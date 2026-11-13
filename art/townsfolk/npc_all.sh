@@ -5,7 +5,7 @@ W=${1:-/root/w/npcs}; R=${2:-/root/w/iris-anim/ftf}; cd $W; mkdir -p out raw; : 
 while read src key h; do
   for v in "" _m; do
     if [ -z "$v" ]; then tris=14000; px=1024; else tris=5000; px=512; fi
-    blender -b -P $R/art/townsfolk/npc_build.py -- $W/$src raw/npc_$key$v.glb $h $tris 2>&1 | grep -E "^(source|NPC|Traceback|  File|[A-Za-z]*Error)" >> build.log
+    blender -b -P $R/art/townsfolk/npc_build.py -- $W/$src raw/npc_$key$v.glb $h $tris 2>&1 | grep -E "^(source|decimated|NPC|Traceback|  File|[A-Za-z]*Error)" >> build.log
     gltf-transform resize raw/npc_$key$v.glb raw/t.glb --width $px --height $px >> gt.log 2>&1
     bash $R/art/tools/compress-glb.sh raw/t.glb out/npc_$key$v.glb npc_$key >> gt.log 2>&1
   done

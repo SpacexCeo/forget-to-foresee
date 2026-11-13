@@ -62,15 +62,25 @@ bpy.ops.object.mode_set(mode='OBJECT'); el.parent = ao; md = el.modifiers.new('r
 bpy.ops.object.select_all(action='DESELECT'); el.select_set(True); bpy.context.view_layer.objects.active = el
 bm = bmesh.new(); bm.from_mesh(me); bmesh.ops.triangulate(bm, faces=bm.faces[:]); bm.to_mesh(me); bm.free()
 now = len(me.polygons)
-if TRIS < now:      # the head and the hands keep their triangles (a decimated face falls apart): the rest gives up more
+if TRIS < now:      # the head and the hands give up far less than the rest (a hard-decimated face falls apart): two pieces, two ratios
     wk = np.clip(sum(W.get(k_, np.zeros(n)) for k_ in W if k_ == 'head' or k_.startswith(('hand_', 'thumb_', 'index_', 'fingers_'))) / tot, 0, 1)
-    me.polygons.foreach_get('vertices', (fv := np.empty(now * 3, np.int32))); keep = (wk[fv.reshape(-1, 3)].max(1) > 0.5); nk = int(keep.sum())
-    g = el.vertex_groups.new(name='_dec')
-    for i in np.nonzero(wk <= 0.5)[0]: g.add([int(i)], 1.0, 'REPLACE')
-    d = el.modifiers.new('dec', 'DECIMATE'); d.vertex_group = '_dec'; d.ratio = max(0.05, (TRIS - nk) / max(now - nk, 1)) if nk < TRIS * 0.8 else TRIS / now
-    if nk >= TRIS * 0.8: d.vertex_group = ''
-    bpy.ops.object.modifier_move_to_index(modifier='dec', index=0); bpy.ops.object.modifier_apply(modifier='dec'); el.vertex_groups.remove(el.vertex_groups['_dec'])
-    print('decimated: head and hands kept %d triangles of %d' % (nk, now))
+    fv = np.empty(now * 3, np.int32); me.polygons.foreach_get('vertices', fv); keep = wk[fv.reshape(-1, 3)].max(1) > 0.5; nk = int(keep.sum())
+    rh = min(1.0, 0.6 * TRIS / max(nk, 1)); rb = min(1.0, max(0.03, (TRIS - nk * rh) / max(now - nk, 1)))
+    for p_ in me.polygons: p_.select = bool(keep[p_.index])
+    for v_ in me.vertices: v_.select = False
+    for e_ in me.edges: e_.select = False
+    me.update()
+    bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.mesh.select_mode(type='FACE'); bpy.ops.mesh.separate(type='SELECTED'); bpy.ops.object.mode_set(mode='OBJECT')
+    parts = [o for o in bpy.context.scene.objects if o.type == 'MESH']
+    for o, r in ((el, rb), *[(o, rh) for o in parts if o is not el]):
+        bpy.ops.object.select_all(action='DESELECT'); o.select_set(True); bpy.context.view_layer.objects.active = o
+        if r < 0.999:
+            d = o.modifiers.new('dec', 'DECIMATE'); d.ratio = r; bpy.ops.object.modifier_move_to_index(modifier='dec', index=0); bpy.ops.object.modifier_apply(modifier='dec')
+    bpy.ops.object.select_all(action='DESELECT')
+    for o in parts: o.select_set(True)
+    bpy.context.view_layer.objects.active = el; bpy.ops.object.join()
+    bm = bmesh.new(); bm.from_mesh(el.data); bmesh.ops.remove_doubles(bm, verts=bm.verts[:], dist=1e-5); bm.to_mesh(el.data); bm.free()
+    print('decimated: head and hands %d triangles x %.2f, the rest %d x %.2f' % (nk, rh, now - nk, rb))
 me = el.data; el.name = 'base'; me.name = 'base'
 for p in me.polygons: p.use_smooth = True
 mat = bpy.data.materials.new('M_townsfolk'); mat.use_nodes = True; bs = mat.node_tree.nodes['Principled BSDF']; bs.inputs['Roughness'].default_value = 0.85; bs.inputs['Metallic'].default_value = 0.0
