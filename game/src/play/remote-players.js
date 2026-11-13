@@ -22,14 +22,20 @@ function modelFileFor(skin) {
 /** A name tag; `badge` (the localized "AI") is drawn as a small teal pill after the name. */
 function nameTag(text, badge = '') {
   const c = document.createElement('canvas'); c.width = 256; c.height = 64;
-  const g = c.getContext('2d');
+  let g = c.getContext('2d');
+  // a long name with a badge gets a wider tag (same pixels per metre) instead of a clipped badge
+  g.font = '700 20px system-ui, sans-serif'; const bw0 = badge ? g.measureText(badge).width + 14 : 0;
+  g.font = '600 22px system-ui, sans-serif'; if (g.measureText(text).width + 28 + (badge ? bw0 + 8 : 0) > 248) { c.width = 384; g = c.getContext('2d'); }
+  const CW = c.width;
   g.textBaseline = 'middle';
   g.font = '700 20px system-ui, sans-serif'; const bw = badge ? g.measureText(badge).width + 14 : 0;
-  g.font = '600 30px system-ui, sans-serif'; const nw = g.measureText(text).width;
-  const w = Math.min(248, nw + 28 + (badge ? bw + 8 : 0)), x0 = (256 - w) / 2;
+  // the name's size shrinks until name and badge fit the tag (long names such as "Sheriffchenko (demo player)")
+  let size = 30; g.font = `600 ${size}px system-ui, sans-serif`; let nw = g.measureText(text).width;
+  while (size > 14 && nw + 28 + (badge ? bw + 8 : 0) > CW - 8) { size -= 2; g.font = `600 ${size}px system-ui, sans-serif`; nw = g.measureText(text).width; }
+  const w = Math.min(CW - 8, nw + 28 + (badge ? bw + 8 : 0)), x0 = (CW - w) / 2;
   g.fillStyle = 'rgba(16,22,24,.72)'; g.beginPath(); g.roundRect(x0, 10, w, 44, 12); g.fill();
   g.strokeStyle = 'rgba(233,180,76,.7)'; g.lineWidth = 2; g.stroke();
-  g.fillStyle = '#f3ead6'; g.textAlign = 'left'; g.fillText(text, x0 + 14, 33);
+  g.fillStyle = '#f3ead6'; g.textAlign = 'left'; g.font = `600 ${size}px system-ui, sans-serif`; g.fillText(text, x0 + 14, 33);
   if (badge) {
     const bx = x0 + 14 + nw + 8;
     g.fillStyle = 'rgba(95,180,170,.9)'; g.beginPath(); g.roundRect(bx, 20, bw, 26, 8); g.fill();
@@ -37,7 +43,7 @@ function nameTag(text, badge = '') {
   }
   const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthWrite: false, transparent: true }));
-  s.scale.set(1.6, 0.4, 1); s.position.y = 2.15; s.renderOrder = 10;
+  s.scale.set(1.6 * (CW / 256), 0.4, 1); s.position.y = 2.15; s.renderOrder = 10;
   return s;
 }
 
@@ -99,6 +105,7 @@ export function createRemotePlayers({ scene, phone = false, aiLabel = 'AI' }) {
       if (!r.p) continue;
       let a = avatars.get(r.id);
       if (!a) { a = build(r); avatars.set(r.id, a); }
+      a.rec = r; // the latest record: the player card reads it (name, skin, account, level, demo)
       if (!a.model) { const src = source(a.skin); if (src) attach(a, src); }
       const on = drawn.has(r.id);
       a.group.visible = on;
@@ -120,5 +127,22 @@ export function createRemotePlayers({ scene, phone = false, aiLabel = 'AI' }) {
     update,
     clear() { for (const a of avatars.values()) scene.remove(a.group); avatars.clear(); },
     count: () => [...avatars.values()].filter((a) => a.group.visible).length,
+    /** The record of the nearest visible player the ray hits (its model or a 2 m tall capsule around it), or null. */
+    pick(raycaster) {
+      let best = null, bestD = Infinity;
+      for (const a of avatars.values()) {
+        if (!a.group.visible || !a.rec) continue;
+        const hits = raycaster.intersectObject(a.group, true).filter((h) => h.object !== a.tag);
+        let d = hits.length ? hits[0].distance : Infinity;
+        if (!hits.length) { // thin or still-loading models: a column of 0.5 m around the feet up to 2 m
+          const p = a.group.position, o = raycaster.ray.origin, dir = raycaster.ray.direction;
+          const tt = Math.max(0, (p.x - o.x) * dir.x + (p.y + 1 - o.y) * dir.y + (p.z - o.z) * dir.z);
+          const q = [o.x + dir.x * tt - p.x, o.y + dir.y * tt - (p.y + 1), o.z + dir.z * tt - p.z];
+          if (Math.hypot(q[0], q[2]) < 0.5 && Math.abs(q[1]) < 1) d = tt;
+        }
+        if (d < bestD) { bestD = d; best = a.rec; }
+      }
+      return best;
+    },
   };
 }
