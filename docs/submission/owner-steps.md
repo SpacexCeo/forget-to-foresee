@@ -53,16 +53,15 @@ the page opens in English (add `&lang=en` if your browser is set to another lang
 18.11, ideally 25.11.
 
 ### 3. The video
-The post uses the 60 s jury video (`docs/submission/jury-video.md`). Check every caption against the README before
+The post uses the jury video; the current shot list, built around the live economy, is `docs/submission/video-shot-list.md` (the older storyboard `jury-video.md` has no town economy). Check every caption against the README before
 posting: nothing may say the contract is "not yet deployed", that the clans have "wallets" in a NEAR sense, or that
-shards are minted in every season. The older 75 s demo cut (`video-shot-list.md`) carries a stale caption; do not post
-it without re-rendering.
+shards are minted in every season. The older renders in this folder (`trailer_*.mp4`) predate the town economy.
 
-### 3b. Repository settings (GitHub → the repo → About ⚙, 2 minutes; audit QW-4)
-- **Description:** `Strategy game where an AI clan agent pays for prophecy with her own memories. Seasons are sealed on NEAR testnet before play; forgotten memories become NEP-171 shards. Built at NEAR HACKATHON.`
-  (the current one says "NFT agents", which the README contradicts: Iris is game state, not a token).
+### 3b. Repository settings (GitHub → the repo → About ⚙, 2 minutes)
+- **Description** (matches the README; Iris is a character, not an AI, and not a token):
+  `3D strategy game on NEAR testnet: 20 merchants with their own accounts trade on chain all day, prophecies are sealed before play, forgotten memories become NFTs. Play in the browser, no wallet. Built at NEAR HACKATHON.`
 - **Website:** `https://spacexceo.github.io/forget-to-foresee/`
-- **Topics:** `near`, `near-protocol`, `nft`, `nep-171`, `game`, `threejs`, `ai-agents`, `merkle-tree`, `nearhackathon`
+- **Topics:** `near`, `near-protocol`, `nearhackathon`, `nep-171`, `nep-245`, `web3-game`, `threejs`, `commit-reveal`, `tee`, `nft`
 - Check the link preview after the next Pages deploy: the page already has `og:` / `twitter:` tags and `og.jpg`.
 
 ### 4. Post on X
@@ -80,3 +79,13 @@ send via the form or `curl`. Keep the payload out of the repository. On 201, rec
 ### 7. After submitting
 - Do not force-push `main` or delete the tag during judging (16.11–18.11).
 - Keep the repository public.
+
+### 8. The final counts (no keys, read-only; about 15 minutes each)
+After 00:00 UTC on 15 Nov (02:00 Kyiv), from a clone of `main`:
+```bash
+node tools/count/count.mjs --window 2026-11-14 --write    # writes docs/proof/tx-2026-11-14.md
+git add docs/proof && git commit -m "Final count of 14 Nov" && git push origin main
+```
+The 13 Nov file was finalised on 14 Nov after 00:10 UTC. The indexer can answer 429 for a while; the tool retries.
+A commit after 23:59 UTC 14 Nov is outside the development window: push it only if the rules allow proof files after
+the deadline, otherwise keep the output for the request-changes form.
