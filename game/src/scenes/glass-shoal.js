@@ -33,7 +33,8 @@ const CSS = `
 .gs-card button,.gs-skip{min-height:44px;min-width:88px;border-radius:10px;border:1px solid #f6c860;background:rgba(246,200,96,.14);color:#f6e2a8;font:600 15px system-ui,sans-serif;cursor:pointer}
 .gs-ride{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 70px);transform:translateX(-50%);z-index:14;text-align:center;color:#f3ead2;font:600 16px system-ui,sans-serif;text-shadow:0 1px 3px #000;pointer-events:none}
 .gs-ride small{display:block;font-weight:400;font-size:13px;opacity:.85}.gs-ride i{display:block;width:220px;height:5px;margin:6px auto 0;border-radius:3px;background:rgba(255,255,255,.18);overflow:hidden}.gs-ride i b{display:block;height:100%;background:#f6c860}
-.gs-skip{position:fixed;right:calc(env(safe-area-inset-right,0px) + 16px);top:calc(env(safe-area-inset-top,0px) + 70px);z-index:15}
+.gs-skip{position:fixed;right:calc(env(safe-area-inset-right,0px) + 16px);bottom:calc(env(safe-area-inset-bottom,0px) + 24px);z-index:15}
+body.gs-owned .ph,body.gs-owned .ftf-town-objective,body.gs-owned .ftf-story-goal,body.gs-owned .ftf-cast,body.gs-owned .ftf-cast-bar,body.gs-owned .ftf-mk,body.gs-owned .ftf-chat,body.gs-owned .ft,body.gs-owned .ts-btn,body.gs-owned .ts-arc,body.gs-owned .ftf-town-prompt,body.gs-owned .ftf-scene-hint{display:none!important}
 html[data-motion=reduce] .gs-track{animation:none}
 @media (prefers-reduced-motion:reduce){.gs-track{animation:none}}
 `;
@@ -156,7 +157,7 @@ export function createGlassShoal(o) {
     if (!textKey) { prompt.hidden = true; return; }
     prompt.textContent = ''; if (!o.touch || !o.touch()) prompt.append(el('kbd', null, 'E')); prompt.append(doc.createTextNode(say(textKey))); prompt.hidden = false;
   }
-  let tAcc = 0, seatT = 0, seatedFor = 0;
+  let tAcc = 0, seatT = 0, seatedFor = 0, ownedClass = false;
   function update(dt, t) {
     tAcc += dt;
     if (seatedFor < 3 && (seatT += dt) > 0.5) { seatT = 0; placeAll(); if (seated >= 2) seatedFor += 0.5; } // re-seat until the ground answers
@@ -209,6 +210,8 @@ export function createGlassShoal(o) {
       if (ride.done) endRide();
     }
     if (mode === 'arena' && arena) { arena.update(dt, t); arena.pose(pose); }
+    const own = mode === 'ride' || mode === 'arena' || mode === 'arena-wait';
+    if (own !== ownedClass) { ownedClass = own; doc.body.classList.toggle('gs-owned', own); }
     void t;
   }
   /** E pressed in town (boot-world calls it before its own E): true when the Shoal used it. */
@@ -235,6 +238,7 @@ export function createGlassShoal(o) {
       return pose.speed;
     },
     skipRide: () => endRide(),
+    get arena() { return arena; },
     /** Dev and tests: jump the quest to a step (?shoal=<step>). */
     debugStep(step) { if (R.QUEST_STEPS.includes(step)) { save = { ...save, step, blade: step !== 'find_blade' }; persist(); } },
     dispose() { group.removeFromParent(); dragon.root.removeFromParent(); track.remove(); prompt.remove(); closeCard(); if (arena) arena.dispose(); },
