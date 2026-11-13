@@ -15,17 +15,10 @@ async function boot(ctxOpts) {
   const page = await (await browser.newContext(ctxOpts)).newPage();
   page.on('pageerror', (e) => res.errors.push(e.message.slice(0, 300)));
   page.on('dialog', (d) => d.accept());
-  await page.goto(`${url}/?play=direct&town=1&day1=0&hero=iris&quest=0&tod=day&weather=clear&test=1`);
+  await page.goto(`${url}/?play=direct&town=1&day1=0&hero=iris&quest=0&tod=day&weather=clear&test=1&ff=rpgHud,hotbar,skillTree,damageNumbers`);
   await page.waitForFunction(() => window.__ftf && window.__ftf.town && window.__ftf.town.ready && window.__ftf.town.mobs, null, { timeout: 600000 });
   for (const name of ['Skip', 'Skip the town quest']) { const b = page.getByRole('button', { name, exact: true }); if (await b.count()) await b.first().click().catch(() => {}); }
-  await page.evaluate(async () => {
-    localStorage.removeItem('ftf.rpg.v1'); localStorage.removeItem('ftf.hotbar.v1');
-    const [m, E] = await Promise.all([import('/src/rpg/index.js'), import('/src/game/town-economy.js')]);
-    const ledger = E.createTownLedger({ storage: localStorage });
-    const r = m.mount({ ledger, player: window.__ftf.player, storage: localStorage, t: null, mobs: () => window.__ftf.town.mobs, base: '/' });
-    window.__rpgMount = r; let last = performance.now();
-    const loop = (tt) => { r.update(Math.min(0.1, (tt - last) / 1000)); last = tt; requestAnimationFrame(loop); }; requestAnimationFrame(loop);
-  });
+  await page.waitForFunction(() => document.getElementById('rpg-hud') && window.__ftfTest && window.__ftfTest.rpg, null, { timeout: 60000 });   // mounted by the sprint seam (flag rpgHud)
   await page.waitForTimeout(800);
   return page;
 }
@@ -87,6 +80,26 @@ await page.keyboard.press('KeyG'); await page.waitForTimeout(120);
 const g = await page.evaluate(() => ({ cd: window.__ftf.town.mobs.actions.strikeCd, stored: JSON.parse(localStorage.getItem('ftf.keys.v1') || '{}').strike }));
 await page.evaluate(async () => { const k = await import('/src/ui/keybinds.js'); k.setBindings(k.defaultBindings(), localStorage); });
 ok('E6 Strike rebound to G: G strikes, the binding is stored', g.cd > 0 && g.stored === 'KeyG', g);
+// E8: the chip shows the one Gate number of the shared silk model
+const e8 = await page.evaluate(async () => { const sc = await import('/src/net/silk-core.js'); const v = sc.silkView(); return { chip: document.querySelector('.rpg-silk .l1').textContent, gate: sc.formatSilkC ? sc.formatSilkC(v.gateC) : String(v.gateC / 100) }; });
+ok('E8 silk chip equals silkView().gateC', e8.chip.replace(/,/g, '') === String(e8.gate).replace(/,/g, '').replace(/ silk$/, ''), e8);
+// F1: the cheat sheet
+await page.keyboard.press('F1'); await page.waitForTimeout(500);
+const f1 = await page.evaluate(() => { const m = document.querySelector('.rpg-cheat'); return m && !m.hidden ? { rows: m.querySelectorAll('h3').length, kbd: !!m.querySelector('.ftf-kbd') } : null; });
+ok('F1 opens the cheat sheet (groups and the keyboard)', !!f1 && f1.rows >= 5 && f1.kbd, f1);
+await page.keyboard.press('Escape'); await page.waitForTimeout(200);
+// Voice points add 2% each to a strike as a follow-up hit on the same creature
+const voice = await page.evaluate(async () => {
+  const T = window.__ftfTest.rpg; T.spend('voice'); T.spend('voice'); T.spend('voice');
+  const f = window.__ftf, M = f.town.mobs, b = M.brain, sk = b.mobs.find((m) => m.type === 'skitter' && m.state !== 'dead' && m.state !== 'gone');
+  if (!sk) return { error: 'no skitter' };
+  for (const o of b.mobs) if (o !== sk && o.state !== 'dead' && o.state !== 'gone') o.pos[0] += 40;
+  const p = f.player.pos, h = f.player.heading; sk.pos[0] = p[0] + Math.sin(h) * 1.2; sk.pos[2] = p[2] + Math.cos(h) * 1.2; sk.pos[1] = p[1]; sk.hp = 500; sk.freeze = 999; sk.state = 'idle';
+  window.__mark = (window.__ftfTelemetry || []).length; return { id: sk.id, voice: T.state().rec.stats.voice };
+});
+await page.keyboard.press('KeyF'); await page.waitForTimeout(900);
+const hits = await page.evaluate((id) => (window.__ftfTelemetry || []).slice(window.__mark).filter((e) => e.name === 'mob.hit' && e.payload.id === id).map((e) => e.payload.dmg), voice.id);
+ok('Voice adds its bonus to a strike (a follow-up hit)', hits.length >= 2 && hits[1] === Math.round(hits[0] * 0.02 * voice.voice), { voice, hits });
 // E7: low HP: the vignette and the bar pulse
 await page.evaluate(() => { window.__ftf.town.mobs.iris.hp = 1; }); await page.waitForTimeout(300);
 ok('E7 low HP vignette on', await page.evaluate(() => document.querySelector('.rpg-vignette').dataset.on === '1'));

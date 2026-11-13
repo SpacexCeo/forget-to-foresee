@@ -19,7 +19,7 @@ keeps loading behind it. Iris is her own model with her own clips; the poses are
 (nothing redrawn). Everything else is code: no downloads.
 
 Not done against the plan:
-- the wake-up is screen space only (4.5 s, not 9 s): no town camera move, no townsfolk ring, no sit-up;
+- the wake-up (7 s, not 9 s; `wakeup_stills.jpg`, `art/anim/wakeup_shots.mjs`): the town camera lies where she lies, looks up at a ring of seven townsfolk and rises to the game framing; the ring stays through the first talk. No sit-up animation; under reduced motion only the eyelids open (no camera move, no ring);
 - `focusOn` / `releaseCamera` only put the request on the bus: the town camera has no cinematic hook in this build;
 - no chromatic aberration or radial blur pass (a vignette and the dolly zoom carry the pull);
 - reduced motion is about 33 s, not 28 s;

@@ -36,8 +36,9 @@ if (flags.rpgHud) import('./rpg/index.js').then((m) => { rpg = m.mount({ ledger:
 
 ## Not done or cut
 
-- Voice and Clear Diction do not yet raise the fight's own damage numbers: that needs the `mob.hit` bus emit (A5) to add the bonus. Insight's mark is applied to Echo and Babel only.
+- Voice and Clear Diction add their share of each fight hit as a follow-up hit (bus `mob.hit`, e2e checked). Insight's mark is applied to Echo and Babel only.
 - Max HP above 100 works through scaling: the fight still counts 0..100, read as the share of her max HP, and each hit is applied in real HP through the defences.
 - The phone hotbar shows slots 1 to 5; there is no swipe-up drawer for 6 to 9. The phone log is hidden under 480 px wide (the town market ticker sits where the one-line ticker would go).
 - No buff icons art (text squares with the seconds left); no E8 e2e yet (the chip now reads the same `net/silk-core.js` view as the other surfaces; the cross-surface equality check is left for A5's first-ten e2e); E10 reduced motion is CSS only.
-- Overlaps with widgets owned by others: the market ticker and the online-count chip over the log (desktop) and slot 1 (phone); the settings gear over the minimap's edge.
+- The market ticker and the chat/online chip are moved by this layer's CSS while it is on (desktop: above the Log; phone: one row above the hotbar). The settings gear still touches the minimap's edge.
+- F1 opens a read-only cheat sheet (`rpg/cheat-sheet.js`); E8 checks the chip against `net/silk-core.js` `silkView()`. The e2e now runs on the seam's own mount (`?ff=rpgHud,hotbar,skillTree,damageNumbers&test=1`): 15/15 green on the GPU server, 13 Nov morning.
