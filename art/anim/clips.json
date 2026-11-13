@@ -974,15 +974,17 @@
    "cloth": {
     "rig": "art/agents/elise/cloth_rig.npz",
     "bake": "art/anim/out/elise_cloth.npz",
+    "note": "v5: the dress is carried by the hips AND both legs (cloth_rig.npz `skin`), so the simulation swings about a shape that already walks with her; the colliders are the real legs, so the margins are a fabric's thickness, not the 2.5 cm that stood in for shrunken capsules",
     "tune": {
      "drag": 2.0,
-     "hold": 0.1,
-     "margin": 0.025,
-     "keep": 0.7,
-     "max_deg": 24,
-     "resolve_margin": 0.01,
-     "enclosed": false,
-     "foot_peek": 0.035
+     "hold": 0.12,
+     "margin": 0.006,
+     "keep": 0.85,
+     "max_deg": 32,
+     "resolve_margin": 0.004,
+     "enclosed": true,
+     "foot_peek": 0.035,
+     "foot_grow": 0.004
     }
    }
   }
