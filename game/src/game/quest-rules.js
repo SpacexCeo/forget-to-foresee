@@ -73,7 +73,7 @@ export function applyQuest(state, a = {}, ctx = {}) {
     case 'ACCEPT': {
       const def = QUESTS[a.questId]; if (!def) return rejected(s, 'quest');
       if (questStatus(s, a.questId, now) !== 'available') return rejected(s, 'not_available');
-      if (Object.keys(QUESTS).some((id) => QUESTS[id].giver === def.giver && id !== a.questId && ['active', 'ready'].includes(get(s, id).state))) return rejected(s, 'giver_busy');
+      if (!def.auto && Object.keys(QUESTS).some((id) => QUESTS[id].giver === def.giver && !QUESTS[id].auto && id !== a.questId && ['active', 'ready'].includes(get(s, id).state))) return rejected(s, 'giver_busy'); // auto quests (journal side/daily/tournament) never block a talk quest
       const n = copy(s); n.seq++;
       const prev = get(n, a.questId);
       const q = { state: 'active', progress: 0, attempt: prev.attempt + 1, acceptedSeq: n.seq, doneAt: prev.doneAt };

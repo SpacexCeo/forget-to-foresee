@@ -34,7 +34,7 @@ export function flagOn(name, search = (globalThis.location && globalThis.locatio
 
 /** Which quest a giver talks about now (pure): the first of theirs that is not done, else the last. */
 export function giverQuest(qs, giver, now = 0) {
-  const ids = Object.keys(QUESTS).filter((id) => QUESTS[id].giver === giver);
+  const ids = Object.keys(QUESTS).filter((id) => QUESTS[id].giver === giver && !QUESTS[id].auto); // auto quests need no talk (journal only)
   for (const id of ids) { const st = questStatus(qs, id, now); if (st !== 'done') return { id, status: st }; }
   return ids.length ? { id: ids[ids.length - 1], status: 'done' } : null;
 }
@@ -108,9 +108,10 @@ export function markerFor(giver, story, qs, now = 0, have = {}) {
 export function questLog(story, qs, now = 0, have = {}) {
   const rows = [];
   for (const id of Object.keys(QUESTS)) {
+    if (QUESTS[id].auto) continue; // the journal's auto quests have English titles and need no talk: not in this log
     const st = questStatus(qs, id, now); if (!['active', 'ready', 'available'].includes(st)) continue;
     const q = QUESTS[id], cur = qs.quests[id] || {};
-    rows.push({ id, giver: q.giver, title: q.title, status: st, progress: q.objective.type === 'kill' ? (cur.progress || 0) : null, count: q.objective.type === 'kill' ? q.objective.count : null,
+    rows.push({ id, giver: q.giver, title: q.title, status: st, progress: q.objective.type === 'kill' ? (st === 'available' ? 0 : cur.progress || 0) : null, /* a repeat on offer starts from 0 */ count: q.objective.type === 'kill' ? q.objective.count : null,
       needs: Object.entries(q.needs || {}).map(([res, need]) => ({ id: res, need, have: Math.min(need, Math.max(0, Number(have[res]) || 0)) })), rewardSilk: q.reward.silk });
   }
   const rank = { ready: 0, active: 1, available: 2 };
