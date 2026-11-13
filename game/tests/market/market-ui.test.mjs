@@ -107,3 +107,16 @@ test('market window: not live yet says so plainly and disables buying and listin
   assert.equal([...doc.body.querySelectorAll('button')].find((b) => b.textContent === 'List for sale').disabled, true);
   ui.close();
 });
+
+test('art: resource icons and deed cards point at files that exist, and keep a letter when an image fails', async () => {
+  const { existsSync } = await import('node:fs');
+  const { resIconPath, deedCardPath, artBox, RES_ICONS, DEED_ART } = await import('../../src/market/art.js');
+  const pub = new URL('../../public/', import.meta.url).pathname;
+  for (const id of RES_ICONS) for (const size of [128, 256]) assert.ok(existsSync(pub + resIconPath(id, size, '')), id + ' ' + size);
+  for (const w of DEED_ART) assert.ok(existsSync(pub + deedCardPath(w, '')), w);
+  assert.equal(deedCardPath(2, '/b/'), '/b/assets/nft/deed_archive.webp'); assert.equal(resIconPath('bread'), null);
+  const { doc } = installDom();
+  const box = artBox(doc, null, 'chitin plate'); assert.equal(box.textContent, 'C'); // no art: the letter
+  const withImg = artBox(doc, '/x.webp', 'veil dust');
+  withImg.querySelector('img').dispatchEvent({ type: 'error' }); assert.equal(withImg.textContent, 'V'); // a failed image keeps the letter
+});
