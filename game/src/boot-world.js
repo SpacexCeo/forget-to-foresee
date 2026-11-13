@@ -672,10 +672,11 @@ const day1On = () => {
   return !judge && !loadDay1(ctx.storage).claimed;
 };
 // The skin is the heroine herself: Elise wears her own model, clips and cel shading (play/iris-avatar.js setHero).
-let ownsSheriff = false; // the wheel's skin NFT, read from the chain for the guest account (play/skins.js); never assumed
-const skinsOwned = () => { const d = loadDay1(ctx.storage); return { elise: !!(d.minted || d.claimed || d.skin === 'elise'), sheriffchenko: ownsSheriff }; };
+// The wheel's skin NFT is read from the chain for the guest account (play/skins.js), never assumed. A function
+// declaration with its state on itself: the HUD asks canSwap() while this module is still being evaluated.
+function skinsOwned() { const d = loadDay1(ctx.storage); return { elise: !!(d.minted || d.claimed || d.skin === 'elise'), sheriffchenko: skinsOwned.sheriff === true }; }
 Promise.all([import('./play/skins.js'), import('./net/wheel-skin.js'), import('./net/agent-ledger.js')]).then(([sk, ws, al]) => sk.ownsWheelSkin({ storage: ctx.storage, skinOf: ws.skinOf, guestFrom: al.guestFrom })).then((yes) => {
-  ownsSheriff = yes;
+  skinsOwned.sheriff = yes;
   if (yes && !params.get('hero') && loadDay1(ctx.storage).skin === 'sheriffchenko' && irisAvatar) irisAvatar.setHero(avatar, heroById('sheriffchenko')).catch(() => {}); // the skin worn last time, once the chain confirms it
 }).catch(() => {});
 function toggleSkin() {
