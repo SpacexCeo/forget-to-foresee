@@ -1,25 +1,32 @@
 {
-  "date": "2026-11-12",
-  "commit": "19f5ca0",
+  "date": "2026-11-13",
+  "commit": "c3c7341e",
   "suites": [
     {
       "name": "game",
       "command": "cd game && npm test",
-      "pass": 824,
+      "pass": 1131,
       "fail": 0,
       "ok": true
     },
     {
       "name": "server",
       "command": "cd server && npm test",
-      "pass": 31,
+      "pass": 39,
       "fail": 0,
       "ok": true
     },
     {
       "name": "relayer",
       "command": "cd relayer && npm test",
-      "pass": 28,
+      "pass": 113,
+      "fail": 0,
+      "ok": true
+    },
+    {
+      "name": "presence",
+      "command": "cd presence && npm test",
+      "pass": 6,
       "fail": 0,
       "ok": true
     },
@@ -78,7 +85,14 @@
       "pass": 12,
       "fail": 0,
       "ok": true
+    },
+    {
+      "name": "contract skin-nft",
+      "command": "cd contracts/skin-nft && cargo test --lib",
+      "pass": 5,
+      "fail": 0,
+      "ok": true
     }
   ],
-  "distBytes": 414368028
+  "distBytes": 471730678
 }
