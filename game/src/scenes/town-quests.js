@@ -19,7 +19,6 @@ import { createTrackerUI } from '../quests/tracker-ui.js';
 import { createAutoWalk, setAutoWalker } from '../sprint/auto-walk.js';
 import { GIVER_NAMES } from '../game/journal-data.js';
 import { loadGuide, guideEvent, guideView, GUIDE_KEY, registerGuideCoach, coachFor } from '../quests/guide.js';
-import { registerTip, showTip } from '../sprint/first-seen.js';
 import { questMarkers } from '../quests/markers-feed.js';
 import { createWaypoint, createTrail, trailDots } from '../quests/waypoint-ui.js';
 import { TOWN_ORIGIN } from './town-layout.js';
@@ -326,9 +325,11 @@ export function createTownQuests({ scene = null, hudToast = null, storage, townL
     if (tracker) tracker.refresh(true);
   }
   // coach marks for steps 4, 6, 7 (sprint §4.11): the seam's first-seen bubble at the HUD button, once each
-  if (useGuide) registerGuideCoach(registerTip, (n, total) => say('guide.title', { n, total }));
+  // first-seen is loaded lazily: a static import from here would tie the play and sprint chunks into a cycle (TDZ at boot)
+  let showTip = null;
+  if (useGuide) import('../sprint/first-seen.js').then((fs) => { registerGuideCoach(fs.registerTip, (n, total) => say('guide.title', { n, total })); showTip = fs.showTip; }).catch(() => { /* no coach marks */ });
   let coached = null; const bornAt = now();
-  function coach() { const id = useGuide && active ? coachFor(guide) : null; if (id && id !== coached && now() - bornAt > 4000) { coached = id; showTip(id); } } // after the HUD has mounted
+  function coach() { const id = useGuide && active ? coachFor(guide) : null; if (id && showTip && id !== coached && now() - bornAt > 4000) { coached = id; showTip(id); } } // after the HUD has mounted
   let tracked = []; try { tracked = (JSON.parse((storage && storage.getItem('ftf.tracked.v1')) || '[]') || []).filter((id) => QUESTS[id]).slice(0, MAX_TRACKED); } catch { tracked = []; }
   const saveTracked = () => { try { storage.setItem('ftf.tracked.v1', JSON.stringify(tracked)); } catch { /* memory only */ } };
   const lvl = () => { try { return Math.max(1, Number(level()) || 1); } catch { return 1; } };
