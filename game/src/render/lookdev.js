@@ -271,6 +271,8 @@ export class LookDev {
 
   /** Where rain splashes fall: the walking height under the camera's subject. */
   setGround(x, y, z) { this.splashes.setGround(x, y, z); }
+  /** The scene's ground sampler `(x, z) => height | null`: each rain splash lands on its own surface. */
+  setGroundSampler(fn) { this.splashes.setGroundSampler(fn); }
 
   /** Any WEATHER name. Eases in over a few seconds (or `seconds`); at once under reduced motion or with `immediate`. */
   setWeather(name, { immediate = false, seconds } = {}) {

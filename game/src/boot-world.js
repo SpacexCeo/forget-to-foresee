@@ -241,6 +241,7 @@ const loadPlayLayer = () => Promise.all([import('./play/game.js'), import('./pla
 const townMode = townPlan({ skip: params.get('skip'), town: params.get('town'), play: params.get('play'), cinematic: params.get('cinematic'), view: params.get('view'), film: params.get('film') });
 let salvageView = null; // story TZ Q2 (?story=1)
 let fogCards = null, doorGlow = null, townShops = null, townProps = null, spotProps = null, townAudio = null, townBarks = null, photo = null, townMonsters = null;
+let splashGround = false; // the rain splashes got the town's ground sampler
 let marketTicker = null, marketScene = null; // the townsfolk market on NEAR testnet (docs/town-economy.md; ?town=1 until ftf-town is live)
 const chestBag = createChestBag({ storage: ctx.storage });
 // Dragon companions (docs/companion-nft-plan.md): only the dragons the heroine token's account holds on chain fly with
@@ -1170,7 +1171,8 @@ function frame() {
       .catch((e) => console.warn('[mp]', e));
   }
   if (town && town.active) {
-    lookdev.setGround(player.pos[0], player.pos[1], player.pos[2]); // rain splashes fall around her
+    if (!splashGround && town.groundAt) { splashGround = true; lookdev.setGroundSampler((x, z) => town.groundAt(x, z)); } // each splash lands on its own surface, not at her height
+    lookdev.setGround(player.pos[0], player.pos[1], player.pos[2]); // the splash tile follows her
     townFrame.playerPos = player.pos; townFrame.reducedMotion = lookdev.reducedMotion; townFrame.lamps = lookdev.light.lamps; // lamps follow the hour and the weather (docs/atmosphere.md)
     townFrame.light.sun = lookdev.sun.color; townFrame.light.daylight = lookdev.weather.state.sun; townFrame.light.pixelsPerMetre = renderer.domElement.height / (2 * Math.tan(camera.fov * Math.PI / 360));
     town.update(clock.elapsedTime, dt, townFrame);

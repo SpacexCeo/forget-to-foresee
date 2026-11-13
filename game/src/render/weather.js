@@ -399,10 +399,17 @@ export class Splashes {
     quad.setAttribute('aSeed', new THREE.InstancedBufferAttribute(seed, 2));
     quad.instanceCount = 0;
     quad.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e6);
+    // The ground under each splash: a world-anchored height grid (HN x HN cells over the 2 x radius tile, wrapped the
+    // same way as the splash spots), filled from the scene's ground sampler a few cells per frame. Each ring then sits
+    // on the surface it fell on (cobbles, a step, a wall top), never at the walking height of the player.
+    const HN = 32, hData = new Float32Array(HN * HN * 4);
+    const hTex = new THREE.DataTexture(hData, HN, HN, THREE.RGBAFormat, THREE.FloatType);
+    hTex.magFilter = hTex.minFilter = THREE.NearestFilter; hTex.generateMipmaps = false; hTex.needsUpdate = true;
+    this.hN = HN; this.hData = hData; this.hTex = hTex; this.hKey = new Float64Array(HN * HN * 2).fill(NaN); this.sampler = null; this.radius = radius;
     this.material = new THREE.ShaderMaterial({
-      uniforms: { uTime: { value: 0 }, uAmount: { value: 0 }, uCenter: { value: new THREE.Vector3() }, uRadius: { value: radius }, uColor: { value: new THREE.Color(0.8, 0.85, 0.9) } },
+      uniforms: { uTime: { value: 0 }, uAmount: { value: 0 }, uCenter: { value: new THREE.Vector3() }, uRadius: { value: radius }, uColor: { value: new THREE.Color(0.8, 0.85, 0.9) }, uHeight: { value: hTex }, uUseH: { value: 0 }, uN: { value: HN } },
       vertexShader: /* glsl */`
-        uniform float uTime, uAmount, uRadius; uniform vec3 uCenter;
+        uniform float uTime, uAmount, uRadius, uUseH, uN; uniform vec3 uCenter; uniform sampler2D uHeight;
         attribute vec2 aSeed;
         varying vec2 vQ; varying float vK, vA;
         float h1( float n ) { return fract( sin( n ) * 43758.5453 ); }
@@ -415,10 +422,13 @@ export class Splashes {
           vec2 w = vec2( h1( id ), h1( id + 3.1 ) ) * S;
           w = mod( w - uCenter.xz + uRadius, S ) - uRadius + uCenter.xz;
           float r = distance( w, uCenter.xz );
-          vec3 c = vec3( w.x, uCenter.y + 0.02, w.y );
+          // the surface this drop fell on (the height grid); the walking height only when the scene gives no sampler
+          vec4 g = texture2D( uHeight, ( floor( mod( w, S ) / ( S / uN ) ) + 0.5 ) / uN );
+          float onGround = mix( 1.0, g.g, uUseH );
+          vec3 c = vec3( w.x, mix( uCenter.y, g.r, uUseH * g.g ) + 0.02, w.y );
           float size = mix( 0.02, 0.11, k ) * ( 0.7 + 0.6 * h1( id + 7.7 ) );
           vQ = position.xz; vK = k;
-          vA = uAmount * ( 1.0 - smoothstep( uRadius * 0.6, uRadius, r ) ) * step( h1( id + 1.9 ), uAmount );
+          vA = uAmount * ( 1.0 - smoothstep( uRadius * 0.6, uRadius, r ) ) * step( h1( id + 1.9 ), uAmount ) * step( 0.5, onGround );
           gl_Position = projectionMatrix * viewMatrix * vec4( c + vec3( position.x, 0.0, position.z ) * size, 1.0 );
         }`,
       fragmentShader: /* glsl */`
@@ -450,14 +460,54 @@ export class Splashes {
     this.material.uniforms.uAmount.value = a;
   }
 
-  /** Where the rings fall: the ground under the camera's subject (x, walking height, z). */
+  /** The centre of the splash tile: the camera's subject (x, walking height, z). Heights come from the sampler. */
   setGround(x, y, z) { this.material.uniforms.uCenter.value.set(x, y, z); }
+
+  /**
+   * The scene's ground: `fn(x, z)` returns the height of the surface rain lands on there (or null over the void). With
+   * a sampler every ring sits on its own surface; without one they all use the walking height (the old behaviour).
+   */
+  setGroundSampler(fn) {
+    this.sampler = typeof fn === 'function' ? fn : null;
+    this.hKey.fill(NaN); this.hData.fill(0); this.hTex.needsUpdate = true;
+    this.material.uniforms.uUseH.value = this.sampler ? 1 : 0;
+  }
+
+  /** Refresh the grid cells whose world cell changed (the centre moved): at most `budget` ground samples per call. */
+  refreshHeights(budget = 64) {
+    if (!this.sampler) return 0;
+    const N = this.hN, R = this.radius, S = 2 * R, c = S / N, ctr = this.material.uniforms.uCenter.value;
+    const bx = ctr.x - R, bz = ctr.z - R, mod = (a) => ((a % S) + S) % S;
+    let used = 0, dirty = false;
+    for (let iz = 0; iz < N; iz++) {
+      const wz = bz + mod(iz * c + c / 2 - bz), kz = Math.floor(wz / c);
+      for (let ix = 0; ix < N; ix++) {
+        const wx = bx + mod(ix * c + c / 2 - bx), kx = Math.floor(wx / c), t = iz * N + ix;
+        if (this.hKey[t * 2] === kx && this.hKey[t * 2 + 1] === kz) continue;
+        dirty = true;
+        if (used >= budget) { this.hData[t * 4 + 1] = 0; continue; } // stale, not resampled yet: no ring there this frame
+        used++;
+        const y = this.sampler(wx, wz), ok = y != null && Number.isFinite(y);
+        this.hKey[t * 2] = kx; this.hKey[t * 2 + 1] = kz;
+        this.hData[t * 4] = ok ? y : 0; this.hData[t * 4 + 1] = ok ? 1 : 0;
+      }
+    }
+    if (dirty) this.hTex.needsUpdate = true;
+    return used;
+  }
 
   setColor(color) { this.material.uniforms.uColor.value.copy(color); }
 
-  update(dt) { this.time += dt; this.material.uniforms.uTime.value = this.time; }
+  update(dt) {
+    this.time += dt; this.material.uniforms.uTime.value = this.time;
+    if (!this.mesh.visible || !this.sampler) return;
+    // cells that found no ground (colliders still streaming in, or the void) are asked again every 2 s
+    this.retryT = (this.retryT || 0) + dt;
+    if (this.retryT > 2) { this.retryT = 0; for (let t = 0; t < this.hN * this.hN; t++) if (!this.hData[t * 4 + 1]) this.hKey[t * 2] = NaN; }
+    this.refreshHeights();
+  }
 
-  dispose() { this.mesh.geometry.dispose(); this.material.dispose(); }
+  dispose() { this.mesh.geometry.dispose(); this.material.dispose(); this.hTex.dispose(); }
 }
 
 /**
