@@ -217,7 +217,7 @@ html.rpg-mk .rpg-log { padding-top: max(28px, calc(36 * var(--k))); }
   .rpg-tray button:focus-visible { outline: 1px solid rgba(255,255,255,.6); outline-offset: 1px; }
   .rpg-tray svg { width: calc(24 * var(--k)); height: calc(24 * var(--k)); margin: 0; color: inherit; stroke-width: 1.5; filter: drop-shadow(0 1px 1px rgba(0,0,0,.8)); }
   .rpg-tray .k { position: static; transform: none; min-width: 0; padding: 0; border: 0; background: none; font: 500 max(10px, calc(12 * var(--k)))/1.2 system-ui, sans-serif; color: rgba(240,242,240,.85); text-shadow: var(--ts); }
-  .rpg-tray .k::before { content: "["; } .rpg-tray .k::after { content: "]"; }
+  .rpg-tray .k { font-size: max(9px, calc(10 * var(--k))); opacity: .8; }   /* just the letter, small, under the icon (owner 13.11: no [ ] brackets) */
   .rpg-tray .dot { right: calc(6 * var(--k)); top: 0; width: 6px; height: 6px; }
   .rpg-tray .lbl { text-shadow: none; }
   .rpg-tray .i-menu { display: none; } .rpg-tray .i-gear { display: inline; }
