@@ -4,7 +4,7 @@
 // ("FORGET TO FORESEE / Year 2048.") stands in for 2.5 s, so the intro never blocks. Emits npe.* and prologue.* on
 // ctx.bus when there is one. Saved at ftf.npe.v1; ?intro=1 forces it, ?intro=0 never.
 import NPE from '../play/locales/en-npe.js';
-import { WAKEUP, lineVars } from './dialogue-script.js';
+import { WAKEUP, lineVars, introPortrait } from './dialogue-script.js';
 import { loadNpe, saveNpe, shouldRun, initial, reduce } from './flow.js';
 import { playDialogue, createSubtitles, installCss } from './dialogue-ui.js';
 import { openRoadmapCard } from './roadmap-card.js';
@@ -92,7 +92,7 @@ export function runIntro(ctx) {
     // the dialogue
     const lines = WAKEUP.map((l) => ({ ...l, text: t(l.key, vars) }));
     const d = playDialogue({ doc, lines, reduced, name: (sp) => t('npe.speaker.' + sp), hint: t('npe.hint'), count: (n, of) => t('npe.count', { n, of }), skipLabel: t('npe.skip'),
-      portrait: ctx.portrait || ((sp) => (sp === 'iris' ? ((ctx.base || '/') + 'assets/cards/iris.webp') : null)),
+      portrait: ctx.portrait || ((sp) => introPortrait(sp, ctx.base || '/')),
       onLine: (i, l) => { if (l.camera && ctx.cameraCue) { try { ctx.cameraCue(l.camera); } catch { /* */ } } emit('npe.camera', { target: l.camera || null, line: l.id }); },
       onDone: (i) => step({ type: 'line_done', last: i === lines.length - 1 }) });
     current = d;

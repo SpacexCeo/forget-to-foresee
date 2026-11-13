@@ -9,6 +9,11 @@ export const SPEAKERS = Object.freeze({
   lamplighter: { color: '#f0b24a' }, elder: { color: '#f6c860' }, iris: { color: '#f3e6c8', italic: true },
 });
 
+/** Speakers with a painted portrait (assets/ui/portraits, the quest givers' set); the others show their initial. */
+export const PORTRAITS = Object.freeze({ elder: 'assets/ui/portraits/elder_256.webp', guard: 'assets/ui/portraits/guard_256.webp', lamplighter: 'assets/ui/portraits/lamplighter_256.webp', iris: 'assets/cards/iris.webp' });
+/** The portrait URL of a speaker under `base`, or null (then the box shows the initial). */
+export const introPortrait = (sp, base = '/') => (PORTRAITS[sp] ? base + PORTRAITS[sp] : null);
+
 /** @type {ReadonlyArray<{id: string, speaker: string, key: string, camera?: string}>} */
 export const WAKEUP = Object.freeze([
   { id: 'W1', speaker: 'townsfolk', key: 'npe.w1' },
