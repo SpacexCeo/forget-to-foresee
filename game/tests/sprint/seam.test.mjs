@@ -96,3 +96,16 @@ test('flags: the 15 sprint flags default off; ?ff=all / ?ff=a,b switch them on f
   assert.deepEqual(queryFlags('?ff=questJournal,nope'), { questJournal: true });
   assert.deepEqual(queryFlags(''), {});
 });
+
+test('window router: journal and market go to their real windows, help to settings, the rest is reported', async () => {
+  resetBus();
+  const { routeWindow, installWindowRouter } = await import('../../src/sprint/window-router.js');
+  const seen = []; const win = new EventTarget();
+  win.addEventListener('ftf:journal-toggle', () => seen.push('journal')); win.addEventListener('ftf:market-open', () => seen.push('market'));
+  const off = installWindowRouter({ win, openSettings: (tab) => seen.push('settings:' + tab) });
+  for (const id of ['journal', 'market', 'help']) win.dispatchEvent(new CustomEvent('ftf:open-window', { detail: { id } }));
+  assert.deepEqual(seen, ['journal', 'market', 'settings:controls']);
+  assert.equal(routeWindow('map', { win }), false);
+  assert.ok(globalThis.__ftfTelemetry.some((e) => e.name === 'window.missing' && e.payload.id === 'map'));
+  off(); win.dispatchEvent(new CustomEvent('ftf:open-window', { detail: { id: 'journal' } })); assert.equal(seen.length, 3, 'detached');
+});
