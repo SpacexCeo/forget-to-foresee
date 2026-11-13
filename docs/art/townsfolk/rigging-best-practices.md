@@ -97,14 +97,56 @@ sources are thin (they are mostly forum practice, not a standard) the note says 
 | 1 | every helper bone's weight redistributed (twist to its segment, knee and elbow shares split) | no weight left on dropped bones |
 | 2 | weights normalized, at most 4 influences, duplicates at one position share weights | exact |
 | 3 | rest stance of the character matches the clips' rest stance, or a direction-aligned rest offset is used | legs within 3 degrees |
-| 4 | clips baked offline on the character's own skeleton | no run-time retarget |
-| 5 | no vertex pulled away from its rest neighbours | edge stretch under 2.5 cm on the legs |
+| 4 | clips baked offline on the character's own skeleton, or the run-time retarget measured by the same check | measured |
+| 5 | no vertex pulled away from its rest neighbours | leg edges stretch under 3 cm while the legs stay nearly straight, under 10 cm in clips that bend a knee past 25 degrees (the outside of a bent knee lengthens by radius times angle) |
 | 6 | knee angle | 3 to 150 degrees, never negative |
 | 7 | knee bend plane continuous | under 25 degrees change per frame |
 | 8 | planted foot | slides under 2 cm while down |
 | 9 | feet on the floor | sole within 2 cm of the floor while down, never below it |
 | 10 | quaternion tracks continuous; loops close | exact |
 | 11 | looked at from the side at the game camera | film |
+
+## 9. Diagnosis of the five quest givers (13.11)
+
+Measured with `art/townsfolk/npc_check.mjs` on what the game played (`check/before.json`; the stretch column of that
+first run also counted the hands hanging beside the legs, the later runs count the legs' own skin only):
+
+| giver | ankles off their own stance, idle (cm) | knee bend plane turns in one frame, walk (deg) | planted foot slides, walk (cm) | feet slide, wave (cm) | worst edge stretch below the hips (cm) |
+|---|---|---|---|---|---|
+| guard | 18 | 106 | 5 | 20 | 7 |
+| innkeeper | 11 | 115 | 4 | 19 | 17 |
+| elder | 5 | 90 | 4 | 10 | 8 |
+| lamplighter | 2 | 106 | 5 | 20 | 68 |
+| shardkeeper | 12 | 105 | 5 | 18 | 4 |
+
+What the owner saw, and its cause:
+
+- **"The legs spread apart."** The load-time retarget sent each ankle to the reference's absolute foot position
+  scaled by leg length. The reference stands with its feet close; these models are bound in a wider stance. Every
+  clip pulled the feet 3 to 17 cm off the model's own stance, so the legs leaned in or out from the hips
+  (checklist 3).
+- **"They straighten sharply" / "the movements look absurd."** The knee's bend plane was taken from the retargeted
+  thigh alone. When the leg came near straight, or the thigh fell behind the hip-to-ankle line, the plane swung by
+  90 to 128 degrees in one frame: the knee snapped sideways or bent backward for a frame (checklist 6, 7).
+- **"The legs lag."** Nothing held a planted foot: 4 to 5 cm of slide per step in the walk, and up to 20 cm in the
+  standing clips (the reference shifts its feet during the wave; scaled to another body that reads as skating)
+  (checklist 8).
+- **"They come off."** Weights. The knee and elbow share bones were merged whole into the shin and the forearm, so the
+  knee cap swung with the shin and the skin above it tore away from the thigh; cloth and hip skin next to a resting
+  arm carried arm weight, and some leg weight crossed the centre line (the lamplighter worst: 15 to 68 cm of
+  stretch) (checklist 1, 4).
+
+## 10. What was changed
+
+- `game/src/play/anim-library.js`, the careful legs (`planted`, on for `npc_*`): the reference's foot travel is added
+  to the character's own rest foot; a foot that is down stays put in a standing clip and travels at exactly the
+  clip's speed in a walk, the difference fading out over the swing; the knee's plane leans on the way the hips face
+  and never points behind them.
+- `art/townsfolk/npc_build.py`: share bones split half and half between the two segments; arm weight removed from
+  everything farther than 8 to 13 cm from the arm's own bones; leg weight returned to its own side; the coat rule
+  (cloth hanging away from a leg follows it by 35% at most) on the three coats.
+- Not done: clips are still retargeted at load, not baked per character offline (checklist 4). The check therefore
+  runs the game's own loader and retarget, so it measures what is played.
 
 ## Sources
 

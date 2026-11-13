@@ -196,6 +196,7 @@ export function retargetClips(gltf, model, { names = null, body = 'adult', armOu
   return out;
 }
 
+const tgtPelX = (rest) => (rest.get('pelvis') ? rest.get('pelvis').wp.x : 0);
 function depth(rest, n) { let d = 0; for (let p = rest.get(n).parent; p; p = rest.get(p).parent) d++; return d; }
 
 const UPPER = /^(chest|neck|shoulder_[LR]|upperarm_[LR]|forearm_[LR]|hand_[LR]|thumb_[LR]|index_[LR]|fingers_[LR]|prop_[LR])$/;
@@ -211,7 +212,23 @@ function retargetClip(clip, ref, tgt, order, K, legs, scale, style, pelvisParent
   }
   const F = times.length;
   const refOrder = [...ref.keys()].sort((a, b) => depth(ref, a) - depth(ref, b));
-  const keyed = order.filter((n) => tracks.has(n) && K.has(n));
+  // The careful hands: these bodies are bound with flat, spread fingers. A hand at rest is never flat: the fingers
+  // curl toward the palm (the long ones most, the thumb least) and are never quite still.
+  const curl = new Map();
+  if (style.planted) {
+    for (const side of ['L', 'R']) {
+      const hand = tgt.get(`hand_${side}`); if (!hand) continue;
+      const inward = new THREE.Vector3(-Math.sign(hand.wp.x - tgtPelX(tgt)) || 0, 0, 0);
+      for (const [name, deg, live] of [[`fingers_${side}`, 30, 4], [`index_${side}`, 20, 3], [`thumb_${side}`, 12, 2]]) {
+        const b = tgt.get(name); if (!b) continue;
+        const dir = Y.clone().applyQuaternion(b.wq).normalize(), palm = new THREE.Vector3(0, -1, 0).addScaledVector(inward, 0.35); palm.addScaledVector(dir, -palm.dot(dir));
+        if (palm.lengthSq() < 1e-6) continue;
+        const axis = dir.clone().cross(palm.normalize()).normalize().applyQuaternion(b.wq.clone().invert()); // in the bone's own frame
+        curl.set(name, { axis, rad: THREE.MathUtils.degToRad(deg), live: THREE.MathUtils.degToRad(live), phase: side === 'L' ? 0 : 1.7 });
+      }
+    }
+  }
+  const keyed = order.filter((n) => (tracks.has(n) && K.has(n)) || curl.has(n));
   const outQ = new Map(keyed.map((n) => [n, new Float32Array(F * 4)]));
   const outP = new Float32Array(F * 3);
   const rw = new Map(refOrder.map((n) => [n, new THREE.Quaternion()])), rp = new Map(refOrder.map((n) => [n, new THREE.Vector3()]));
@@ -279,6 +296,7 @@ function retargetClip(clip, ref, tgt, order, K, legs, scale, style, pelvisParent
       else if (t.parent) tp.get(n).copy(t.t).applyQuaternion(pw).add(tp.get(t.parent));
       else tp.get(n).copy(t.wp);
     }
+    for (const [n, c] of curl) tw.get(n).multiply(s1.setFromAxisAngle(c.axis, c.rad + c.live * Math.sin((f / Math.max(1, F - 1)) * Math.PI * 2 + c.phase)));
     // the legs again, onto the reference's ankles at the model's scale
     for (let li = 0; li < legs.length; li++) {
       const L = legs[li];
