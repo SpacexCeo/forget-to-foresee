@@ -1,0 +1,111 @@
+// Wallet providers for the account login (net/account-login.js), no libraries:
+//   - EVM: EIP-6963 discovery (every injected wallet announces itself), else window.ethereum; EIP-191 personal_sign.
+//   - Solana: the injected providers (Phantom, Solflare, Backpack, window.solana); signMessage (ed25519 over bytes).
+//   - NEAR: MyNearWallet's sign-message page in a popup, the same request @near-wallet-selector/my-near-wallet makes
+//     (NEP-413: message, nonce, recipient; the answer comes back by postMessage from the wallet's origin).
+// A provider: {kind, id, name, connect() -> {address, publicKey?}, signMessage(text, nonceHex) -> signature text,
+// signDeviceKey() -> Uint8Array (>= 64 bytes)}. Nothing here runs until the player taps a wallet.
+import { DEVICE_KEY_TEXT, RECIPIENT, deviceKeyNonce, b58, b64, unb64, toHex, fromHex } from './account-login.js';
+
+const utf8 = (s) => new TextEncoder().encode(s);
+
+/** EIP-6963: the injected EVM wallets that answer within `waitMs`, plus window.ethereum when none announce. */
+export function discoverEvm(win = globalThis.window, waitMs = 250) {
+  return new Promise((resolve) => {
+    if (!win || typeof win.addEventListener !== 'function') { resolve([]); return; }
+    const found = new Map();
+    const on = (e) => { const d = e && e.detail; if (d && d.info && d.provider && !found.has(d.info.uuid)) found.set(d.info.uuid, { id: d.info.rdns || d.info.uuid, name: d.info.name, icon: d.info.icon, provider: d.provider }); };
+    win.addEventListener('eip6963:announceProvider', on);
+    try { win.dispatchEvent(new Event('eip6963:requestProvider')); } catch { /* old browser */ }
+    setTimeout(() => {
+      win.removeEventListener('eip6963:announceProvider', on);
+      const list = [...found.values()];
+      if (!list.length && win.ethereum) list.push({ id: 'injected', name: win.ethereum.isMetaMask ? 'MetaMask' : 'Browser wallet', icon: null, provider: win.ethereum });
+      resolve(list);
+    }, waitMs);
+  });
+}
+
+/** An EVM provider for one discovered wallet. */
+export function evmProvider(w) {
+  let address = null;
+  const sign = (text) => w.provider.request({ method: 'personal_sign', params: ['0x' + toHex(utf8(text)), address] });
+  return {
+    kind: 'evm', id: w.id, name: w.name,
+    async connect() { const [a] = await w.provider.request({ method: 'eth_requestAccounts' }); if (!a) throw new Error('no_account'); address = a; return { address: a }; },
+    signMessage: (text) => sign(text),
+    async signDeviceKey() { return fromHex(await sign(DEVICE_KEY_TEXT)).slice(0, 64); }, // r || s (v differs between wallets)
+  };
+}
+
+/** The injected Solana wallets of this page. */
+export function discoverSolana(win = globalThis.window) {
+  if (!win) return [];
+  const out = [], seen = new Set();
+  const add = (id, name, p) => { if (p && typeof p.signMessage === 'function' && !seen.has(p)) { seen.add(p); out.push({ id, name, provider: p }); } };
+  add('phantom', 'Phantom', win.phantom && win.phantom.solana);
+  add('solflare', 'Solflare', win.solflare);
+  add('backpack', 'Backpack', win.backpack && (win.backpack.solana || win.backpack));
+  add('solana', 'Solana wallet', win.solana);
+  return out;
+}
+
+/** A Solana provider for one injected wallet. */
+export function solanaProvider(w) {
+  let address = null;
+  const sig = async (text) => { const r = await w.provider.signMessage(utf8(text), 'utf8'); const s = r && (r.signature || r); return s instanceof Uint8Array ? s : Uint8Array.from(s); };
+  return {
+    kind: 'sol', id: w.id, name: w.name,
+    async connect() {
+      const r = await w.provider.connect();
+      const pk = (r && r.publicKey) || w.provider.publicKey;
+      address = pk && (typeof pk.toBase58 === 'function' ? pk.toBase58() : String(pk));
+      if (!address) throw new Error('no_account');
+      return { address };
+    },
+    async signMessage(text) { return b58(await sig(text)); },
+    signDeviceKey: () => sig(DEVICE_KEY_TEXT),
+  };
+}
+
+export const MNW_TESTNET = 'https://testnet.mynearwallet.com';
+/** NEP-413 through MyNearWallet's popup: resolves {accountId, publicKey, signature (base64)}. */
+export function myNearWalletSign({ message, nonce, recipient = RECIPIENT, walletUrl = MNW_TESTNET, win = globalThis.window }) {
+  return new Promise((resolve, reject) => {
+    const href = new URL(walletUrl); href.pathname = 'sign-message';
+    href.searchParams.append('message', message);
+    href.searchParams.append('nonce', b64(nonce));
+    href.searchParams.append('recipient', recipient);
+    href.searchParams.append('callbackUrl', win.location.href);
+    const child = win.open(href.toString(), 'MyNearWallet', 'width=480,height=640');
+    if (!child) { reject(new Error('popup_blocked')); return; }
+    const origin = new URL(walletUrl).origin;
+    const done = (fn, v) => { win.removeEventListener('message', on); clearInterval(poll); try { child.close(); } catch { /* gone */ } fn(v); };
+    const on = (e) => {
+      if (e.origin !== origin || !e.data) return;
+      if (e.data.status === 'success' && e.data.signedRequest) done(resolve, e.data.signedRequest);
+      else if (e.data.status === 'failure') done(reject, new Error(e.data.errorMessage || 'wallet_refused'));
+    };
+    win.addEventListener('message', on);
+    const poll = setInterval(() => { if (child.closed) done(reject, new Error('wallet_closed')); }, 500);
+  });
+}
+
+/** The NEAR provider (MyNearWallet). connect() is the device-key signature: it is also where the account comes from. */
+export function nearProvider({ sign = myNearWalletSign } = {}) {
+  let first = null;
+  return {
+    kind: 'near', id: 'mynearwallet', name: 'MyNearWallet',
+    async connect() {
+      first = await sign({ message: DEVICE_KEY_TEXT, nonce: await deviceKeyNonce() });
+      if (!first || !first.accountId || !first.signature) throw new Error('no_account');
+      return { address: first.accountId, publicKey: first.publicKey };
+    },
+    async signDeviceKey() { if (!first) throw new Error('not_connected'); return unb64(first.signature); },
+    async signMessage(text, nonceHex) {
+      const r = await sign({ message: text, nonce: fromHex(nonceHex) });
+      if (!first || r.accountId !== first.accountId) throw new Error('account_changed');
+      return r.signature;
+    },
+  };
+}

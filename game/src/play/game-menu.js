@@ -130,7 +130,7 @@ function spark(doc, values, w = 220, h = 44, color = '#2fc4b2') {
  * @param {{doc?: Document, t: Function, ledger: object, storage?: object, tab?: string, owner?: string|null, createGuest?: (() => Promise<{account?: string, error?: string}>)|null, exportKey?: Function|null,
  *   nickname?: string|null, eliseMinted?: boolean, onChain?: Promise, base?: string, manifest?: Promise}} o
  */
-export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 'profile', owner: ownerIn = null, createGuest = null, exportKey = null, nickname = null, eliseMinted = false, onChain = null, base = (import.meta.env && import.meta.env.BASE_URL) || '/', manifest = null, chests = null, chestClient = null, heroineToken = null, companionsRead = null, now = () => Date.now() }) {
+export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 'profile', owner: ownerIn = null, createGuest = null, exportKey = null, nickname = null, eliseMinted = false, onChain = null, base = (import.meta.env && import.meta.env.BASE_URL) || '/', manifest = null, chests = null, chestClient = null, heroineToken = null, companionsRead = null, now = () => Date.now(), account = null }) {
   if (!(doc.getElementById && doc.getElementById('gm-style'))) { const st = doc.createElement('style'); st.id = 'gm-style'; st.textContent = CSS + WHEEL_CSS; doc.head.append(st); }
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const btn = (text, fn, cls = 'gm-btn') => { const b = el('button', cls, text); b.type = 'button'; b.addEventListener('click', () => fn(b)); return b; };
@@ -148,7 +148,11 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
   const xBtn = btn('×', () => close(), 'gm-x'); xBtn.setAttribute('aria-label', t('quest.close'));
   // UI-004 header: the game's name over the open tab's title
   const head = el('div', 'gm-head'); const titleBox = el('div', 'gm-titlebox'); const tabTitle = el('h2', null, t('menu.title'));
-  titleBox.append(el('span', 'gm-kicker', 'Forget to Foresee'), tabTitle); head.append(titleBox, xBtn);
+  titleBox.append(el('span', 'gm-kicker', 'Forget to Foresee'), tabTitle); head.append(titleBox);
+  if (account) { // sign in / create account (flag accountLogin): opens its own panel over the menu
+    const a = btn(account.login ? t('acct.signed', { login: account.login }) : t('acct.open'), () => account.open(), 'gm-btn'); a.style.cssText = 'margin-left:auto;min-height:40px;padding:8px 14px'; a.dataset.acct = '1'; head.append(a);
+  }
+  head.append(xBtn);
   const tabs = el('div', 'gm-tabs'); tabs.setAttribute('role', 'tablist');
   const body = el('div', 'gm-body'); body.setAttribute('role', 'tabpanel');
   panel.append(head, tabs, body);
