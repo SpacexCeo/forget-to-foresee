@@ -1,7 +1,7 @@
 // The RPG HUD layout (sprint plan 5.4 / 5.5 / 3.3): every rectangle at the 1920 × 1080 reference, scaled with --u.
 // The design tokens are declared here with the plan's final values as fallbacks (A5's tokens.css overrides them).
 export const HUD_CSS = `
-.rpg { --u: calc(min(100vw, 100vh * 1.7778) / 1920);
+.rpg { --u: calc(min(100vw, 100vh * 1.7778) / 1920); /* a 1920x1080 frame; the lower pieces sit by bottom, so a window taller than 16:9 keeps them at the foot of the screen */
   position: fixed; inset: 0; pointer-events: none; z-index: 10; font-family: var(--font-ui); color: var(--ftf-text); }
 .rpg[hidden] { display: none; }
 .rpg * { box-sizing: border-box; }
@@ -51,12 +51,12 @@ export const HUD_CSS = `
 .rpg-zoom button:disabled { opacity: .45; cursor: not-allowed; }
 .rpg-coords { left: calc(1696 * var(--u)); top: calc(228 * var(--u)); width: calc(200 * var(--u)); text-align: center; font-size: max(11px, calc(12 * var(--u))); color: var(--ftf-muted); }
 /* cast bar 810,940 300×16 */
-.rpg-castbar { left: calc(810 * var(--u)); top: calc(940 * var(--u)); width: calc(300 * var(--u)); height: calc(16 * var(--u)); background: rgba(0,0,0,.6); }
+.rpg-castbar { left: calc(810 * var(--u)); top: auto; bottom: calc(124 * var(--u)); width: calc(300 * var(--u)); height: calc(16 * var(--u)); background: rgba(0,0,0,.6); }
 .rpg-castbar[hidden] { display: none; }
 .rpg-castbar i.fill { background: var(--ftf-gold); }
 .rpg-castbar[data-int="1"] i.fill { background: var(--ftf-danger); }
 /* hotbar 684,1000 552×56 */
-.rpg-hotbar { left: calc(684 * var(--u)); top: calc(1000 * var(--u)); width: calc(552 * var(--u)); height: calc(56 * var(--u)); display: flex; gap: calc(6 * var(--u)); }
+.rpg-hotbar { left: calc(684 * var(--u)); top: auto; bottom: calc(24 * var(--u)); width: calc(552 * var(--u)); height: calc(56 * var(--u)); display: flex; gap: calc(6 * var(--u)); }
 .rpg-slot { position: relative; flex: 0 0 calc(56 * var(--u)); height: calc(56 * var(--u)); border: 2px solid var(--ftf-border); border-radius: 8px; background: rgba(14,16,24,.88); padding: 0; pointer-events: auto; overflow: hidden; transition: transform 80ms; }
 .rpg-slot:hover { border-color: var(--ftf-gold); }
 .rpg-slot:focus-visible { outline: 2px solid var(--ftf-gold); outline-offset: 2px; }
@@ -75,11 +75,11 @@ export const HUD_CSS = `
 .rpg-slot[data-active="1"] { border-color: var(--ftf-gold); animation: rpg-glow 1s ease-in-out infinite; }
 @keyframes rpg-glow { 50% { box-shadow: 0 0 calc(8 * var(--u)) var(--ftf-gold); } }
 /* xp bar 684,1064 552×8 */
-.rpg-xp { left: calc(684 * var(--u)); top: calc(1064 * var(--u)); width: calc(552 * var(--u)); height: max(6px, calc(8 * var(--u))); background: var(--xp-bg); pointer-events: auto; }
+.rpg-xp { left: calc(684 * var(--u)); top: auto; bottom: calc(8 * var(--u)); width: calc(552 * var(--u)); height: max(6px, calc(8 * var(--u))); background: var(--xp-bg); pointer-events: auto; }
 .rpg-xp i.fill { background: var(--xp); }
 .rpg-xp .tick { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(255,255,255,.55); }
 /* chat and log 24,836 420×220 */
-.rpg-log { left: calc(24 * var(--u)); top: calc(836 * var(--u)); width: calc(420 * var(--u)); height: calc(220 * var(--u)); background: rgba(14,16,24,.72); pointer-events: auto; display: flex; flex-direction: column; }
+.rpg-log { left: calc(24 * var(--u)); top: auto; bottom: calc(24 * var(--u)); width: calc(420 * var(--u)); height: calc(220 * var(--u)); background: rgba(14,16,24,.72); pointer-events: auto; display: flex; flex-direction: column; }
 .rpg-log:hover, .rpg-log:focus-within { background: rgba(14,16,24,.92); }
 .rpg-log .tabs { display: flex; gap: 2px; padding: 2px; }
 .rpg-log .tabs button { height: max(24px, calc(24 * var(--u))); padding: 0 10px; border: 0; border-radius: 6px; background: transparent; font-size: max(12px, calc(13 * var(--u))); color: var(--ftf-muted); }
@@ -88,7 +88,7 @@ export const HUD_CSS = `
 .rpg-log .body p { margin: 0 0 4px; }
 .rpg-log .body .sys { color: var(--ftf-muted); } .rpg-log .body .quest { color: var(--ftf-gold); } .rpg-log .body .err { color: var(--ftf-danger); } .rpg-log .body .xp { color: var(--ftf-xp); } .rpg-log .body .loot { color: var(--ftf-silk); }
 /* silk chip 1372,1012 168×44 */
-.rpg-silk { left: calc(1372 * var(--u)); top: calc(1012 * var(--u)); width: calc(168 * var(--u)); height: calc(44 * var(--u)); pointer-events: auto; cursor: pointer; }
+.rpg-silk { left: calc(1372 * var(--u)); top: auto; bottom: calc(24 * var(--u)); width: calc(168 * var(--u)); height: calc(44 * var(--u)); pointer-events: auto; cursor: pointer; }
 .rpg-silk .coin { position: absolute; left: calc(10 * var(--u)); top: calc(10 * var(--u)); width: calc(24 * var(--u)); height: calc(24 * var(--u)); border-radius: 50%; background: radial-gradient(circle at 35% 35%, #fff4cf, #e8dcb4 45%, #9c8a55); }
 .rpg-silk .l1 { position: absolute; left: calc(42 * var(--u)); top: calc(4 * var(--u)); font-size: max(14px, calc(16 * var(--u))); font-weight: 700; color: var(--ftf-silk); white-space: nowrap; }
 .rpg-silk .l2 { position: absolute; left: calc(42 * var(--u)); top: calc(24 * var(--u)); font-size: max(11px, calc(12 * var(--u))); color: var(--ftf-warn); white-space: nowrap; }
@@ -97,7 +97,7 @@ export const HUD_CSS = `
 .rpg-silk[data-pop="1"] { animation: rpg-pop .24s ease-out; }
 @keyframes rpg-pop { 50% { transform: scale(1.08); } }
 /* tray 1552,1012 344×44 */
-.rpg-tray { left: calc(1552 * var(--u)); top: calc(1012 * var(--u)); width: calc(344 * var(--u)); height: calc(44 * var(--u)); display: flex; gap: calc(6 * var(--u)); }
+.rpg-tray { left: calc(1552 * var(--u)); top: auto; bottom: calc(24 * var(--u)); width: calc(344 * var(--u)); height: calc(44 * var(--u)); display: flex; gap: calc(6 * var(--u)); }
 .rpg-tray button { position: relative; flex: 0 0 calc(44 * var(--u)); height: calc(44 * var(--u)); min-width: 0; padding: 0; border: 1px solid var(--ftf-border); border-radius: 8px; background: var(--ftf-panel); display: flex; align-items: center; justify-content: center; }
 .rpg-tray button:hover { border-color: var(--ftf-gold-dim); background: rgba(255,255,255,.12); }
 .rpg-tray button[aria-pressed="true"] { border-color: var(--ftf-gold); }

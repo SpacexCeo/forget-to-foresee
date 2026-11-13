@@ -1,15 +1,15 @@
 // Salvage drops (owner's story TZ, item Q2): the fast, certain source of the spare part a citizen asks for. Every
 // monster kill rolls once, seeded by its kill id (so a replay or an agent gets the same part for the same kill): a
-// stone spider (id `skitter`) drops a part 30 % of the time and never misses seven times running (the 7th kill after
-// six misses always drops), veilbells and the hulker drop uncommon or rare parts, the crownrift always drops a rare
+// stone spider (id `skitter`) drops a part 60 % of the time and never misses three times running (the 3rd kill after
+// two misses always drops), veilbells and the hulker drop uncommon or rare parts, the crownrift always drops a rare
 // (5 % legendary). At most SALVAGE.dailyCap parts per UTC day. Pure: state in, state out, nothing mutated. The quest
 // rules (quest-rules.js) re-export salvageRoll; the view adds the part to the inventory with source 'salvage'.
 import { seededRandom } from './town-economy.js';
 import { resolveMobId } from './mob-names.js';
 
 export const SALVAGE = Object.freeze({
-  spiderChance: 0.3,          // a stone spider (skitter) drops a part this often ...
-  pity: 6,                    // ... and after this many misses in a row the next one always drops
+  spiderChance: 0.6,          // a stone spider (skitter) drops a part this often (owner 13.11: was 0.3, too rare) ...
+  pity: 2,                    // ... and after this many misses in a row the next one always drops (the 3rd kill at worst)
   uncommonShare: 0.15,        // of a spider's drops, the rest common
   dailyCap: 12,               // salvage parts per UTC day, then none
   legendaryShare: 0.05,       // of the crownrift's drops

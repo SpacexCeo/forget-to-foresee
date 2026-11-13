@@ -26,20 +26,20 @@ test('no player-visible locale string says "skitter"; art/mobs/mobs.json carries
   assert.equal(mobs.skitter.display, 'stone spider'); assert.equal(mobs.skitter.file, 'mob_skitter.glb', 'file names unchanged');
 });
 
-test('salvage (Q2): spiders 30 % with a guarantee on the 7th, deterministic, tables by type, 12 per UTC day', async () => {
+test('salvage (Q2): spiders 60 % with a guarantee on the 3rd (owner 13.11), deterministic, tables by type, 12 per UTC day', async () => {
   const { salvageRoll, initialSalvage, SALVAGE } = await import('../../src/game/salvage.js');
-  // pity: never more than 6 misses in a row over 10,000 seeded spider kills (days rotate so the cap never bites)
+  // pity: never more than 2 misses in a row over 10,000 seeded spider kills (days rotate so the cap never bites)
   let s = initialSalvage(), run = 0, worst = 0, drops = 0, unc = 0;
   for (let i = 0; i < 10000; i++) {
     const r = salvageRoll(s, { killId: 'k' + i, mob: 'skitter', day: 'd' + Math.floor(i / 10) });
     s = r.state;
     if (r.partId) { drops++; if (SALVAGE.uncommon.includes(r.partId)) unc++; else assert.ok(SALVAGE.common.includes(r.partId)); run = 0; } else worst = Math.max(worst, ++run);
   }
-  assert.ok(worst <= 6, `at most 6 misses in a row (${worst})`);
-  const rate = drops / 10000; assert.ok(rate > 0.3 && rate < 0.42, `drop rate with the pity ${rate}`);
+  assert.ok(worst <= SALVAGE.pity, `at most ${SALVAGE.pity} misses in a row (${worst})`);
+  const rate = drops / 10000; assert.ok(rate > 0.6 && rate < 0.72, `drop rate with the pity ${rate}`);
   assert.ok(Math.abs(unc / drops - 0.15) < 0.03, `uncommon share ${(unc / drops).toFixed(3)}`);
-  // a fresh profile: the first part within 7 spider kills, always
-  for (let p = 0; p < 200; p++) { let st = initialSalvage(), got = 0; for (let i = 0; i < 7 && !got; i++) { const r = salvageRoll(st, { killId: `p${p}_${i}`, mob: 'spider', day: 'x' }); st = r.state; if (r.partId) got = i + 1; } assert.ok(got >= 1 && got <= 7); }
+  // a fresh profile: the first part within 3 spider kills, always
+  for (let p = 0; p < 200; p++) { let st = initialSalvage(), got = 0; for (let i = 0; i < 3 && !got; i++) { const r = salvageRoll(st, { killId: `p${p}_${i}`, mob: 'spider', day: 'x' }); st = r.state; if (r.partId) got = i + 1; } assert.ok(got >= 1 && got <= 3); }
   // determinism, aliases, no mutation
   const a = salvageRoll(initialSalvage(), { killId: 'same', mob: 'skitter', day: 'x' }), b = salvageRoll(initialSalvage(), { killId: 'same', mob: 'stone spider', day: 'x' });
   assert.deepEqual(a, b);
