@@ -47,6 +47,7 @@ test('journal: opens with five tabs; the spiders show Guard, 0/10 and 0/5, 20 si
   const d = doc.querySelector('.fj-detail').textContent;
   assert.match(d, /From: Guard/); assert.match(d, /Kill stone spiders0\/10/); assert.match(d, /Bring spider silk thread0\/5/); assert.match(d, /\+20 silk/); assert.match(d, /\+80 XP/);
   assert.match(d, /HOW TO GET IT/);
+  const res = doc.querySelector('[data-res="spider_silk_thread"]'); assert.ok(res && res.querySelector('.fj-res'), 'the delivery shows the resource icon (A3 art.js)');
   assert.equal(walks.length, 0, 'selecting never moves Iris');
   doc.querySelector('[data-quest="q_spiders"]').click(); // the second click
   assert.deepEqual(walks, ['q_spiders']); assert.equal(j.isOpen, false);
@@ -119,4 +120,14 @@ test('auto-walk: a movement key wins over the 2 s re-plan toward a walking giver
   route = null; ended = 'cancel'; t = 2500; w.update(); // W pressed in a slow frame, then the re-plan is due
   assert.deepEqual(events.at(-1), ['autowalk.cancelled', 'input']);
   assert.equal(route, null, 'the route stays dropped');
+});
+
+test('auto-walk: held off by the giver at talking range counts as arrived, not blocked', () => {
+  let pos = [0, 0, 0], route = null, ended = null, t = 0; const events = [];
+  const driver = { setRoute: (pts) => { route = pts; ended = null; }, cancel: () => { if (route) ended = 'cancel'; route = null; }, active: () => !!route, ended: () => ended, pos: () => pos };
+  const w = createAutoWalk({ driver, doc: makeDoc(), say, emit: (n, p) => events.push([n, p.reason || null]), now: () => t });
+  w.autoWalkTo({ pos: [10, 0], label: 'Elder' });
+  pos = [7, 0, 0]; t = 100; w.update(); // 3 m away, then stuck against the Elder's collider
+  t = 2000; w.update();
+  assert.deepEqual(events.at(-1), ['autowalk.arrived', null]);
 });

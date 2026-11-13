@@ -117,12 +117,19 @@ test('E6: an auto-walk that reaches 2.2 m of the giver fires autowalk.arrived', 
   const g = await openTown('?' + FLAGS);
   try {
     await g.page.evaluate(() => { window.__aw = []; for (const n of ['started', 'arrived', 'cancelled']) window.addEventListener('ftf:autowalk.' + n, (e) => window.__aw.push(n + ':' + ((e.detail && e.detail.reason) || ''))); });
+    // software rendering is slow: start 5 m from the Elder (her quest marker, town-local + TOWN_ORIGIN) so the walk is short
+    await g.until(() => (globalThis.__ftfQuestMarkers || []).some((m) => m.id === 'avail:q_welcome'), 20000);
+    await g.page.evaluate(() => {
+      const m = globalThis.__ftfQuestMarkers.find((x) => x.id === 'avail:q_welcome'), pl = window.__ftf.player;
+      const p = [m.pos[0], pl.pos[1], m.pos[1] + 5]; pl.pos = p.slice(); pl.prevPos = p.slice(); pl.lastSafe = p.slice(); pl.vy = 0;
+    });
+    await g.wait(1500);
     await press(g, 'j');
     await g.until(() => !!document.querySelector('.fj-row[data-quest="q_welcome"]'), 10000);
     await g.click('.fj-row[data-quest="q_welcome"]'); await g.wait(200);
     await g.click('.fj-row[data-quest="q_welcome"]');
     await g.until(() => window.__aw.includes('started:'), 10000);
-    // the whole walk runs on its own (software rendering is slow: a generous timeout)
+    // the rest of the walk runs on its own (software rendering is slow: a generous timeout)
     await g.until(() => window.__aw.some((e) => e.startsWith('arrived') || e.startsWith('cancelled')), 240000);
     const ev = await g.page.evaluate(() => window.__aw);
     assert.ok(ev.includes('arrived:'), 'autowalk.arrived: ' + ev);

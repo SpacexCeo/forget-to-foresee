@@ -115,6 +115,7 @@ export function createAutoWalk({ driver, emit = () => {}, toast = () => {}, say 
         finish('cancelled', 'input'); return; // a movement key cleared the town's route
       }
       if (d < walk.best - 0.25) { walk.best = d; walk.bestAt = t; }
+      else if (t - walk.bestAt > 1500 && d <= walk.stopRadius * 1.6) { driver.cancel(); finish('arrived'); } // held off by the giver's own collider: close enough to talk
       else if (t - walk.bestAt > 6000) { finish('cancelled', 'blocked'); toast(say('autowalk.blocked')); }
     },
     dispose() { if (walk) finish('cancelled', 'replaced'); hideLabel(); },
