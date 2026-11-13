@@ -140,7 +140,7 @@ function spark(doc, values, w = 220, h = 44, color = '#2fc4b2') {
  * @param {{doc?: Document, t: Function, ledger: object, storage?: object, tab?: string, owner?: string|null, createGuest?: (() => Promise<{account?: string, error?: string}>)|null, exportKey?: Function|null,
  *   nickname?: string|null, eliseMinted?: boolean, onChain?: Promise, base?: string, manifest?: Promise}} o
  */
-export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 'profile', owner: ownerIn = null, createGuest = null, exportKey = null, nickname = null, eliseMinted = false, onChain = null, base = (import.meta.env && import.meta.env.BASE_URL) || '/', manifest = null, chests = null, chestClient = null, heroineToken = null, companionsRead = null, now = () => Date.now(), account = null, townLedger = false }) {
+export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 'profile', owner: ownerIn = null, createGuest = null, exportKey = null, nickname = null, eliseMinted = false, onChain = null, base = (import.meta.env && import.meta.env.BASE_URL) || '/', manifest = null, chests = null, chestClient = null, heroineToken = null, companionsRead = null, now = () => Date.now(), account = null, townLedger = false, onClose = null }) {
   const tabList = townLedger ? [TABS[0], TOWN_TAB, ...TABS.slice(1)] : TABS;
   let ledgerView = null; // the open Town Ledger (it polls the relayer while it is shown)
   if (!(doc.getElementById && doc.getElementById('gm-style'))) { const st = doc.createElement('style'); st.id = 'gm-style'; st.textContent = CSS + WHEEL_CSS; doc.head.append(st); }
@@ -174,7 +174,8 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
   root.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Escape') close(); });
   doc.body.append(root);
   let current = null;
-  function close() { if (wheelView) wheelView.destroy(); if (ledgerView) ledgerView.destroy(); inv.dispose(); root.remove(); }
+  let closed = false;
+  function close() { if (closed) return; closed = true; if (wheelView) wheelView.destroy(); if (ledgerView) ledgerView.destroy(); inv.dispose(); root.remove(); if (onClose) onClose(); }
 
   const views = {
     profile() {

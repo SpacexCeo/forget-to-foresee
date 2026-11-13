@@ -15,6 +15,7 @@ import { portalFee } from '../game/expedition-config.js';
 import { xpForKill } from '../game/town-economy.js';
 import { mobDisplayName } from '../game/mob-names.js';
 import { blocksWindows } from '../ui/onboarding-queue.js';
+import { registerWindow, claimWindow, pressWindow, isWindowOpen } from '../ui/window-toggle.js';
 
 export const RPG_KEY = 'ftf.rpg.v1';
 const WORLD_HP = 100;                           // the hillside fight counts Iris's health out of 100 (play/mobs.js IRIS_HP)
@@ -132,8 +133,10 @@ export function mount(ctx) {
   const typing = (e) => { const el = e.target; return !!(el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName || ''))) || !!doc.querySelector('dialog[open]'); };
   const active = () => (ctx.active ? ctx.active() : !!(win.__ftf && win.__ftf.town && win.__ftf.town.active));   // the town phase only (not the archipelago)
   const onKey = (e) => {
-    if (e.__rpg || !active() || typing(e) || (e.target && e.target.closest && e.target.closest('.rpg-modal:not([hidden])'))) return;   // keys inside the tree or the sheet are theirs
+    if (e.__rpg || !active() || typing(e)) return;
     const action = actionOf(e.code) || FIXED_ALIASES[e.code] || null; if (!action) return;
+    // keys inside the tree or the sheet are theirs, but the window keys still close it or switch to another window
+    if (e.target && e.target.closest && e.target.closest('.rpg-modal:not([hidden])') && !(WINDOWS.includes(action) || action === 'help')) return;
     const down = e.type === 'keydown';
     const slot = /^hotbar(\d)$/.exec(action);
     if (slot) { e.preventDefault(); e.stopImmediatePropagation(); if (!e.repeat || !down) press(Number(slot[1]) - 1, 'key', !down); return; }
@@ -157,19 +160,21 @@ export function mount(ctx) {
     if (!list.length) { targetId = null; return; }
     const i = list.findIndex((m) => m.id === targetId); targetId = list[(i + 1) % list.length].id;
   }
+  // one window at a time (ui/window-toggle.js): the tree, the sheet and the cheat sheet answer for themselves here
+  const offWindows = [['skills', () => tree], ['character', () => sheet], ['help', () => cheat]].map(([id, w]) => registerWindow(id, { isOpen: () => !!(w() && w().isOpen), close: () => w() && w().close() }));
   function openWindow(id) {
     if (id !== 'menu' && blocksWindows()) return;                                   // a first-time overlay runs: windows wait
     if (id === 'menu') { if (ctx.openMenu) ctx.openMenu(); else { const e = new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape', bubbles: true }); e.__rpg = true; win.dispatchEvent(e); } return; }
-    if (id === 'skills') { import('./skill-tree-ui.js').then((m) => { tree = tree || m.createSkillTree({ doc, t, api }); tree.toggle(); open.skills = tree.isOpen; }); return; }
-    if (id === 'character') { import('./character-panel.js').then((m) => { sheet = sheet || m.createCharacterPanel({ doc, t, api }); sheet.toggle(); open.character = sheet.isOpen; }); return; }
+    if (id === 'skills') { import('./skill-tree-ui.js').then((m) => { tree = tree || m.createSkillTree({ doc, t, api }); if (!tree.isOpen) claimWindow('skills'); tree.toggle(); open.skills = tree.isOpen; }); return; }
+    if (id === 'character') { import('./character-panel.js').then((m) => { sheet = sheet || m.createCharacterPanel({ doc, t, api }); if (!sheet.isOpen) claimWindow('character'); sheet.toggle(); open.character = sheet.isOpen; }); return; }
     if (id === 'help') {                                                             // F1: the read-only cheat sheet (rebind lives in Settings -> Controls)
       import('./cheat-sheet.js').then((m) => { cheat = cheat || m.createCheatSheet({ doc, t, touch: () => !!(ctx.keys && ctx.keys.touchControls),
         onRebind: () => { if (ctx.openSettings) ctx.openSettings('controls'); else win.dispatchEvent(new CustomEvent('ftf:open-window', { detail: { id: 'settings', tab: 'controls' } })); },
         onGlossary: () => import('../npe/glossary.js').then((g) => g.openGlossary({ doc, t: ctx.t })).catch(() => win.dispatchEvent(new CustomEvent('ftf:open-window', { detail: { id: 'glossary' } }))) });
-        cheat.toggle(); });
+        if (!cheat.isOpen) claimWindow('help'); cheat.toggle(); });
       return;
     }
-    if (id === 'market') { win.dispatchEvent(new CustomEvent('ftf:market-open', { detail: { tab: 'buy' } })); return; } // B and the tray: boot-world mounts market/ lazily on this event
+    if (id === 'market') { if (pressWindow('market')) win.dispatchEvent(new CustomEvent('ftf:market-open', { detail: { tab: 'buy' } })); return; } // B and the tray: boot-world mounts market/ lazily on this event
     if (ctx.ui && ctx.ui.open) ctx.ui.open(id); else win.dispatchEvent(new CustomEvent('ftf:open-window', { detail: { id } }));
   }
 
@@ -270,7 +275,7 @@ export function mount(ctx) {
         cast: cast && cast.dur > 300 ? { name: cast.name, p: Math.min(1, (tnow - cast.t0) / cast.dur) } : null,
         slots, xpInto: xi.into, xpNeed: xi.need, silk: sv, silkPop,
         // the desktop tray has no Skills button (owner 13.11): the Character button carries its dot too
-        open: { skills: !!(tree && tree.isOpen), character: !!(sheet && sheet.isOpen) }, badges: { skills: sp > 0 && L >= 2, character: tp > 0 || (sp > 0 && L >= 2) },
+        open: { skills: !!(tree && tree.isOpen), character: !!(sheet && sheet.isOpen), journal: isWindowOpen('journal'), bag: isWindowOpen('menu'), market: isWindowOpen('market') }, badges: { skills: sp > 0 && L >= 2, character: tp > 0 || (sp > 0 && L >= 2) },
         coords: ctx.player && map ? map.coords() : null, zoomMin: map && map.atMin, zoomMax: map && map.atMax,
         zone: M && M.iris && M.iris.outside ? 'field' : 'town', stamina: ctx.stamina || null,
       });
@@ -282,7 +287,7 @@ export function mount(ctx) {
     dispose() {
       win.removeEventListener('keydown', onKey, true); win.removeEventListener('keyup', onKey, true); win.removeEventListener('ftf:cast', onCastEvent); win.removeEventListener('ftf:mob-killed', onKill); win.removeEventListener('ftf:close-windows', onCloseAll); doc.removeEventListener('pointerdown', onOutside, true);
       doc.documentElement.classList.remove('rpg-mk');
-      if (offLedger) offLedger(); if (offHit) offHit(); offBind(); hud.dispose(); if (tree) tree.dispose(); if (sheet) sheet.dispose(); if (cheat) cheat.dispose();
+      if (offLedger) offLedger(); if (offHit) offHit(); offBind(); for (const off of offWindows) off(); hud.dispose(); if (tree) tree.dispose(); if (sheet) sheet.dispose(); if (cheat) cheat.dispose();
     },
   };
 }

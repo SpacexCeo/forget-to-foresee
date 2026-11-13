@@ -24,7 +24,9 @@ import { Input } from './ui/input.js';
 import { PAD } from './ui/gamepad.js';
 import { navigateGamepadMenu } from './ui/gamepad-menu.js';
 import { mountSceneControls } from './ui/scene-controls.js';
-import { setBindings, loadBindings } from './ui/keybinds.js';
+import { setBindings, loadBindings, bindings } from './ui/keybinds.js';
+import { createMouseAim, aimPoint } from './ui/mouse-aim.js';
+import { menuKeyAction, registerWindow, claimWindow } from './ui/window-toggle.js';
 import { loadSettings, renderOverrides, lookFactors, frameDue } from './ui/settings-store.js';
 import { loadVolumes, saveVolumes } from './audio/mix.js';
 import './ui/styles.css';
@@ -218,10 +220,22 @@ ctx.townLedger = townLedger; // the Echo terminal's board shows the learning tow
 // It reads ftf-town through the relayer, keeps the last good number when offline and records waiting silk on Sync.
 import('./net/silk-balance.js').then((m) => { const model = m.createSilkModel({ ledger: townLedger, storage: ctx.storage, flush: () => (expeditionSync ? expeditionSync.flush() : null) }); m.installSilkModel(model); model.refresh(true); }).catch((e) => console.warn('[silk]', e));
 // The player market (market/index.js; docs/market.md): loaded on the first 'ftf:market-open' {tab?}; the HUD's key and button send it.
-{ let market = null; const openMarket = (e) => { if (market) return; window.removeEventListener('ftf:market-open', openMarket); import('./market/index.js').then((m) => { market = m.mount({ t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage, ledger: townLedger }); market.open((e && e.detail && e.detail.tab) || 'buy'); }).catch((err) => console.warn('[market]', err)); }; window.addEventListener('ftf:market-open', openMarket); }
+{ let market = null; const openMarket = (e) => { if (market) return; window.removeEventListener('ftf:market-open', openMarket); import('./market/index.js').then((m) => { market = m.mount({ t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage, ledger: townLedger }); claimWindow('market'); market.open((e && e.detail && e.detail.tab) || 'buy'); }).catch((err) => console.warn('[market]', err)); }; window.addEventListener('ftf:market-open', openMarket); }
 // The game menu (play/game-menu.js): Profile, Achievements, NFTs, Inventory + wheel, Agents, Log / Stats.
-const openProfileFor = (quest = null, tab = 'profile') => import('./play/game-menu.js').then((m) => { const d1 = loadDay1(ctx.storage); return m.openGameMenu({ t: (k, a) => ctx.i18n.t(k, a), ledger: townLedger, storage: ctx.storage, tab, chests: chestBag, heroineToken: (d1.guest || {}).token_id || null, owner: (d1.guest || {}).account_id || null, createGuest: () => day1Mint.mint(loadDay1(ctx.storage).nickname || undefined).then((r) => (r.phase === 'minted' && r.record.guest ? { account: r.record.guest.account_id } : { error: r.reason || 'failed' })), nickname: d1.nickname || null, eliseMinted: !!d1.minted, townLedger: featureFlags.on('townLedger'), account: featureFlags.on('accountLogin') ? { open: () => openAccount(), login: d1.login ? `${d1.login.kind.toUpperCase()} ${String(d1.login.address).slice(0, 10)}…` : null } : null, exportKey: d1.playerKey ? () => { const r = loadDay1(ctx.storage); return `account: ${(r.guest || {}).account_id || '(not created yet)'}\nsecret key: ${r.playerKey.secretKey}`; } : null }); }).catch((e) => console.warn('[menu]', e));
-window.addEventListener('ftf:menu-open', (e) => { const tab = e && e.detail && e.detail.tab; openProfileFor(null, typeof tab === 'string' ? tab : 'profile'); }); // the HUD's Bag (I) via sprint/window-router.js
+// One game menu at a time (owner 13.11: I, then I or C again, stacked a second layer): a hotkey or a tray button for the
+// open tab closes the menu, for another tab switches to it (ui/window-toggle.js menuKeyAction); other windows close first.
+let gameMenu = null, gameMenuLoading = null;
+registerWindow('menu', { isOpen: () => !!gameMenu, close: () => gameMenu && gameMenu.close() });
+const openProfileFor = (quest = null, tab = 'profile', toggle = false) => {
+  const act = menuKeyAction({ open: !!gameMenu, tab: gameMenu && (gameMenu.tab === 'wheel' ? 'inventory' : gameMenu.tab) }, tab === 'wheel' ? 'inventory' : tab, toggle);
+  if (act === 'close') { gameMenu.close(); return Promise.resolve(null); }
+  if (act === 'switch' || act === 'stay') { if (gameMenu.tab !== tab) gameMenu.show(tab); return Promise.resolve(gameMenu); }
+  if (gameMenuLoading) return gameMenuLoading; // a second key press while the menu's code loads
+  claimWindow('menu');
+  return (gameMenuLoading = openGameMenuNow(quest, tab).then((h) => { gameMenuLoading = null; return h; }));
+};
+const openGameMenuNow = (quest, tab) => import('./play/game-menu.js').then((m) => { const d1 = loadDay1(ctx.storage); const h = m.openGameMenu({ onClose: () => { if (gameMenu === h) gameMenu = null; }, t: (k, a) => ctx.i18n.t(k, a), ledger: townLedger, storage: ctx.storage, tab, chests: chestBag, heroineToken: (d1.guest || {}).token_id || null, owner: (d1.guest || {}).account_id || null, createGuest: () => day1Mint.mint(loadDay1(ctx.storage).nickname || undefined).then((r) => (r.phase === 'minted' && r.record.guest ? { account: r.record.guest.account_id } : { error: r.reason || 'failed' })), nickname: d1.nickname || null, eliseMinted: !!d1.minted, townLedger: featureFlags.on('townLedger'), account: featureFlags.on('accountLogin') ? { open: () => openAccount(), login: d1.login ? `${d1.login.kind.toUpperCase()} ${String(d1.login.address).slice(0, 10)}…` : null } : null, exportKey: d1.playerKey ? () => { const r = loadDay1(ctx.storage); return `account: ${(r.guest || {}).account_id || '(not created yet)'}\nsecret key: ${r.playerKey.secretKey}`; } : null }); gameMenu = h; return h; }).catch((e) => { console.warn('[menu]', e); return null; });
+window.addEventListener('ftf:menu-open', (e) => { const d = (e && e.detail) || {}; openProfileFor(null, typeof d.tab === 'string' ? d.tab : 'profile', !!d.id); }); // {id}: a hotkey or a tray button (it toggles) // the HUD's Bag (I) via sprint/window-router.js
 const judge = params.get('demo') === 'judge';
 if (judge) ctx.prefs.set({ hudMode: 'novice' });
 if (ctx.prefs && !params.has('tier')) { // a Quality change in the settings applies at once; a fixed choice switches the governor off
@@ -976,6 +990,7 @@ const mouseAt = { x: 0, y: 0, ok: false };
 if (!coarse) addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse') { mouseAt.x = e.clientX; mouseAt.y = e.clientY; mouseAt.ok = true; } }, { passive: true });
 const _aimRay = new THREE.Raycaster(), _aimNdc = new THREE.Vector2(), _aimPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), _aimHit = new THREE.Vector3();
 function cursorGround() {
+  if (mouseAim.locked) return aimPoint(player.pos, rig.yaw); // mouse aim: the crosshair looks along the camera
   if (coarse || !mouseAt.ok) return null;
   const r = renderer.domElement.getBoundingClientRect();
   _aimNdc.set(((mouseAt.x - r.left) / r.width) * 2 - 1, -((mouseAt.y - r.top) / r.height) * 2 + 1);
@@ -983,6 +998,23 @@ function cursorGround() {
   return _aimRay.ray.intersectPlane(_aimPlane, _aimHit) ? [_aimHit.x, _aimHit.y, _aimHit.z] : null;
 }
 const strikeAimInput = () => ({ cursor: cursorGround(), move: wishVector() });
+/**
+ * Mouse aim (ui/mouse-aim.js; owner 13.11): a mouse button is the key of its action (the strike, the prompt's E, Lance),
+ * sent as that key so the whole input map answers as it does for the keyboard (the HUD's mana gate, the Shoal's own keys,
+ * rebinding). An armed cast leaves on the left button at the crosshair.
+ */
+function mouseKey(action, down) {
+  if (down && action === 'strike' && inTown && townCasting && townCasting.releaseArmed()) return;
+  const code = bindings()[action];
+  if (code) renderer.domElement.dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { code, key: code, bubbles: true }));
+}
+const mouseAim = createMouseAim({ target: renderer.domElement, input,
+  mode: () => gameSettings.mouseMode, touch: () => mobileDevice || !!input.touchControls,
+  active: () => entered && !(townFlow && townFlow.busy) && !(photo && photo.on),
+  prompt: () => !!document.querySelector('.ftf-town-prompt:not([hidden]), .gs-prompt:not([hidden])'),
+  onAction: mouseKey,
+  // the browser took Esc to free the pointer: the page gets the Esc it never saw (the cast is put away, a panel closes, else the menu)
+  onEscape: () => { for (const type of ['keydown', 'keyup']) document.body.dispatchEvent(new KeyboardEvent(type, { code: 'Escape', key: 'Escape', bubbles: true })); } });
 function strikeNow() { if (townMobs && townMobs.strike(strikeAimInput())) interruptMove(STRIKE_ROOT); }
 let inspecting = null;
 let accumulator = 0;
@@ -1093,6 +1125,7 @@ function handleInput(dt) {
       if (input.hit('Space') || input.hit('Digit4')) townMobs.dash(wishVector());
     }
     townCasting.setPointer(input.hover ? input.hover.x : null, input.hover ? input.hover.y : null);
+    townCasting.setAimPoint(mouseAim.locked ? aimPoint(player.pos, rig.yaw) : null);
   }
   if (playOn && (input.hit('KeyI') || pad.hit(PAD.inspect))) handleInspect();
   if (playOn && !inspecting) {
@@ -1393,6 +1426,7 @@ function frame() {
   if (boot.onProgress && (progressTimer -= dt) <= 0) { progressTimer = 0.25; boot.onProgress(streamer.stats()); }
   hud.frame(dt);
   hud.update(dt, { info: renderer.info, physics, streaming: streamer.stats(), events: streamer.events, camera: rig, lookdev: lookdev.stats() });
+  mouseAim.update();
   input.endFrame();
   requestAnimationFrame(frame);
 }

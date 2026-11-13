@@ -131,6 +131,7 @@ export function createSettingsPopup({ doc = globalThis.document, t: tGame, i18n,
         row('set.ctl.sens', range(settings.sensitivity, 0.4, 2, 0.05, (v) => v.toFixed(2) + '×', (v) => setS({ sensitivity: SETTINGS_OPTIONS.sensitivity.reduce((a, b) => (Math.abs(b - v) < Math.abs(a - v) ? b : a)) }), t('set.ctl.sens'))),
         row('set.ctl.invert', toggle(settings.invertY, (v) => setS({ invertY: v }), t('set.ctl.invert')))];
       const touch = hooks.touch && hooks.touch();                                   // (read before any use: the pane threw and showed empty)
+      if (!(touch && touch.available)) out.push(row('set.ctl.mouse', select(SETTINGS_OPTIONS.mouseMode.map((m) => [m, t('set.ctl.mouse.' + m)]), settings.mouseMode, (v) => setS({ mouseMode: v }), t('set.ctl.mouse')), 'set.ctl.mouseNote'));
       if (!(touch && touch.available)) out.push(row('set.ctl.quick', toggle(loadSettings(storage).quickCast, (v) => setS({ quickCast: v }), t('set.ctl.quick')), 'set.ctl.quickNote'));
       if (touch && touch.available) out.push(row('set.ctl.touch', select([['sticks', t('set.ctl.sticks')], ['tap', t('set.ctl.tap')]], touch.mode, (v) => touch.setMode(v), t('set.ctl.touch'))));
       out.push(el('h3', null, t('set.ctl.keys')));

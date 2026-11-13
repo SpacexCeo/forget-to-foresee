@@ -1,9 +1,11 @@
-// World input. Mouse look uses right drag, so menus and keyboard focus need no pointer lock.
+// World input. Classic mouse look uses right drag, so menus and keyboard focus need no pointer lock; mouse aim
+// (ui/mouse-aim.js, the desktop default) holds the pointer and sets `aimMode` / `lookLocked` here.
 // Touch: tap = walk, drag = orbit, pinch = zoom, double-tap = run to the spot, plus a thumb-reachable
 // run toggle button (docs/mobile.md). All three run sources feed one flag, `input.running`, which is
 // also what `down('ShiftLeft', 'ShiftRight')` reports, so the gameplay loop needs no touch branch.
 import { GamepadInput, readGamepads } from './gamepad.js';
 import { remapKey } from './keybinds.js';
+import { AIM_LOOK_SCALE } from './mouse-aim.js';
 
 const SHIFT = new Set(['ShiftLeft', 'ShiftRight']);
 
@@ -91,6 +93,8 @@ export class Input {
     this.tapRun = new TapRun();
     this.stickMove = null; // [right, forward] from the touch joystick; null when none
     this.stickRun = false; // the joystick pushed far: run
+    this.aimMode = false; // mouse aim is the mouse mode now: no click-to-walk, no right-drag orbit (ui/mouse-aim.js)
+    this.lookLocked = false; // the pointer is held: every mouse movement turns the camera
     this.endFrame();
 
     window.addEventListener('keydown', (e) => {
@@ -121,6 +125,7 @@ export class Input {
     target.addEventListener('contextmenu', (e) => e.preventDefault());
     window.addEventListener('pointerdown', () => { this.device = 'keyboard'; });
     target.addEventListener('pointerdown', (e) => {
+      if (this.aimMode && e.pointerType === 'mouse') return; // mouse aim: the buttons are actions (ui/mouse-aim.js)
       if (e.button === 2) {
         this.dragPointer = e.pointerId;
         target.setPointerCapture(e.pointerId);
@@ -132,6 +137,7 @@ export class Input {
     target.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse') { if (!this.hover) this.hover = { x: 0, y: 0 }; this.hover.x = e.clientX; this.hover.y = e.clientY; } });
     target.addEventListener('pointerleave', () => { this.hover = null; });
     target.addEventListener('pointermove', (e) => {
+      if (this.lookLocked && e.pointerType === 'mouse') { this.dragX += e.movementX * AIM_LOOK_SCALE; this.dragY += e.movementY * AIM_LOOK_SCALE; return; }
       if (e.pointerId !== this.dragPointer) return;
       this.device = 'keyboard';
       this.dragX += e.movementX;
