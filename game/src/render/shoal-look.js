@@ -116,17 +116,19 @@ const GradeLutShader = {
 
 /**
  * @param {{renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.PerspectiveCamera, tier?: string, profile?: string,
- *   params?: object, reduced?: () => boolean, withFlat?: boolean}} o
+ *   params?: object, reduced?: () => boolean, withFlat?: boolean, origin?: {x: number, y: number, z: number}, embedded?: boolean}} o
+ *   `origin`: where the flat sits in the world (the arena's centre). `embedded`: inside the game (the arena look): the
+ *   pixel ratio, shadow type and scene fog stay the game's; the caller swaps `look.fog` in and out (shoal-arena-look.js).
  */
-export function createShoalLook({ renderer, scene, camera, tier = 'high', profile = 'desktop', params = SHOAL_DEFAULT, reduced = () => false, withFlat = true }) {
+export function createShoalLook({ renderer, scene, camera, tier = 'high', profile = 'desktop', params = SHOAL_DEFAULT, reduced = () => false, withFlat = true, origin = null, embedded = false }) {
   const Q = shoalQuality(tier, profile);
   let P = clampParams(params);
-  const root = new THREE.Group(); root.name = 'shoal_look'; scene.add(root);
+  const root = new THREE.Group(); root.name = 'shoal_look'; if (origin) root.position.set(origin.x, origin.y, origin.z); scene.add(root);
   const sunDir = new THREE.Vector3(), sunCol = new THREE.Color();
   const zenith = new THREE.Color().setRGB(0.07, 0.2, 0.38), horizon = new THREE.Color(0xe7c39a), ground = new THREE.Color(0x8a8278), fogColor = new THREE.Color(0xd9c3a6);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  renderer.setPixelRatio(Math.min(globalThis.devicePixelRatio || 1, Q.pixelRatioMax));
+  renderer.shadowMap.enabled = true;
+  if (!embedded) { renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.setPixelRatio(Math.min(globalThis.devicePixelRatio || 1, Q.pixelRatioMax)); }
 
   // sky
   const skyMat = new THREE.ShaderMaterial({ vertexShader: SKY_VS, fragmentShader: SKY_FS, side: THREE.BackSide, depthWrite: false, fog: false,
@@ -136,14 +138,15 @@ export function createShoalLook({ renderer, scene, camera, tier = 'high', profil
   const hemi = new THREE.HemisphereLight(0x9fb4c4, 0x6e5b48, 0.55); root.add(hemi);
   let csm = null, sun = null;
   if (Q.cascades > 1) {
-    csm = new CSM({ maxFar: 600, cascades: Q.cascades, mode: 'practical', parent: root, shadowMapSize: Q.shadowSize, lightDirection: new THREE.Vector3(0, -1, 0), camera, lightIntensity: 3.2, lightMargin: 120 });
+    csm = new CSM({ maxFar: 600, cascades: Q.cascades, mode: 'practical', parent: scene, shadowMapSize: Q.shadowSize, lightDirection: new THREE.Vector3(0, -1, 0), camera, lightIntensity: 3.2, lightMargin: 120 });
     csm.fade = true;
   } else {
     sun = new THREE.DirectionalLight(0xffffff, 3.2); sun.castShadow = true; sun.shadow.mapSize.set(Q.shadowSize, Q.shadowSize);
     const s = sun.shadow.camera; s.left = -60; s.right = 60; s.top = 60; s.bottom = -60; s.near = 1; s.far = 400; sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.03;
     root.add(sun, sun.target);
   }
-  scene.fog = new THREE.FogExp2(fogColor, P.fog);
+  const fog = new THREE.FogExp2(fogColor, P.fog);
+  if (!embedded) scene.fog = fog;
 
   // the flat
   let flat = null, reflector = null, flatMat = null;
@@ -208,7 +211,7 @@ export function createShoalLook({ renderer, scene, camera, tier = 'high', profil
     const c = sunColor(P.sunHeight); sunCol.setRGB(c[0], c[1], c[2]);
     horizon.setRGB(0.91 * (0.75 + 0.25 * c[1]), 0.76 * (0.7 + 0.3 * c[1]), 0.6 * (0.6 + 0.4 * c[2]));
     fogColor.copy(horizon).lerp(new THREE.Color(0xc9ccc8), 0.35);
-    scene.fog.color.copy(fogColor); scene.fog.density = P.fog;
+    fog.color.copy(fogColor); fog.density = P.fog;
     if (csm) { csm.lightDirection.copy(sunDir).negate(); for (const l of csm.lights) l.color.copy(sunCol); }
     if (sun) { sun.color.copy(sunCol); }
     hemi.intensity = 1.1 + 0.4 * Math.min(1, P.sunHeight / 25);   // no sun disc: the sky fill carries the shadow side
@@ -226,7 +229,7 @@ export function createShoalLook({ renderer, scene, camera, tier = 'high', profil
   const crystals = [];
   let time = 0;
   const api = {
-    root, get params() { return { ...P }; }, quality: Q, get composer() { return composer; },
+    root, fog, get params() { return { ...P }; }, quality: Q, get composer() { return composer; },
     set(p) { P = clampParams({ ...P, ...p }); apply(); },
     attach(obj) { if (!csm) return; obj.traverse((o) => { if (o.isMesh) { o.castShadow = o.castShadow !== false; o.receiveShadow = true; const ms = Array.isArray(o.material) ? o.material : [o.material]; for (const m of ms) if (m && (m.isMeshStandardMaterial || m.isMeshPhysicalMaterial) && !m.userData.csm) { csm.setupMaterial(m); m.userData.csm = true; } } }); },
     crystal(hex = 0x9fe8e0, k = 3.2) { const m = new THREE.MeshStandardMaterial({ color: 0x223a3a, emissive: hex, emissiveIntensity: k, roughness: 0.15, metalness: 0.1 }); crystals.push(m); return m; },
@@ -234,14 +237,16 @@ export function createShoalLook({ renderer, scene, camera, tier = 'high', profil
       if (!reduced()) time += dt;
       if (flatMat && flatMat.uniforms) { flatMat.uniforms.uTime.value = time; flatMat.uniforms.uCam.value.copy(camera.position); }
       mistMat.uniforms.uTime.value = time;
-      sky.position.copy(camera.position);
+      sky.position.copy(camera.position).sub(root.position);   // the dome follows the camera (root-local)
       if (csm) csm.update();
-      if (sun) { const f = focus || camera.position; sun.target.position.set(f.x, 0, f.z); sun.position.set(f.x + sunDir.x * 200, sunDir.y * 200, f.z + sunDir.z * 200); }
+      if (sun) { const f = focus || camera.position, o = root.position; sun.target.position.set(f.x - o.x, 0, f.z - o.z); sun.position.set(f.x - o.x + sunDir.x * 200, sunDir.y * 200, f.z - o.z + sunDir.z * 200); }
       if (rays) rays.setSun(sunDir, camera);
     },
     render() { composer.render(); },
+    /** Show or hide everything this look added (the arena look turns it on for the fight only). */
+    setVisible(v) { root.visible = v; if (csm) for (const l of csm.lights) l.visible = v; },
     setSize(w, h) { composer.setSize(w, h); if (bloom) bloom.setSize(w * Q.bloomScale, h * Q.bloomScale); if (csm) csm.updateFrustums(); },
-    dispose() { scene.remove(root); scene.fog = null; composer.dispose(); rt.dispose(); if (lutTex) lutTex.dispose(); if (csm) csm.dispose(); if (reflector) reflector.dispose(); skyMat.dispose(); mistMat.dispose(); for (const m of crystals) m.dispose(); },
+    dispose() { scene.remove(root); if (scene.fog === fog) scene.fog = null; composer.dispose(); rt.dispose(); if (lutTex) lutTex.dispose(); if (csm) csm.dispose(); if (reflector) reflector.dispose(); skyMat.dispose(); mistMat.dispose(); for (const m of crystals) m.dispose(); },
   };
   return api;
 }
