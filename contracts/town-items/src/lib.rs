@@ -23,12 +23,13 @@ pub const ERR_SELF: &str = "ERR_SELF: sender and receiver are the same";
 pub const ERR_APPROVAL: &str = "ERR_APPROVAL: approvals are not supported";
 pub const ERR_LENGTH: &str = "ERR_LENGTH: token_ids and amounts differ in length or are empty";
 pub const ERR_TOKEN_ID: &str = "ERR_TOKEN_ID: ids are 1-32 characters [a-z0-9_]";
+pub const ERR_REQUEST: &str = "ERR_REQUEST: request_hash is 64 hex characters, used once";
 const GAS_ON_TRANSFER: Gas = Gas::from_tgas(30);
 const GAS_RESOLVE: Gas = Gas::from_tgas(15);
 
 #[derive(BorshStorageKey)]
 #[near]
-enum StorageKey { Balances, Supply, Meta }
+enum StorageKey { Balances, Supply, Meta, Requests } // new variants at the END only (state-compatible upgrades)
 
 #[near(serializers = [json])]
 pub struct Token { pub token_id: TokenId, pub owner_id: Option<AccountId> }
@@ -116,6 +117,20 @@ impl Items {
         let s = self.supply.get(&token_id).copied().unwrap_or(0); self.supply.insert(token_id.clone(), s - amount.0);
         event("mt_burn", format!(r#"{{"owner_id":"{}","token_ids":["{}"],"amounts":["{}"]{}}}"#, me, token_id, amount.0, memo.map(|m| format!(r#","memo":"{}""#, m.replace('"', "").chars().take(64).collect::<String>())).unwrap_or_default()));
     }
+
+    /// Upgrade v2 (player market, sprint 6.4): moves items between two players for a sale the relayer settles. Only an
+    /// authorised minter (the relayer's market key) or the owner; `request_hash` (sha256 of the buyer's signed request)
+    /// is recorded once, so a request never moves items twice. Same balance checks and NEP-245 `mt_transfer` event as a
+    /// player's own transfer, with memo "p2p".
+    pub fn coordinator_transfer(&mut self, from: AccountId, to: AccountId, token_id: TokenId, amount: U128, request_hash: String) {
+        require!(self.minters.contains(&env::predecessor_account_id()) || env::predecessor_account_id() == self.owner_id, ERR_NOT_MINTER);
+        require!(request_hash.len() == 64 && request_hash.bytes().all(|b| b.is_ascii_hexdigit()), ERR_REQUEST);
+        let mut used: LookupMap<String, bool> = LookupMap::new(StorageKey::Requests);
+        require!(!used.contains_key(&request_hash), ERR_REQUEST);
+        used.insert(request_hash, true); used.flush();
+        self.internal_transfer(&from, &to, &[token_id], &[amount], Some("p2p".into()));
+    }
+    pub fn request_used(&self, request_hash: String) -> bool { LookupMap::<String, bool>::new(StorageKey::Requests).contains_key(&request_hash) }
 
     fn internal_transfer(&mut self, from: &AccountId, to: &AccountId, token_ids: &[TokenId], amounts: &[U128], memo: Option<String>) {
         require!(from != to, ERR_SELF);

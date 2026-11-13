@@ -560,7 +560,12 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     state.route[state.route.length - 1] = [stand[0], stand[1], stand[2]];
     return true;
   }
-  function cancelRoute() { state.route = null; }
+  function cancelRoute() { if (state.route) state.routeEnd = 'cancel'; state.route = null; }
+  /** Auto-walk (sprint/auto-walk.js): follow these world points with the same steering as the QA route. */
+  function walkTo(points) {
+    if (state.phase !== 'town' || !Array.isArray(points) || !points.length) return false;
+    state.route = points.map((p) => [p[0], p[1], p[2]]); state.routeEnd = null; return true;
+  }
 
   /** Steering for the frame loop while the QA route is active; null when idle. */
   function routeWish() {
@@ -569,7 +574,7 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
       const w = steerTo(player.pos, state.route[0], last ? 0.3 : 0.7);
       if (w) { const l = Math.hypot(w[0], w[1]); return last || l === 0 ? w : [w[0] / l, w[1] / l]; }
       state.route.shift();
-      if (!state.route.length) state.route = null;
+      if (!state.route.length) { state.route = null; state.routeEnd = 'done'; }
     }
     return null;
   }
@@ -587,7 +592,7 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     closePanel: () => closeOpen(), expandPill: () => pills.expandLatest(), get pills() { return pills; }, minimise,
     /** The shop counter (scenes/town-shops.js): opens the panel the door used to open. */
     openSpot(id) { if (spotPanel || folkTalk) closeOpen(); remote = true; spotPanel = id; renderTalk(); renderVisibility(); const b = talkEl.querySelector('button:not([disabled]):not(.ftf-panel-min)'); if (b && b.focus) b.focus(); },
-    get questActive() { return !!(quest && quest.active); }, interact, register, walkRoute, cancelRoute, routeWish,
+    get questActive() { return !!(quest && quest.active); }, interact, register, walkRoute, walkTo, cancelRoute, routeWish, get routeEnd() { return state.routeEnd || null; },
     /** The same transition to the archipelago from anywhere in town (the story's Gate-Loom, scenes/town-portal.js), with its own cover line. */
     depart(opts = {}) { if (state.registering || state.phase !== 'town') return state.registering || Promise.resolve(false); state.registering = run(opts); return state.registering; },
     get phase() { return state.phase; },

@@ -53,7 +53,7 @@ export async function logSignatureValid({ accountId, publicKey, at, signature, f
  * else {reason, at}. Pure.
  */
 export function checkEntries(log, from, now = Date.now()) {
-  const turned = new Set(); let lastBounty = -Infinity, lastKill = null; const win = [], perDay = new Map();
+  const turned = new Set(), lastRepeat = new Map(); let lastKill = null; const win = [], perDay = new Map();
   for (let i = 0; i < log.length; i++) {
     const e = log[i], d = e.data || {}, fresh = i >= from;
     const bad = (reason) => ({ reason, at: i });
@@ -78,7 +78,9 @@ export function checkEntries(log, from, now = Date.now()) {
       }
       case 'bounty_resolved': {
         const q = QUESTS[d.questId]; if (!q || !q.repeat) return bad('bounty');
-        if (e.t - lastBounty < q.repeat.minutes * 60_000) return bad('bounty_cooldown'); lastBounty = e.t;
+        const prev = lastRepeat.has(d.questId) ? lastRepeat.get(d.questId) : -Infinity; // each repeatable has its own clock
+        if (q.repeat.mode === 'daily' ? Math.floor(e.t / DAY) === Math.floor(prev / DAY) : e.t - prev < q.repeat.minutes * 60_000) return bad('bounty_cooldown');
+        lastRepeat.set(d.questId, e.t);
         if (!(e.silkC >= 0 && e.silkC <= q.reward.silk * 100)) return bad('bounty_silk');
         break;
       }

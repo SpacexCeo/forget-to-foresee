@@ -215,6 +215,8 @@ ctx.townLedger = townLedger; // the Echo terminal's board shows the learning tow
 // The ONE silk number (net/silk-balance.js, sprint 6.2): the HUD chip, the tracker, the portal and the windows read it.
 // It reads ftf-town through the relayer, keeps the last good number when offline and records waiting silk on Sync.
 import('./net/silk-balance.js').then((m) => { const model = m.createSilkModel({ ledger: townLedger, storage: ctx.storage, flush: () => (expeditionSync ? expeditionSync.flush() : null) }); m.installSilkModel(model); model.refresh(true); }).catch((e) => console.warn('[silk]', e));
+// The player market (market/index.js; docs/market.md): loaded on the first 'ftf:market-open' {tab?}; the HUD's key and button send it.
+{ let market = null; const openMarket = (e) => { if (market) return; window.removeEventListener('ftf:market-open', openMarket); import('./market/index.js').then((m) => { market = m.mount({ t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage }); market.open((e && e.detail && e.detail.tab) || 'buy'); }).catch((err) => console.warn('[market]', err)); }; window.addEventListener('ftf:market-open', openMarket); }
 // The game menu (play/game-menu.js): Profile, Achievements, NFTs, Inventory + wheel, Agents, Log / Stats.
 const openProfileFor = (quest = null, tab = 'profile') => import('./play/game-menu.js').then((m) => { const d1 = loadDay1(ctx.storage); return m.openGameMenu({ t: (k, a) => ctx.i18n.t(k, a), ledger: townLedger, storage: ctx.storage, tab, chests: chestBag, heroineToken: (d1.guest || {}).token_id || null, owner: (d1.guest || {}).account_id || null, createGuest: () => day1Mint.mint(loadDay1(ctx.storage).nickname || undefined).then((r) => (r.phase === 'minted' && r.record.guest ? { account: r.record.guest.account_id } : { error: r.reason || 'failed' })), nickname: d1.nickname || null, eliseMinted: !!d1.minted, exportKey: d1.playerKey ? () => { const r = loadDay1(ctx.storage); return `account: ${(r.guest || {}).account_id || '(not created yet)'}\nsecret key: ${r.playerKey.secretKey}`; } : null }); }).catch((e) => console.warn('[menu]', e));
 const judge = params.get('demo') === 'judge';
@@ -337,6 +339,9 @@ if (townMode.town) {
         depart: (o) => (townFlow ? townFlow.depart(o) : Promise.resolve(false)), search: location.search,
         // the Gate-Loom on chain (rev 4): ftf-town gate_price / balance_of / gate_paid_of through the relayer, which credits the
         // guest's verified log and calls pay_gate_for on the guest's signed request (relayer/api/town/gate.js)
+        // the journal's auto-walk drives the town's own route steering (W A S D clears it); markers are town-local
+        walkDriver: { setRoute: (pts) => townFlow && townFlow.walkTo(pts), cancel: () => townFlow && townFlow.cancelRoute(), active: () => !!(townFlow && townFlow.routeActive), ended: () => townFlow && townFlow.routeEnd, pos: () => player.pos },
+        toWorld: townToWorld, level: () => townLedger.level,
         gate: { read: () => { const g = al.guestFrom(ctx.storage); return g ? gm.readGate({ account: g.accountId }) : Promise.resolve({ ok: false, reason: 'need_guest' }); }, pay: () => gm.payGate({ storage: ctx.storage, flush: () => (expeditionSync ? expeditionSync.flush() : null) }) } });
       const w = townToWorld(pm.PORTAL_TOWN);
       townPortal = pm.createTownPortal({ scene, position: w, facing: Math.PI / 2, i18n: ctx.i18n, read: () => townQuests.portalFacts(), onPay: () => townQuests.payGate(), reducedMotion: lookdev.reducedMotion, light: !(mobileDevice || lookdev.tier === 'low') });
@@ -389,7 +394,7 @@ if (townMode.town) {
   if (!photo) photo = createPhotoMode({ canvas: renderer.domElement, i18n: ctx.i18n, rig, coarse: mobileDevice, onChange: (on) => { if (on) { stopSteering(); clearWorldInput(); } } }); // feature 9: P
   if (!townBarks) { // feature 7: a short line from the townsfolk Iris walks past (scenes/barks.js)
     const people = [];
-    townBarks = createBarks({ camera, i18n: ctx.i18n, hour: () => lookdev.look && lookdev.look.name, rain: () => lookdev.weather.state.rain || 0,
+    townBarks = createBarks({ camera, i18n: ctx.i18n, extra: () => (featureFlags.on('newPlayerIntro') ? NPE_BARKS : []), hour: () => lookdev.look && lookdev.look.name, rain: () => lookdev.weather.state.rain || 0,
       hired: () => townLedger.hires().map((h) => h.npc),
       people: () => { people.length = 0; const tf = town.townsfolk; if (tf) for (const p of tf.people) if (p.state === 'loaded' && p.root.visible) people.push({ key: p.def.key, pos: folkPos(p) }); return people; } });
   }
@@ -434,7 +439,7 @@ if (townMode.town) {
   });
   mountCasting();
   // The player HUD (ui/player-hud.js): portrait frame, level, health, the silk wallet and the toast stack, town only.
-  if (!window.__ftfSprint) window.__ftfSprint = mountSprint({ THREE, scene, camera, renderer, player, ledger: townLedger, town, chests: chestBag, t: (k, a) => ctx.i18n.t(k, a), toast: (s) => toast(s), reduced: () => lookdev.reducedMotion, storage: ctx.storage, keys: input, flags: featureFlags, i18n: ctx.i18n }); // sprint seam (src/sprint, docs/sprint/CTX.md)
+  if (!window.__ftfSprint) window.__ftfSprint = mountSprint({ THREE, scene, camera, renderer, player, ledger: townLedger, town, chests: chestBag, t: (k, a) => ctx.i18n.t(k, a), toast: (s) => toast(s), reduced: () => lookdev.reducedMotion, storage: ctx.storage, keys: input, flags: featureFlags, i18n: ctx.i18n, active: () => inTown, mobs: () => townMobs, base: import.meta.env.BASE_URL, floatNumber: numbersHook, openSettings: (tab) => openSettings(tab), skin: () => (irisAvatar ? irisAvatar.hero.id : startHero.id) }); // sprint seam (src/sprint, docs/sprint/CTX.md)
   if (!playerHud) playerHud = createPlayerHud({ t: (k, a) => ctx.i18n.t(k, a), ledger: townLedger, chests: chestBag, base: import.meta.env.BASE_URL,
     nickname: () => loadDay1(ctx.storage).nickname || null, skin: () => (irisAvatar ? irisAvatar.hero.id : startHero.id),
     onSkin: () => toggleSkin(), canSwap: () => { const o = skinsOwned(); return !!(o.elise || o.sheriffchenko); },
@@ -687,6 +692,8 @@ function toggleSkin() {
 }
 /** Above the altar: when the next Tournament round starts ("Open now" in this build: rounds are always open). */
 let altarTimer = null;
+/** The new-player intro's crowd lines (play/locales/en-npe.js, sprint 7.3), in the barks rotation when the intro is on. */
+const NPE_BARKS = Object.freeze(Array.from({ length: 10 }, (_, i) => `npe.bark.${i + 1}`));
 const _altarP = new THREE.Vector3();
 function updateAltarTimer() {
   if (!town || !inTown) { if (altarTimer) altarTimer.hidden = true; return; }
@@ -772,7 +779,8 @@ async function startDay1() {
   await m.runArrival({ t, mint: day1Mint, flyIn, reduced: () => lookdev.reducedMotion, inventoryEl: () => document.querySelector('.ftf-town-profile'), nickname: loadDay1(ctx.storage).nickname || '' });
   refreshCompanions(); // a fresh heroine may already hold a dragon
   const orbit = (base) => (p) => { rig.dist = TOWN_CAMERA.dist + 9 * Math.sin(Math.PI * p); rig.rotate(base); };
-  await m.runHints({ t, steps: [
+  // No Day-1 tips on phones at all (owner 13.11, asked many times): the tracker and the quest log carry the same lines there.
+  if (!input.touchControls) await m.runHints({ t, steps: [
     ...(input.touchControls ? [] : [{ key: 'day1.hint.skin' }]), // not on phones (owner 12.11: the tip took the screen there)
     { key: 'day1.hint.quest', when: () => !!(townFlow && townFlow.questActive) },
     { key: 'day1.hint.trailers', when: () => !input.touchControls, buttons: [ // not on phones (owner 12.11)
@@ -1113,7 +1121,7 @@ function frame() {
   accumulator = f.accumulator;
   physics.steps = f.steps; physics.substeps = 0;
   let moving = false;
-  player.run = input.down('ShiftLeft', 'ShiftRight') || (moveTarget ? moveRun : coarse && !!(play && play.routeActive));
+  player.run = input.down('ShiftLeft', 'ShiftRight') || (moveTarget ? moveRun : coarse && !!(play && play.routeActive)) || !!(inTown && townFlow && townFlow.routeActive); // A1 auto-walk runs
   // outside the walls, a winded Iris walks until 20 % stamina is back (game/stamina.js)
   const fieldOn = !!(inTown && townMobs && townMobs.iris && townMobs.iris.outside);
   if (fieldOn && !stamina.canRun()) player.run = false;

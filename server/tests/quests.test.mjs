@@ -47,7 +47,7 @@ test('a scripted session hunts at T2: the chain completes, actionId replays, an 
   for (const [type, args] of CHAIN) { const r = p.cmd(type, args); assert.equal(r.status, 200, type + ' ' + JSON.stringify(r.body.error || '')); }
   const o = p.obs().expedition;
   assert.equal(o.actor, 'scripted'); assert.equal(o.account, 'salt.arena.testnet');
-  assert.equal(o.resources.spider_silk_thread, 6 - 5 + 6 - 4, 'two hunts of ten yield 6 threads each; the turn-ins consumed 5 and 4');
+  assert.equal(o.resources.spider_silk_thread, 6 - 5 + 6, 'two hunts of ten yield 6 threads each; the spider quest consumed 5 (the bounty asks for none)');
   assert.equal(o.quests.q_spiders.state, 'done'); assert.equal(o.quests.b_spiders.state === 'done' || o.quests.b_spiders.state === 'locked', true);
   assert.equal(o.balanceC, 800 + 2_000 + 600 + 20 * 12, 'welcome + spiders + bounty + 20 hunted skitters (T2 kill silk)');
   const env = { actionId: 'replay-test-0001', expectedVersion: p.obs().version, type: 'quest_accept', args: { questId: 'q_part' } };

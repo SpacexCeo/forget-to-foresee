@@ -30,7 +30,7 @@ if (flags.rpgHud) import('./rpg/index.js').then((m) => { rpg = m.mount({ ledger:
 ## For the other agents
 
 - A1: tray buttons `#rpg-tray-journal`, `#rpg-tray-map`; tracker slot 1576, 268, 320 × 420 is kept free. Without `ctx.ui.open` the HUD sends `ftf:open-window` {id}.
-- A3: `#rpg-tray-bag`, `#rpg-tray-market`, the silk chip `#rpg-silk` (click → `ctx.ui.openWallet` or `ftf:open-window` {id: 'wallet'}); it reads `ctx.silk.silkView()` and calls `syncSilkNow()`. Without it the ledger's silk shows as play silk.
+- A3: `#rpg-tray-bag`, `#rpg-tray-market`, the silk chip `#rpg-silk` (click → `ctx.ui.openWallet` or `ftf:open-window` {id: 'wallet'}); it reads `ctx.silk.silkView()` when given, else the shared model of `net/silk-core.js` (`silkView()`, Sync calls `syncSilkNow()`).
 - A4: F1 opens Settings → Controls (the table and the keyboard) through `ctx.openSettings('controls')`.
 - A5: e2e hook `window.__ftfTest.rpg` with `?test=1`: `grantXp(n)`, `setLevel(n)`, `learn(id)`, `cast(slot)`, `state()`.
 
@@ -39,5 +39,5 @@ if (flags.rpgHud) import('./rpg/index.js').then((m) => { rpg = m.mount({ ledger:
 - Voice and Clear Diction do not yet raise the fight's own damage numbers: that needs the `mob.hit` bus emit (A5) to add the bonus. Insight's mark is applied to Echo and Babel only.
 - Max HP above 100 works through scaling: the fight still counts 0..100, read as the share of her max HP, and each hit is applied in real HP through the defences.
 - The phone hotbar shows slots 1 to 5; there is no swipe-up drawer for 6 to 9. The phone log is hidden under 480 px wide (the town market ticker sits where the one-line ticker would go).
-- No buff icons art (text squares with the seconds left); no E8 (silk chip equals the portal prompt: waits for A3's silkView) e2e yet; E10 reduced motion is CSS only.
+- No buff icons art (text squares with the seconds left); no E8 e2e yet (the chip now reads the same `net/silk-core.js` view as the other surfaces; the cross-surface equality check is left for A5's first-ten e2e); E10 reduced motion is CSS only.
 - Overlaps with widgets owned by others: the market ticker and the online-count chip over the log (desktop) and slot 1 (phone); the settings gear over the minimap's edge.

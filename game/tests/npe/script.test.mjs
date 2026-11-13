@@ -46,3 +46,12 @@ test('script: placeholders come from config; typing is 40 cps and instant under 
   assert.equal(typeMs('a'.repeat(40)), 1000); assert.equal(typeMs('a'.repeat(40), true), 0);
   assert.equal(typedChars('abcdefghij', 100), 4); assert.equal(typedChars('abcdefghij', 0, true), 10); assert.equal(typedChars('abc', 99999), 3);
 });
+
+test('barks: the intro lines join the crowd rotation when passed, never for a hired agent', async () => {
+  const { barkCandidates } = await import('../../src/scenes/barks.js');
+  const base = barkCandidates({ key: 'weaver' });
+  const withNpe = barkCandidates({ key: 'weaver', extra: BARKS });
+  assert.deepEqual(withNpe, [...base, ...BARKS]);
+  assert.deepEqual(barkCandidates({ key: 'guard', hired: true, extra: BARKS }), ['bark.hired.1', 'bark.hired.2']);
+  for (const k of BARKS) assert.ok(NPE[k], k);
+});

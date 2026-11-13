@@ -28,7 +28,7 @@ const centsOf = (micro) => Math.floor(Number(micro || 0) / MICRO_PER_CENT);
  * @returns {{view(): object, refresh(force?: boolean): Promise<object>, syncNow(): Promise<{ok, creditedC?, reason?, retryAfterS?}>, subscribe(fn): () => void, dispose(): void}}
  */
 export function createSilkModel({ ledger = null, storage = null, flush = null, base = relayerUrl(), fetch = globalThis.fetch, now = () => Date.now(), timers = globalThis, doc = globalThis.document, win = globalThis } = {}) {
-  let s = { onChainC: 0, creditableC: null, creditedC: null, feeC: EXPEDITION.PORTAL_FEE_C, chainOk: false, stale: false, syncing: false, lastSyncAt: null, dayRoomC: null };
+  let s = { onChainC: 0, creditableC: null, creditedC: null, feeC: EXPEDITION.PORTAL_FEE_C, chainOk: false, stale: false, syncing: false, lastSyncAt: null, dayRoomC: null, noAccount: false };
   let reading = null, lastRead = -Infinity, lastAutoSync = -Infinity, disposed = false;
   const subs = new Set();
   const view = () => computeSilkView({ ...s, localTotalC: ledger ? ledger.silk : 0 });
@@ -50,8 +50,9 @@ export function createSilkModel({ ledger = null, storage = null, flush = null, b
     reading = (async () => {
       try {
         const b = await read();
+        if (!b) s = { ...s, noAccount: true };
         if (b) {
-          s = { ...s, onChainC: centsOf(b.silk), feeC: b.gate_price != null ? centsOf(b.gate_price) : s.feeC, chainOk: true, stale: false,
+          s = { ...s, noAccount: false, onChainC: centsOf(b.silk), feeC: b.gate_price != null ? centsOf(b.gate_price) : s.feeC, chainOk: true, stale: false,
             creditableC: b.creditable != null ? centsOf(b.creditable) : s.creditableC, creditedC: b.credited != null ? centsOf(b.credited) : s.creditedC,
             dayRoomC: b.day_room != null ? centsOf(b.day_room) : s.dayRoomC };
         }

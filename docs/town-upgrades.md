@@ -89,3 +89,14 @@ v1-state fixture test still passes. 61 unit tests in total. Deploy with `bash co
 init call, no migration). The relayer's coordinator (`gate.ftf-town.testnet`, docs/town-gate.md) needs these methods
 on its function-call key: `register, credit_silk, pay_gate_for, pledge_for, claim_for, unbond_for, exit_early_for,
 invest_stall_for, claim_stall_for, enter_tournament_for`.
+
+## v5: player-market settlement
+
+`trade_for(account_id, counterparty, silk, fee, reference, request_hash)` is for coordinators only, on the buyer's
+signed request. It goes through the same guard as the v4 moves: the hash is recorded once and counts in the buyer's
+daily limit. `silk` moves from the buyer to the seller minus `fee`, which is burned. The fee is at most a tenth of the
+price. Neither side may be a town wallet, and the seller must be registered. The burn is counted under the raw key
+`p:burned` (view `p2p_burned`), apart from `burned_silk`, so market fees never raise the season mint. Sales are
+counted under `p:count` (view `p2p_trades`). The event is `p2p_trade`. There are no struct changes, and the v1-state
+fixture test still passes. 69 unit tests. See `docs/market.md`.
+

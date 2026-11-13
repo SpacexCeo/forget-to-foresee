@@ -74,6 +74,7 @@ test('silk model: Sync flushes the log, signs credit_only and maps 429, no_verif
   assert.deepEqual(await off.syncNow(), { ok: false, reason: 'network' });
   const none = createSilkModel({ ledger, storage: { getItem: () => null }, base: 'https://r.example', fetch: ok.fetch, now, timers, win: null, doc: null });
   assert.deepEqual(await none.syncNow(), { ok: false, reason: 'need_guest' });
+  assert.equal((await none.refresh(true)).noAccount, true); // no account: the chip shows this device's silk, labelled "This device"
 });
 
 test('silk model: the shared instance is what every surface reads; before boot it says "checking" (chainOk false)', async () => {

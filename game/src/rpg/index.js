@@ -10,6 +10,7 @@ import * as S from './skills.js';
 import { skillById, BASE, NODE } from './skills-data.js';
 import { bindings, actionOf, keyLabel, FIXED_ALIASES, onBindings } from '../ui/keybinds.js';
 import { ledgerSilkView } from './silk-chip.js';
+import * as silkCore from '../net/silk-core.js';
 import { portalFee } from '../game/expedition-config.js';
 import { xpForKill } from '../game/town-economy.js';
 import { mobDisplayName } from '../game/mob-names.js';
@@ -42,11 +43,12 @@ export function mount(ctx) {
   let lastWorldHp = null, flash = {}, pressed = {}, manaPulseUntil = 0, lastFailLog = 0, targetId = null, cast = null, open = {}, silkPop = false, lastGate = null;
   let tree = null, sheet = null, map = null;
   const fee = portalFee(win.location ? win.location.search : '').feeC;
-  const silkView = () => (ctx.silk && ctx.silk.silkView ? ctx.silk.silkView() : ledgerSilkView(ctx.ledger, fee));
+  // the ONE silk number (A3's model, net/silk-core.js); the ledger only when no model is installed and none is given
+  const silkView = () => (ctx.silk && ctx.silk.silkView ? ctx.silk.silkView() : silkCore.silkView ? silkCore.silkView() : ledgerSilkView(ctx.ledger, fee));
   const refreshStats = () => { const before = stats; stats = S.statsOf(L, rec); if (stats.maxHP !== before.maxHP) self = { ...self, hp: Math.min(stats.maxHP, Math.round(self.hp * stats.maxHP / before.maxHP)), maxHP: stats.maxHP }; caster = { ...caster, mana: Math.min(caster.mana, stats.maxMana) }; };
 
   const hud = createHud({ doc, t, base: ctx.base || '/', reduced: () => !!(ctx.reduced && ctx.reduced()), keyOf: (a) => keyLabel(bindings()[a]),
-    onSlot: (i) => press(i, 'click'), onTray: (id) => openWindow(id), onSync: () => { if (ctx.silk && ctx.silk.syncSilkNow) ctx.silk.syncSilkNow(); },
+    onSlot: (i) => press(i, 'click'), onTray: (id) => openWindow(id), onSync: () => { if (ctx.silk && ctx.silk.syncSilkNow) ctx.silk.syncSilkNow(); else silkCore.syncSilkNow(); },
     onSilk: () => { if (ctx.ui && ctx.ui.openWallet) ctx.ui.openWallet(); else win.dispatchEvent(new CustomEvent('ftf:open-window', { detail: { id: 'wallet' } })); },
     onMap: () => openWindow('map'), onZoom: (d) => map && map.zoom(d), onFrame: () => openWindow('character'),
     onDropSkill: (i, id) => { bar = S.placeOnSlot(bar, i, id); save(); } });

@@ -225,8 +225,8 @@ export function createPlayerHud({ doc = document, t, ledger, chests = null, base
   function renderSilk() {
     const v = silkView();
     // the line under the number and the breakdown (the same words as the wallet card)
-    sub.className = 'ph-sub' + (v.stale || !v.chainOk ? ' ph-muted' : '');
-    sub.textContent = v.stale ? t('silk.offline') : !v.chainOk ? t('silk.checking') : v.syncing ? t('silk.syncing') : v.pendingC > 0 ? t('silk.waiting', { n: formatSilkC(v.pendingC) }) : '';
+    sub.className = 'ph-sub' + (v.stale || !v.chainOk || v.noAccount ? ' ph-muted' : '');
+    sub.textContent = v.noAccount ? t('silk.device') : v.stale ? t('silk.offline') : !v.chainOk ? t('silk.checking') : v.syncing ? t('silk.syncing') : v.pendingC > 0 ? t('silk.waiting', { n: formatSilkC(v.pendingC) }) : '';
     sub.hidden = !sub.textContent;
     sync.hidden = !(v.chainOk && v.pendingC > 0 && !v.syncing); sync.textContent = t('silk.sync');
     const tip = [t('silk.tip.gate', { n: formatSilkC(v.gateC) }), t('silk.tip.chain', { n: formatSilkC(v.onChainC) }),
@@ -236,7 +236,7 @@ export function createPlayerHud({ doc = document, t, ledger, chests = null, base
     // every gain floats by the coin at once (it may still be waiting or play silk); line 1 moves with the chain number
     if (lastLocal != null && ledger.silk !== lastLocal) floatDelta(walletDelta(lastLocal, ledger.silk));
     lastLocal = ledger.silk;
-    const target = v.gateC;
+    const target = v.noAccount ? v.localTotalC : v.gateC; // without an account nothing is on NEAR: the chip shows this device's silk, labelled so
     if (shown == null) { shown = target; setCount(target); return; }
     if (target === shown) return;
     if (reducedMotion()) { shown = target; setCount(target); return; }
