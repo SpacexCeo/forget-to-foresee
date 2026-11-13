@@ -20,16 +20,23 @@ Branch `claude/jury-ready` (the lead merges into `sprint/5h`, the owner merges t
 
 ## Open (for the lead / the next seat)
 
-1. **Flags on** at the agreed time: set the 15 sprint flags to `true` in `game/public/features.json`, run
-   `bash scripts/verify-sprint.sh`, then flip the Status column in `docs/how-to-see.md` and the README sprint table to
-   "live" only for what the flags-on run shows working.
-2. `first-ten.mjs` covers boot, prologue and dialogue events only; the remaining steps of plan 8.6 need A1-A4's
-   `window.__ftfTest` hooks.
-3. Lint finding owned by A4: `game/src/npe/dialogue-script.js` formats silk with `toFixed(2)` (BOARD request).
-4. Nothing listens to `ftf:open-window` yet (A2's tray and silk chip send it): A1 / A3 windows should.
+1. **Flags on** when the owner says go: `git apply docs/sprint/flags-on.patch` (sets the 15 sprint flags to `true` in
+   `game/public/features.json`, nothing else), commit, run `bash scripts/verify-sprint.sh`, then flip the Status column
+   in `docs/how-to-see.md` and the README sprint table to "live" only for what the flags-on run shows working.
+2. `first-ten.mjs` asserts steps 1-6, 9, 11, 12 and 14 against the real intro. Steps 7-8 (auto-walk, first quest), 10
+   (chest) and 13 (tournament) report "skip" until `window.__ftfTest.quests` / chest / tournament hooks exist. Headless
+   SwiftShader time is about 470 s (budget 6 min is for hardware GL). Step 3 sees `oh_no` only when the prologue gets far
+   enough before the timeout; otherwise it accepts the earlier cues.
+3. Lint findings still open (owners A2/A4, BOARD): `rpg/hud-style.js:137` ellipsis without title,
+   `npe/dialogue-script.js:37` `toFixed`, `en-npe.js` `cup.add` 166 and `cup.policy.explorer` 220 characters.
+   `verify-sprint.sh` is red on lint only for these.
+4. `ftf:open-window` is routed by `sprint/window-router.js`: journal and quests -> `ftf:journal-toggle`
+   (town-quests), market -> `ftf:market-open`, help -> settings controls. `map`, `bag`, `wallet` have no window:
+   bus `window.missing` only.
 5. Overlap probe: a townsfolk bark bubble sits over the E prompt (informational).
-6. `docs/STATS.md` is stale until `node scripts/stats.mjs --write` before the final merge.
+6. `docs/STATS.md` regenerated 13.11 (game 1131); run `node scripts/stats.mjs --write` again before the final merge.
 7. No video clips: this box renders WebGL only in software; the owner records with `record-runbook.md`.
+8. Phone rule: on touch nothing auto-shows (`tests/sprint/touch-rule.test.mjs`).
 
 ## Owner only
 
