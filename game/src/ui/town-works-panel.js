@@ -144,6 +144,8 @@ export function createTownWorksPanel({ t, storage = null, client = null, flush =
  * @param {{t: Function, storage?: object, client?: object, doc?: Document}} o
  */
 export function createTournamentEntry({ t, storage = null, client = null, flush = null, doc = globalThis.document }) {
+  // the seasons this browser entered (net/pet.js SEASONS_KEY): the Hatchkeeper opens once one of them has settled
+  const rememberSeason = (id) => { try { const all = new Set(JSON.parse((storage && storage.getItem('ftf.tourney.seasons.v1')) || '[]')); all.add(String(id)); storage.setItem('ftf.tourney.seasons.v1', JSON.stringify([...all].slice(-20))); } catch { /* memory only */ } };
   const api = client || createTownAct({ storage, flush });
   createTownWorksPanel({ t, client: api, doc }); // installs the shared style once
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -163,12 +165,13 @@ export function createTournamentEntry({ t, storage = null, client = null, flush 
         kids.push(el('p', null, t('tourn.purse', { silk: silkOf(season.purse), n: season.entrants, id: season.id })));
         kids.push(el('p', 'tw-note', t('tourn.fee', { fee: silkOf(params.entryFee) })));
         kids.push(el('p', 'tw-note', t('works.balance', { silk: silkOf(silk) })));
-        if (season.entered) kids.push(el('p', null, t('tourn.entered', { id: season.id })));
+        if (season.entered) { kids.push(el('p', null, t('tourn.entered', { id: season.id }))); rememberSeason(season.id); }
         else {
           const go = el('button', 'act', t('tourn.enter', { fee: silkOf(params.entryFee) })); go.type = 'button'; go.disabled = r.me.paused;
           go.addEventListener('click', async () => {
             go.disabled = true; st.textContent = t('works.sending');
             const a = await api.act('enter_tournament', { season_id: season.id });
+            if (a.ok) rememberSeason(season.id); // the Hatchkeeper checks it once the season settles (net/pet.js)
             render(a.ok ? t('tourn.done') : t('works.err.' + a.reason), a.ok ? a.hash : null);
           });
           kids.push(el('div', 'tw-ctl')); kids[kids.length - 1].append(go);

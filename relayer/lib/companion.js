@@ -24,11 +24,15 @@ export const COMPANION = Object.freeze({
   maxSkewMs: 5 * 60 * 1000, gas: 30_000_000_000_000n,
 });
 export const DRAGON_KINDS = Object.freeze(['nacre', 'rill', 'cinder']);
-export const REASONS = Object.freeze(['welcome', 'boss']);
+export const REASONS = Object.freeze(['welcome', 'boss', 'tournament']);
+// "tournament" (owner 13.11, "prove you are real"): the first pet, once per guest, after its first tournament: the town
+// contract shows the guest entered that season (has_entered) and the season is settled. The player picks which of
+// their heroine NFTs owns it; the relayer checks that heroine is theirs (the guests contract's token, or an NFT the
+// account holds on the heroine contract) and mints the pet to that heroine token's account.
 const NAMES = Object.freeze({ nacre: 'Nacre', rill: 'Rill', cinder: 'Cinder' });
 const ACCOUNT_RE = /^(?=.{2,64}$)[a-z0-9]+([-_][a-z0-9]+)*(\.[a-z0-9]+([-_][a-z0-9]+)*)*$/;
 
-export const companionMessage = (accountId, at, reason) => `ftf-companion|${accountId}|${at}|${reason}`;
+export const companionMessage = (accountId, at, reason, seasonId = '', heroineToken = '') => `ftf-companion|${accountId}|${at}|${reason}` + (reason === 'tournament' ? `|${seasonId}|${heroineToken}` : '');
 
 export const companionEnv = (env = process.env) => ({
   secretKey: env.FTF_COMPANION_KEY || '',
@@ -36,6 +40,7 @@ export const companionEnv = (env = process.env) => ({
   heroine: env.FTF_HEROINE_CONTRACT || COMPANION.heroine,
   guests: env.FTF_GUESTS_CONTRACT || COMPANION.guests,
   logDir: env.FTF_EXPEDITION_DIR || '',
+  town: env.FTF_TOWN_CONTRACT || 'ftf-town.testnet',
 });
 
 /** Shape check of a claim. */
@@ -47,7 +52,13 @@ export function validateClaim(b, now = Date.now()) {
   if (typeof b.signature !== 'string' || b.signature.length > 100) return { ok: false, error: 'bad_signature' };
   const reason = b.reason == null ? 'welcome' : b.reason;
   if (!REASONS.includes(reason)) return { ok: false, error: 'bad_reason' };
-  return { ok: true, accountId: b.account_id, publicKey: b.public_key, at: b.at, signature: b.signature, reason, message: companionMessage(b.account_id, b.at, reason) };
+  let seasonId = '', heroineToken = '';
+  if (reason === 'tournament') {
+    if (typeof b.season_id !== 'string' || !/^[A-Za-z0-9_.:-]{1,64}$/.test(b.season_id)) return { ok: false, error: 'bad_season' };
+    if (typeof b.heroine_token !== 'string' || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(b.heroine_token) || b.heroine_token.length > 64) return { ok: false, error: 'bad_heroine' };
+    seasonId = b.season_id; heroineToken = b.heroine_token;
+  }
+  return { ok: true, accountId: b.account_id, publicKey: b.public_key, at: b.at, signature: b.signature, reason, seasonId, heroineToken, message: companionMessage(b.account_id, b.at, reason, seasonId, heroineToken) };
 }
 
 /** ed25519 over the claim message with the request's own public key. */
@@ -64,13 +75,13 @@ export async function claimSignatureValid({ publicKey, signature, message }) {
 export async function dragonKinds(accountId) {
   const h = await sha256(new TextEncoder().encode('ftf-dragon|' + accountId));
   const w = h[0] % 3;
-  return { welcome: DRAGON_KINDS[w], boss: DRAGON_KINDS[(w + 1 + (h[1] % 2)) % 3] };
+  return { welcome: DRAGON_KINDS[w], boss: DRAGON_KINDS[(w + 1 + (h[1] % 2)) % 3], tournament: DRAGON_KINDS[w] };
 }
 
 /** The dragon's token id for a heroine token ("elise-<sub>") and reason: fixed, so a claim mints at most once. */
 export function dragonTokenId(heroineTokenId, reason) {
   const sub = String(heroineTokenId).replace(/^elise-/, '');
-  const id = (reason === 'boss' ? 'crown-dragon-' : 'dragon-') + sub;
+  const id = (reason === 'boss' ? 'crown-dragon-' : reason === 'tournament' ? 'pet-' : 'dragon-') + sub;
   return /^[a-z0-9]+(-[a-z0-9]+)*$/.test(id) && id.length <= 40 ? id : null;
 }
 
@@ -87,7 +98,9 @@ export function dragonMetadata(kind, reason, heroineTokenId) {
   const name = NAMES[kind];
   return {
     title: `${name}, Elise's dragon`,
-    description: reason === 'boss'
+    description: reason === 'tournament'
+      ? `${name} chose Elise after her first tournament: the Hatchkeeper's first pet. Owned by the heroine NFT ${heroineTokenId}; it moves with her.`
+      : reason === 'boss'
       ? `${name} joined Elise after the crownrift fell. Owned by the heroine NFT ${heroineTokenId}; it moves with her.`
       : `${name} flies beside Elise from her first day. Owned by the heroine NFT ${heroineTokenId}; it moves with her.`,
     extra: JSON.stringify({ kind, reason, heroine: heroineTokenId }),
@@ -109,16 +122,29 @@ export async function claimCompanion(v, deps) {
   const g = await client.view(cfg.guests, 'guest_of', { public_key: v.publicKey });
   if (!g || g.account_id !== v.accountId) return { status: 403, body: { error: 'not_your_key' } };
   if (!g.minted || !g.token_id) return { status: 409, body: { error: 'no_heroine' } };
-  const tokenId = dragonTokenId(g.token_id, v.reason);
+  let heroineToken = g.token_id;
+  if (v.reason === 'tournament') { // the first pet: one per guest, to the heroine the player picked, after a finished tournament
+    const prior = await client.view(cfg.companions, 'nft_token', { token_id: dragonTokenId(g.token_id, 'tournament') }); // one pet per guest (its id follows the guest's own heroine)
+    if (prior) { let x = {}; try { x = JSON.parse((prior.metadata && prior.metadata.extra) || '{}'); } catch { /* none */ } return { status: 200, body: { reason: v.reason, kind: x.kind || null, token_id: prior.token_id, owner_id: prior.owner_id, heroine_token: x.heroine || null, contract: cfg.companions, tx_hash: null, already: true } }; }
+    const entered = await client.view(cfg.town, 'has_entered', { season_id: v.seasonId, account_id: v.accountId }).catch(() => false);
+    const season = entered ? await client.view(cfg.town, 'season', { season_id: v.seasonId }).catch(() => null) : null;
+    if (!entered || !season || !season.settled) return { status: 409, body: { error: 'no_tournament' } };
+    if (v.heroineToken !== g.token_id) {
+      const t = await client.view(cfg.heroine, 'nft_token', { token_id: v.heroineToken }).catch(() => null);
+      if (!t || t.owner_id !== v.accountId) return { status: 403, body: { error: 'not_your_heroine' } };
+    }
+    heroineToken = v.heroineToken;
+  }
+  const tokenId = dragonTokenId(v.reason === 'tournament' ? g.token_id : heroineToken, v.reason); // the pet's id follows the guest; its owner is the chosen heroine
   if (!tokenId) return { status: 500, body: { error: 'bad_token_id' } };
   const kinds = await dragonKinds(v.accountId), kind = kinds[v.reason];
-  const owner = `${g.token_id}.${cfg.heroine}`;
-  const answer = (token, tx, already) => ({ status: 200, body: { reason: v.reason, kind, token_id: tokenId, owner_id: token ? token.owner_id : owner, heroine_token: g.token_id, contract: cfg.companions, tx_hash: tx, already } });
+  const owner = `${heroineToken}.${cfg.heroine}`;
+  const answer = (token, tx, already) => ({ status: 200, body: { reason: v.reason, kind, token_id: tokenId, owner_id: token ? token.owner_id : owner, heroine_token: heroineToken, contract: cfg.companions, tx_hash: tx, already } });
   const existing = await client.view(cfg.companions, 'nft_token', { token_id: tokenId });
   if (existing) return answer(existing, null, true);
   if (v.reason === 'boss' && !bossDown((deps.loadLog || loadLog)(cfg.logDir, v.accountId))) return { status: 409, body: { error: 'boss_not_down' } };
   const key = deps.key || (await importSecretKey(cfg.secretKey));
-  const send = () => client.call({ key, signerId: cfg.companions, receiverId: cfg.companions, methodName: 'nft_mint', args: { token_id: tokenId, receiver_id: owner, metadata: dragonMetadata(kind, v.reason, g.token_id) }, gas: COMPANION.gas });
+  const send = () => client.call({ key, signerId: cfg.companions, receiverId: cfg.companions, methodName: 'nft_mint', args: { token_id: tokenId, receiver_id: owner, metadata: dragonMetadata(kind, v.reason, heroineToken) }, gas: COMPANION.gas });
   let r;
   try { r = await queue(send); } catch (e) {
     if (e && /InvalidNonce|nonce/i.test(JSON.stringify(e.rpc || e.message))) r = await queue(send); else throw e;

@@ -90,3 +90,44 @@ test('companion: refusals — bad signature, stale, no heroine yet, not configur
   const r = await claimCompanion(v, deps(chain({ failMint: 'Smart contract panicked: ERR_NOT_MINTER: only an authorized minter can mint' })));
   assert.equal(r.status, 502); assert.equal(r.body.error, 'not_minter');
 });
+
+async function signedT({ season = 's1', heroine = TOKEN, at = NOW, account = ACC } = {}) {
+  const key = await importSecretKey((await generateKeyPair()).secretKey);
+  const signature = b58encode(await key.sign(new TextEncoder().encode(companionMessage(account, at, 'tournament', season, heroine))));
+  return { account_id: account, public_key: key.publicKey, at, signature, reason: 'tournament', season_id: season, heroine_token: heroine };
+}
+function townChain({ entered = true, settled = true, heroines = {} } = {}) {
+  const c = chain(), view = c.client.view;
+  c.client.view = async (ct, m, a) => {
+    if (m === 'has_entered') return entered && a.season_id === 's1' && a.account_id === ACC;
+    if (m === 'season') return a.season_id === 's1' ? { settled } : null;
+    if (ct === cfg.heroine && m === 'nft_token') return heroines[a.token_id] || null;
+    return view(ct, m, a);
+  };
+  return c;
+}
+const tcfg = { ...cfg, town: 'ftf-town.testnet' };
+
+test('pet (tournament): no claim before the first finished tournament', async () => {
+  for (const [opts, why] of [[{ entered: false }, 'not entered'], [{ settled: false }, 'season still open']]) {
+    const c = townChain(opts); const body = await signedT();
+    const r = await claimCompanion(validateClaim(body, NOW), { ...deps(c), cfg: tcfg });
+    assert.equal(r.status, 409, why); assert.equal(r.body.error, 'no_tournament'); assert.equal(c.calls.length, 0, why + ': nothing minted');
+  }
+  assert.equal(validateClaim({ ...(await signedT()), season_id: '' }, NOW).error, 'bad_season');
+});
+
+test('pet (tournament): minted to the chosen heroine token account, once per guest; a heroine of someone else is refused', async () => {
+  const other = 'elise-second-1';
+  const c = townChain({ heroines: { [other]: { token_id: other, owner_id: ACC }, 'elise-stranger': { token_id: 'elise-stranger', owner_id: 'x.testnet' } } });
+  const v = validateClaim(await signedT({ heroine: other }), NOW); assert.ok(v.ok);
+  const r = await claimCompanion(v, { ...deps(c), cfg: tcfg });
+  assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.already, false);
+  assert.equal(r.body.owner_id, other + '.' + cfg.heroine, 'the pet belongs to the chosen heroine (NFT owns NFT)');
+  assert.equal(r.body.token_id, 'pet-lambada-1a');
+  const again = await claimCompanion(validateClaim(await signedT({ heroine: TOKEN }), NOW), { ...deps(c), cfg: tcfg });
+  assert.equal(again.body.already, true, 'one pet per guest'); assert.equal(c.calls.length, 1);
+  const c2 = townChain({ heroines: { 'elise-stranger': { token_id: 'elise-stranger', owner_id: 'x.testnet' } } });
+  const bad = await claimCompanion(validateClaim(await signedT({ heroine: 'elise-stranger' }), NOW), { ...deps(c2), cfg: tcfg });
+  assert.equal(bad.status, 403); assert.equal(bad.body.error, 'not_your_heroine');
+});

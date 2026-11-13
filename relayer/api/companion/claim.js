@@ -1,4 +1,4 @@
-// POST /api/companion/claim {account_id, public_key, at, signature, reason: "welcome"|"boss"}, signed by the guest key
+// POST /api/companion/claim {account_id, public_key, at, signature, reason: "welcome"|"boss"|"tournament", season_id?, heroine_token?}, signed by the guest key
 // as "ftf-companion|<account>|<at>|<reason>" -> {reason, kind, token_id, owner_id, heroine_token, contract, tx_hash, already}.
 // Idempotent: a dragon already minted for that heroine and reason is returned without a transaction (lib/companion.js).
 import { cors, createBucket, createQueue, envConfig, clientIp } from '../../lib/core.js';

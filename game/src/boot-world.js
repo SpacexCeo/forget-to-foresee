@@ -272,15 +272,24 @@ const chestBag = createChestBag({ storage: ctx.storage });
 // her (net/companions.js); ?companion=<kind> shows one locally for QA, never labelled as owned.
 const companions = [];
 let companionKinds = '';
-function setCompanions(all) {
-  const kinds = companionsToShow(all); // switched off for now (companion-rules.js COMPANIONS_ENABLED)
+function setCompanions(all, { owned = false } = {}) {
+  const kinds = owned ? all.slice(0, 1) : companionsToShow(all); // general companions are off (COMPANIONS_ENABLED); an owned Hatchkeeper pet flies
   const key = kinds.join(','); if (key === companionKinds) return; companionKinds = key;
   for (const c of companions.splice(0)) c.dispose();
   const perchAfter = Number(params.get('perch')) || undefined; // QA: ?perch=<seconds> lands the dragon sooner
   kinds.forEach((kind, slot) => companions.push(createCompanion({ scene, kind, slot, mobile: mobileDevice, perchAfter })));
 }
 function refreshCompanions() {
-  if (!COMPANIONS_ENABLED) { setCompanions([]); return; } // no reads, no claims, no dragon beside her
+  if (!COMPANIONS_ENABLED) { // owner 13.11: only the Hatchkeeper's pet, owned by the heroine she plays, flies with her; no other claims
+    const tokenId = (loadDay1(ctx.storage).guest || {}).token_id;
+    if (!tokenId) { setCompanions([]); return; }
+    Promise.all([import('./net/companions.js'), import('./net/pet.js')]).then(([cm, pm]) => cm.readCompanions({ tokenId }).then((r) => {
+      const pet = r && r.state === 'loaded' ? pm.petsOf(r.dragons)[0] : null;
+      setCompanions(pet ? [pet.kind] : [], { owned: true });
+      window.__ftfPet = pet ? { kind: pet.kind, heroine: tokenId } : null; window.dispatchEvent(new CustomEvent('ftf:pet', { detail: window.__ftfPet })); // the companion slots unlock (ui/companion-slot.js)
+    })).catch(() => {});
+    return;
+  }
   const qa = params.get('companion');
   if (qa && ['nacre', 'rill', 'cinder'].includes(qa)) { setCompanions([qa]); return; }
   const tokenId = (loadDay1(ctx.storage).guest || {}).token_id;
@@ -316,7 +325,20 @@ const _camFwd = new THREE.Vector3();
 /** The town errand's next townsperson (innkeeper, then baker, then shrinekeeper) gets a gold "!" too (owner 13.11). */
 const ERRAND_NPC = Object.freeze({ read: 'innkeeper', trade: 'baker', deliver: 'shrinekeeper' }); // scenes/town-quest.js QUEST_NPC
 function errandMarkers() { const k = townFlow && townFlow.questActive ? ERRAND_NPC[townFlow.questStep] : null; return k ? [{ giver: k, sym: '!' }] : []; }
-let hatchkeeper = null, hatchLoading = false; // the Hatchkeeper by the lower-lane stalls (scenes/hatchkeeper.js, live, owner 13.11)
+let hatchkeeper = null, hatchLoading = false;
+/** The Hatchkeeper's pet (net/pet.js): its state for the panel, and the claim to the heroine the player picks. */
+function hatchPet() {
+  return {
+    state: () => import('./net/pet.js').then(async (pm) => {
+      const heroines = await pm.heroineOptions({ storage: ctx.storage });
+      const pet = await pm.findPet({ storage: ctx.storage, heroines });
+      const proof = pet ? { proven: true, seasonId: null } : await pm.tournamentProof({ storage: ctx.storage });
+      return { state: pm.hatchState({ proven: proof.proven, pet }), heroines, seasonId: proof.seasonId, pet };
+    }),
+    claim: (heroineToken, seasonId) => import('./net/companion-claim.js').then((m) => m.claimCompanion({ reason: 'tournament', storage: ctx.storage, seasonId, heroineToken }))
+      .then((r) => { if (r && r.ok) { refreshCompanions(); setTimeout(refreshCompanions, 4000); } return r; }),
+  };
+} // the Hatchkeeper by the lower-lane stalls (scenes/hatchkeeper.js, live, owner 13.11)
 let townQuests = null, townPortal = null, townBoard = null, expeditionSync = null, questMarkers = null; // the Expedition (?story=1): scenes/town-quests.js, town-portal.js
 let glassShoal = null, shoalLoading = false;
 let town = null, townFlow = null, townCasting = null, townMobs = null, inTown = false, townGrounded = false, irisAvatar = null, killXp = null, endgamePass = null, stallMounted = false, worksMounted = false, tournMounted = false;
@@ -395,7 +417,7 @@ if (townMode.town) {
   }
   townProps = createTownProps({ scene, town, ledger: townLedger, i18n: ctx.i18n, mobile: mobileDevice });
   // the mirror and the notice board: the two spots the town files do not model get an object (owner 12.11)
-  if (!hatchLoading) { hatchLoading = true; import('./scenes/hatchkeeper.js').then((m) => { hatchkeeper = m.createHatchkeeper({ scene, t: (k, a) => ctx.i18n.t(k, a), groundAt: (x, z) => town.groundAt(x, z), mobile: mobileDevice, reduced: () => lookdev.reducedMotion }); spots.push(hatchkeeper.spot); }).catch((e) => console.warn('[hatchkeeper]', e)); }
+  if (!hatchLoading) { hatchLoading = true; import('./scenes/hatchkeeper.js').then((m) => { hatchkeeper = m.createHatchkeeper({ pet: hatchPet(), scene, t: (k, a) => ctx.i18n.t(k, a), groundAt: (x, z) => town.groundAt(x, z), mobile: mobileDevice, reduced: () => lookdev.reducedMotion }); spots.push(hatchkeeper.spot); }).catch((e) => console.warn('[hatchkeeper]', e)); }
   if (!spotProps) spotProps = createSpotProps({ scene, town, near: (id) => { const s = spots.find((x) => x.id === id); return !!(s && inTown && s.near(player.pos)); } });
   refreshCompanions();
   // The Glass Shoal (flag glassShoal, docs/plans/boss/glass-shoal-boss.md): the level-5 main quest, the dragon ride and
