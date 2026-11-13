@@ -438,7 +438,10 @@ if (townMode.town) {
       glassShoal = m.createGlassShoal({ THREE, scene, camera, rig, player, toWorld: townToWorld, groundAt: (x, z) => town.groundAt(x, z), folkAt, ledger: townLedger, chests: chestBag, storage: ctx.storage,
         locale: () => (ctx.i18n && ctx.i18n.locale) || 'en', toast: (s) => toast(s), reduced: () => lookdev.reducedMotion, mobile: mobileDevice, touch: () => !!input.touchControls,
         hero: () => (irisAvatar && irisAvatar.hero ? irisAvatar.hero.id : startHero.id), clip: (n) => { if (irisAvatar && irisAvatar.combat) irisAvatar.combat(n); }, axes: () => input.moveAxes() });
-      if (params.get('shoal')) glassShoal.debugStep(params.get('shoal')); // dev preview: ?ff=glassShoal&shoal=reach_stone (a quest step), &shoal=ride (onto the dragon), &shoal=arena (straight into the fight)
+      const shoalJump = params.get('shoal'), gs = glassShoal;
+      if (shoalJump === 'arena' || shoalJump === 'ride') { // only after the loading screen: the town must settle (and warm) around her first
+        const go = () => (window.__ftfBootMarks && window.__ftfBootMarks.done ? gs.debugStep(shoalJump) : setTimeout(go, 150)); go();
+      } else if (shoalJump) gs.debugStep(shoalJump); // dev preview: ?ff=glassShoal&shoal=reach_stone (a quest step), &shoal=ride (onto the dragon), &shoal=arena (straight into the fight)
       if (window.__ftf) window.__ftf.glassShoal = glassShoal;
     }).catch((e) => { shoalLoading = false; console.warn('[shoal]', e); });
   };

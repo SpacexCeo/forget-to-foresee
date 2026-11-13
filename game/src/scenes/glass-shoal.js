@@ -36,7 +36,8 @@ body.ts-touch .gs-prompt kbd{display:none}@media (pointer:coarse){.gs-prompt kbd
 .gs-ride{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 70px);transform:translateX(-50%);z-index:14;text-align:center;color:#f3ead2;font:600 16px system-ui,sans-serif;text-shadow:0 1px 3px #000;pointer-events:none}
 .gs-ride small{display:block;font-weight:400;font-size:13px;opacity:.85}.gs-ride i{display:block;width:220px;height:5px;margin:6px auto 0;border-radius:3px;background:rgba(255,255,255,.18);overflow:hidden}.gs-ride i b{display:block;height:100%;background:#f6c860}
 .gs-skip{position:fixed;right:calc(env(safe-area-inset-right,0px) + 16px);bottom:calc(env(safe-area-inset-bottom,0px) + 24px);z-index:15}
-body.gs-owned .ph,body.gs-owned .ftf-town-objective,body.gs-owned .ftf-story-goal,body.gs-owned .ftf-cast,body.gs-owned .ftf-cast-bar,body.gs-owned .ftf-mk,body.gs-owned .ftf-chat,body.gs-owned .ft,body.gs-owned .ts-btn,body.gs-owned .ts-arc,body.gs-owned .ftf-town-prompt,body.gs-owned .ftf-scene-hint{display:none!important}
+body.gs-owned .ph,body.gs-owned .ftf-town-objective,body.gs-owned .ftf-story-goal,body.gs-owned .ftf-cast,body.gs-owned .ftf-cast-bar,body.gs-owned .ftf-mk,body.gs-owned .ftf-chat,body.gs-owned .ft,body.gs-owned .ts-btn,body.gs-owned .ts-arc,body.gs-owned .ftf-town-prompt,body.gs-owned .ftf-scene-hint,
+body.gs-owned .rpg,body.gs-owned .ftf-bark,body.gs-owned .ftf-altar-timer,body.gs-owned .ftf-run-toggle{display:none!important}
 html[data-motion=reduce] .gs-track{animation:none}
 @media (prefers-reduced-motion:reduce){.gs-track{animation:none}}
 `;
