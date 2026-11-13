@@ -5,14 +5,17 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { chunkFor } from '../../build/chunks.js';
 
-test('every module main.js imports statically lands in the boot chunk (or stays in the entry)', () => {
+// Lead, 13.11: features.js had no rule ("undefined"), Rollup put it into client-core, and the loading page then
+// preloaded three, ui, play and client-core (first load 1085 KB gz instead of 12). Every relative static import of the
+// entry is pinned to "boot" now; "let Rollup decide" is not allowed for them.
+test('every module main.js imports statically is pinned to the boot chunk', () => {
   const main = readFileSync(new URL('../../src/main.js', import.meta.url), 'utf8');
   const statics = [...main.matchAll(/^import\s+(?:[^'"]+from\s+)?['"](\.[^'"]+)['"]/gm)].map((m) => m[1]);
   assert.ok(statics.length >= 2);
   for (const rel of statics) {
     const id = '/repo/game/src/' + rel.replace(/^\.\//, '');
     const chunk = chunkFor(id);
-    assert.ok(chunk === 'boot' || chunk === undefined, `${rel} → chunk ${chunk}: a static import from the entry must be in "boot"`);
+    assert.equal(chunk, 'boot', `${rel} → chunk ${chunk}: a static import from the entry must be pinned to "boot" in build/chunks.js`);
   }
 });
 

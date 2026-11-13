@@ -39,7 +39,8 @@ export function chunkFor(id) {
   const p = id.replace(/\\/g, '/');
   if (ENTRY_MODULES.some((e) => p.includes(e))) return undefined;
   if (/\.css(\?|$)/.test(p)) return undefined; // stylesheets stay with their importer: a CSS import must not bind the entry to a chunk
-  if (p.includes('/src/ui/loading.js') || p.includes('/src/ui/webgl-guard.js') || p.includes('/src/ui/premise.js') || p.includes('/src/ui/motion/') || p.includes('vite/preload-helper')) return 'boot'; // tiny, static with the entry
+  if (p.includes('/src/ui/loading.js') || p.includes('/src/ui/webgl-guard.js') || p.includes('/src/ui/premise.js') || p.includes('/src/ui/motion/') || p.includes('vite/preload-helper')
+    || p.includes('/src/features.js') || p.includes('/src/sprint/retry-import.js') || p.includes('/src/entry-url.js')) return 'boot'; // tiny, static with the entry (features.js once fell into client-core and dragged three, ui, play into the first load)
   if (p.includes('/node_modules/three/')) return 'three';
   if (p.includes('/src/render/') || p.includes('/src/physics/') || p.includes('/src/scenes/') || p.includes('/src/play/logogram.js') || CORE_PLAY.some((m) => p.includes(m))) return 'client-core';
   if (p.includes('/src/locales/') || p.includes('/src/play/locales/')) return 'locales';

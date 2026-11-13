@@ -9,7 +9,10 @@ const limit = (Number(process.argv[3]) || 240) * 1000;
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
 const errors = [];
-page.on('pageerror', (e) => errors.push(e.message));
+page.on('pageerror', (e) => errors.push('PAGEERR ' + e.message));
+// a module that fails to evaluate (a TDZ across chunks: "Cannot access 'x' before initialization") can also surface as a
+// console error or be caught by the sprint mount; both count as a failed boot
+page.on('console', (m) => { if (m.type() !== 'error' && m.type() !== 'warning') return; const x = m.text(); if (/before initialization|is not defined|is not a function|Failed to fetch dynamically imported/.test(x)) errors.push('CONSOLE ' + x.slice(0, 300)); });
 await page.goto(url, { waitUntil: 'domcontentloaded' });
 const t0 = Date.now();
 let marks = null;
@@ -17,6 +20,12 @@ while (Date.now() - t0 < limit && !errors.length) {
   marks = await page.evaluate(() => window.__ftfBootMarks || null).catch(() => null);
   if (marks && marks.done) break;
   await page.waitForTimeout(1000);
+}
+// after the loading screen: let the lazily mounted modules (sprint flags, HUD) evaluate, then read the sprint bus
+if (marks && marks.done && !errors.length) {
+  await page.waitForTimeout(6000);
+  const shown = await page.evaluate(() => (window.__ftfTelemetry || []).filter((e) => e.name === 'error.shown').map((e) => JSON.stringify(e.payload))).catch(() => []);
+  for (const x of shown) errors.push('error.shown ' + x);
 }
 const pct = await page.evaluate(() => { const b = document.querySelector('#boot .boot-pct'); return b ? b.textContent : null; }).catch(() => null);
 await browser.close();
