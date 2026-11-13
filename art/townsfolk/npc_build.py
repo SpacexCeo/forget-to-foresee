@@ -3,13 +3,13 @@ They become townsfolk of the shared agent rig (same bone names as every other bo
 game/public/assets/anim/townsfolk.glb retargets onto them at load): the 78 bones are merged into 31 of ours (twist and
 share bones into their limb, the three long fingers into one, the face into the head), the mesh is stood on the
 floor at the giver's height facing -Y, welded (it comes as a triangle soup) and decimated; UVs and texture are its own.
-    blender -b -P npc_build.py -- <source.glb> <out_raw.glb> <height m> <triangles> [outline mm, 0 = none]
+    blender -b -P npc_build.py -- <source.glb> <out_raw.glb> <height m> <triangles> [outline mm, 0 = none] [coat: largest leg share of cloth hanging off the legs, 0 = off]
 The texture is resized and compressed afterwards (art/tools/compress-glb.sh).
 """
 import bpy, bmesh, sys, re, math
 import numpy as np
 from mathutils import Vector
-a = sys.argv[sys.argv.index('--') + 1:]; SRC, OUT, HEIGHT, TRIS = a[0], a[1], float(a[2]), int(a[3]); OUTLINE = float(a[4]) if len(a) > 4 else 0.0
+a = sys.argv[sys.argv.index('--') + 1:]; SRC, OUT, HEIGHT, TRIS = a[0], a[1], float(a[2]), int(a[3]); OUTLINE = float(a[4]) if len(a) > 4 else 0.0; COAT = float(a[5]) if len(a) > 5 else 0.0
 
 def canon(name):
     """A second naming scheme of generated rigs (65 bones, prefixed) in the names of the first."""
@@ -46,6 +46,16 @@ gname = {g.index: canon(g.name) for g in el.vertex_groups}
 for v in me.vertices:
     for g in v.groups:
         W.setdefault(ours(gname[g.group]) or 'pelvis', np.zeros(n))[v.index] += g.weight
+if COAT > 0:      # a long coat welded to the body: cloth that hangs away from a leg follows it by `COAT` at most, the hips take the rest
+    sm = lambda a_, b_, x_: (lambda t_: t_ * t_ * (3 - 2 * t_))(np.clip((x_ - a_) / (b_ - a_), 0, 1)); kk = HEIGHT / 1.8; moved = 0.0
+    for s_ in 'LR':
+        cap = np.ones(n)
+        for bone, a_, b_, r0, r1 in ((f'thigh_{s_}', J[f'{s_}_Thigh'], J[f'{s_}_Calf'], 0.105, 0.075), (f'shin_{s_}', J[f'{s_}_Calf'], J[f'{s_}_Foot'], 0.085, 0.085)):
+            ab = b_ - a_; t_ = np.clip(((co - a_) @ ab) / (ab @ ab), 0, 1); d_ = np.linalg.norm(co - a_ - t_[:, None] * ab, axis=1); e_ = d_ - (r0 + (r1 - r0) * t_) * kk
+            c_ = 1 - (1 - COAT) * sm(0.01 * kk, 0.07 * kk, e_); w_ = W.get(bone)
+            if w_ is None: continue
+            give = w_ * (1 - c_); W[bone] = w_ - give; W.setdefault('pelvis', np.zeros(n)); W['pelvis'] = W['pelvis'] + give; moved += float(give.sum())
+    print('coat: leg weight moved to the hips, %.0f vertex-weights' % moved)
 tot = sum(W.values()); print('source: %d vertices, %d triangles, %d bones; unweighted vertices %d; scale %.3f' % (n, sum(len(p.vertices) - 2 for p in me.polygons), len(arm0.data.bones), int((tot < 1e-4).sum()), k))
 W.setdefault('pelvis', np.zeros(n))[tot < 1e-4] = 1.0; tot = sum(W.values())
 img = next((i for i in bpy.data.images if i.size[0] > 0), None)
