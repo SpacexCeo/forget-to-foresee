@@ -25,11 +25,13 @@ async function boot(ctxOpts) {
 
 // ---------------------------------------------------------------- desktop 1920 × 1080
 const page = await boot({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
-const RECTS = { '.rpg-frame': [24, 24, 360, 96], '.rpg-map': [1696, 24, 200, 200], '.rpg-hotbar': [684, 1000, 552, 56], '.rpg-xp': [684, 1064, 552, 8], '.rpg-log': [24, 836, 420, 220], '.rpg-silk': [1372, 1012, 168, 44], '.rpg-tray': [1552, 1012, 344, 44] };
+const RECTS = { '.rpg-frame': [24, 24, 340, 92], '.rpg-map': [1696, 24, 200, 200], '.rpg-xp': [760, 1054, 400, 8], '.rpg-log': [24, 864, 400, 192], '.rpg-silk': [1488, 1008, 168, 48], '.rpg-tray': [1680, 1008, 216, 48] };   // the compact HUD (owner mockup 13.11)
 const rects = await page.evaluate((sels) => Object.fromEntries(sels.map((s) => { const r = document.querySelector(s).getBoundingClientRect(); return [s, [r.left, r.top, r.width, r.height].map((x) => Math.round(x))]; })), Object.keys(RECTS));
 const off = Object.entries(RECTS).filter(([s, e]) => rects[s].some((v, i) => Math.abs(v - e[i]) > 2));
 ok('E1 rectangles at the 5.4 coordinates (±2 px)', !off.length, off.length ? off.map(([s]) => `${s} ${rects[s]}`) : 'all');
-const TRACKER = [1576, 268, 320, 420];
+const hb = await page.evaluate(() => { const r = document.querySelector('.rpg-hotbar').getBoundingClientRect(); return [r.left + r.width / 2, r.bottom]; });
+ok('E1 hotbar centred over the XP bar', Math.abs(hb[0] - 960) <= 2 && Math.abs(hb[1] - 1040) <= 2, hb);
+const TRACKER = [1608, 264, 288, 360];
 const hit = Object.entries(rects).filter(([, r]) => r[0] < TRACKER[0] + TRACKER[2] && r[0] + r[2] > TRACKER[0] && r[1] < TRACKER[1] + TRACKER[3] && r[1] + r[3] > TRACKER[1]);
 ok('E1 nothing overlaps the A1 tracker slot', !hit.length, hit.map(([s]) => s));
 ok('old HUD frame hidden', await page.evaluate(() => { const f = document.querySelector('.ph-frame'); return !f || getComputedStyle(f).display === 'none'; }));

@@ -17,7 +17,8 @@ export const TRAY = Object.freeze([
   { id: 'map', action: 'map', icon: SVG('<path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/>') },
   { id: 'bag', action: 'bag', icon: SVG('<path d="M6 8h12l-1 12H7z"/><path d="M9 8a3 3 0 016 0"/>') },
   { id: 'market', action: 'market', icon: SVG('<path d="M4 9l2-5h12l2 5"/><path d="M5 9v11h14V9"/><path d="M4 9h16"/>') },
-  { id: 'menu', action: null, key: 'Esc', icon: SVG('<path d="M4 7h16M4 12h16M4 17h16"/>') },
+  // the menu: a gear on the desktop tray (it opens the game menu with Settings), the three lines on the phone tray
+  { id: 'menu', action: null, key: 'Esc', icon: SVG('<g class="i-menu"><path d="M4 7h16M4 12h16M4 17h16"/></g><g class="i-gear"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></g>') },
 ]);
 
 /** What a hotbar slot shows: {state, label, seconds, sweep (0..1 left), global}. Pure. */
@@ -29,6 +30,13 @@ export function slotView({ id, cd, mana, manaCost, flash = false, active = false
   }
   if (manaCost > mana) return { state: 'nomana', seconds: null, sweep: 0, flash, active };
   return { state: 'ready', seconds: null, sweep: 0, flash, active };
+}
+
+/** Is the stamina bar shown? Only while it is below full, just spent, or flashing a refusal; a full bar that has
+ * rested for 3 s fades out (the same rule as the old frame, scenes/player-hud.js). `st` is game/stamina.js or null. Pure. */
+export function staminaShown(st) {
+  if (!st) return false;
+  return st.ratio < 0.999 || st.flash > 0 || st.idle <= 3;
 }
 
 /**
@@ -62,7 +70,8 @@ export function createHud(o) {
   const frame = el('div', 'rpg-frame px panel'); frame.tabIndex = 0; frame.setAttribute('role', 'button');
   const portrait = el('div', 'rpg-portrait'), name = el('div', 'rpg-name', 'Iris'), lv = el('div', 'rpg-lv');
   const hp = bar('rpg-hp'), mana = bar('rpg-mana');
-  frame.append(portrait, name, lv, hp.b, mana.b);
+  const stam = bar('rpg-stam'); stam.txt.remove(); stam.ghost.remove(); stam.b.setAttribute('role', 'meter'); stam.b.setAttribute('aria-valuemin', '0'); stam.b.setAttribute('aria-valuemax', '100'); stam.b.dataset.show = '0';
+  frame.append(portrait, name, lv, hp.b, mana.b, stam.b);
   frame.addEventListener('click', () => o.onFrame && o.onFrame());
   const vignette = el('div', 'rpg-vignette');
   const buffs = el('div', 'rpg-buffs px');
@@ -72,7 +81,9 @@ export function createHud(o) {
   target.append(tn, tl, thp.b);
   // minimap
   const map = el('div', 'rpg-map px'); map.setAttribute('role', 'button'); map.tabIndex = 0; map.setAttribute('aria-label', t('hud.map.open'));
-  const canvas = el('canvas'); canvas.width = 200; canvas.height = 200; map.append(canvas, el('div', 'n', 'N'));
+  const canvas = el('canvas'); canvas.width = 400; canvas.height = 400;   // 2x the 200 px frame: crisp dots and lines
+  const zone = el('div', 'loc');
+  map.append(canvas, el('div', 'n', 'N'), zone);
   map.addEventListener('click', () => o.onMap && o.onMap());
   const zoom = el('div', 'rpg-zoom px'), zin = el('button', null, '+'), zout = el('button', null, '−');
   zin.type = zout.type = 'button'; zin.setAttribute('aria-label', t('hud.map.zoomIn')); zout.setAttribute('aria-label', t('hud.map.zoomOut'));
@@ -155,6 +166,13 @@ export function createHud(o) {
       hp.b.dataset.low = hpPct < 0.25 && hpPct > 0 ? '1' : '0'; vignette.dataset.on = hp.b.dataset.low;
       mana.fill.style.width = (v.maxMana ? (v.mana / v.maxMana) * 100 : 0).toFixed(1) + '%'; mana.txt.textContent = `${Math.floor(v.mana)} / ${v.maxMana}`;
       mana.b.dataset.pulse = v.manaPulse ? '1' : '0';
+      // stamina (game/stamina.js): a thin bar under the mana, shown only while it matters
+      const sta = v.stamina || null, stOn = staminaShown(sta);
+      stam.b.dataset.show = stOn ? '1' : '0'; frame.dataset.stam = stOn ? '1' : '0';
+      if (sta) {
+        stam.fill.style.width = (Math.max(0, Math.min(1, sta.ratio)) * 100).toFixed(1) + '%'; stam.b.dataset.winded = sta.winded ? '1' : '0'; stam.b.dataset.flash = sta.flash > 0.5 ? '1' : '0';
+        const sv = String(Math.round(sta.value)); if (stam.b.getAttribute('aria-valuenow') !== sv) { stam.b.setAttribute('aria-valuenow', sv); stam.b.setAttribute('aria-label', t('hud.stamina')); stam.b.title = `${t('hud.stamina')} ${sv} / 100`; }
+      }
       // target
       if (v.target) {
         target.hidden = false; tn.textContent = v.target.name; tl.textContent = v.target.elite ? t('hud.target.elite') : '';
@@ -187,7 +205,8 @@ export function createHud(o) {
       if (v.silkPop) { silk.dataset.pop = '0'; void silk.offsetWidth; silk.dataset.pop = '1'; }
       // tray
       for (const it of TRAY) { const b = trayBtn[it.id]; b.querySelector('.k').textContent = it.key || o.keyOf(it.action); b.setAttribute('aria-pressed', String(!!(v.open && v.open[it.id]))); b.dataset.badge = v.badges && v.badges[it.id] ? '1' : '0'; b.disabled = !!v.cinematic; b.dataset.why = v.cinematic ? t('hud.tray.notNow') : ''; }
-      coords.textContent = v.coords ? t('hud.map.coords', { x: v.coords[0], z: v.coords[1] }) : '';
+      coords.textContent = v.coords ? t('hud.map.coords', { x: v.coords[0], z: v.coords[1] }) : ''; coords.hidden = !v.coords;
+      const zn = v.zone ? t('hud.map.zone.' + v.zone) : ''; if (zone.textContent !== zn) { zone.textContent = zn; zone.hidden = !zn; }
       zin.disabled = !!v.zoomMin; zout.disabled = !!v.zoomMax; zin.title = v.zoomMin ? t('hud.map.limit') : t('hud.map.zoomIn'); zout.title = v.zoomMax ? t('hud.map.limit') : t('hud.map.zoomOut');
     },
     log(text, kind = 'sys', channel = 'log') {
