@@ -62,7 +62,7 @@ export const TOWNSFOLK = Object.freeze([
   { key: 'innkeeper', height: 1.65, walk: 1.15 },
   { key: 'baker', height: 1.72, walk: 1.15 },
   { key: 'shrinekeeper', height: 1.60, walk: 0.95 },
-  { key: 'elder', height: 1.70, walk: 0.65 },
+  { key: 'elder', height: 1.70, walk: 1.15 }, // a grown man's pace and the normal walk (owner 13.11: "he is not a grandpa")
   { key: 'musician', height: 1.74, walk: 1.25 },
   { key: 'sweeper', height: 1.62, walk: 1.20 },
   { key: 'lamplighter', height: 1.70, walk: 1.30 },

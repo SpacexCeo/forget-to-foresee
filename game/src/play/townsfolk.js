@@ -27,7 +27,7 @@ const _pelvis = new THREE.Vector3();
 const _sphere = new THREE.Sphere(), _frustum = new THREE.Frustum(), _m = new THREE.Matrix4(), _target = [0, 0, 0], _local = [0, 0, 0];
 const ONE_SHOT = new Set(['wave', 'salute', 'nod', 'gesture_offer', 'understand']);
 /** Body type of the shared mocap set (anim-library.js townsfolkClips): posture and stride per kind of person. */
-const BODY = { elder: 'elder', child_a: 'child', child_b: 'child', guard: 'guard' };
+const BODY = { child_a: 'child', child_b: 'child', guard: 'guard' }; // the elder is a grown man, not an old one (owner 13.11): the default body
 
 class Person {
   constructor(def, scene) {
@@ -68,7 +68,7 @@ class Person {
       if (face) this.mixer.clipAction(face).play();
       // move at the speed the clips walk at, so the feet never slide; sit at the height the sit clip sits at
       const speedOf = (want) => { const c = this.clips.get(pickClip(this.names, want)); return c && c.userData && c.userData.speed > 0 ? c.userData.speed : 0; };
-      this.clipSpeed = { walk: speedOf(this.def.key === 'elder' ? 'elder_walk' : 'walk') || this.def.walk, run: speedOf('run') || this.def.run || 2.6 };
+      this.clipSpeed = { walk: speedOf('walk') || this.def.walk, run: speedOf('run') || this.def.run || 2.6 };
       this.plan.walkSpeed = this.clipSpeed.walk; if (this.def.run) this.plan.runSpeed = this.clipSpeed.run;
       const sit = this.clips.get('sit');
       this.sitDrop = sit && sit.userData && sit.userData.pelvis_y ? sit.userData.pelvis_y - 0.10 * (sit.userData.scale || 1) : null;
@@ -99,7 +99,7 @@ class Person {
 
   /** The walk (or run) layer: its weight follows the actual speed and its phase the distance covered, so feet do not slide. */
   gait(dt, speed, gait) {
-    const name = pickClip(this.names, gait === 'run' ? 'run' : this.def.key === 'elder' ? 'elder_walk' : 'walk');
+    const name = pickClip(this.names, gait === 'run' ? 'run' : 'walk');
     if (!name) return;
     if (this.walkName !== name) {
       if (this.walkAct) this.walkAct.stop();
