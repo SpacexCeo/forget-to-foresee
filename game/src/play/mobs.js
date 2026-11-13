@@ -10,6 +10,7 @@
 // Events: `ftf:mob-killed` on window, detail {type, pos: [x, y, z] world, elite, killId} when a monster has fallen (its death
 // clip has played and the dissolve starts) - the loot code turns it into a chest. `ftf:iris-down` when her health
 // runs out (she is carried back to the gate with full health).
+import { emit as busEmit } from '../sprint/bus.js';
 import { onField } from '../scenes/town-outside.js';
 import { CASTS } from '../scenes/town-casting-fx.js';
 
@@ -537,6 +538,7 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
 
   function handle(ev) {
     for (const e of ev) {
+      if (e.kind === 'hit' || e.kind === 'killed') busEmit(e.kind === 'hit' ? 'mob.hit' : 'mob.killed', { type: e.mob.type, id: e.mob.id, dmg: e.amount, crit: !!e.crit }); // sprint bus (A5 seam)
       const v = views.get(e.mob);
       if (e.kind === 'attack' && v) { if (v.actions.attack) { play(v, 'attack', 0.1); v.oneShot = v.actions.attack; } v.ring.visible = !(e.ranged || e.mob.T.ranged); if (onFeedback) onFeedback('attack', e.mob); }
       else if (e.kind === 'impact') { if (v) v.ring.visible = false; if (e.hit) hurt(e.mob.T.damage, !!e.mob.T.heavy); }

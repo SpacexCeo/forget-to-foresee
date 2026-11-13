@@ -9,9 +9,9 @@ const ACCOUNT_RE = /^(?=.{2,64}$)[a-z0-9]+([-_][a-z0-9]+)*(\.[a-z0-9]+([-_][a-z0
 
 /** The text a player's key signs to open a chest. */
 export const openMessage = (accountId, atMs, count = null, requestId = null) => (count == null ? `ftf-chest-open|${accountId}|${atMs}` : `ftf-chest-open|${accountId}|${atMs}|${count}|${requestId}`);
-/** Most openings in one batch transaction, and the gas each open_chest action gets (10 x 28 = 280 of 300 Tgas). */
+/** Most openings in one batch (one transaction each), and the gas each open_chest transaction gets (as a single open). */
 export const BATCH_MAX = 10;
-export const BATCH_ACTION_GAS = 28_000_000_000_000n;
+export const BATCH_ACTION_GAS = 100_000_000_000_000n;
 
 /** Validates {account_id, public_key, at, signature} (signature: base58 ed25519 over openMessage). */
 export function validateOpen(b, now = Date.now(), maxSkewMs = CHEST_DEFAULTS.maxSkewMs) {
@@ -110,9 +110,12 @@ export function leftToday(openings, cap = 30, nowNs = BigInt(Date.now()) * 1_000
   return Math.max(0, cap - used);
 }
 
-/** Counted separately on purpose: one batch is one transaction with N openings. */
-export const chestCounters = { transactions: 0, openings: 0, batches: 0 };
+/** Counted separately on purpose: a batch of N is N transactions sent together; errors are counted by code. */
+export const chestCounters = { transactions: 0, openings: 0, batches: 0, errors: {} };
+export const countChestError = (code) => { chestCounters.errors[code] = (chestCounters.errors[code] || 0) + 1; };
 const journal = new Map(); // request id -> the answer (a repeated request never re-sends)
+/** The stored answer of a batch request id, or null (a retry of a lost answer is served from here, before the replay guard). */
+export const journaled = (accountId, requestId) => (requestId && journal.has(accountId + '|' + requestId) ? journal.get(accountId + '|' + requestId) : null);
 
 /**
  * Opens up to `count` chests in ONE transaction of `open_chest` actions (owner's batch design; no contract change).
@@ -121,7 +124,7 @@ const journal = new Map(); // request id -> the answer (a repeated request never
  */
 export async function openChests({ accountId, publicKey, count, requestId }, { secretKey, chests = CHEST_DEFAULTS.chests, season = CHEST_DEFAULTS.season, rpcUrls, fetch = globalThis.fetch, queue = (fn) => fn(), now = () => Date.now(), client: given = null }) {
   if (!secretKey) return { status: 503, body: { error: 'chest_not_configured' } };
-  if (journal.has(requestId)) return journal.get(requestId);
+  if (journal.has(accountId + '|' + requestId)) return journal.get(accountId + '|' + requestId);
   const client = given || createTxClient({ rpcUrls, fetch });
   try { await client.rpc('query', { request_type: 'view_access_key', finality: 'final', account_id: accountId, public_key: publicKey }); } catch { return { status: 403, body: { error: 'not_your_key' } }; }
   const info = await client.view(chests, 'season_info', {});
@@ -131,18 +134,27 @@ export async function openChests({ accountId, publicKey, count, requestId }, { s
   const n = Math.min(count, BATCH_MAX, left, info.size - info.opened);
   if (n <= 0) return { status: left <= 0 ? 429 : 410, body: { error: left <= 0 ? 'daily_cap' : 'sold_out' } };
   const key = await importSecretKey(secretKey);
+  // One single-action transaction per chest: a function-call access key (FTF_CHEST_KEY) may not sign a transaction
+  // with several actions (the network refuses it before it is sent, which is why every batch failed). They go out
+  // back to back from one queue slot, so a partial success settles exactly the chests that opened.
   const calls = Array.from({ length: n }, () => ({ methodName: 'open_chest', args: { account_id: accountId }, gas: BATCH_ACTION_GAS }));
-  const send = () => client.callMany({ key, signerId: chests, receiverId: chests, calls });
-  let r = await queue(send);
-  chestCounters.transactions++;
-  if (!r.ok) { r = await queue(send); chestCounters.transactions++; } // all-or-nothing: nothing landed, retry once
-  if (!r.ok) return { status: 502, body: { error: 'tx_failed', tx_hash: r.hash, failure: String(r.failure || '').slice(0, 160) } };
-  const opened = openedEvents(r.outcome).filter((o) => o.account_id === accountId);
+  const results = await queue(() => client.callEach({ key, signerId: chests, receiverId: chests, calls }));
+  chestCounters.transactions += results.length;
+  const good = results.filter((r) => r.ok);
+  for (const r of results) if (!r.ok) countChestError(/ERR_DAILY/.test(String(r.failure)) ? 'daily_cap' : /ERR_SOLD_OUT/.test(String(r.failure)) ? 'sold_out' : 'tx_failed');
+  if (!good.length) {
+    const f = String(results[0] && results[0].failure || '');
+    const code = /ERR_DAILY/.test(f) ? 'daily_cap' : /ERR_SOLD_OUT/.test(f) ? 'sold_out' : 'tx_failed';
+    return { status: code === 'daily_cap' ? 429 : code === 'sold_out' ? 410 : 502, body: { error: code, tx_hash: results[0] ? results[0].hash : null, failure: f.slice(0, 160) } };
+  }
+  const opened = [];
+  for (const r of good) for (const o of openedEvents(r.outcome)) if (o.account_id === accountId) opened.push({ ...o, tx: r.hash });
   chestCounters.openings += opened.length; chestCounters.batches++;
   const s = info.season || season;
-  const answer = { status: 200, body: { requested: count, opened: opened.length, cut: n < count ? (left < count ? 'daily_cap' : 'batch_or_deck') : null, tx_hash: r.hash, transactions: 1, contract: chests, season: s, seed: info.seed.seed,
-    openings: opened.map((o) => ({ opening: { index: o.index, position: o.position, nft: o.nft }, ...outcomeAt(s, o.position) })) } };
-  journal.set(requestId, answer);
+  const cut = opened.length < count ? (left < count ? 'daily_cap' : opened.length < n ? 'failed_some' : 'batch_or_deck') : null;
+  const answer = { status: 200, body: { requested: count, opened: opened.length, cut, tx_hash: good[good.length - 1].hash, transactions: results.length, tx_hashes: good.map((r) => r.hash), contract: chests, season: s, seed: info.seed.seed,
+    openings: opened.map((o) => ({ opening: { index: o.index, position: o.position, nft: o.nft }, tx_hash: o.tx, ...outcomeAt(s, o.position) })) } };
+  journal.set(accountId + '|' + requestId, answer);
   if (journal.size > 5_000) journal.delete(journal.keys().next().value);
   return answer;
 }

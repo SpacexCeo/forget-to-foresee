@@ -6,7 +6,15 @@
 // No relayer, no opening: nothing is ever invented here.
 export const CHEST_OUTCOMES = Object.freeze(['nft', 'item', 'silk', 'xp']);
 
-const REASON = Object.freeze({ need_guest: 'no_guest', not_your_key: 'no_key', not_configured: 'soon', season_not_ready: 'soon', daily_cap: 'rate', rate_limited: 'rate', sold_out: 'sold_out', network: 'network' });
+// Every relayer code has its own plain message (chest.err.<key>); only a code nobody knows falls back to 'bad'.
+const REASON = Object.freeze({ need_guest: 'no_guest', not_your_key: 'no_key', not_configured: 'soon', chest_not_configured: 'soon', season_not_ready: 'soon',
+  daily_cap: 'daily', rate_limited: 'rate', sold_out: 'sold_out', network: 'network', rpc: 'network', timeout: 'network',
+  tx_failed: 'tx_failed', no_opening: 'no_opening', stale: 'stale', replayed: 'replayed', deck_mismatch: 'deck_mismatch',
+  bad_count: 'request', bad_request_id: 'request', bad_signature: 'request', bad_body: 'request', bad_account: 'request', bad_public_key: 'request' });
+/** The plain message keys a chest panel may show (chest.err.<key>). */
+export const CHEST_ERRORS = Object.freeze(['off', 'soon', 'rate', 'daily', 'sold_out', 'no_guest', 'no_key', 'network', 'tx_failed', 'no_opening', 'stale', 'replayed', 'deck_mismatch', 'request', 'bad']);
+/** The relayer's code → the message key (unknown codes → 'bad'; the real code is logged for Details). Pure. */
+export const chestErrorKey = (code) => REASON[code] || (CHEST_ERRORS.includes(code) ? code : 'bad');
 
 /** net/chest.js's answer → the reveal's opening: {index, outcome {kind, id, amount, rarity}, verification, tx, nft, proof}. Pure. */
 export function toOpening(r) {
@@ -30,7 +38,7 @@ export function createChestClient({ storage = null, load = () => import('./chest
     async open() {
       let m; try { m = await load(); } catch { return { ok: false, error: 'network' }; }
       let r; try { r = await m.openChest({ storage }); } catch { return { ok: false, error: 'network' }; }
-      if (!r || !r.ok) return { ok: false, error: REASON[r && r.reason] || 'bad' };
+      if (!r || !r.ok) { if (r && r.reason) console.warn('[chest] relayer code', r.reason); return { ok: false, error: chestErrorKey(r && r.reason), code: (r && r.reason) || null }; }
       if (!r.outcome || !CHEST_OUTCOMES.includes(r.outcome.kind)) return { ok: false, error: 'bad' };
       return { ok: true, opening: toOpening(r) };
     },
@@ -39,7 +47,7 @@ export function createChestClient({ storage = null, load = () => import('./chest
       let m; try { m = await load(); } catch { return { ok: false, error: 'network' }; }
       if (!m.openChests) return { ok: false, error: 'off' };
       let r; try { r = await m.openChests({ storage, count }); } catch { return { ok: false, error: 'network' }; }
-      if (!r || !r.ok) return { ok: false, error: REASON[r && r.reason] || 'bad' };
+      if (!r || !r.ok) { if (r && r.reason) console.warn('[chest] relayer code', r.reason); return { ok: false, error: chestErrorKey(r && r.reason), code: (r && r.reason) || null }; }
       const openings = (r.openings || []).filter((x) => x && x.outcome && CHEST_OUTCOMES.includes(x.outcome.kind)).map(toOpening);
       if (!openings.length) return { ok: false, error: 'bad' };
       return { ok: true, openings, cut: r.cut || null, batch: !!r.batch, tx: r.tx_hash || null };

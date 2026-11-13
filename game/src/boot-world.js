@@ -46,6 +46,7 @@ import { createTownFlow } from './scenes/town-flow.js';
 import { createTownQuest, questPlan, QUEST_KEY } from './scenes/town-quest.js';
 import { createTownLedger } from './game/town-economy.js';
 import { features as featureFlags } from './features.js';
+import { mountSprint } from './sprint/index.js';
 import { createDay1Mint, loadDay1 } from './play/day1-mint.js';
 import { TALK_RADIUS } from './scenes/town-quest.js';
 import { PROGRAMS, TOWNSFOLK } from './play/townsfolk-plan.js';
@@ -210,6 +211,9 @@ const JUDGE_SEED = 'cc161d308faa67539af44205b56b6d4f';
 // The town ledger (game/town-economy.js): town silk, hired townsfolk, XP and the profile; this browser only, never the season.
 const townLedger = createTownLedger({ storage: ctx.storage });
 ctx.townLedger = townLedger; // the Echo terminal's board shows the learning townsfolk agents
+// The ONE silk number (net/silk-balance.js, sprint 6.2): the HUD chip, the tracker, the portal and the windows read it.
+// It reads ftf-town through the relayer, keeps the last good number when offline and records waiting silk on Sync.
+import('./net/silk-balance.js').then((m) => { const model = m.createSilkModel({ ledger: townLedger, storage: ctx.storage, flush: () => (expeditionSync ? expeditionSync.flush() : null) }); m.installSilkModel(model); model.refresh(true); }).catch((e) => console.warn('[silk]', e));
 // The game menu (play/game-menu.js): Profile, Achievements, NFTs, Inventory + wheel, Agents, Log / Stats.
 const openProfileFor = (quest = null, tab = 'profile') => import('./play/game-menu.js').then((m) => { const d1 = loadDay1(ctx.storage); return m.openGameMenu({ t: (k, a) => ctx.i18n.t(k, a), ledger: townLedger, storage: ctx.storage, tab, chests: chestBag, heroineToken: (d1.guest || {}).token_id || null, owner: (d1.guest || {}).account_id || null, createGuest: () => day1Mint.mint(loadDay1(ctx.storage).nickname || undefined).then((r) => (r.phase === 'minted' && r.record.guest ? { account: r.record.guest.account_id } : { error: r.reason || 'failed' })), nickname: d1.nickname || null, eliseMinted: !!d1.minted, exportKey: d1.playerKey ? () => { const r = loadDay1(ctx.storage); return `account: ${(r.guest || {}).account_id || '(not created yet)'}\nsecret key: ${r.playerKey.secretKey}`; } : null }); }).catch((e) => console.warn('[menu]', e));
 const judge = params.get('demo') === 'judge';
@@ -429,6 +433,7 @@ if (townMode.town) {
   });
   mountCasting();
   // The player HUD (ui/player-hud.js): portrait frame, level, health, the silk wallet and the toast stack, town only.
+  if (!window.__ftfSprint) window.__ftfSprint = mountSprint({ THREE, scene, camera, renderer, player, ledger: townLedger, town, chests: chestBag, t: (k, a) => ctx.i18n.t(k, a), toast: (s) => toast(s), reduced: () => lookdev.reducedMotion, storage: ctx.storage, keys: input, flags: featureFlags, i18n: ctx.i18n }); // sprint seam (src/sprint, docs/sprint/CTX.md)
   if (!playerHud) playerHud = createPlayerHud({ t: (k, a) => ctx.i18n.t(k, a), ledger: townLedger, chests: chestBag, base: import.meta.env.BASE_URL,
     nickname: () => loadDay1(ctx.storage).nickname || null, skin: () => (irisAvatar ? irisAvatar.hero.id : startHero.id),
     onSkin: () => toggleSkin(), canSwap: () => { const d = loadDay1(ctx.storage); return !!(d.minted || d.claimed || d.skin === 'elise'); },
@@ -450,9 +455,12 @@ if (townMode.town) {
     import('./ui/town-works-panel.js').then((u) => { if (!panel) panel = u.createTownWorksPanel({ t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage, flush: () => (expeditionSync ? expeditionSync.flush() : null) }); panel.open(); }).catch((err) => console.warn('[works]', err));
   }); }
   // The on-chain tournament entry: tapping the altar label dispatches 'ftf:tournament-open'
-  if (!tournMounted) { tournMounted = true; let panel = null; window.addEventListener('ftf:tournament-open', () => {
-    import('./ui/town-works-panel.js').then((u) => { if (!panel) panel = u.createTournamentEntry({ t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage, flush: () => (expeditionSync ? expeditionSync.flush() : null) }); panel.open(); }).catch((err) => console.warn('[tournament]', err));
-  }); }
+  // (flag agentTournament: the Season Cup card first, with the Agent badge, Add an agent and the exhibition; play/season-cup.js)
+  if (!tournMounted) { tournMounted = true; let panel = null, cupCard = null; const openEntry = () => import('./ui/town-works-panel.js').then((u) => { if (!panel) panel = u.createTournamentEntry({ t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage, flush: () => (expeditionSync ? expeditionSync.flush() : null) }); panel.open(); }).catch((err) => console.warn('[tournament]', err));
+    window.addEventListener('ftf:tournament-open', () => {
+      if (!featureFlags.on('agentTournament')) { openEntry(); return; }
+      import('./play/season-cup.js').then((u) => { if (!cupCard) cupCard = u.createSeasonCup({ t: (k, a) => ctx.i18n.t(k, a), onEnterChain: openEntry }); cupCard.open(); }).catch((err) => { console.warn('[cup]', err); openEntry(); });
+    }); }
   // XP for monsters felled beyond the walls (play/kill-xp.js): "+N XP" over the kill, the level-up burst, chime and toast
   if (!killXp) import('./play/kill-xp.js').then((m) => { if (!killXp) killXp = m.createKillXp({ THREE, scene, camera, player, ledger: townLedger, t: (k, a) => ctx.i18n.t(k, a), toast, reduced: () => lookdev.reducedMotion, active: () => inTown, floatNumber: numbersHook }); }).catch((e) => console.warn('[town] kill xp', e));
   // Twin-stick touch controls (scenes/touch-sticks.js): left stick, camera drag on the right, the skill arc

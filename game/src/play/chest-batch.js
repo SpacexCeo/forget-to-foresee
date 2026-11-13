@@ -1,10 +1,12 @@
 // Batch chest opening (owner, 12.11; docs/chests.md "Batch opening"): "Open 5" / "Open all (≤ 10)" in the bag sends
-// one request; the relayer opens them in ONE transaction on NEAR testnet. Here the cards flip one by one (0.4 s each,
+// one request; the relayer opens them on NEAR testnet, one transaction per chest sent together. Here the cards flip one by one (0.4 s each,
 // a tap skips to the end), then a summary grid sorted by rarity with each card's "Verified ✓" linking to its
 // transaction, and "Claim all". The rewards are settled the moment the answer arrives (onSettled per opening), so
 // closing early never loses one. No answer, no outcome: the chests stay sealed and the panel says why.
 import { outcomeView } from './chest-open.js';
 import { cue } from '../audio/town-audio.js';
+// the plain message keys (net/chest-client.js CHEST_ERRORS; kept here so this panel loads without the net code)
+const ERR_KEYS = ['off', 'soon', 'rate', 'daily', 'sold_out', 'no_guest', 'no_key', 'network', 'tx_failed', 'no_opening', 'stale', 'replayed', 'deck_mismatch', 'request'];
 
 export const FLIP_S = 0.4;
 const RANK = Object.freeze({ nft: 0, legendary: 1, epic: 2, rare: 3, uncommon: 4, common: 5 });
@@ -77,7 +79,7 @@ export function openChestBatch({ doc = document, t, client, chests, count, items
   function summary(r) {
     grid.replaceChildren(...byRarity(r.openings).map(card));
     const notes = [el('p', 'cb-note', t('chest.batch.summary', { n: r.openings.length }))];
-    if (r.openings.length < n) notes.push(el('p', 'cb-note', t('chest.batch.cut', { n: r.openings.length })));
+    if (r.openings.length < n) notes.push(el('p', 'cb-note', t(r.cut === 'daily_cap' ? 'chest.batch.cut' : 'chest.batch.cutSome', { n: r.openings.length })));
     info.replaceChildren(...notes);
     const claim = button(t('chest.batch.claim'), close); btns.replaceChildren(claim); claim.focus && claim.focus();
   }
@@ -87,7 +89,7 @@ export function openChestBatch({ doc = document, t, client, chests, count, items
   client.openMany(n).then((r) => {
     if (!r.ok) {
       outcome = { ok: false, error: r.error }; cue('ui_error');
-      info.replaceChildren(el('p', null, t('chest.err.' + (['off', 'soon', 'rate', 'sold_out', 'no_guest', 'no_key', 'network'].includes(r.error) ? r.error : 'bad'))), el('p', 'cb-note', t('chest.stillSealed')));
+      info.replaceChildren(el('p', null, t('chest.err.' + (ERR_KEYS.includes(r.error) ? r.error : 'bad'))), el('p', 'cb-note', t('chest.stillSealed')));
       return;
     }
     // settle every opening at once against its own sealed chest: the rewards are safe whatever happens next

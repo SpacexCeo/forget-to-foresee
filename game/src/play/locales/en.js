@@ -1,7 +1,13 @@
 // English (base) strings of the 3D play layer: objectives, context options, panels, controls and
 // world-layer dialogue. Merged over src/locales/en.js at runtime (src/play/i18n.js); keys mirror
 // ru.js exactly (tests/client/play.test.mjs). ICU MessageFormat; typographic quotes “ ” ‘ ’.
-export default {
+import quests from './en-quests.js';
+import hud from './en-hud.js';
+import market from './en-market.js';
+import npe from './en-npe.js';
+import tips from './en-tips.js';
+import video from './en-video.js';
+const EN = {
   // ---- badge, help ----
   'play.badge': 'Local demo · the rules run in your browser through the same room as the agent API',
   'play.help.title': 'Controls',
@@ -669,6 +675,18 @@ export default {
   'day1.hint.skin.touch': "Switch your heroine between Iris and Elise any time: tap the ⇄ button on your portrait (top left).",
   'hud.skin': "Switch heroine",
   'town.silk': "Silk",
+  'silk.waiting': "+{n} waiting",
+  'silk.offline': "Offline",
+  'silk.checking': "Checking…",
+  'silk.syncing': "Syncing…",
+  'silk.sync': "Sync",
+  'silk.tip.gate': "Silk that counts for the Gate-Loom: {n}",
+  'silk.tip.chain': "Recorded on NEAR: {n}",
+  'silk.tip.pending': "Waiting to be recorded: {n}",
+  'silk.tip.play': "Play silk (saved on this device only): {n}",
+  'silk.tip.total': "All silk you hold: {n}",
+  'silk.tip.fee': "Gate price: {n}",
+  'silk.tip.sync': "Press Sync to record the waiting silk now. It also syncs by itself every minute.",
   'chest.badge': "{n, plural, one {# sealed chest} other {# sealed chests}}",
   'hud.health': "Health",
   'hud.panel.collapse': "Fold the panel",
@@ -1331,7 +1349,14 @@ export default {
   'chest.err.sold_out': "Season 1 chests are all opened: the deck of 10,000 is used up.",
   'chest.err.no_guest': "Opening a chest needs your Day-1 guest account first.",
   'chest.err.network': "No connection to the chest service.",
-  'chest.err.bad': "The chest service failed: try again.",
+  'chest.err.bad': "The chest service had a problem. Your chests are still sealed. Try again.",
+  'chest.err.tx_failed': "The network did not accept that opening. Your chests are still sealed. Try fewer at a time.",
+  'chest.err.no_opening': "The network accepted the request but sent no result. Your chests are still sealed. Try again in a moment.",
+  'chest.err.daily': "You have opened the most chests allowed today. Come back after 00:00 UTC. Your other chests are safe.",
+  'chest.err.stale': "Your device clock looks wrong. Turn on automatic time, then try again.",
+  'chest.err.replayed': "That request was already sent. Look in your bag: the chest may already be open.",
+  'chest.err.deck_mismatch': "A safety check on the chest list failed, so openings are paused. Nothing was lost.",
+  'chest.err.request': "Something went wrong with that request. Your chests are still sealed. Reload the page and try again.",
   'chest.stillSealed': "Your chest stays sealed in the inventory.",
   'chest.close': "Close",
   'chest.out.silk': "{n} town silk",
@@ -1661,8 +1686,9 @@ export default {
   "chest.batch.title": "{n, plural, one {Opening # chest} other {Opening # chests}}",
   "chest.batch.open": "Open {n}",
   "chest.batch.all": "Open all ({n})",
-  "chest.batch.summary": "{n, plural, one {# chest opened in one transaction on NEAR testnet.} other {# chests opened in one transaction on NEAR testnet.}}",
+  "chest.batch.summary": "{n, plural, one {# chest opened on NEAR testnet.} other {# chests opened on NEAR testnet, one transaction each.}}",
   "chest.batch.cut": "Today's limit stopped the batch at {n}; the other chests stay sealed.",
+  "chest.batch.cutSome": "Opened {n}. The others are still sealed. Try again.",
   "chest.batch.claim": "Claim all",
   "chest.batch.skip": "Tap anywhere to skip to the end.",
   "chest.batch.skipBtn": "Skip",
@@ -1763,3 +1789,5 @@ export default {
   "quest.track.offer": "{giver} has a quest for you",
   "quest.track.near": "{m} m",
 };
+// sprint 5h seams (A5): each area's English strings live in its own file; other locales fall back to English
+export default Object.assign(EN, quests, hud, market, npe, tips, video);

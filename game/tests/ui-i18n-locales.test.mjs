@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { MESSAGES, argNames, parse, format } from '../src/ui/i18n/index.js';
 import { PLAY_MESSAGES, createPlayI18n } from '../src/play/i18n.js';
+import { SPRINT_KEYS } from '../src/play/locales/sprint-keys.js';
 
 const FULL = ['uk', 'it', 'zh'];
 const LATIN_WORD = /\b(?:the|and|of|with|your|you|is|are|not|tick|silk|Shell|sign|memory)\b/;
@@ -39,13 +40,13 @@ for (const [name, source, en] of [['game', MESSAGES, MESSAGES.en], ['play', PLAY
       const msgs = source[locale];
       assert.ok(msgs, `${name}:${locale} exists`);
       const keys = ownKeys(locale, source);
-      assert.deepEqual(Object.keys(en).filter((k) => !Object.prototype.hasOwnProperty.call(msgs, k)), [], `${locale} misses keys`);
+      assert.deepEqual(Object.keys(en).filter((k) => !SPRINT_KEYS.has(k) && !Object.prototype.hasOwnProperty.call(msgs, k)), [], `${locale} misses keys`); // sprint en-*.js keys fall back to English
       assert.deepEqual(keys.filter((k) => !(k in en)), [], `${locale} has keys English lacks`);
     }
   });
 
   test(`${name} strings: every uk/it/zh message parses and uses exactly the English placeholders`, () => {
-    for (const locale of FULL) for (const [k, enMsg] of Object.entries(en)) {
+    for (const locale of FULL) for (const [k, enMsg] of Object.entries(en)) { if (SPRINT_KEYS.has(k)) continue; // English-only sprint keys
       const msg = source[locale][k];
       assert.equal(typeof msg, 'string', `${locale}:${k}`);
       assert.doesNotThrow(() => parse(msg), `${locale}:${k} does not parse`);
@@ -56,7 +57,7 @@ for (const [name, source, en] of [['game', MESSAGES, MESSAGES.en], ['play', PLAY
 
   test(`${name} strings: uk/it/zh texts are translated, not English copies`, () => {
     const copies = [];
-    for (const locale of FULL) for (const [k, enMsg] of Object.entries(en)) {
+    for (const locale of FULL) for (const [k, enMsg] of Object.entries(en)) { if (SPRINT_KEYS.has(k)) continue; // English-only sprint keys
       if (SAME_AS_EN.has(k) || (locale === 'it' && SAME_IT.has(k))) continue;
       const msg = source[locale][k];
       if (msg === enMsg) copies.push(`${locale}:${k}`);

@@ -1,6 +1,7 @@
 // Play layer (src/play/): command bus, walk replay, context options, objectives, clan cues, hooks,
 // play strings, and the onboarding played end to end through the same room as the agent API.
 import { test } from 'node:test';
+import { SPRINT_KEYS } from '../../src/play/locales/sprint-keys.js';
 import assert from 'node:assert/strict';
 import { createLocalTransport } from '../../src/play/transport-local.js';
 import { CommandBus } from '../../src/play/commands.js';
@@ -18,8 +19,8 @@ import { AUDIO_MANIFEST } from '../../src/audio/manifest.js';
 const SEED = '0123456789abcdef0123456789abcdef';
 
 test('play strings: EN and RU have the same keys, every message formats in both locales', () => {
-  const en = Object.keys(PLAY_MESSAGES.en).sort();
-  for (const loc of ['uk', 'ru', 'it', 'zh']) assert.deepEqual(Object.keys(PLAY_MESSAGES[loc]).sort(), en, `${loc} play keys mirror en`);
+  const en = Object.keys(PLAY_MESSAGES.en).filter((k) => !SPRINT_KEYS.has(k)).sort(); // sprint en-*.js keys fall back to English
+  for (const loc of ['uk', 'ru', 'it', 'zh']) assert.deepEqual(Object.keys(PLAY_MESSAGES[loc]).filter((k) => !SPRINT_KEYS.has(k)).sort(), en, `${loc} play keys mirror en`);
   const missing = [];
   for (const loc of ['en', 'uk', 'ru', 'it', 'zh']) {
     const i18n = createPlayI18n(loc, { onMissing: (k) => missing.push(k) });

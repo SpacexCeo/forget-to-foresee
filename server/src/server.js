@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { createApi } from '../../game/src/net/api.js';
 import { RateLimiter } from './rate-limit.js';
+import { createTournament, ENTER_ACTION } from './tournament.js';
 
 const MAX_BODY = 16 * 1024;
 const OPENAPI_PATH = fileURLToPath(new URL('../../docs/api/openapi.yaml', import.meta.url));
@@ -23,9 +24,24 @@ const OPENAPI_PATH = fileURLToPath(new URL('../../docs/api/openapi.yaml', import
  * @param {() => number} [o.clock]   rate-limit clock (defaults to the registry clock or Date.now)
  * @param {number} [o.tickMs]   how often walking avatars are advanced for live SSE arrivals (10 Hz)
  */
-export function createServer({ registry = {}, limits = {}, log = () => {}, corsOrigins = ['http://localhost:5173', 'http://127.0.0.1:5173'], clock, tickMs = 100 } = {}) {
+export function createServer({ registry = {}, limits = {}, log = () => {}, corsOrigins = ['http://localhost:5173', 'http://127.0.0.1:5173'], clock, tickMs = 100, tournament = {} } = {}) {
   const api = createApi(registry);
   const now = clock || api.registry.clock;
+  const cup = createTournament({ clock: api.registry.clock, ...tournament });
+  // an entrant's score: its own session's Iris silk once that season has an outcome (null before)
+  const scoreOf = (e) => { const s = api.registry.sessions.get(e.sessionId); if (!s) return null; try { const o = s.room.observe(e.playerId); return o && o.season && o.season.outcome ? Number((o.iris && o.iris.silk) || 0) : null; } catch { return null; } };
+  /** POST commands of type enter_tournament (sprint 7.9): the same envelope, auth, idempotency and version rules as the room. */
+  function enterTournament(id, token, env) {
+    const a = api.registry.auth(id, token);
+    if (!a) return { status: 401, body: { ok: false, error: { code: 'unauthorized', message: 'missing or invalid bearer token for this session' } } };
+    const { room, member } = a;
+    if (typeof env.actionId !== 'string' || !/^[A-Za-z0-9._:-]{8,128}$/.test(env.actionId)) return { status: 400, body: { ok: false, error: { code: 'invalid_request', message: 'actionId must be 8-128 characters of [A-Za-z0-9._:-] (an idempotency key, unique per command)' } } };
+    if (!Number.isInteger(env.expectedVersion)) return { status: 400, body: { ok: false, error: { code: 'invalid_request', message: 'expectedVersion (integer) is required; use observation.version' } } };
+    const who = { sessionId: id, playerId: member.playerId, owner: null, account: null };
+    const r = cup.enter(who, env.args || {}, env.actionId, () => (env.expectedVersion === room.version ? null : room.version));
+    if (r.body.ok) r.body.version = room.version;
+    return r;
+  }
   const lim = {
     commands: new RateLimiter({ rate: 20, burst: 40, clock: now, ...limits.commands }),
     reads: new RateLimiter({ rate: 50, burst: 100, clock: now, ...limits.reads }),
@@ -92,7 +108,12 @@ export function createServer({ registry = {}, limits = {}, log = () => {}, corsO
   const routes = [
     ['GET', /^\/v1\/health$/, (req, res) => send(res, 200, { ok: true, service: 'forget-to-foresee-api', apiVersion: 'v1' })],
     ['GET', /^\/v1\/openapi\.yaml$/, (req, res) => { openapi ||= readFileSync(OPENAPI_PATH, 'utf8'); res.writeHead(200, { 'Content-Type': 'application/yaml; charset=utf-8' }); res.end(openapi); }],
-    ['GET', /^\/v1\/actions$/, (req, res) => { const r = api.catalog(); send(res, r.status, r.body); }],
+    ['GET', /^\/v1\/actions$/, (req, res) => { const r = api.catalog(); if (r.body && Array.isArray(r.body.actions)) r.body.actions = [...r.body.actions, { ...ENTER_ACTION, backedBy: 'tournament module (server/src/tournament.js; simulation, no chain)' }]; send(res, r.status, r.body); }],
+    ['GET', /^\/v1\/tournament$/, (req, res, m, token, url) => {
+      const q = url.searchParams.get('season_id');
+      if (q && q !== cup.season.id) return error(res, 404, 'no_such_season', 'no cup with that season_id');
+      send(res, 200, { ok: true, ...cup.view(scoreOf) });
+    }],
     ['POST', /^\/v1\/sessions$/, async (req, res) => {
       if (limited(res, lim.create, keyOf(null, req))) return;
       const r = api.createSession(await readBody(req)); send(res, r.status, r.body);
@@ -117,7 +138,8 @@ export function createServer({ registry = {}, limits = {}, log = () => {}, corsO
     }],
     ['POST', /^\/v1\/sessions\/([\w-]+)\/commands$/, async (req, res, [id], token) => {
       if (limited(res, lim.commands, keyOf(token, req))) return;
-      const r = api.command(id, token, await readBody(req));
+      const body = await readBody(req);
+      const r = body && body.type === 'enter_tournament' ? enterTournament(id, token, body) : api.command(id, token, body);
       send(res, r.status, r.body, r.body && r.body.replayed ? { 'Idempotent-Replayed': 'true' } : {});
     }],
   ];
@@ -160,7 +182,7 @@ export function createServer({ registry = {}, limits = {}, log = () => {}, corsO
   server.on('close', () => { clearInterval(ticker); for (const s of [...streams]) s.close(); });
 
   return {
-    server, api,
+    server, api, tournament: cup,
     listen(port = 8787, host = '127.0.0.1') { return new Promise((resolve) => server.listen(port, host, () => resolve(server.address()))); },
     close() { for (const s of [...streams]) s.close(); server.closeAllConnections?.(); return new Promise((resolve) => server.close(() => resolve())); },
   };

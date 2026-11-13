@@ -1,0 +1,42 @@
+/* Design tokens (sprint plan 3.3). Values are final; sizes are at the 1920 x 1080 reference and scale with --u. */
+:root {
+  --u: calc(min(100vw, 100vh * 1.7778) / 1920);
+  --ftf-panel: rgba(14, 16, 24, 0.90);
+  --ftf-panel-solid: #0e1018;
+  --ftf-border: #3a3f55;
+  --ftf-gold: #f6c860;
+  --ftf-gold-dim: #b8964a;
+  --ftf-text: #eef0f6;
+  --ftf-muted: #aab1c5;
+  --ftf-ok: #5ccf8a;
+  --ftf-warn: #f0b24a;
+  --ftf-danger: #ff6b62;
+  --ftf-info: #4aa3ff;
+  --ftf-silk: #e8dcb4;
+  --ftf-xp: #b06cff;
+  --rar-common: #b8b8b8;
+  --rar-uncommon: #5ccf5c;
+  --rar-rare: #4aa3ff;
+  --rar-epic: #b06cff;
+  --rar-legendary: #ff9a2e;
+  --rar-mythic: #ff5c8a;
+  --hp: #d2493f; --hp-bg: #2a1210;
+  --mana: #3f8fd2; --mana-bg: #0f1c2b;
+  --xp: #b06cff; --xp-bg: #1d1230;
+  --font-ui: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-title: "Cormorant Garamond", Georgia, serif;
+  --fs-xs: max(12px, calc(12 * var(--u)));
+  --fs-sm: max(14px, calc(14 * var(--u)));
+  --fs-md: max(14px, calc(16 * var(--u)));
+  --fs-lg: max(16px, calc(20 * var(--u)));
+  --fs-xl: max(20px, calc(28 * var(--u)));
+  --radius: max(6px, calc(10 * var(--u)));
+  --radius-modal: max(8px, calc(14 * var(--u)));
+  --shadow: 0 8px 32px rgba(0, 0, 0, .55);
+  --z-hud: 10; --z-tracker: 12; --z-modal: 40; --z-dialogue: 50; --z-tooltip: 60; --z-toast: 70;
+  --ease: cubic-bezier(.2, .8, .2, 1);
+  --t-fast: 120ms; --t-med: 220ms;
+  --tap-min: 44px;
+}
+html[data-motion="reduce"] { --t-fast: 0ms; --t-med: 0ms; }
+@media (prefers-reduced-motion: reduce) { :root { --t-fast: 0ms; --t-med: 0ms; } }

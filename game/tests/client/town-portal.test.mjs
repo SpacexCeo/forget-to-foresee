@@ -15,7 +15,9 @@ test('portal state: off without the flag, dormant below the fee, ready at the fe
 });
 
 test('portal prompt: wants the fee with the balance, pays at the fee, marks a demo fee, quiet when spent', () => {
-  assert.deepEqual(portalPrompt('dormant', { balanceC: 123_456, feeC: 1_000_000 }), { key: 'story.portal.wants', args: { fee: '10,000', n: '1,234' } });
+  assert.deepEqual(portalPrompt('dormant', { balanceC: 123_456, feeC: 1_000_000 }), { key: 'story.portal.wants', args: { fee: '10,000', n: '1,234.56' } }); // one formatter (net/silk-core.js formatSilkC)
+  // "you hold" is the silk on NEAR (the HUD chip's number) even when the payable balance adds the waiting silk
+  assert.equal(portalPrompt('dormant', { balanceC: 6000, heldC: 3800, feeC: 20_000 }).args.n, '38');
   assert.deepEqual(portalPrompt('ready', { balanceC: 1_000_000, feeC: 1_000_000 }), { key: 'story.portal.pay', args: { fee: '10,000' } });
   assert.equal(portalPrompt('ready', { feeC: 10_000, demo: true }).key, 'story.portal.payDemo');
   assert.equal(portalPrompt('dormant', { feeC: 10_000, demo: true }).key, 'story.portal.wantsDemo');

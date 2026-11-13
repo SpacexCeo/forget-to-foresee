@@ -4,7 +4,7 @@ import { POOL, KIND, mergeOrAdd, curve, textOf, sizeOf, alive } from './float-nu
 
 const CSS = `
 .fn { position: fixed; left: 0; top: 0; z-index: 6; pointer-events: none; font: 800 18px/1 system-ui, sans-serif; white-space: nowrap;
-  text-shadow: 0 1px 2px #000, 0 0 6px rgba(0, 0, 0, .55); will-change: transform, opacity; opacity: 0; }
+  text-shadow: -1px 0 #000, 1px 0 #000, 0 -1px #000, 0 1px #000, 0 0 6px rgba(0, 0, 0, .55); will-change: transform, opacity; opacity: 0; }
 .fn.crit::after { content: ''; position: absolute; left: 50%; top: 50%; width: 1.4em; height: 1.4em; margin: -.7em 0 0 -.7em; border-radius: 50%;
   border: 2px solid rgba(246, 200, 96, .7); animation: fn-ring .35s ease-out forwards; }
 @keyframes fn-ring { from { transform: scale(.4); opacity: 1; } to { transform: scale(1.8); opacity: 0; } }
@@ -35,7 +35,7 @@ export function createFloatNumbers({ camera, THREE, doc = globalThis.document, w
         if (e.textContent !== text) e.textContent = text;
         e.className = 'fn' + (n.kind === 'crit' && !red ? ' crit' : '');
         e.style.color = k.color; e.style.fontSize = sizeOf(n) + 'px';
-        e.style.transform = `translate(${((v3.x + 1) / 2 * w + jx).toFixed(1)}px, ${((1 - v3.y) / 2 * h - c.rise).toFixed(1)}px) translate(-50%, -50%) scale(${(c.scale * n.grow).toFixed(3)})`;
+        e.style.transform = `translate(${((v3.x + 1) / 2 * w + jx + (c.drift || 0)).toFixed(1)}px, ${((1 - v3.y) / 2 * h - c.rise).toFixed(1)}px) translate(-50%, -50%) scale(${(c.scale * n.grow).toFixed(3)})`;
         e.style.opacity = c.opacity.toFixed(3);
       }
     },
