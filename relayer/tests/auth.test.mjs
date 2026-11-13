@@ -202,3 +202,77 @@ test('a NEAR login key is checked on the account\'s own network: *.testnet on te
   await ak('ann.near', 'ed25519:x'); await ak('bob.testnet', 'ed25519:y');
   assert.deepEqual(hits, [['mainnet', 'ann.near'], ['testnet', 'bob.testnet']]);
 });
+
+// ---------- passkeys (WebAuthn, ECDSA P-256) ----------
+import { generateKeyPairSync, sign as nodeSign } from 'node:crypto';
+import { verifyPasskey } from '../lib/auth.js';
+const u64 = (b) => Buffer.from(b).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const sha = (b) => createHash('sha256').update(b).digest();
+function passkey() {
+  const { publicKey, privateKey } = generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
+  return { id: u64(Buffer.from('credential-id-0123456789')), spki: u64(publicKey.export({ format: 'der', type: 'spki' })), privateKey };
+}
+/** What navigator.credentials.get returns for challenge = sha256(message), serialised as the browser sends it. */
+function assertion(pk, message, { origin = 'https://spacexceo.github.io', type = 'webauthn.get', flags = 0x05, challengeOf = message } = {}) {
+  const cdj = Buffer.from(JSON.stringify({ type, challenge: u64(sha(Buffer.from(challengeOf, 'utf8'))), origin, crossOrigin: false }));
+  const authData = Buffer.concat([sha(new URL(origin).hostname), Buffer.from([flags]), Buffer.from([0, 0, 0, 1])]);
+  const signature = nodeSign('sha256', Buffer.concat([authData, sha(cdj)]), { key: pk.privateKey, dsaEncoding: 'der' });
+  return JSON.stringify({ authenticatorData: u64(authData), clientDataJSON: u64(cdj), signature: u64(signature) });
+}
+const ORIGINS = ['https://spacexceo.github.io'];
+
+test('passkey: a good assertion passes; another key, another text, a foreign origin, no user presence or a create-type fails', () => {
+  const pk = passkey(), other = passkey();
+  const m = loginMessage(fields({ kind: 'passkey', address: pk.id }));
+  assert.deepEqual(verifyPasskey(assertion(pk, m), m, pk.spki, { origins: ORIGINS }), { ok: true });
+  assert.equal(verifyPasskey(assertion(other, m), m, pk.spki, { origins: ORIGINS }).error, 'bad_signature');
+  assert.equal(verifyPasskey(assertion(pk, m, { challengeOf: m + 'x' }), m, pk.spki, { origins: ORIGINS }).error, 'bad_challenge');
+  assert.equal(verifyPasskey(assertion(pk, m, { origin: 'https://evil.example' }), m, pk.spki, { origins: ORIGINS }).error, 'bad_origin');
+  assert.equal(verifyPasskey(assertion(pk, m, { flags: 0x04 }), m, pk.spki, { origins: ORIGINS }).error, 'not_user_present');
+  assert.equal(verifyPasskey(assertion(pk, m, { type: 'webauthn.create' }), m, pk.spki, { origins: ORIGINS }).error, 'bad_signature');
+  assert.equal(verifyPasskey('garbage', m, pk.spki, { origins: ORIGINS }).error, 'bad_signature');
+  assert.equal(verifyPasskey(assertion(pk, m), m, 'not-a-key', { origins: ORIGINS }).error, 'bad_public_key');
+  assert.equal(identityOf('passkey', 'short'), null);
+});
+
+function passkeyHarness() {
+  let t = Date.UTC(2026, 10, 13, 12);
+  const store = createIdentityStore(join(mkdtempSync(join(tmpdir(), 'ftf-pk-')), 'auth', 'identities.json'));
+  const nonces = createNonces({ now: () => t });
+  const keys = new Map();
+  const accessKey = async (acc, pk) => (keys.get(acc) === pk ? { permission: 'FullAccess' } : null);
+  return { store, nonces, keys, link: createLinker({ store, nonces, accessKey, origins: ORIGINS, now: () => t }), advance: (ms) => { t += ms; } };
+}
+async function pkRequest(h, pk, { guest = null, sendKey = true, signer = pk, expires = null } = {}) {
+  const { nonce, expires: exp } = h.nonces.issue();
+  const msg = loginMessage({ kind: 'passkey', address: pk.id, account: guest ? guest.account : null, deviceKey: 'ed25519:dev', nonce, expires: expires || exp });
+  const body = { kind: 'passkey', address: pk.id, public_key: sendKey ? signer.spki : undefined, signature: assertion(signer, msg), nonce, expires: expires || exp, device_key: 'ed25519:dev' };
+  if (guest) body.account = { account_id: guest.account, public_key: guest.kp.publicKey, signature: b64(await guest.kp.sign(new TextEncoder().encode(msg))), guest_key: guest.kp.publicKey };
+  return body;
+}
+
+test('passkey link: pins the P-256 key to the guest; another device gets the account back; a swapped key is refused', async () => {
+  const h = passkeyHarness();
+  const pk = passkey();
+  const kp = await edKey(); h.keys.set('ann.guests.testnet', kp.publicKey);
+  const r = await h.link(await pkRequest(h, pk, { guest: { account: 'ann.guests.testnet', kp } }));
+  assert.deepEqual(r.body, { status: 'linked', account_id: 'ann.guests.testnet' });
+  assert.equal(h.store.get('passkey:' + pk.id).passkey_key, pk.spki);
+  // a synced passkey on another device: no key sent, the pinned one verifies
+  assert.deepEqual((await h.link(await pkRequest(h, pk, { sendKey: false }))).body, { status: 'existing', account_id: 'ann.guests.testnet', guest_key: kp.publicKey });
+  // an attacker reusing the credential id with their own key: the pinned key wins
+  const thief = { ...passkey(), id: pk.id };
+  assert.equal((await h.link(await pkRequest(h, pk, { signer: thief }))).status, 401);
+});
+
+test('passkey: a replayed or expired request is refused', async () => {
+  const h = passkeyHarness();
+  const pk = passkey();
+  const body = await pkRequest(h, pk);
+  assert.deepEqual((await h.link(body)).body, { status: 'new' });
+  assert.deepEqual(await h.link(body), { status: 401, body: { error: 'nonce_used_or_expired' } });
+  const late = await pkRequest(h, pk);
+  h.advance(AUTH.nonceTtlMs + 1);
+  assert.equal((await h.link(late)).body.error, 'nonce_used_or_expired');
+  assert.equal((await h.link(await pkRequest(h, pk, { expires: '2099-01-01T00:00:00.000Z' }))).body.error, 'expiry_mismatch');
+});

@@ -1949,6 +1949,8 @@ export default {
   "acct.guest": "Играть как гость",
   "acct.guest.note": "Игра как гость: прогресс хранится только в этом браузере. Войдите в любой момент, чтобы он был с вами на любом устройстве.",
   "acct.testnet": "Ваш аккаунт живёт в NEAR testnet. Здесь ничто не имеет реальной ценности.",
+  "acct.passkey": "Войти с ключом доступа (Face ID, отпечаток, PIN устройства)",
+  "acct.passkey.new": "Создать ключ доступа",
   "acct.near": "Кошелёк NEAR (HOT, Meteor, Intear, MyNearWallet…)",
   "acct.near.testnet": "Аккаунт NEAR testnet (MyNearWallet)",
   "acct.evm": "Кошелёк EVM ({name})",
