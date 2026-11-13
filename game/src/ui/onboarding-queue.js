@@ -11,6 +11,7 @@ let active = null;
 const pending = [];
 const subs = new Set();
 let gate = null;   // resolves when the boot has settled, so the earlier steps get the chance to enqueue first
+const expected = new Map();   // id -> deadline (ms): a step announced early (boot knows Day 1 will ask the name) holds back later ones
 
 function notify(win) {
   for (const fn of [...subs]) { try { fn(active); } catch { /* a listener's error stays there */ } }
@@ -31,6 +32,10 @@ function settled(win, settleMs) {
 async function pump(win) {
   if (active || !pending.length) return;
   pending.sort((a, b) => rank(a.id) - rank(b.id) || a.seq - b.seq);
+  const now = Date.now();
+  for (const [id, until] of expected) if (until <= now) expected.delete(id);
+  const waitFor = [...expected.keys()].filter((id) => rank(id) < rank(pending[0].id));
+  if (waitFor.length) { setTimeout(() => pump(win), 250); return; }   // an earlier step is on its way
   const job = pending.shift();
   active = job.id; notify(win);
   try { if (win && win.dispatchEvent) win.dispatchEvent(new CustomEvent('ftf:close-windows', { detail: { by: job.id } })); } catch { /* */ }
@@ -46,11 +51,15 @@ let seq = 0;
  */
 export function runOnboarding(id, fn, { win = globalThis.window, wait = true, settleMs = 600 } = {}) {
   if (!win) { try { return Promise.resolve(fn()); } catch (e) { return Promise.reject(e); } }   // no page (unit tests): nothing can pile up
+  expected.delete(id);
   return new Promise((resolve, reject) => {
     pending.push({ id, fn, resolve, reject, seq: seq++ });
     (wait ? settled(win, settleMs) : Promise.resolve()).then(() => pump(win));
   });
 }
+
+/** Announce a step that will be queued soon (e.g. the Day-1 name): later steps wait for it, at most `ms`. */
+export function expectOnboarding(id, ms = 20000) { expected.set(id, Date.now() + ms); }
 
 /** The id of the overlay that runs now, or null. */
 export const onboardingActive = () => active;
@@ -60,4 +69,4 @@ export const onOnboarding = (fn) => { subs.add(fn); return () => subs.delete(fn)
 export const blocksWindows = () => active != null;
 
 /** Tests only: forget everything. */
-export function _resetOnboarding() { active = null; pending.length = 0; subs.clear(); gate = null; seq = 0; }
+export function _resetOnboarding() { active = null; pending.length = 0; subs.clear(); gate = null; seq = 0; expected.clear(); }

@@ -65,6 +65,7 @@ import { createCompanion } from './scenes/companion.js';
 import { COMPANIONS_ENABLED, companionsToShow } from './scenes/companion-rules.js';
 import { createDoorGlow } from './scenes/door-glow.js';
 import { cue, cueAt, MOB_SOUNDS } from './audio/town-audio.js';
+import { expectOnboarding } from './ui/onboarding-queue.js';
 
 /**
  * Builds the renderer, the island, the camera and the frame loop (the heavy chunk: three.js, scenes, render,
@@ -685,6 +686,7 @@ const day1On = () => {
   if (q === '1') return true;
   return !judge && !loadDay1(ctx.storage).claimed;
 };
+if (day1On()) expectOnboarding('name');   // the Day-1 name comes first: the intro and the card wait for it (ui/onboarding-queue.js)
 // The skin is the heroine herself: Elise wears her own model, clips and cel shading (play/iris-avatar.js setHero).
 // The wheel's skin NFT is read from the chain for the guest account (play/skins.js), never assumed. A function
 // declaration with its state on itself: the HUD asks canSwap() while this module is still being evaluated.

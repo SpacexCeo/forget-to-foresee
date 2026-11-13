@@ -23,3 +23,15 @@ test('queue: without a page (unit tests) it runs at once', async () => {
   _resetOnboarding();
   assert.equal(await runOnboarding('guide', () => 7, { win: null }), 7);
 });
+
+test('queue: an announced earlier step holds back a later one that is queued first', async () => {
+  const { expectOnboarding } = await import('../../src/ui/onboarding-queue.js');
+  _resetOnboarding(); const win = fakeWin(), log = [];
+  expectOnboarding('name', 2000);
+  const intro = runOnboarding('intro', async () => { log.push('intro'); }, { win, wait: false });
+  await new Promise((r) => setTimeout(r, 400));
+  assert.deepEqual(log, [], 'the intro waits for the announced name');
+  const name = runOnboarding('name', async () => { log.push('name'); }, { win, wait: false });
+  await name; await intro;
+  assert.deepEqual(log, ['name', 'intro']);
+});
