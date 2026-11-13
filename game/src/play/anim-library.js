@@ -4,6 +4,8 @@
 //   play on the model as is; a side-car clip replaces the model's own clip of the same name.
 // - The shared townsfolk file (townsfolk.glb) is retargeted here, once per character, onto any model of the shared
 //   agent rig whatever its proportions and rest pose: `townsfolkClips(model)`.
+// - The five quest givers have that same motion baked offline for their own bodies (npc_<key>.glb, art/anim/clips.json
+//   → characters.npc_<key>): `townsfolkClips` hands those out as they are, no retarget.
 // The face (blinks, brows, lips) stays on a separate always-on layer cut from the model's own idle clip, because the
 // motion-capture clips carry the body only.
 import * as THREE from 'three';
@@ -88,6 +90,19 @@ export const BODY_STYLE = Object.freeze({
   guard: { time: 0.94, stride: 1, lean: -2.5, bounce: 0.8, armOut: 3 },
 });
 
+/**
+ * Characters whose townsfolk clips are baked offline for their own skeleton and proportions (feet planted and knees
+ * solved on that very body, its own walking speed in `userData.speed`): assets/anim/<name>.glb. The phone model
+ * (`<name>_m`) has the same skeleton and plays the same file.
+ */
+export const BAKED_CLIPS = Object.freeze(['npc_guard', 'npc_innkeeper', 'npc_elder', 'npc_lamplighter', 'npc_shardkeeper']);
+
+/** The baked clip file of a cache key ('npc_guard', 'npc_guard_m', 'npc_guard:check' → 'npc_guard'), or null. */
+export function bakedClipFile(key) {
+  const name = String(key || '').replace(/:.*$/, '').replace(/_m$/, '');
+  return BAKED_CLIPS.includes(name) ? name : null;
+}
+
 const LIMB = /^(upperarm|forearm|thigh|shin)_[LR]$/;          // aligned to the reference's rest direction
 const HAND = /^(hand|thumb|index|fingers|prop)_([LR])$/;       // carried by the forearm's alignment
 const ARM = /^(upperarm|forearm|hand|thumb|index|fingers|prop)_([LR])$/;
@@ -121,7 +136,12 @@ const retargeted = new Map();
 export function townsfolkClips(model, { names = null, body = 'adult', armOut = 0, key = null, base = baseUrl(), file = 'townsfolk', planted = /^npc_/.test(key || '') } = {}) {
   const k = key ? `${file}|${key}|${typeof body === 'string' ? body : JSON.stringify(body)}|${armOut}|${names ? names.join(',') : '*'}|${planted ? 'p' : ''}` : null;
   if (k && retargeted.has(k)) return retargeted.get(k);
-  const p = loadFile(file, base).then((g) => retargetClips(g, model, { names, body, armOut, planted }), (e) => { console.warn('[anim] shared clips failed', file, e); return []; });
+  const shared = () => loadFile(file, base).then((g) => retargetClips(g, model, { names, body, armOut, planted }), (e) => { console.warn('[anim] shared clips failed', file, e); return []; });
+  // a quest giver: the clips baked for this very body (the shared set retargeted here is only the fallback when the file fails)
+  const own = file === 'townsfolk' ? bakedClipFile(key) : null;
+  const p = own
+    ? loadFile(own, base).then((g) => g.animations.filter((c) => !names || names.includes(c.name)), (e) => { console.warn('[anim] baked clips failed', own, e); return shared(); })
+    : shared();
   if (k) retargeted.set(k, p);
   return p;
 }

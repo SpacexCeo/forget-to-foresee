@@ -1,0 +1,580 @@
+{
+ "limits": {
+  "kneeMin": -1,
+  "kneeMax": 150,
+  "pop": 14,
+  "popMoving": 30,
+  "plane": 25,
+  "slide": 0.02,
+  "stretch": 0.03,
+  "stretchBent": 0.1,
+  "spread": 0.06
+ },
+ "report": {
+  "npc_guard": {
+   "own": 0,
+   "edges": 2311,
+   "restAnkles": 0.309,
+   "clips": {
+    "idle": {
+     "speed": 0,
+     "kneeMin": 14.1,
+     "kneeMax": 21,
+     "pop": 1.2,
+     "plane": 0.3,
+     "slide": 0,
+     "stretch": 0.011,
+     "spread": 0,
+     "floor": 0
+    },
+    "idle_shift": {
+     "speed": 0,
+     "kneeMin": 14.1,
+     "kneeMax": 27.4,
+     "pop": 1.3,
+     "plane": 0.4,
+     "slide": 0,
+     "stretch": 0.013,
+     "spread": 0,
+     "floor": 0
+    },
+    "idle_look": {
+     "speed": 0,
+     "kneeMin": 14.1,
+     "kneeMax": 21,
+     "pop": 1.2,
+     "plane": 0.3,
+     "slide": 0,
+     "stretch": 0.011,
+     "spread": 0,
+     "floor": 0
+    },
+    "walk": {
+     "speed": 1.3,
+     "kneeMin": 7.7,
+     "kneeMax": 77.1,
+     "pop": 19.9,
+     "plane": 3.4,
+     "slide": 0.019,
+     "stretch": 0.028,
+     "spread": 0.16,
+     "floor": 0.198
+    },
+    "talk": {
+     "speed": 0,
+     "kneeMin": 13.4,
+     "kneeMax": 22.4,
+     "pop": 1.2,
+     "plane": 0.5,
+     "slide": 0,
+     "stretch": 0.01,
+     "spread": 0,
+     "floor": 0
+    },
+    "talk_b": {
+     "speed": 0,
+     "kneeMin": 13.8,
+     "kneeMax": 22.6,
+     "pop": 1.3,
+     "plane": 0.6,
+     "slide": 0,
+     "stretch": 0.011,
+     "spread": 0,
+     "floor": 0
+    },
+    "wave": {
+     "speed": 0,
+     "kneeMin": 14.2,
+     "kneeMax": 28.7,
+     "pop": 2.2,
+     "plane": 2,
+     "slide": 0,
+     "stretch": 0.014,
+     "spread": 0,
+     "floor": 0
+    },
+    "nod": {
+     "speed": 0,
+     "kneeMin": 14.4,
+     "kneeMax": 20,
+     "pop": 1.2,
+     "plane": 0.6,
+     "slide": 0,
+     "stretch": 0.011,
+     "spread": 0,
+     "floor": 0
+    },
+    "salute": {
+     "speed": 0,
+     "kneeMin": 14.4,
+     "kneeMax": 20.1,
+     "pop": 1.2,
+     "plane": 0.6,
+     "slide": 0,
+     "stretch": 0.011,
+     "spread": 0,
+     "floor": 0
+    }
+   }
+  },
+  "npc_innkeeper": {
+   "own": 0,
+   "edges": 862,
+   "restAnkles": 0.219,
+   "clips": {
+    "idle": {
+     "speed": 0,
+     "kneeMin": 16.1,
+     "kneeMax": 22,
+     "pop": 1.3,
+     "plane": 0.4,
+     "slide": 0,
+     "stretch": 0.02,
+     "spread": 0,
+     "floor": 0
+    },
+    "idle_shift": {
+     "speed": 0,
+     "kneeMin": 14,
+     "kneeMax": 30.2,
+     "pop": 1.5,
+     "plane": 0.4,
+     "slide": 0,
+     "stretch": 0.03,
+     "spread": 0,
+     "floor": 0
+    },
+    "idle_look": {
+     "speed": 0,
+     "kneeMin": 16.1,
+     "kneeMax": 22,
+     "pop": 1.3,
+     "plane": 0.4,
+     "slide": 0,
+     "stretch": 0.02,
+     "spread": 0,
+     "floor": 0
+    },
+    "walk": {
+     "speed": 0.9,
+     "kneeMin": 30.2,
+     "kneeMax": 79,
+     "pop": 8.8,
+     "plane": 3.2,
+     "slide": 0.017,
+     "stretch": 0.079,
+     "spread": 0.078,
+     "floor": 0.16
+    },
+    "talk": {
+     "speed": 0,
+     "kneeMin": 13.4,
+     "kneeMax": 23.5,
+     "pop": 1.7,
+     "plane": 0.5,
+     "slide": 0,
+     "stretch": 0.018,
+     "spread": 0,
+     "floor": 0
+    },
+    "talk_b": {
+     "speed": 0,
+     "kneeMin": 13.9,
+     "kneeMax": 23,
+     "pop": 1.4,
+     "plane": 0.6,
+     "slide": 0,
+     "stretch": 0.019,
+     "spread": 0,
+     "floor": 0
+    },
+    "wave": {
+     "speed": 0,
+     "kneeMin": 14.2,
+     "kneeMax": 30.3,
+     "pop": 2,
+     "plane": 2,
+     "slide": 0,
+     "stretch": 0.045,
+     "spread": 0,
+     "floor": 0
+    },
+    "nod": {
+     "speed": 0,
+     "kneeMin": 16.5,
+     "kneeMax": 21.1,
+     "pop": 1.2,
+     "plane": 0.6,
+     "slide": 0,
+     "stretch": 0.019,
+     "spread": 0,
+     "floor": 0
+    },
+    "salute": {
+     "speed": 0,
+     "kneeMin": 16.6,
+     "kneeMax": 21.1,
+     "pop": 1.2,
+     "plane": 0.6,
+     "slide": 0,
+     "stretch": 0.02,
+     "spread": 0,
+     "floor": 0
+    },
+    "counter": {
+     "speed": 0,
+     "kneeMin": 31.1,
+     "kneeMax": 36.2,
+     "pop": 0.4,
+     "plane": 0.5,
+     "slide": 0,
+     "stretch": 0.026,
+     "spread": 0,
+     "floor": 0
+    }
+   }
+  },
+  "npc_elder": {
+   "own": 0,
+   "edges": 1813,
+   "restAnkles": 0.173,
+   "clips": {
+    "idle": {
+     "speed": 0,
+     "kneeMin": 14.3,
+     "kneeMax": 18.9,
+     "pop": 0.9,
+     "plane": 0.3,
+     "slide": 0,
+     "stretch": 0.018,
+     "spread": 0,
+     "floor": 0
+    },
+    "idle_shift": {
+     "speed": 0,
+     "kneeMin": 14.2,
+     "kneeMax": 25.6,
+     "pop": 1.1,
+     "plane": 0.4,
+     "slide": 0,
+     "stretch": 0.028,
+     "spread": 0,
+     "floor": 0
+    },
+    "idle_look": {
+     "speed": 0,
+     "kneeMin": 14.3,
+     "kneeMax": 18.9,
+     "pop": 0.9,
+     "plane": 0.3,
+     "slide": 0,
+     "stretch": 0.018,
+     "spread": 0,
+     "floor": 0
+    },
+    "walk": {
+     "speed": 1.1,
+     "kneeMin": 12.5,
+     "kneeMax": 78.6,
+     "pop": 14.4,
+     "plane": 3.2,
+     "slide": 0.012,
+     "stretch": 0.062,
+     "spread": 0.026,
+     "floor": 0.19
+    },
+    "talk": {
+     "speed": 0,
+     "kneeMin": 13.7,
+     "kneeMax": 20.4,
+     "pop": 1.1,
+     "plane": 0.5,
+     "slide": 0,
+     "stretch": 0.017,
+     "spread": 0,
+     "floor": 0
+    },
+    "talk_b": {
+     "speed": 0,
+     "kneeMin": 13.9,
+     "kneeMax": 20.3,
+     "pop": 1.2,
+     "plane": 0.6,
+     "slide": 0,
+     "stretch": 0.018,
+     "spread": 0,
+     "floor": 0
+    },
+    "wave": {
+     "speed": 0,
+     "kneeMin": 14.2,
+     "kneeMax": 25.4,
+     "pop": 2,
+     "plane": 1.9,
+     "slide": 0,
+     "stretch": 0.043,
+     "spread": 0,
+     "floor": 0
+    },
+    "nod": {
+     "speed": 0,
+     "kneeMin": 14.5,
+     "kneeMax": 18,
+     "pop": 1,
+     "plane": 0.6,
+     "slide": 0,
+     "stretch": 0.014,
+     "spread": 0,
+     "floor": 0
+    },
+    "salute": {
+     "speed": 0,
+     "kneeMin": 14.5,
+     "kneeMax": 18,
+     "pop": 1,
+     "plane": 0.6,
+     "slide": 0,
+     "stretch": 0.015,
+     "spread": 0,
+     "floor": 0
+    },
+    "sit": {
+     "speed": 0,
+     "kneeMin": 99.8,
+     "kneeMax": 102.6,
+     "pop": 0.1,
+     "plane": 0.2,
+     "slide": 0,
+     "stretch": 0.069,
+     "spread": 0.025,
+     "floor": 0
+    },
+    "elder_walk": {
+     "speed": 0.5,
+     "kneeMin": 12,
+     "kneeMax": 52.1,
+     "pop": 18.9,
+     "plane": 2.4,
+     "slide": 0.005,
+     "stretch": 0.036,
+     "spread": 0.077,
+     "floor": 0.101
+    }
+   }
+  },
+  "npc_lamplighter": {
+   "own": 0,
+   "edges": 1537,
+   "restAnkles": 0.106,
+   "clips": {
+    "idle": {
+     "speed": 0,
+     "kneeMin": 14.2,
+     "kneeMax": 19.4,
+     "pop": 1.1,
+     "plane": 0.3,
+     "slide": 0,
+     "stretch": 0.01,
+     "spread": 0,
+     "floor": 0
+    },
+    "idle_shift": {
+     "speed": 0,
+     "kneeMin": 14.1,
+     "kneeMax": 29,
+     "pop": 1.3,
+     "plane": 0.4,
+     "slide": 0,
+     "stretch": 0.012,
+     "spread": 0,
+     "floor": 0
+    },
+    "idle_look": {
+     "speed": 0,
+     "kneeMin": 14.2,
+     "kneeMax": 19.4,
+     "pop": 1.1,
+     "plane": 0.3,
+     "slide": 0,
+     "stretch": 0.01,
+     "spread": 0,
+     "floor": 0
+    },
+    "walk": {
+     "speed": 1.2,
+     "kneeMin": 9.9,
+     "kneeMax": 77.6,
+     "pop": 18.5,
+     "plane": 3.3,
+     "slide": 0.016,
+     "stretch": 0.036,
+     "spread": 0.051,
+     "floor": 0.194
+    },
+    "talk": {
+     "speed": 0,
+     "kneeMin": 13.5,
+     "kneeMax": 21.9,
+     "pop": 1.2,
+     "plane": 0.5,
+     "slide": 0,
+     "stretch": 0.009,
+     "spread": 0,
+     "floor": 0
+    },
+    "talk_b": {
+     "speed": 0,
+     "kneeMin": 13.9,
+     "kneeMax": 21.2,
+     "pop": 1.4,
+     "plane": 0.6,
+     "slide": 0,
+     "stretch": 0.009,
+     "spread": 0,
+     "floor": 0
+    },
+    "wave": {
+     "speed": 0,
+     "kneeMin": 14.2,
+     "kneeMax": 33.8,
+     "pop": 3.5,
+     "plane": 1.9,
+     "slide": 0,
+     "stretch": 0.016,
+     "spread": 0,
+     "floor": 0
+    },
+    "nod": {
+     "speed": 0,
+     "kneeMin": 14.5,
+     "kneeMax": 18.7,
+     "pop": 1.1,
+     "plane": 0.5,
+     "slide": 0,
+     "stretch": 0.01,
+     "spread": 0,
+     "floor": 0
+    },
+    "salute": {
+     "speed": 0,
+     "kneeMin": 14.5,
+     "kneeMax": 18.6,
+     "pop": 1.1,
+     "plane": 0.6,
+     "slide": 0,
+     "stretch": 0.01,
+     "spread": 0,
+     "floor": 0
+    }
+   }
+  },
+  "npc_shardkeeper": {
+   "own": 0,
+   "edges": 2094,
+   "restAnkles": 0.239,
+   "clips": {
+    "idle": {
+     "speed": 0,
+     "kneeMin": 16.4,
+     "kneeMax": 22,
+     "pop": 0.9,
+     "plane": 0.4,
+     "slide": 0,
+     "stretch": 0.015,
+     "spread": 0,
+     "floor": 0
+    },
+    "idle_shift": {
+     "speed": 0,
+     "kneeMin": 14.1,
+     "kneeMax": 27.3,
+     "pop": 0.9,
+     "plane": 0.4,
+     "slide": 0,
+     "stretch": 0.018,
+     "spread": 0,
+     "floor": 0
+    },
+    "idle_look": {
+     "speed": 0,
+     "kneeMin": 16.4,
+     "kneeMax": 22,
+     "pop": 0.9,
+     "plane": 0.4,
+     "slide": 0,
+     "stretch": 0.015,
+     "spread": 0,
+     "floor": 0
+    },
+    "walk": {
+     "speed": 1.2,
+     "kneeMin": 5.4,
+     "kneeMax": 76.9,
+     "pop": 18.9,
+     "plane": 3.4,
+     "slide": 0.015,
+     "stretch": 0.043,
+     "spread": 0.092,
+     "floor": 0.181
+    },
+    "talk": {
+     "speed": 0,
+     "kneeMin": 14.9,
+     "kneeMax": 23,
+     "pop": 1.3,
+     "plane": 0.5,
+     "slide": 0,
+     "stretch": 0.016,
+     "spread": 0,
+     "floor": 0
+    },
+    "talk_b": {
+     "speed": 0,
+     "kneeMin": 14,
+     "kneeMax": 22.1,
+     "pop": 1.1,
+     "plane": 0.6,
+     "slide": 0,
+     "stretch": 0.016,
+     "spread": 0,
+     "floor": 0
+    },
+    "wave": {
+     "speed": 0,
+     "kneeMin": 14.2,
+     "kneeMax": 27.5,
+     "pop": 2.4,
+     "plane": 2,
+     "slide": 0,
+     "stretch": 0.018,
+     "spread": 0,
+     "floor": 0
+    },
+    "nod": {
+     "speed": 0,
+     "kneeMin": 17,
+     "kneeMax": 21.2,
+     "pop": 0.9,
+     "plane": 0.6,
+     "slide": 0,
+     "stretch": 0.014,
+     "spread": 0,
+     "floor": 0
+    },
+    "salute": {
+     "speed": 0,
+     "kneeMin": 17,
+     "kneeMax": 21.2,
+     "pop": 0.9,
+     "plane": 0.6,
+     "slide": 0,
+     "stretch": 0.014,
+     "spread": 0,
+     "floor": 0
+    }
+   }
+  }
+ },
+ "bad": [],
+ "errors": []
+}

@@ -37,7 +37,7 @@ export function createTownShops({ scene, streamer, player, rig, lookdev, i18n, r
   const swing = createSwingSet(); // the rooms' chandeliers and wall lanterns sway a little too
   const state = { phase: 'street', shop: null, zone: null, busy: false, saved: null };
   // The shopkeepers behind the counters (Maren, Odo, Bram: the townsfolk keeper models, their own idle / talk clips)
-  const KEEPER_MODEL = Object.freeze({ exchange: 'npc_shardkeeper', scribe: 'townsfolk_scribe', inn: 'npc_innkeeper' }); // the quest givers' own models carry no clips: the shared set is retargeted onto them
+  const KEEPER_MODEL = Object.freeze({ exchange: 'npc_shardkeeper', scribe: 'townsfolk_scribe', inn: 'npc_innkeeper' }); // the quest givers' clips are baked for their own bodies (assets/anim/npc_<key>.glb), the scribe's set is retargeted at load
   const keepers = new Map(); // shop id -> {root, mixer, acts, playing}
   let lastT = performance.now();
   function placeKeeper(shop) {

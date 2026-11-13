@@ -157,6 +157,16 @@ Picking takes without a browser: `take_info.py` (time line of hip height, hand h
     stride, lean, bounce and arm clearance per body type. Each clip's `userData`: `loop`, `speed` (m/s on that
     character and body type: move at this speed, or advance the clip by distance / speed), `pelvis_y`, `scale`,
     `take`. `TOWNSFOLK_CLIPS` lists the names.
+  - **The five quest givers are baked, not retargeted** (`BAKED_CLIPS`, `bakedClipFile(key)`): `townsfolkClips`
+    hands out `assets/anim/npc_<key>.glb` as it is (the phone model shares the file), and falls back to the retarget
+    only if the file fails. The files come from `build_clips.py --char npc_<key>` (`clips.json` →
+    `characters.npc_<key>`): the same takes solved offline on each giver's own skeleton and proportions, with a
+    heel-to-toe walk at that body's own speed, every standing clip on the model's own stance (`stance.feet: "rest"`,
+    so a wave or a nod blends into an idle without a foot moving), knees kept forward (`knee_fwd`, `knee_align`),
+    fingers that curl and open through idles and talks (`finger_life`), and `extras.scale` for the sit height. They
+    are compressed without the animation filters (`gltf-transform meshopt --level medium`): the 12-bit pelvis track
+    of the default level makes a planted foot tremble by a quarter of a millimetre. Checked by
+    `art/townsfolk/npc_check.mjs` (report: `docs/art/townsfolk/check/baked.json`).
 - `gait.js`
   - `GaitLayer`: walk and run are driven by one shared stride phase, so the feet stay in step through the whole
     walk ↔ run blend; a stride starts from rest at the passing pose; the stride speeds come from the clips

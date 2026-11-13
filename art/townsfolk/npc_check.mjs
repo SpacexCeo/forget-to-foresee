@@ -3,7 +3,9 @@
 //   node art/townsfolk/npc_check.mjs [--url http://127.0.0.1:5211] [--models npc_guard,...] [--out report.json]
 // Per clip: knee bend range and the largest change in one frame (a pop), the knee's bend-plane turn per frame (while
 // the knee is bent more than 17 degrees: a straighter leg has no plane to speak of), how far
-// a planted foot slides, how far the ankles stand apart against the rest stance, and the longest stretch of a mesh
+// a planted foot slides (the sole's contact point against the ground: the heel while the toes are up, the ball once
+// the foot is flat or the heel peels off; an ankle that rolls over a planted heel is not a slide), how far the ankles
+// stand apart against the rest stance, and the longest stretch of a mesh
 // edge on the legs against its rest length (3 cm while the legs stay nearly straight; 10 cm in clips that bend a knee
 // past 25 degrees: the outside of a bent knee lengthens by the limb's radius times the angle). Exit code 1 when a
 // limit is broken.
@@ -39,6 +41,12 @@ for (const name of models) {
     const nT = idx ? idx.count / 3 : pos.count / 3, stepT = Math.max(1, Math.floor(nT / 6000));
     for (let t = 0; t < nT; t += stepT) { const a = idx ? idx.getX(t * 3) : t * 3, b = idx ? idx.getX(t * 3 + 1) : t * 3 + 1; if (!leg(a) || !leg(b)) continue; const pa = P(a), pb = P(b); edges.push([a, b, pa.distanceTo(pb)]); }
     const rest = { ankles: Math.abs(wp(bone('foot_L')).x - wp(bone('foot_R')).x) };
+    // the sole's two contact points, each fixed to its bone: the heel under and a little behind the ankle (foot bone), the ball under the toe joint (toe bone)
+    const sole = {};
+    for (const s of ['L', 'R']) {
+      const fb = bone('foot_' + s), tb = bone('toe_' + s), A = wp(fb), T = wp(tb);
+      sole[s] = { fb, tb, heel: fb.worldToLocal(new THREE.Vector3(A.x + (A.x - T.x) * 0.35, 0, A.z + (A.z - T.z) * 0.35)), ball: tb.worldToLocal(new THREE.Vector3(T.x, 0, T.z)) };
+    }
     const out = { own: own.length, edges: edges.length, restAnkles: +rest.ankles.toFixed(3), clips: {} };
     const mixer = new THREE.AnimationMixer(model);
     for (const clip of clips) {
@@ -55,18 +63,22 @@ for (const name of models) {
           R.kneeMin = Math.min(R.kneeMin, bend); R.kneeMax = Math.max(R.kneeMax, bend);
           const p = prev[s];
           if (p) { R.pop = Math.max(R.pop, Math.abs(bend - p.bend)); if (n.length() > 0.3 && p.n.length() > 0.3) R.plane = Math.max(R.plane, n.clone().normalize().angleTo(p.n.clone().normalize()) * 180 / Math.PI); }
-          prev[s] = { bend, n }; feet[s].push({ a, toe });
+          prev[s] = { bend, n }; feet[s].push({ a, toe, heel: sole[s].fb.localToWorld(sole[s].heel.clone()), ball: sole[s].tb.localToWorld(sole[s].ball.clone()) });
         }
         R.spread = Math.max(R.spread, Math.abs(Math.abs(feet.L[f].a.x - feet.R[f].a.x) - rest.ankles));
         if (f % 3 === 0) for (const [a, b, l0] of edges) { const d = P(a).distanceTo(P(b)) - l0; if (d > R.stretch) R.stretch = d; }
       }
-      // planted: the ankle within 1.5 cm of its lowest height in the clip; slide = travel against the ground while planted
+      // planted: the sole's contact point (the lower of heel and ball) within 1.5 cm of the sole's lowest height in the clip and, in a
+      // clip that travels, not swinging past (slower against the ground than 0.4 of the clip's speed); slide = its travel against the ground while planted
       for (const s of ['L', 'R']) {
-        const ys = feet[s].map((x) => x.a.y), lo = Math.min(...ys); let run = 0, worst = 0;
+        const low = feet[s].map((x) => Math.min(x.heel.y, x.ball.y)), lo = Math.min(...low), ys = feet[s].map((x) => x.a.y); let run = 0, worst = 0;
+        const dt = clip.duration / F, step = speed * dt * (clip.userData && clip.userData.forward === -1 ? -1 : 1);
         for (let f = 1; f < F; f++) {
-          if (ys[f] < lo + 0.015 && ys[f - 1] < lo + 0.015) { const dx = feet[s][f].a.x - feet[s][f - 1].a.x, dz = feet[s][f].a.z - feet[s][f - 1].a.z + speed * (clip.duration / F) * (clip.userData && clip.userData.forward === -1 ? -1 : 1); run += Math.hypot(dx, dz); worst = Math.max(worst, run); } else run = 0;
+          const k = feet[s][f].heel.y + feet[s][f - 1].heel.y < feet[s][f].ball.y + feet[s][f - 1].ball.y ? 'heel' : 'ball';
+          const p = feet[s][f][k], q = feet[s][f - 1][k], d = Math.hypot(p.x - q.x, p.z - q.z + step);
+          if (low[f] < lo + 0.015 && low[f - 1] < lo + 0.015 && (!speed || d / dt < 0.4 * speed)) { run += d; worst = Math.max(worst, run); } else run = 0;
         }
-        R.slide = Math.max(R.slide, worst); R.floor = Math.max(R.floor, Math.max(...ys) - lo);
+        R.slide = Math.max(R.slide, worst); R.floor = Math.max(R.floor, Math.max(...ys) - Math.min(...ys));
       }
       for (const k of Object.keys(R)) R[k] = +R[k].toFixed(k === 'slide' || k === 'stretch' || k === 'spread' || k === 'floor' ? 3 : 1);
       out.clips[clip.name] = R;
