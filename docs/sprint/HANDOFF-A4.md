@@ -34,7 +34,11 @@ Run the example: `node server/src/main.js & node server/examples/agent-tournamen
 
 - **Stipend:** settled with A1. The intro grants no silk: W17 now says "The town gives every newcomer a welcome. Ask me when you are settled.", and the one stipend stays the story's TWIST_DONE (a verified expedition-log entry).
 - **Barks:** wired. The ten lines join the crowd rotation of `scenes/barks.js` (option `extra`) while `newPlayerIntro` is on. The timing stays that module's own (6 m, 2.6 s bubbles, 20 s per person), not the plan's 8 m / 3 s / 20–40 s.
-- **E2E E1–E7:** written as DOM tests only, because the e2e harness is not on `main` yet.
+- **E2E:** two browser scripts run on a Vite dev server.
+  - `game/tests/e2e/npe-intro.mjs` covers E1–E4 and E7: title card, 19 lines with the right speakers, the card, Start, controls back, no silk granted; both Esc paths; no intro on the second load; reduced motion; no coach mark over the dialogue.
+  - `tips-panels.mjs` covers the panels' tips.
+  - Run: `npx vite --port 5199 & node tests/e2e/npe-intro.mjs`; both are green.
+  - E5 and E6 (the cup) are DOM tests in `tests/npe/cup.test.mjs`.
 - **"?" re-show handle and the panels test (7.8):** done for the Season Cup.
   - `reshowButton({doc, id, show: showTip})` in `npe/tips.js` makes the 24 × 24 "?" button. Other panel owners (journal A1, skills A2, bag / market / games A3) can add it to their headers.
   - To be covered by the test, a panel registers `window.__ftfTest.panels.<name> = {open, close, tip, selector}`.
