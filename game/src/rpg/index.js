@@ -202,6 +202,7 @@ export function mount(ctx) {
         if (lastWorldHp != null && w < lastWorldHp - 1e-6) {
           const dmg = lastWorldHp - w, r = S.takeDamage({ ...self, hp: lastWorldHp / WORLD_HP * stats.maxHP }, dmg, tnow, rec);
           self = { ...r.self, maxHP: stats.maxHP }; M.iris.hp = Math.max(0, self.hp / stats.maxHP * WORLD_HP);
+          if (ctx.floatNumber && r.taken > 0 && ctx.player) ctx.floatNumber({ kind: 'taken', amount: r.taken, pos: [ctx.player.pos[0], ctx.player.pos[1] + 1.9, ctx.player.pos[2]] });
         } else self = { ...self, hp: w / WORLD_HP * stats.maxHP, maxHP: stats.maxHP };
         lastWorldHp = M.iris.hp;
       }

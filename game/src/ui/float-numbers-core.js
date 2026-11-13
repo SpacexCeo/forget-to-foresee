@@ -1,26 +1,37 @@
 // Floating numbers, the pure part (a reference game teardown M5 / F1; reimplemented from the behaviour, in our quiet palette).
-// Kinds: damage, crit (a finisher too), silk_gain, silk_spend, xp. Hits on the same target within MERGE_MS merge into
-// one number that grows a little; crits pop larger and live longer. Reduced motion: no pop, no jitter, a plain fade.
+// Kinds (sprint plan 5.13): damage dealt (white), critical ("34!", gold, a quick 1.0 -> 1.4 -> 1.0 pop), damage taken
+// ("−7", red, drifts left), heal ("+12", green), silk gained ("+3 silk"), silk spent, XP ("+20 XP", violet, merges
+// within XP_MERGE_MS), miss ("Miss", muted). Hits on the same target within MERGE_MS merge into one number that grows a
+// little. Reduced motion: no pop, no jitter, no rise: a plain fade in place.
 
 export const POOL = 24;
 export const MERGE_MS = 250;
-export const RISE_PX = 33;
+export const RISE_PX = 40;
+export const XP_MERGE_MS = 400;
 export const KIND = Object.freeze({
-  damage: { life: 650, pop: 1.2, size: 18, color: '#f3ead6' },
-  crit: { life: 1600, pop: 3.0, size: 46, color: '#f6c860', jitter: 6, jitterMs: 300 },
-  silk_gain: { life: 900, pop: 1.2, size: 18, color: '#f2dfae' },
-  silk_spend: { life: 900, pop: 1.0, size: 16, color: '#9a9283' },
-  xp: { life: 900, pop: 1.15, size: 16, color: '#a9d6e6' },
+  damage: { life: 700, pop: 1.15, size: 18, color: '#ffffff', rise: 40 },
+  crit: { life: 1100, pop: 'bounce', size: 26, color: '#f6c860', rise: 40, jitter: 4, jitterMs: 200 },
+  taken: { life: 800, pop: 1.1, size: 20, color: '#ff6b62', rise: 30, drift: -14 },
+  heal: { life: 800, pop: 1.1, size: 18, color: '#5ccf8a', rise: 40 },
+  silk_gain: { life: 900, pop: 1.15, size: 16, color: '#e8dcb4', rise: 40 },
+  silk_spend: { life: 900, pop: 1.0, size: 16, color: '#9a9283', rise: 30 },
+  xp: { life: 900, pop: 1.1, size: 14, color: '#b06cff', rise: 40 },
+  miss: { life: 700, pop: 1.0, size: 14, color: '#aab1c5', rise: 24 },
 });
 /** Numbers of other players are smaller. */
-export const OTHER_SIZE = Object.freeze({ normal: 16, crit: 28 });
+export const OTHER_SIZE = Object.freeze({ normal: 14, crit: 20 });
 
-/** The text of a number: silk with two decimals and a sign, XP with its unit, damage as a whole number. */
-export function textOf(kind, amount, xpUnit = 'XP') {
+const silkNum = (a) => (Number.isInteger(Math.round(a * 100) / 100) ? String(Math.round(a)) : (Math.round(a * 100) / 100).toFixed(2).replace(/0$/, ''));
+/** The text of a number: "+3 silk" (whole, else up to 2 decimals), "+20 XP", "34!" for a crit, "−7" taken, "+12" healed, "Miss". */
+export function textOf(kind, amount, xpUnit = 'XP', words = {}) {
   const a = Math.abs(Number(amount) || 0);
-  if (kind === 'silk_gain') return '+' + a.toFixed(2);
-  if (kind === 'silk_spend') return '−' + a.toFixed(2);
+  if (kind === 'silk_gain') return '+' + silkNum(a) + ' ' + (words.silk || 'silk');
+  if (kind === 'silk_spend') return '−' + silkNum(a) + ' ' + (words.silk || 'silk');
   if (kind === 'xp') return '+' + Math.round(a) + ' ' + xpUnit;
+  if (kind === 'crit') return Math.round(a) + '!';
+  if (kind === 'taken') return '−' + Math.round(a);
+  if (kind === 'heal') return '+' + Math.round(a);
+  if (kind === 'miss') return words.miss || 'Miss';
   return String(Math.round(a));
 }
 
@@ -30,6 +41,10 @@ export function textOf(kind, amount, xpUnit = 'XP') {
  */
 export function mergeOrAdd(live, ev, now) {
   const family = ev.kind === 'crit' ? 'damage' : ev.kind;
+  if (family === 'xp') {                                                           // XP stacks: one growing "+N XP" within the merge window
+    const m = live.find((n) => n.family === 'xp' && n.target === (ev.target ?? null) && now - n.lastAt <= XP_MERGE_MS);
+    if (m) { m.amount += ev.amount; m.merges++; m.lastAt = now; return m; }
+  }
   if (ev.target != null && (family === 'damage')) {
     const m = live.find((n) => n.target === ev.target && n.family === 'damage' && now - n.lastAt <= MERGE_MS);
     if (m) {
@@ -51,10 +66,10 @@ export function curve(kind, ms, reduced = false) {
   const opacity = t >= 1 ? 0 : t < 0.6 ? 1 : 1 - (t - 0.6) / 0.4;
   if (reduced) return { scale: 1, rise: 0, opacity, jitter: 0 };
   const popT = Math.min(1, ms / 120);
-  const scale = k.pop + (1 - k.pop) * (1 - Math.pow(1 - popT, 3));
-  const rise = RISE_PX * Math.min(1, t * 1.4);
+  const scale = k.pop === 'bounce' ? 1 + 0.4 * Math.sin(Math.PI * Math.min(1, ms / 160)) : k.pop + (1 - k.pop) * (1 - Math.pow(1 - popT, 3));
+  const rise = (k.rise || RISE_PX) * Math.min(1, ms / 700);
   const jitter = k.jitter && ms < k.jitterMs ? k.jitter * (1 - ms / k.jitterMs) : 0;
-  return { scale, rise, opacity, jitter };
+  return { scale, rise, opacity, jitter, drift: (k.drift || 0) * Math.min(1, ms / 700) };
 }
 
 export const sizeOf = (n) => (n.other ? (n.kind === 'crit' ? OTHER_SIZE.crit : OTHER_SIZE.normal) : (KIND[n.kind] || KIND.damage).size);
