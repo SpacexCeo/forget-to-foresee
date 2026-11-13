@@ -46,7 +46,7 @@ export function authHandler(opts = {}) {
       store = store || createIdentityStore(identityFile(env));
       const client = opts.client || createTxClient({ rpcUrls: cfg.rpcUrls.length ? cfg.rpcUrls : DEFAULTS.rpcUrls, fetch: opts.fetch || globalThis.fetch, timeoutMs: 20_000 });
       const mainnet = opts.mainnetClient || createTxClient({ rpcUrls: env.FTF_MAINNET_RPC ? env.FTF_MAINNET_RPC.split(',').map((s) => s.trim()).filter(Boolean) : MAINNET_RPC, fetch: opts.fetch || globalThis.fetch, timeoutMs: 20_000 });
-      linker = createLinker({ store, nonces, accessKey: opts.accessKey || accessKeyVia(client, mainnet), now: opts.now });
+      linker = createLinker({ store, nonces, accessKey: opts.accessKey || accessKeyVia(client, mainnet), origins: cfg.origins, now: opts.now });
     }
     try {
       const r = await linker(body);

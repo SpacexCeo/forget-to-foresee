@@ -7,6 +7,8 @@ export default {
   'acct.guest': 'Play as guest',
   'acct.guest.note': 'Play as guest: your progress is saved in this browser only. Sign in any time to keep it on every device.',
   'acct.testnet': 'Your account lives on NEAR testnet. Nothing here has real-world value.',
+  'acct.passkey': 'Sign in with a passkey (Face ID, fingerprint, device PIN)',
+  'acct.passkey.new': 'Create a passkey',
   'acct.near': 'NEAR wallet (HOT, Meteor, Intear, MyNearWallet…)',
   'acct.near.testnet': 'NEAR testnet account (MyNearWallet)',
   'acct.evm': 'EVM wallet ({name})',

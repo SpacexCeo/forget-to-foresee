@@ -17,6 +17,8 @@ Behind the feature flag `accountLogin` (`game/public/features.json`, off). `?ff=
 - The panel opens from the game menu (header button) and from the Day-1 name step (a secondary button under
   Continue). It never opens by itself; Esc, the × or a tap outside closes it. Text: "Your account lives on NEAR
   testnet. Nothing here has real-world value."
+- **Sign in with a passkey / Create a passkey** (first rows when the browser has WebAuthn): the "email-like" login,
+  with Face ID, a fingerprint or the device PIN, no extension and no provider secret. See "Passkeys" below.
 - Email / Google: not built. No project on the owner's machine had it (the reference site uses NEAR wallets only),
   and wallets shipped first before the feature freeze.
 
@@ -51,6 +53,25 @@ The Day-1 guest account stays the on-chain identity. A login links to it.
    account and key are kept locally) or keep this browser's account (the login moves here; the old mapping is kept in
    `history`). Nothing is dropped silently.
 
+### Passkeys (WebAuthn)
+
+- **Create a passkey**: `navigator.credentials.create` (ES256, discoverable, rpId = the page's host). The browser
+  hands over the credential's P-256 public key (`getPublicKey()`, SPKI). **Sign in with a passkey**:
+  `navigator.credentials.get` with no allow-list, so the browser offers the passkeys it holds (or a phone's via QR).
+- **Login message**: the passkey signs an assertion whose challenge is `sha256(login message)`. The relayer
+  (`verifyPasskey` in `relayer/lib/auth.js`) checks five things: `type = webauthn.get`, the challenge, an allowed
+  origin (`FTF_ALLOWED_ORIGINS` or localhost), `rpIdHash = sha256(origin host)` with the user-present flag set, and
+  the ECDSA P-256 signature over `authenticatorData || sha256(clientDataJSON)`. The identity is
+  `passkey:<credential id>`. The first link pins the public key (`passkey_key`); later requests verify with the pinned
+  key, so reusing a credential id with another key fails. Replays and expiry are covered by the same one-time nonce.
+- **Device key**: the PRF extension's output for the salt `sha256("ftf-device-key-v1")`. Synced passkeys (iCloud
+  Keychain, Google Password Manager) give the same output on every device, so the same device key comes back and the
+  account is restored. Without PRF the device key is kept in this browser only, and another device answers
+  "no device key" (`acct.nokey`), as for a non-deterministic wallet.
+- Tests: `relayer/tests/auth.test.mjs` (good, bad key/text/origin/presence/type, replayed, expired, pinned key) and
+  `game/tests/client/account-login.test.mjs` (the real provider with a fake authenticator against the real linker:
+  create + restore with PRF, no PRF, foreign origin, panel rows).
+
 Limits, stated honestly: a wallet whose signatures are not deterministic (some smart-contract or MPC wallets)
 cannot restore the account on a second device; the panel says so (`acct.nokey`). Rate limit: 20 requests a minute
 per IP on `/api/auth/*`. Nonces live in the relayer's memory (one process).
@@ -58,6 +79,6 @@ per IP on `/api/auth/*`. Nonces live in the relayer's memory (one process).
 ## Files
 
 - `relayer/lib/auth.js`, `relayer/api/auth.js`, `relayer/tests/auth.test.mjs`
-- `game/src/net/account-login.js` (flow), `game/src/net/wallets.js` (providers, no libraries),
+- `game/src/net/account-login.js` (flow), `game/src/net/wallets.js` (providers incl. `passkeyProvider`, no libraries),
   `game/src/play/account-panel.js` (UI), `game/src/play/locales/en-account.js` (+ `ru.js`),
   `game/tests/client/account-login.test.mjs` (the browser flow against the real relayer linker)
