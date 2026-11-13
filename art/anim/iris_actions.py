@@ -374,7 +374,9 @@ def main():
     ap.add_argument('--cloth', default='', help='a cloth rig (.npz): bake the gown, ribbons and strands over the new clips and check the legs against it')
     a = ap.parse_args()
     cfg_ = json.load(open(os.path.join(HERE, 'clips.json')))['characters']      # the character's own chain params (a firm bun)
-    chains.use_character(next((v for v in cfg_.values() if os.path.basename(v.get('model', '')) == os.path.basename(a.model)), None))
+    char_ = next((v for v in cfg_.values() if os.path.basename(v.get('model', '')) == os.path.basename(a.model)), None)
+    chains.use_character(char_)
+    from ftfanim import skirt as skirt_; skirt_.use_character(char_)
     globals()['RELEASE_S'] = a.release
     for k_ in ('cast_lance', 'cast_snare'): EXTRAS[k_]['release_s'] = EXTRAS[k_]['step_s'] = a.release
     rig = Rig(a.model)

@@ -5,12 +5,12 @@
 The file is built of separate pieces (the body with both legs, the dress, the hair, the lacing, the ribbons, the
 eyes), so nothing is welded and nothing has to be cut apart.
 Kept from the file: the mesh, the UVs, the texture, and its weights for the spine, shoulders, arms, hands, fingers,
-neck and head (bone names mapped onto hers). Replaced by rules: the dress below the hips (spread over her 13 skirt
-chains by angle and height instead of following the thighs), the ribbon tails (the hand, the tips sway), the legs and
-shoes (her joints: the file's knee sits 8 cm too high). The hidden right leg is removed above the shoe, as in the v3
-build: it would cut the narrow skirt in a stride.
+neck and head (bone names mapped onto hers). Replaced by rules: the dress below the hips (the cloth grid of the v3
+gown re-seated on this dress, her 13 skirt chains on it, the grid's weights; not the thighs), the ribbon tails (the hand, the tips sway), the legs and
+shoes (her joints: the file's knee sits 8 cm too high). The hidden right leg is removed with its shoe: it would cut the
+narrow skirt in a stride.
     blender -b -P s20_owner_rig.py -- <model.fbx> <texture.jpg> <work dir> <name> <base triangles> [outline mm 2.2]
-Writes <name>.blend and <name>_raw.glb (toon material + inverted hull outline).
+Writes <name>.blend, <name>_raw.glb (toon material + inverted hull outline) and cloth_rig.npz (the cloth grid on this dress).
 """
 import bpy, bmesh, sys, os, json
 import numpy as np
@@ -18,6 +18,7 @@ from mathutils import Vector
 HERE = os.path.dirname(os.path.abspath(__file__))
 a = sys.argv[sys.argv.index('--') + 1:]; SRC, TEX, WD, NAME, TRIS = a[0], a[1], a[2], a[3], int(a[4]); MM = float(a[5]) if len(a) > 5 else 2.2
 HEIGHT = 1.741
+V3RIG = os.path.join(HERE, '..', 'v3', 'out', 'cloth_rig.npz')      # the v3 gown's cloth rig: grid layout, weights, body capsules
 SK = json.load(open(os.path.join(HERE, '..', 'v3', 'skeleton.json'))); BH = {k: np.array(v['head']) for k, v in SK.items()}; BT = {k: np.array(v['tail']) for k, v in SK.items()}
 ss = lambda a_, b_, x: (lambda t: t * t * (3 - 2 * t))(np.clip((x - a_) / (b_ - a_), 0, 1))
 MAP = {'Hips': 'pelvis', 'Spine': 'spine', 'Spine1': 'chest', 'Spine2': 'chest', 'Neck': 'neck', 'Head': 'head'}
@@ -68,10 +69,10 @@ red = (col[:, 0] > 0.25) & (col[:, 0] > 1.8 * col[:, 1])
 LACE = ~BODY & ~DRESS & ~red & (z < 1.12) & (z > 0.5) & (np.abs(x) < 0.2)          # the lacing and its bow ride the dress
 armw = sum(get(p + s_) for s_ in 'LR' for p in ('upperarm_', 'forearm_', 'hand_', 'index_', 'fingers_', 'thumb_')); arm = armw > 0.5
 print('pieces: %d; body %d vertices, dress %d, lacing %d, red %d, arm %d' % (len(ids), BODY.sum(), DRESS.sum(), LACE.sum(), red.sum(), arm.sum()))
-# the hidden right leg would cut the narrow skirt in a stride: it goes, the shoe stays (as in the v3 build)
+# the hidden right leg would cut the narrow skirt in a stride: it goes, shoe included (a shoe alone showed in front of the hem in a run)
 bm = bmesh.new(); bm.from_mesh(me); bm.verts.ensure_lookup_table(); OI = bm.verts.layers.int.new('orig')
 for v in bm.verts: v[OI] = v.index
-gone = BODY & (x < -0.004) & (z > 0.15) & (z < 0.90) & ~arm
+gone = BODY & (x < -0.004) & (z < 0.90) & ~arm
 drop = [f for f in bm.faces if all(gone[v.index] for v in f.verts)]; keepv = np.ones(n, bool)
 bmesh.ops.delete(bm, geom=drop, context='FACES'); bm.to_mesh(me); bm.free(); me.update()
 alive = np.empty(len(me.vertices), np.int32); me.attributes['orig'].data.foreach_get('value', alive); me.attributes.remove(me.attributes['orig'])
@@ -92,18 +93,46 @@ for sd in 'LR':                                        # ribbon tails: with the 
     u_r = 0.6 * ss(0.92, 0.78, z); u_1 = ss(0.84, 0.76, z)
     for k in upper: W[k][tails] = 0
     W['hand_' + sd][tails] = (1 - u_r)[tails]; W['ribbon_%s_0' % sd][tails] = (u_r * (1 - u_1))[tails]; W['ribbon_%s_1' % sd][tails] = (u_r * u_1)[tails]
-# the dress below the hips (and the lacing on it): her 13 skirt chains by angle and height
-NC = 13; P = np.array([[BH['skirt_%02d_%d' % (c, j)] for j in range(4)] + [BT['skirt_%02d_3' % c]] for c in range(NC)])
-zj = P[:, :, 2].mean(0); u = np.interp(-z, -zj, np.arange(5)); j0 = np.clip(np.floor(u).astype(int), 0, 3); t = np.clip(u - j0, 0, 1)
-pt = P[:, j0, :] * (1 - t)[None, :, None] + P[:, np.minimum(j0 + 1, 4), :] * t[None, :, None]; ang_c = np.arctan2(pt[:, :, 1], pt[:, :, 0]); ang = np.arctan2(y, x)
-d = (ang[None] - ang_c + np.pi) % (2 * np.pi) - np.pi; dp = np.where(d >= 0, d, np.inf); dn = np.where(d < 0, -d, np.inf); cp = dp.argmin(0); cn = dn.argmin(0); a_ = dp.min(0); b_ = dn.min(0)
-wc = np.zeros((NC, n)); idx = np.arange(n); wc[cp, idx] += b_ / (a_ + b_ + 1e-9); wc[cn, idx] += a_ / (a_ + b_ + 1e-9)
-wj = np.zeros((4, n)); wj[0] = 1
-for j in range(1, 4): s_ = ss(j - 0.18, j + 0.18, u); wj[j] = s_; wj[j - 1] *= (1 - s_)
-skirt = (DRESS | LACE) & (z < 0.95); w_sk = ss(0.95, 0.80, z) * skirt
-for k in upper: W[k] = W[k] * (1 - w_sk)
-for c in range(NC):
-    for j in range(4): W['skirt_%02d_%d' % (c, j)][skirt] = (w_sk * wc[c] * wj[j])[skirt]
+# the dress below the hips (and the lacing on it): the cloth grid of the v3 gown is re-seated on THIS dress (same rows
+# and columns, each point moved along its ray from the body's axis onto the dress), her 13 skirt chains follow it, and
+# the dress takes the grid's own weights: the baked cloth then moves exactly this surface, and the clip build's check
+# (no leg capsule through the gown) is a check of this dress
+d3 = np.load(V3RIG); G = d3['grid'].astype(float); Gb = np.stack([G[..., 0], -G[..., 2], G[..., 1]], -1); R_, C_ = Gb.shape[:2]
+th3 = np.arctan2(Gb[..., 1], Gb[..., 0]); h3 = Gb[..., 2]; r3 = np.hypot(Gb[..., 0], Gb[..., 1])
+dm = DRESS & (z < 0.92); thD = np.arctan2(y[dm], x[dm]); rD = np.hypot(x[dm], y[dm]); zD = z[dm]; rn = np.full((R_, C_), np.nan)
+for i in range(R_):                                    # the dress radius along each grid point's ray: its four nearest dress vertices
+    for j in range(C_):
+        dd = np.hypot(((thD - th3[i, j] + np.pi) % (2 * np.pi) - np.pi) * 0.17, zD - h3[i, j]); nn = np.argpartition(dd, 4)[:4]
+        if dd[nn].max() < 0.05: rn[i, j] = float(np.average(rD[nn], weights=1.0 / (dd[nn] + 0.004)))
+found = np.isfinite(rn).mean()
+for i in range(R_):
+    ok = np.isfinite(rn[i])
+    if ok.sum() >= 2: rn[i] = np.interp(np.arange(C_), np.nonzero(ok)[0], rn[i][ok])
+    elif i: rn[i] = rn[i - 1] * r3[i] / r3[i - 1]
+    else: rn[i] = r3[i]
+rs = rn.copy(); rs[:, 1:-1] = 0.25 * rn[:, :-2] + 0.5 * rn[:, 1:-1] + 0.25 * rn[:, 2:]; rn = rs
+Gn = np.stack([rn * np.cos(th3), rn * np.sin(th3), h3], -1); g2 = lambda p_: np.stack([np.asarray(p_)[..., 0], np.asarray(p_)[..., 2], -np.asarray(p_)[..., 1]], -1)
+rows = [int(v_) for v_ in d3['ch_rows']]; cols = [int(v_) for v_ in d3['ch_cols']]; SK = json.loads(json.dumps(SK)); tails = {str(n_): p_ for n_, p_ in zip(d3['tail_names'], d3['tail_pos'])}
+for c in range(len(cols)):
+    for k_ in range(len(rows) - 1):
+        nm = 'skirt_%02d_%d' % (c, k_); SK[nm]['head'] = Gn[rows[k_], cols[c]].tolist(); SK[nm]['tail'] = Gn[rows[k_ + 1], cols[c]].tolist(); tails[nm] = g2(Gn[rows[k_ + 1], cols[c]])
+def seg_d(p_, a_, b_):
+    ab = b_ - a_; t_ = np.clip(((p_ - a_) @ ab) / (ab @ ab), 0, 1); return np.linalg.norm(p_ - a_ - t_[:, None] * ab, axis=1), t_
+clear = {}; cap_r = d3['cap_r'].astype(float).copy()   # the leg capsules of the wide gown are fitted to this close dress: 6 mm of air at rest
+for q_, (bn, p0, p1, st) in enumerate(zip(d3['cap_bone'], d3['cap_p0'], d3['cap_p1'], d3['cap_set'])):
+    if int(st) == 0:
+        dd, tt = seg_d(g2(Gn).reshape(-1, 3), p0.astype(float), p1.astype(float)); c_ = float((dd - (cap_r[q_, 0] + (cap_r[q_, 1] - cap_r[q_, 0]) * tt)).min())
+        if c_ < 0.006: cap_r[q_] = np.maximum(cap_r[q_] - (0.006 - c_), 0.02); c_ = float((dd - (cap_r[q_, 0] + (cap_r[q_, 1] - cap_r[q_, 0]) * tt)).min())
+        clear[str(bn) + '#%d' % q_] = (round(c_, 4), [round(float(v_), 3) for v_ in cap_r[q_]])
+print('cloth grid re-seated: %.0f%% of the points found on the dress; mean radius %.3f -> %.3f m; leg capsules (rest clearance m, radii): %s' % (found * 100, r3.mean(), rn.mean(), clear))
+cap_set = d3['cap_set'].copy(); cap_set[np.isin(d3['cap_bone'], ['thigh_R', 'shin_R'])] = 9      # the right leg is not there (removed above the shoe): it shapes nothing; its shoe still kicks the hem
+np.savez_compressed(WD + '/cloth_rig.npz', **{**{k_: d3[k_] for k_ in d3.files}, 'grid': g2(Gn), 'cap_r': cap_r, 'cap_set': cap_set, 'tail_names': np.array(list(tails)), 'tail_pos': np.array([tails[k_] for k_ in tails])})
+gwn = [str(v_) for v_ in d3['gw_names']]; gw = d3['gw'].reshape(-1, len(gwn)).astype(float); gp = Gn.reshape(-1, 3)
+skirt = (DRESS | LACE) & (z < float(h3.max()))
+for i in np.nonzero(skirt)[0]:
+    dd = np.linalg.norm(gp - co[i], axis=1); nn = np.argpartition(dd, 3)[:3]; ww = 1.0 / (dd[nn] + 1e-4) ** 2; wv = (gw[nn] * ww[:, None]).sum(0) / ww.sum()
+    for k in upper: W[k][i] = 0.0
+    for q_, nm in enumerate(gwn): W[nm][i] = wv[q_]
 # the body's legs and shoes: her joints (the file's knee sits 8 cm too high)
 for sd, sgn in (('L', 1), ('R', -1)):
     lg = BODY & ~arm & (z < 0.97) & (x * sgn > 0)

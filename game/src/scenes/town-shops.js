@@ -11,6 +11,7 @@ import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { setFog } from '../render/fog.js';
 import { createSwingSet } from '../render/swing.js';
 import { cue } from '../audio/town-audio.js';
+import { townsfolkClips, mergeClips } from '../play/anim-library.js';
 import { TOWN_SHOPS, SHOP_LIGHT, SHOP_CAMERA, SHOP_TRANSITION, shopZoneAt, shopPrompt } from './town-layout.js';
 
 /**
@@ -36,7 +37,7 @@ export function createTownShops({ scene, streamer, player, rig, lookdev, i18n, r
   const swing = createSwingSet(); // the rooms' chandeliers and wall lanterns sway a little too
   const state = { phase: 'street', shop: null, zone: null, busy: false, saved: null };
   // The shopkeepers behind the counters (Maren, Odo, Bram: the townsfolk keeper models, their own idle / talk clips)
-  const KEEPER_MODEL = Object.freeze({ exchange: 'townsfolk_shardkeeper', scribe: 'townsfolk_scribe', inn: 'townsfolk_innkeeper' });
+  const KEEPER_MODEL = Object.freeze({ exchange: 'npc_shardkeeper', scribe: 'townsfolk_scribe', inn: 'npc_innkeeper' }); // the quest givers' own models carry no clips: the shared set is retargeted onto them
   const keepers = new Map(); // shop id -> {root, mixer, acts, playing}
   let lastT = performance.now();
   function placeKeeper(shop) {
@@ -50,9 +51,11 @@ export function createTownShops({ scene, streamer, player, rig, lookdev, i18n, r
       m.position.set(...shop.keeperStand.position); m.rotation.y = shop.keeperStand.heading;
       m.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
       scene.add(m); k.root = m;
-      k.mixer = new THREE.AnimationMixer(m);
-      for (const c of g.animations || []) k.acts[c.name] = k.mixer.clipAction(c);
-      keeperClip(k, 'idle');
+      return townsfolkClips(m, { key: KEEPER_MODEL[shop.id], names: ['idle', 'talk'] }).then((shared) => {
+        k.mixer = new THREE.AnimationMixer(m);
+        for (const c of mergeClips(g.animations || [], shared || [])) k.acts[c.name] = k.mixer.clipAction(c);
+        keeperClip(k, 'idle');
+      });
     }).catch((e) => console.warn('[shops] keeper', shop.id, e));
   }
   function keeperClip(k, name) {
