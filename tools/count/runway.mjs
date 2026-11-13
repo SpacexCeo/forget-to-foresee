@@ -5,6 +5,7 @@
 //   node tools/count/runway.mjs            # burn measured over the last hour
 //   node tools/count/runway.mjs --hours 6
 import { count, parseArgs } from './count.mjs';
+import { pathToFileURL } from 'node:url';
 
 export const RPC = 'https://test.rpc.fastnear.com';
 const TOWN = 'ftf-town.testnet';
@@ -54,7 +55,7 @@ export async function runway({ hours = 1, fetchFn = fetch } = {}) {
   return runwayMarkdown(runwayRows(balances, summary, opts.to - opts.from), opts.to - opts.from);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const i = process.argv.indexOf('--hours');
   runway({ hours: i > 0 ? Number(process.argv[i + 1]) : 1 }).then(console.log).catch((e) => { console.error(`runway failed: ${e.message}`); process.exit(1); });
 }

@@ -4,6 +4,7 @@
 import { createApi } from '../src/net/api.js';
 import { demoRandomBytes } from '../src/net/near-season.js';
 import { replayCommands, replayLink } from '../src/net/replay.js';
+import { pathToFileURL } from 'node:url';
 
 export const JUDGE_SEED = 'cc161d308faa67539af44205b56b6d4f';
 export const PAGE = 'https://spacexceo.github.io/forget-to-foresee/';
@@ -27,4 +28,4 @@ export function judgeReplay() {
   return { seedHex: JUDGE_SEED, rules: 'v3', commands: replayCommands(api.history(sessionId, token).body.history) };
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) console.log(replayLink(PAGE, judgeReplay()));
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) console.log(replayLink(PAGE, judgeReplay()));

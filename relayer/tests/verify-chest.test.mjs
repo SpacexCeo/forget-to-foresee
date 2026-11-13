@@ -6,6 +6,7 @@ import { writeFileSync, mkdtempSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { commitment, seasonSeed, drawRandom, replayDraws, nftTierOf } from '../lib/chest-deck.js';
 import { hex, personalMessageHash, signHashForTest } from '../lib/tee-crypto.js';
 import { verifyChest } from '../../tools/verify-chest/lib.mjs';
@@ -49,6 +50,6 @@ test('tampering fails: position, random, counters, seed, root', () => {
 test('CLI offline: PASS and exit 0', () => {
   const f = join(mkdtempSync(join(tmpdir(), 'ftf-chest-')), 'd.json');
   writeFileSync(f, JSON.stringify(season(30)));
-  const r = spawnSync(process.execPath, [new URL('../../tools/verify-chest/verify.mjs', import.meta.url).pathname, '--offline', f, '--index', '2'], { encoding: 'utf8' });
+  const r = spawnSync(process.execPath, [fileURLToPath(new URL('../../tools/verify-chest/verify.mjs', import.meta.url)), '--offline', f, '--index', '2'], { encoding: 'utf8' });
   assert.equal(r.status, 0, r.stdout + r.stderr); assert.match(r.stdout, /PASS\n$/);
 });

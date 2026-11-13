@@ -15,6 +15,7 @@ import { readFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { checkSignature } from '../../relayer/lib/tee.js';
 import { verifyModelAttestation } from '../../relayer/lib/tee-attest.js';
+import { pathToFileURL } from 'node:url';
 
 const args = process.argv.slice(2);
 const opt = (k) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : null; };
@@ -70,4 +71,4 @@ async function main() {
   process.exit(ok ? 0 : 1);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main().catch((e) => { console.error('FAIL', e.message); process.exit(1); });
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main().catch((e) => { console.error('FAIL', e.message); process.exit(1); });
