@@ -57,3 +57,20 @@ Errors: `outside_band` (with `minC`, `maxC`), `not_enough_items`, `not_enough_si
 3. `P2P_SETTLEMENT=chain` in `relayer/.env`, then restart the relayer.
 
 Tests: `relayer/tests/p2p.test.mjs` (6) and the contract tests (`trade_for` 8, `coordinator_transfer` 5).
+
+## Games tab: Loom Dice (play money, sprint 6.8)
+
+`game/src/market/dice.js`. "Roll under N" for N = 50, 25 or 10. The roll is 1–100 and pays stake × 96/N, so every bet
+returns 96 % on average: a 4 % house edge, shown in an odds table generated from the code. Stakes are 1, 2, 5 or 10
+**play silk**, and the payout is capped at 50.
+
+- **Play silk only**: silk on this device that can never be recorded on NEAR. Nothing is written on chain, and the
+  verified log never sees dice silk.
+- **Daily limits (UTC)**: net win 40 silk, net loss 60, 200 rolls, 1.5 s between rolls.
+- **Allowance**: a one-time play allowance of 20 play silk.
+- **First open**: a modal with the legal frame (no real value; cannot be bought, cashed out or used for the
+  Gate-Loom; 18+), shown once.
+- **Checkable rolls**: `roll = 1 + floor(100 · seededRandom('dice:' + sha256(id|n)))`. Verify recomputes it.
+- **Tests**: over 200,000 seeded rolls each bet wins within ±0.5 % of N and returns 96 % ± 1 %
+  (`game/tests/market/dice.test.mjs`).
+

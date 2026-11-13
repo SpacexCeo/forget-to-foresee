@@ -100,3 +100,12 @@ test('silk: no surface formats a silk balance by itself (one formatter, formatSi
   }
   assert.deepEqual(bad, []);
 });
+
+test('plain labels: the old "Local — kept in this browser only" wording is gone; the device line says what clearing does', async () => {
+  for (const lang of ['en', 'ru', 'uk', 'it', 'zh']) {
+    const src = readFileSync(new URL(`../../src/play/locales/${lang}.js`, import.meta.url), 'utf8');
+    assert.doesNotMatch(src, /Local — kept in this browser only|Local: kept in this browser only/, lang);
+  }
+  const en = (await import('../../src/play/locales/en.js')).default;
+  assert.match(en['inv.offchain.note'], /Clearing your browser data removes it\. It is not on the blockchain\./);
+});

@@ -5,6 +5,7 @@
 // invents a result: an error says what happened, why, and what to do next.
 import { MARKET, TRADABLE, feeOf, bandOf } from './market-rules.js';
 import { formatSilkC, silkView, subscribeSilk, refreshSilk } from '../net/silk-core.js';
+import { DICE, oddsTable, payoutOf, stakeAllowed, rollOf } from './dice.js';
 
 const TX = /^[1-9A-HJ-NP-Za-km-z]{32,64}$/;
 const CSS = `
@@ -41,6 +42,11 @@ const CSS = `
 .mk2-confirm { margin-top: 10px; padding: 12px; border-radius: 10px; border: 1px solid rgba(233, 180, 76, .35); background: rgba(233, 180, 76, .06); display: grid; gap: 8px; }
 .mk2-empty { padding: 28px 0; text-align: center; color: #b9ad97; }
 .mk2-empty b { display: block; color: #f3ead6; margin-bottom: 4px; }
+.mk2-game { display: grid; gap: 10px; max-width: 560px; }
+.mk2-game .mk2-items button { text-transform: none; }
+.mk2-roll { font: 700 44px/1 Georgia, serif; color: #f6d892; min-height: 48px; }
+.mk2-win { color: #8fe0b0; font-weight: 700; } .mk2-lose { color: #ff8a7a; font-weight: 700; }
+.mk2-modal { padding: 16px; border-radius: 12px; border: 1px solid rgba(233, 180, 76, .45); background: #0f1416; display: grid; gap: 10px; max-width: 480px; }
 @media (max-width: 640px) { .mk2 { height: calc(100vh - 32px); } .mk2 th:nth-child(6), .mk2 td:nth-child(6) { display: none; } }
 @media (prefers-reduced-motion: reduce) { .mk2 * { transition: none !important; } }
 `;
@@ -51,7 +57,7 @@ const age = (t, ms) => (ms < 3_600_000 ? t('p2p.age.min', { n: Math.max(1, Math.
  * @param {{t: Function, client: object, doc?: Document, now?: () => number, explorer?: string}} o
  * @returns {{open(tab?: string): void, close(): void, readonly isOpen: boolean}}
  */
-export function createMarketUi({ t, client, doc = globalThis.document, now = () => Date.now(), explorer = 'https://testnet.nearblocks.io' }) {
+export function createMarketUi({ t, client, dice = null, storage = null, doc = globalThis.document, now = () => Date.now(), explorer = 'https://testnet.nearblocks.io' }) {
   if (!(doc.getElementById && doc.getElementById('mk2-style'))) { const s = doc.createElement('style'); s.id = 'mk2-style'; s.textContent = CSS; doc.head.append(s); }
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const btn = (label, fn, cls = 'mk2-act') => { const b = el('button', cls, label); b.type = 'button'; b.addEventListener('click', fn); return b; };
@@ -60,12 +66,12 @@ export function createMarketUi({ t, client, doc = globalThis.document, now = () 
   const errText = (r) => t('p2p.err.' + (['outside_band', 'not_enough_items', 'not_enough_silk', 'listing_gone', 'limit_listings', 'daily_cap', 'self_trade', 'paused', 'rate_limited', 'network', 'need_guest', 'too_small', 'not_configured'].includes(r.error) ? r.error : 'other'),
     { min: formatSilkC(r.minC || 0), max: formatSilkC(r.maxC || 0), need: formatSilkC(r.needC || 0), have: formatSilkC(r.haveC || 0), qty: r.have ?? '' });
   let root = null, body = null, chip = null, silkEl = null, tab = 'buy', item = TRADABLE[0], unSilk = null, settlement = null;
-  const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); close(); } else if (['1', '2', '3'].includes(e.key) && !(e.target && e.target.tagName === 'INPUT')) show(['buy', 'sell', 'mine'][Number(e.key) - 1]); };
+  const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); close(); } else if (['1', '2', '3', '4'].includes(e.key) && !(e.target && e.target.tagName === 'INPUT')) show(['buy', 'sell', 'mine', 'games'][Number(e.key) - 1]); };
 
   function setChip(s) {
     settlement = s || settlement;
     if (!chip) return;
-    chip.hidden = !settlement; chip.className = 'mk2-chip' + (settlement === 'chain' ? ' chain' : '');
+    chip.hidden = !settlement || tab === 'games'; chip.className = 'mk2-chip' + (settlement === 'chain' ? ' chain' : '');
     chip.textContent = settlement === 'chain' ? t('p2p.chain') : t('p2p.demo');
   }
   const txLinks = (f) => [f.txItems, f.txSilk].filter((h) => TX.test(String(h || ''))).map((h) => { const a = el('a', null, t('p2p.viewTx')); a.href = `${explorer}/txns/${h}`; a.target = '_blank'; a.rel = 'noopener noreferrer'; return a; });
@@ -175,10 +181,52 @@ export function createMarketUi({ t, client, doc = globalThis.document, now = () 
     body.replaceChildren(table, state);
   }
 
+  // ---- Games: Loom Dice, play money only (sprint 6.8). Shown once: the legal frame, with "I understand" / "Back".
+  const GAMES_OK = 'ftf.games.ok.v1';
+  let bet = 50, stake = 100;
+  function gamesTab() {
+    if (!dice) { body.replaceChildren(el('p', 'mk2-note', t('games.off'))); return; }
+    let agreed = false; try { agreed = !!(storage && storage.getItem(GAMES_OK)); } catch { /* ask again */ }
+    if (!agreed) {
+      const m = el('div', 'mk2-modal'); m.append(el('h4', null, t('games.title')), el('p', null, t('games.legal')));
+      const row = el('div'); row.append(btn(t('games.agree'), () => { try { storage && storage.setItem(GAMES_OK, '1'); } catch { /* memory only */ } if (dice.claimAllowance()) refreshSilk(false).catch(() => {}); gamesTab(); }), btn(t('p2p.back'), () => show('buy'), 'mk2-act mk2-ghost'));
+      m.append(row); body.replaceChildren(m); return;
+    }
+    const g = el('div', 'mk2-game');
+    const bets = el('div', 'mk2-items'), stakes = el('div', 'mk2-items');
+    const summary = el('p', 'mk2-note'), out = el('div'), hint = el('div'), rollEl = el('div', 'mk2-roll'), fair = el('p', 'mk2-note'), counters = el('p', 'mk2-note');
+    const go = btn(t('games.roll'), () => doRoll());
+    const odds = el('details'); odds.append(el('summary', null, t('games.odds')));
+    const tb = el('table'); const hr = el('tr'); for (const k of ['bet', 'chance', 'pays', 'back', 'edge']) hr.append(el('th', null, t('games.col.' + k))); tb.append(hr);
+    for (const r of oddsTable()) { const tr = el('tr'); tr.append(el('td', null, t('games.under', { n: r.n })), el('td', null, Math.round(r.chance * 100) + '%'), el('td', null, '×' + r.multiplier.toFixed(2)), el('td', null, Math.round(r.rtp * 100) + '%'), el('td', null, Math.round(r.edge * 100) + '%')); tb.append(tr); }
+    odds.append(tb);
+    const paint = () => {
+      bets.replaceChildren(...DICE.bets.map((n) => { const b = btn(t('games.under', { n }) + ' · ×' + (96 / n).toFixed(2), () => { bet = n; if (!stakeAllowed(stake, bet)) stake = 100; paint(); }, ''); b.setAttribute('aria-pressed', String(n === bet)); return b; }));
+      stakes.replaceChildren(...DICE.stakesC.map((c) => { const b = btn(formatSilkC(c), () => { stake = c; paint(); }, ''); b.setAttribute('aria-pressed', String(c === stake)); b.disabled = !stakeAllowed(c, bet); if (b.disabled) b.title = t('games.maxPayout'); return b; }));
+      summary.textContent = t('games.summary', { x: formatSilkC(payoutOf(stake, bet)), p: bet });
+      const s = dice.state(), why = dice.blocker(stake, bet);
+      play.textContent = t('games.play', { n: formatSilkC(dice.play()) });
+      counters.textContent = t('games.counters', { up: formatSilkC(Math.max(0, s.netC)), down: formatSilkC(Math.max(0, -s.netC)), rolls: s.rollsToday });
+      go.disabled = !!why && why !== 'cooldown'; go.title = why ? t('games.why.' + why) : '';
+      hint.replaceChildren(...(why && why !== 'cooldown' ? [el('p', 'mk2-note', t('games.why.' + why))] : []));
+    };
+    function doRoll() {
+      const r = dice.roll(stake, bet);
+      if (!r.ok) { out.replaceChildren(el('p', 'mk2-state err', t('games.why.' + r.reason))); return; }
+      rollEl.textContent = String(r.roll);
+      out.replaceChildren(el('p', r.win ? 'mk2-win' : 'mk2-lose', r.win ? t('games.win', { x: formatSilkC(r.payoutC - r.stakeC) }) : t('games.lose', { x: formatSilkC(r.stakeC) })));
+      fair.replaceChildren(t('games.fair', { k: r.k, seed: r.seed.slice(0, 16) + '…' }) + ' ', btn(t('games.verify'), () => { const v = rollOf(dice.state().wheelId, r.k); fair.append(' ' + t(v.roll === r.roll ? 'games.verified' : 'games.mismatch', { roll: v.roll })); }, 'mk2-act mk2-ghost'));
+      refreshSilk(false).catch(() => {}); paint();
+    }
+    const play = el('p', 'mk2-note');
+    g.append(el('p', 'mk2-note', t('games.rule')), bets, stakes, summary, go, hint, rollEl, out, fair, counters, play, odds, el('p', 'mk2-note', t('games.footer')));
+    body.replaceChildren(g); paint();
+  }
+
   function show(next) {
     tab = next;
     for (const b of root.querySelectorAll('.mk2-tabs button')) b.setAttribute('aria-selected', String(b.dataset.tab === tab));
-    (tab === 'buy' ? buyTab : tab === 'sell' ? sellTab : mineTab)().catch(() => body.replaceChildren(el('p', 'mk2-state err', t('p2p.err.network'))));
+    Promise.resolve((tab === 'buy' ? buyTab : tab === 'sell' ? sellTab : tab === 'games' ? gamesTab : mineTab)()).catch(() => body.replaceChildren(el('p', 'mk2-state err', t('p2p.err.network'))));
   }
   function open(first = 'buy') {
     if (root) { show(first); return; }
@@ -188,7 +236,7 @@ export function createMarketUi({ t, client, doc = globalThis.document, now = () 
     const x = btn('×', close, 'mk2-x'); x.setAttribute('aria-label', t('p2p.close'));
     head.append(el('h3', null, t('p2p.title')), silkEl, x);
     const tabs = el('div', 'mk2-tabs'); tabs.setAttribute('role', 'tablist');
-    for (const k of ['buy', 'sell', 'mine']) { const b = btn(t('p2p.tab.' + k), () => show(k), ''); b.setAttribute('role', 'tab'); b.dataset.tab = k; tabs.append(b); }
+    for (const k of ['buy', 'sell', 'mine', 'games']) { const b = btn(t(k === 'games' ? 'games.tab' : 'p2p.tab.' + k), () => show(k), ''); b.setAttribute('role', 'tab'); b.dataset.tab = k; tabs.append(b); }
     chip = el('div', 'mk2-chip'); chip.hidden = true; body = el('div', 'mk2-body');
     box.append(head, tabs, chip, body); root.append(box); doc.body.append(root);
     const paintSilk = () => { const v = silkView(); silkEl.textContent = v.chainOk ? silk(v.gateC) : ''; silkEl.title = t('silk.tip.gate', { n: formatSilkC(v.gateC) }); };
