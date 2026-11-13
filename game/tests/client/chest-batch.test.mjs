@@ -37,7 +37,7 @@ test('batch: the client maps the batch answer and reports the cut', async () => 
   const r = await c.openMany(5);
   assert.equal(r.ok, true); assert.equal(r.cut, 'daily_cap'); assert.equal(r.openings[0].outcome.amount, 5); assert.equal(r.openings[0].verification.verified, true);
   const off = createChestClient({ load: async () => ({ openChests: async () => ({ ok: false, reason: 'daily_cap' }) }) });
-  assert.deepEqual(await off.openMany(3), { ok: false, error: 'rate' });
+  assert.deepEqual(await off.openMany(3), { ok: false, error: 'daily', code: 'daily_cap' });
 });
 
 test('batch: every opening settles its own chest at once; flips then a summary with verified links; Claim all closes', async () => {

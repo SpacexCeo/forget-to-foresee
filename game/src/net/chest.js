@@ -123,7 +123,7 @@ export async function openChests({ storage, count, deployment = DAY1_DEPLOYMENT,
       const a = { season: ans.season, opening: full, outcome: x.outcome, leaf: x.leaf, proof: x.proof };
       const check = await checkOpening(a, info).catch(() => ({ ok: false }));
       openings.push({ ok: true, index: full.index, position: full.position, outcome: x.outcome, nft: full.nft ? { token_id: full.token_id, contract } : null,
-        tx_hash: ans.tx_hash, explorer: explorer(ans.tx_hash), verified: !!check.ok, check, proof: { leaf: x.leaf, proof: x.proof, root: x.root, random: full.random, block_random: full.block_random, seed: info && info.seed ? info.seed.seed : null } });
+        tx_hash: x.tx_hash || ans.tx_hash, explorer: explorer(x.tx_hash || ans.tx_hash), verified: !!check.ok, check, proof: { leaf: x.leaf, proof: x.proof, root: x.root, random: full.random, block_random: full.block_random, seed: info && info.seed ? info.seed.seed : null } });
     }
     return { ok: true, openings, tx_hash: ans.tx_hash, cut: ans.cut || null, batch: true };
   } catch { return { ok: false, reason: 'network' }; }
