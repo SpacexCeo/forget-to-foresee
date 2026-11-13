@@ -11,6 +11,12 @@ Behind the feature flag `accountLogin` (`game/public/features.json`, off). `?ff=
   NEAR Mobile, Nightly, Hana, NEAR CLI). It runs on mainnet: HOT, MyNearWallet, OKX and Hana declare no testnet support,
   and a NEP-413 signature is free and moves nothing; the game account stays the testnet guest. If NEAR Connect cannot
   load, the row falls back to MyNearWallet directly.
+  The device-key text is signed inside the wallet's own sign-in step (`connect({signMessageParams})`, the wallet's
+  `signInAndSignMessage`), so a NEAR login is two wallet approvals: connect, then the sign-in message after the gold
+  "Continue in your wallet" button. HOT gets the NEP-413 nonce as a plain array (its executor sends JSON, where a
+  `Uint8Array` turns into an object). Wallets answer in different shapes (`signedMessage` nested or flat, snake-case
+  fields, byte signatures): `signedOf` in `net/wallets.js` reads them all. While a wallet is being asked, a tap outside
+  the panel or Esc does not close it. The relayer logs each link outcome (`[auth] link <kind> -> <status> <result>`).
 - **NEAR testnet account (MyNearWallet)**: MyNearWallet's NEP-413 popup on testnet, no library.
 - **EVM wallet (MetaMask and others)**, **Solana wallet (Phantom and others)**. Each EIP-6963 EVM wallet and each
   injected Solana wallet the browser has gets its own row.
