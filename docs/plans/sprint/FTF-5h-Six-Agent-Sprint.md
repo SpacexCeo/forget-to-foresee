@@ -1,9 +1,9 @@
 # Forget to Foresee: 5-Hour Work Order for Six Parallel Agents
 
-> **Lead adaptation (13 Nov, 02:40 Kyiv):** the lead is the merge captain (owner decision of 12 Nov). Agents work on their usual
-> branches and report merge-ready commits; the lead merges into `main` in waves after `npm test`, the relayer tests and the built-page
-> smoke, so there is no `sprint/5h` branch. Seats: A1 = story worker, A2 = combat worker, A3 = economy/relayer worker, A4 = art worker,
-> A5 = HUD/jury worker, A6 = Fable (GPU server, ~15 h left). Owner rule: no other project's name anywhere in the repo.
+> **Owner, 13 Nov 02:50 Kyiv: run it exactly as written.** Branch `sprint/5h` is cut from `main`; agents push `sprint/5h-aN` and
+> open PRs into `sprint/5h`; A5 merges the waves (the lead does it until A5 starts); the final merge to `main` is the owner's.
+> Seats: A1 = story worker, A2 = combat worker, A3 = economy/relayer worker, A4 = art worker, A5 = HUD/jury worker, A6 = Fable.
+> Pause 06:55–07:40 Kyiv. Owner rule: no other project's name anywhere in the repo.
 
 
 *Owner's voice. English only. Written Friday 13 November 2026, about 02:20 Kyiv time (UTC+2). Source repo: `SpacexCeo/forget-to-foresee`, checked at `origin/main` 5b4ad54c (13 Nov 2026 01:23 Kyiv). Sibling specs reused: `FTF-Owner-Master-Plan.md` (called MP below), `FTF-City-Economy.md`, `FTF-Story-Quests-Leaderboard-TZ.md` (STZ), `FTF-Jury-Review-2026-11-13.md`, `FTF-a reference game-Teardown-TZ.md`, `FTF-Submission-Checklist.md`.*
