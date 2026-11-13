@@ -14,6 +14,7 @@ export async function open(url, { device = null } = {}) {
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
   page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text().slice(0, 200)); });
   page.on('requestfailed', (r) => { const u = r.url(); if (!/favicon|rpc|nearblocks|relayer|fastnear|jsdelivr/.test(u)) failed.push(u.slice(0, 160)); });
+  if (url) await page.goto(url);
   return { browser, context, page, errors, failed };
 }
 export async function booted(page, ms = 300000) {

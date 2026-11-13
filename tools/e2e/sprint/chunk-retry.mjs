@@ -1,7 +1,7 @@
 // A blocked chunk (the first two requests of the world chunk fail) does not end on the broken-load screen.
 import { open, booted, assert } from './lib.mjs';
 export default async function (base) {
-  const { browser, page } = await open(base + '?day1=0&quest=0');
+  const { browser, page } = await open(null);
   try {
     let blocked = 0;
     await page.route(/\/assets\/(boot-world|scenes|client-core)[^/]*\.js$/, (route) => { if (blocked < 2) { blocked++; return route.abort('failed'); } return route.continue(); });
