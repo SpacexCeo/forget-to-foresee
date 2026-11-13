@@ -15,8 +15,10 @@ import { loadHolder } from '../net/holder.js';
 import { holderSection } from './holder-panel.js';
 import { renderProfileView } from './profile-view.js';
 import { createChestBag } from '../game/chests.js';
+import { createFriends } from './friends.js';
 import { createChestClient } from '../net/chest-client.js';
 import { cue } from '../audio/town-audio.js';
+import { formatSilkC } from '../net/silk-core.js';
 
 /** UI-004 tab icons (line art, currentColor). */
 const TAB_ICON = Object.freeze({
@@ -25,9 +27,10 @@ const TAB_ICON = Object.freeze({
   nfts: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M7 4h10l4 5-9 11L3 9l4-5Zm-4 5h18M9 9l3 11 3-11M7 4l2 5m8-5-2 5"/></svg>',
   inventory: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M5 8h14l-1 12H6L5 8Zm4 0V6a3 3 0 0 1 6 0v2"/></svg>',
   agents: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm-6 9c.6-3.3 3-5 6-5s5.4 1.7 6 5M16 4.5a3.5 3.5 0 0 1 0 6.5M18 15c1.7.6 2.7 2.2 3 5"/></svg>',
+  friends: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 19c.6-3.4 3-5 6-5s5.4 1.6 6 5"/><circle cx="17" cy="9" r="2.6"/><path d="M16 14.2c2.6.2 4.4 1.7 5 4.3"/></g></svg>',
   log: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M5 20v-6m5 6V9m5 11V5m5 15v-9"/></svg>',
 });
-export const TABS = Object.freeze(['profile', 'achievements', 'nfts', 'inventory', 'agents', 'log']);
+export const TABS = Object.freeze(['profile', 'achievements', 'nfts', 'inventory', 'friends', 'agents', 'log']);
 const RARITY_COLOR = Object.freeze({ common: '#b9bfc7', uncommon: '#2fc4b2', rare: '#8d5cf6', epic: '#e0479e', legendary: '#f2a516' });
 let manifestP = null;
 /** The items manifest (cached). */
@@ -37,65 +40,65 @@ export function loadManifest(base = (import.meta.env && import.meta.env.BASE_URL
 
 const CSS = `
 .gm-titlebox { flex: 1; display: grid; gap: 2px; } .gm-titlebox h2 { flex: none; }
-.gm-kicker { font: 600 11px/1.2 system-ui, sans-serif; letter-spacing: .16em; text-transform: uppercase; color: #d9b26a; }
+.gm-kicker { font: 600 11px/1.2 var(--font-ui, system-ui, sans-serif); letter-spacing: .16em; text-transform: uppercase; color: var(--ftf-gold, #c5a469); }
 .gm-tab { flex-direction: column; justify-content: center; gap: 4px; min-width: 88px; padding: 8px 12px; }
 .gm-tab svg { display: block; }
-.gm-over { display: grid; grid-template-columns: 1fr auto; gap: 8px 16px; align-items: center; padding: 14px 16px; margin-bottom: 14px; border-radius: 16px; background: #131c1b; border: 1px solid rgba(214, 226, 214, .12); }
+.gm-over { display: grid; grid-template-columns: 1fr auto; gap: 8px 16px; align-items: center; padding: 14px 16px; margin-bottom: 14px; border-radius: 16px; background: var(--ftf-panel-solid, #101f1a); border: 1px solid rgba(214, 226, 214, .12); }
 .gm-over b { display: block; font-size: 15px; }
 .gm-big { font: 600 28px/1 "Cormorant Garamond", Georgia, serif; }
-.gm-bar { grid-column: 1 / -1; height: 6px; border-radius: 3px; background: rgba(233, 230, 220, .1); overflow: hidden; } .gm-bar > i { display: block; height: 100%; background: linear-gradient(90deg, #2fc4b2, #d9b26a); }
+.gm-bar { grid-column: 1 / -1; height: 6px; border-radius: 3px; background: rgba(233, 230, 220, .1); overflow: hidden; } .gm-bar > i { display: block; height: 100%; background: linear-gradient(90deg, #2fc4b2, var(--ftf-gold, #c5a469)); }
 .gm-state { display: inline-block; padding: 2px 8px; border-radius: 8px; font: 600 11px/1.5 system-ui; background: rgba(233, 230, 220, .08); color: rgba(233, 230, 220, .65); } .gm-state.gm-on { background: rgba(127, 209, 139, .16); color: #7fd18b; }
 .gm-chips { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
 .gm-fchip { min-height: 38px; padding: 6px 14px; border-radius: 10px; border: 1px solid rgba(214, 226, 214, .16); background: transparent; color: rgba(233, 230, 220, .75); font: 600 13px/1 system-ui; cursor: pointer; }
 .gm-refresh { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; }
 .gm-refresh svg { transition: transform .5s ease; } .gm-refresh.gm-spin svg { transform: rotate(360deg); }
 .gm-fchip[aria-pressed="true"] { background: rgba(47, 196, 178, .16); border-color: rgba(47, 196, 178, .6); color: #2fc4b2; }
-.gm-card[role="button"] { cursor: pointer; } .gm-card[role="button"]:focus-visible { outline: 2px solid #d9b26a; outline-offset: 2px; }
-.gm-detail { display: grid; grid-template-columns: 96px 1fr; gap: 16px; align-items: center; margin-top: 14px; padding: 14px 16px; border-radius: 16px; background: #131c1b; border: 1px solid rgba(214, 226, 214, .12); }
+.gm-card[role="button"] { cursor: pointer; } .gm-card[role="button"]:focus-visible { outline: 2px solid var(--ftf-gold, #c5a469); outline-offset: 2px; }
+.gm-detail { display: grid; grid-template-columns: 96px 1fr; gap: 16px; align-items: center; margin-top: 14px; padding: 14px 16px; border-radius: 16px; background: var(--ftf-panel-solid, #101f1a); border: 1px solid rgba(214, 226, 214, .12); }
 .gm-detail[hidden] { display: none; } .gm-detail img { width: 96px; height: 96px; object-fit: contain; } .gm-detail b { font: 600 20px/1.2 "Cormorant Garamond", Georgia, serif; margin-right: 8px; }
-.gm-rchip { display: inline-block; padding: 2px 8px; border-radius: 8px; font: 600 11px/1.5 system-ui; background: rgba(217, 178, 106, .14); color: #d9b26a; }
+.gm-rchip { display: inline-block; padding: 2px 8px; border-radius: 8px; font: 600 11px/1.5 system-ui; background: rgba(197, 164, 105, .14); color: var(--ftf-gold, #c5a469); }
 @media (max-width: 640px) { .gm-tab { min-width: 72px; padding: 6px 10px; font-size: 12px; } }
-.gm { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; background: rgba(3, 7, 7, .62); font: 15px/1.4 system-ui, -apple-system, 'Segoe UI', sans-serif; color: #e9e6dc; }
+.gm { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; background: rgba(3, 7, 7, .62); font: 15px/1.4 system-ui, -apple-system, 'Segoe UI', sans-serif; color: var(--ftf-text, #eef0ea); }
 .gm-panel { position: relative; width: min(920px, calc(100vw - 24px)); height: min(640px, calc(100vh - 24px)); display: grid; grid-template-rows: auto auto 1fr; border-radius: 20px; overflow: hidden;
   background: rgba(13, 19, 18, .95); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid rgba(214, 226, 214, .12); box-shadow: 0 24px 60px rgba(0, 0, 0, .55); }
 @supports not (backdrop-filter: blur(1px)) { .gm-panel { background: #0f1615; } }
 .gm-head { display: flex; align-items: center; gap: 12px; padding: 16px 18px 8px; }
-.gm-head h2 { margin: 0; flex: 1; font: 600 19px/1.1 "Cormorant Garamond", Georgia, serif; letter-spacing: .08em; text-transform: uppercase; color: #e9e6dc; }
-.gm-head h2::before { content: '✧'; color: #d9b26a; margin-right: 10px; }
-.gm-x { width: 44px; height: 44px; border-radius: 50%; border: 0; background: rgba(233, 230, 220, .08); font: 500 20px/1 system-ui; color: #e9e6dc; cursor: pointer; }
+.gm-head h2 { margin: 0; flex: 1; font: 600 19px/1.1 "Cormorant Garamond", Georgia, serif; letter-spacing: .08em; text-transform: uppercase; color: var(--ftf-text, #eef0ea); }
+.gm-head h2::before { content: '✧'; color: var(--ftf-gold, #c5a469); margin-right: 10px; }
+.gm-x { width: 44px; height: 44px; border-radius: 50%; border: 0; background: rgba(233, 230, 220, .08); font: 500 20px/1 system-ui; color: var(--ftf-text, #eef0ea); cursor: pointer; }
 .gm-tabs { display: flex; gap: 8px; padding: 4px 16px 10px; overflow-x: auto; scrollbar-width: none; }
 .gm-tab { flex: 0 0 auto; min-height: 44px; padding: 8px 16px; border-radius: 10px; border: 1px solid rgba(214, 226, 214, .14); background: transparent; color: rgba(233, 230, 220, .7); font: 600 14px/1 system-ui; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: transform .12s ease, background .12s ease; }
 .gm-tab:hover { transform: translateY(-2px); } .gm-tab:active { transform: scale(.96); }
-.gm-tab[aria-selected="true"] { background: rgba(217, 178, 106, .14); border-color: rgba(217, 178, 106, .7); color: #d9b26a; }
+.gm-tab[aria-selected="true"] { background: rgba(197, 164, 105, .14); border-color: rgba(197, 164, 105, .7); color: var(--ftf-gold, #c5a469); }
 .gm-body { overflow-y: auto; padding: 4px 18px 18px; }
 .gm-note { color: rgba(233, 230, 220, .62); font-size: 13px; margin: 6px 0; }
 .gm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 12px; }
-.gm-card { position: relative; border-radius: 18px; padding: 10px 8px 8px; text-align: center; background: linear-gradient(160deg, #18211f, var(--rb, #131c1b)); box-shadow: 0 4px 12px rgba(0, 0, 0, .3), inset 0 0 0 1px var(--rc, rgba(214, 226, 214, .18)); overflow: hidden; }
+.gm-card { position: relative; border-radius: 18px; padding: 10px 8px 8px; text-align: center; background: linear-gradient(160deg, #18211f, var(--rb, var(--ftf-panel-solid, #101f1a))); box-shadow: 0 4px 12px rgba(0, 0, 0, .3), inset 0 0 0 1px var(--rc, rgba(214, 226, 214, .18)); overflow: hidden; }
 .gm-card img { width: 72px; height: 72px; object-fit: contain; display: block; margin: 0 auto 4px; filter: drop-shadow(0 4px 6px rgba(0,0,0,.18)); }
 .gm-card b { display: block; font: 700 13px/1.2 system-ui; } .gm-card small { display: block; color: rgba(233, 230, 220, .62); font-size: 11px; }
-.gm-count { position: absolute; top: 6px; right: 8px; min-width: 22px; padding: 2px 6px; border-radius: 11px; background: #0b100f; color: #e9e6dc; font: 700 11px/1.4 system-ui; }
+.gm-count { position: absolute; top: 6px; right: 8px; min-width: 22px; padding: 2px 6px; border-radius: 11px; background: #0b100f; color: var(--ftf-text, #eef0ea); font: 700 11px/1.4 system-ui; }
 .gm-card[data-rarity="rare"]::after, .gm-card[data-rarity="epic"]::after, .gm-card[data-rarity="legendary"]::after { content: ""; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 40%, rgba(255,255,255,.22) 50%, transparent 60%); transform: translateX(-120%); animation: gm-shine 3.2s ease-in-out infinite; }
 @keyframes gm-shine { 60%, 100% { transform: translateX(120%); } }
 .gm-card.gm-new { animation: gm-pop .5s cubic-bezier(.3, 1.6, .5, 1); }
 @keyframes gm-pop { from { transform: scale(.6); } to { transform: scale(1); } }
-.gm-btn { min-height: 44px; padding: 10px 20px; border-radius: 10px; border: 0; cursor: pointer; font: 700 15px/1 system-ui; color: #14201c; background: linear-gradient(135deg, #e6c27e, #c99a48); box-shadow: 0 6px 16px rgba(217, 178, 106, .22); transition: transform .12s ease; }
+.gm-btn { min-height: 44px; padding: 10px 20px; border-radius: 10px; border: 0; cursor: pointer; font: 700 15px/1 system-ui; color: #14201c; background: linear-gradient(135deg, #e6c27e, #c99a48); box-shadow: 0 6px 16px rgba(197, 164, 105, .22); transition: transform .12s ease; }
 .gm-btn:hover { transform: translateY(-2px); } .gm-btn:active { transform: scale(.96); } .gm-btn[disabled] { opacity: .45; cursor: default; transform: none; }
-.gm-btn.gm-ghost { color: #e9e6dc; background: transparent; border: 1px solid rgba(214, 226, 214, .2); box-shadow: none; }
+.gm-btn.gm-ghost { color: var(--ftf-text, #eef0ea); background: transparent; border: 1px solid rgba(214, 226, 214, .2); box-shadow: none; }
 .gm-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 10px 0; }
 .gm-prof { display: grid; grid-template-columns: 150px 1fr; gap: 18px; align-items: center; }
 .gm-prof img { width: 150px; border-radius: 16px; box-shadow: 0 8px 22px rgba(30, 36, 80, .25); }
 .gm-prof img.gm-ring-frame { outline: 4px solid #3fd0c9; outline-offset: 3px; box-shadow: 0 0 0 9px rgba(63, 208, 201, .25), 0 8px 22px rgba(30, 36, 80, .25); }
-.gm-holder { margin-top: 18px; } .gm-holder input { flex: 1; min-width: 160px; padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(214, 226, 214, .2); background: #0b100f; color: #e9e6dc; font: inherit; }
+.gm-holder { margin-top: 18px; } .gm-holder input { flex: 1; min-width: 160px; padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(214, 226, 214, .2); background: #0b100f; color: var(--ftf-text, #eef0ea); font: inherit; }
 .gm-holder .gm-row { flex-wrap: wrap; gap: 8px; } .gm-holder-list { margin: 6px 0; padding-left: 18px; }
 .gm-ring { --p: 0; width: 64px; height: 64px; border-radius: 50%; background: conic-gradient(var(--c, #2fc4b2) calc(var(--p) * 1turn), rgba(233, 230, 220, .12) 0); display: grid; place-items: center; }
-.gm-ring > span { width: 50px; height: 50px; border-radius: 50%; background: #131c1b; display: grid; place-items: center; font: 600 16px/1 "Cormorant Garamond", Georgia, serif; }
-.gm-medal { display: grid; justify-items: center; gap: 6px; text-align: center; padding: 10px 6px; border-radius: 16px; background: #131c1b; border: 1px solid rgba(214, 226, 214, .1); }
-.gm-medal[data-done="true"] { background: linear-gradient(160deg, #2a2716, #1a211b); border-color: rgba(217, 178, 106, .4); }
-.gm-nft { position: relative; border-radius: 16px; overflow: hidden; background: #131c1b; border: 1px solid rgba(214, 226, 214, .12); box-shadow: 0 6px 18px rgba(0, 0, 0, .3); padding: 10px; }
+.gm-ring > span { width: 50px; height: 50px; border-radius: 50%; background: var(--ftf-panel-solid, #101f1a); display: grid; place-items: center; font: 600 16px/1 "Cormorant Garamond", Georgia, serif; }
+.gm-medal { display: grid; justify-items: center; gap: 6px; text-align: center; padding: 10px 6px; border-radius: 16px; background: var(--ftf-panel-solid, #101f1a); border: 1px solid rgba(214, 226, 214, .1); }
+.gm-medal[data-done="true"] { background: linear-gradient(160deg, #2a2716, #1a211b); border-color: rgba(197, 164, 105, .4); }
+.gm-nft { position: relative; border-radius: 16px; overflow: hidden; background: var(--ftf-panel-solid, #101f1a); border: 1px solid rgba(214, 226, 214, .12); box-shadow: 0 6px 18px rgba(0, 0, 0, .3); padding: 10px; }
 .gm-nft img { width: 100%; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 10px; }
-.gm-chip { display: inline-block; margin: 4px 4px 0 0; padding: 3px 9px; border-radius: 10px; font: 700 11px/1.5 system-ui; background: #0b100f; color: #e9e6dc; border: 1px solid rgba(214, 226, 214, .16); text-decoration: none; }
+.gm-chip { display: inline-block; margin: 4px 4px 0 0; padding: 3px 9px; border-radius: 10px; font: 700 11px/1.5 system-ui; background: #0b100f; color: var(--ftf-text, #eef0ea); border: 1px solid rgba(214, 226, 214, .16); text-decoration: none; }
 .gm-chip.gm-near { background: transparent; border-color: rgba(47, 196, 178, .5); color: #2fc4b2; }
-.gm-agent { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 12px 14px; border-radius: 16px; background: #131c1b; border: 1px solid rgba(214, 226, 214, .1); margin-bottom: 10px; }
+.gm-agent { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 12px 14px; border-radius: 16px; background: var(--ftf-panel-solid, #101f1a); border: 1px solid rgba(214, 226, 214, .1); margin-bottom: 10px; }
 .gm-agent b { font-size: 15px; }
 .gm-wheelwrap { display: grid; grid-template-columns: minmax(240px, 340px) 1fr; gap: 18px; align-items: start; }
 .gm-wheel { position: relative; width: 100%; aspect-ratio: 1; }
@@ -106,7 +109,7 @@ const CSS = `
 .gm-confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
 .gm-confetti i { position: absolute; top: 40%; left: 50%; width: 8px; height: 12px; border-radius: 2px; animation: gm-burst 1.1s ease-out forwards; }
 @keyframes gm-burst { to { transform: translate(var(--dx), var(--dy)) rotate(540deg); opacity: 0; } }
-.gm-prize { padding: 12px 14px; border-radius: 16px; background: linear-gradient(135deg, #2a2716, #1a211b); border: 1px solid rgba(217, 178, 106, .4); font-weight: 600; }
+.gm-prize { padding: 12px 14px; border-radius: 16px; background: linear-gradient(135deg, #2a2716, #1a211b); border: 1px solid rgba(197, 164, 105, .4); font-weight: 600; }
 @media (max-width: 640px) { .gm-prof, .gm-wheelwrap { grid-template-columns: 1fr; } .gm-prof img { width: 120px; } }
 @media (prefers-reduced-motion: reduce) { .gm-wheel .gm-spinner { transition: none; } .gm-card::after, .gm-card.gm-new, .gm-confetti i { animation: none !important; } .gm-tab, .gm-btn { transition: none; } }
 html[data-motion="reduce"] .gm-wheel .gm-spinner { transition: none; } html[data-motion="reduce"] .gm-card::after, html[data-motion="reduce"] .gm-confetti i { animation: none !important; }
@@ -134,7 +137,7 @@ function spark(doc, values, w = 220, h = 44, color = '#2fc4b2') {
  * @param {{doc?: Document, t: Function, ledger: object, storage?: object, tab?: string, owner?: string|null, createGuest?: (() => Promise<{account?: string, error?: string}>)|null, exportKey?: Function|null,
  *   nickname?: string|null, eliseMinted?: boolean, onChain?: Promise, base?: string, manifest?: Promise}} o
  */
-export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 'profile', owner: ownerIn = null, createGuest = null, exportKey = null, nickname = null, eliseMinted = false, onChain = null, base = (import.meta.env && import.meta.env.BASE_URL) || '/', manifest = null, chests = null, chestClient = null, heroineToken = null, companionsRead = null, now = () => Date.now() }) {
+export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 'profile', owner: ownerIn = null, createGuest = null, exportKey = null, nickname = null, eliseMinted = false, onChain = null, base = (import.meta.env && import.meta.env.BASE_URL) || '/', manifest = null, chests = null, chestClient = null, heroineToken = null, companionsRead = null, now = () => Date.now(), account = null }) {
   if (!(doc.getElementById && doc.getElementById('gm-style'))) { const st = doc.createElement('style'); st.id = 'gm-style'; st.textContent = CSS + WHEEL_CSS; doc.head.append(st); }
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const btn = (text, fn, cls = 'gm-btn') => { const b = el('button', cls, text); b.type = 'button'; b.addEventListener('click', () => fn(b)); return b; };
@@ -152,7 +155,11 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
   const xBtn = btn('×', () => close(), 'gm-x'); xBtn.setAttribute('aria-label', t('quest.close'));
   // UI-004 header: the game's name over the open tab's title
   const head = el('div', 'gm-head'); const titleBox = el('div', 'gm-titlebox'); const tabTitle = el('h2', null, t('menu.title'));
-  titleBox.append(el('span', 'gm-kicker', 'Forget to Foresee'), tabTitle); head.append(titleBox, xBtn);
+  titleBox.append(el('span', 'gm-kicker', 'Forget to Foresee'), tabTitle); head.append(titleBox);
+  if (account) { // sign in / create account (flag accountLogin): opens its own panel over the menu
+    const a = btn(account.login ? t('acct.signed', { login: account.login }) : t('acct.open'), () => account.open(), 'gm-btn'); a.style.cssText = 'margin-left:auto;min-height:40px;padding:8px 14px'; a.dataset.acct = '1'; head.append(a);
+  }
+  head.append(xBtn);
   const tabs = el('div', 'gm-tabs'); tabs.setAttribute('role', 'tablist');
   const body = el('div', 'gm-body'); body.setAttribute('role', 'tabpanel');
   panel.append(head, tabs, body);
@@ -180,7 +187,7 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
         over.append(ol, el('strong', 'gm-big', `${done} / ${all.length}`), ob);
         for (const a of all) {
           const m = el('div', 'gm-medal'); m.dataset.done = String(a.done);
-          const ring = el('div', 'gm-ring'); ring.style.setProperty('--p', String(a.progress)); ring.style.setProperty('--c', a.done ? '#d9b26a' : '#2fc4b2');
+          const ring = el('div', 'gm-ring'); ring.style.setProperty('--p', String(a.progress)); ring.style.setProperty('--c', a.done ? 'var(--ftf-gold, #c5a469)' : '#2fc4b2');
           ring.append(el('span', null, a.done ? '★' : Math.round(a.progress * 100) + '%'));
           m.append(ring, el('b', null, t('ach.' + a.id)), el('span', 'gm-state' + (a.done ? ' gm-on' : ''), t(a.done ? 'menu.unlocked' : 'menu.locked')), el('small', 'gm-note', t('ach.' + a.id + '.desc', { goal: a.goal })));
           g.append(m);
@@ -264,13 +271,13 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
         for (const it of owned) {
           const c = el('div', 'gm-card' + (it.id === inv.newest && fresh.has(it.id) ? ' gm-new' : '')); c.dataset.rarity = it.rarity || 'common';
           c.tabIndex = 0; c.setAttribute('role', 'button'); c.addEventListener('click', () => pick(it)); c.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(it); } });
-          c.style.setProperty('--rc', RARITY_COLOR[it.rarity] || RARITY_COLOR.common); c.style.setProperty('--rb', (RARITY_COLOR[it.rarity] || '#eef0f6') + '33');
+          c.style.setProperty('--rc', RARITY_COLOR[it.rarity] || RARITY_COLOR.common); c.style.setProperty('--rb', (RARITY_COLOR[it.rarity] || 'var(--ftf-text, #eef0ea)') + '33');
           const img = el('img'); img.src = base + 'assets/items/' + (it.icon128 || it.icon); img.alt = '';
           c.append(el('span', 'gm-count', '×' + it.n), img, el('b', null, t(it.nameKey)), el('small', null, t('rarity.' + (it.rarity || 'common')) + ' · ' + t('menu.source.' + (it.source || 'wheel'))));
           g.append(c);
         }
         const sum = el('div', 'gm-row');
-        sum.append(el('span', 'gm-chip', t('inv.townSilk') + ': ' + (ledger.silk / 100).toFixed(2)), btn(t('menu.openWheel'), () => show('wheel')));
+        sum.append(el('span', 'gm-chip', t('inv.townSilk') + ': ' + formatSilkC(ledger.silk)), btn(t('menu.openWheel'), () => show('wheel')));
         return [el('p', 'gm-note', t('inv.offchain.note')), sum, chestSection(list), chips, g, detail];
       });
     },
@@ -304,6 +311,18 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
       }
       return [el('p', 'gm-note', t('menu.agentsNote')), ...out];
     },
+    friends() { // the friends list (play/friends.js): players added from their card, saved on this device
+      const f = createFriends({ storage, me: owner || null });
+      const list = f.list();
+      if (!list.length) return [el('p', 'gm-note', t('friends.empty'))];
+      const rows = list.map((p) => {
+        const r = el('div', 'gm-card');
+        r.append(el('b', null, p.name), el('small', null, p.demo ? t('friends.demo') : (p.account || '')));
+        r.append(btn(t('friends.remove'), () => { f.remove(p); show('friends'); }, 'gm-btn'));
+        return r;
+      });
+      return [el('p', 'gm-note', t('friends.note')), ...rows];
+    },
     log() {
       const st = ledger.stats;
       const g = el('div', 'gm-grid');
@@ -313,7 +332,7 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
       const lines = el('div');
       for (const l of ledger.log().slice(0, 40)) lines.append(el('p', 'gm-note', t('log.line', { time: new Date(l.at).toLocaleTimeString(), name: t('folk.name.' + l.npc), echo: t('exch.echo.' + l.echo), side: t('log.side.' + l.side), size: l.size, entry: (l.entry / 100).toFixed(2), exit: (l.exit / 100).toFixed(2), result: (l.result >= 0 ? '+' : '') + (l.result / 100).toFixed(2), reason: t('log.reason.' + l.reason) })));
       if (!lines.childNodes.length) lines.append(el('p', 'gm-note', t('open.none')));
-      return [g, el('h3', null, t('profile.equity')), spark(doc, ledger.equity, 320, 60, '#d9b26a'), el('h3', null, t('log.heading')), lines];
+      return [g, el('h3', null, t('profile.equity')), spark(doc, ledger.equity, 320, 60, 'var(--ftf-gold, #c5a469)'), el('h3', null, t('log.heading')), lines];
     },
   };
   const fresh = new Set();
@@ -378,7 +397,7 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
   }
   /** No guest yet: one line and the Day-1 free account button (the same mint the arrival runs, play/day1-mint.js). */
   function guestBanner() {
-    const wrap = el('div', 'gm-guest'); wrap.style.cssText = 'display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0 10px;padding:10px 12px;border:1px solid rgba(217,178,106,.45);border-radius:10px;background:rgba(217,178,106,.08)';
+    const wrap = el('div', 'gm-guest'); wrap.style.cssText = 'display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0 10px;padding:10px 12px;border:1px solid rgba(197, 164, 105,.45);border-radius:10px;background:rgba(197, 164, 105,.08)';
     const line = el('p', 'gm-note', t('chest.guest.line')); line.style.margin = '0'; line.style.flex = '1 1 220px';
     wrap.append(line);
     if (!createGuest) return wrap;

@@ -165,3 +165,21 @@ test('stall pledge, tournament and lobby copy: five locales, no invest/APY/profi
   const { MESSAGES } = await import('../../src/locales/index.js');
   assert.match(MESSAGES.en['tour.desc'], /practice season/); assert.match(MESSAGES.en['tour.desc'], /town altar/);
 });
+
+test('town works panel: an account not yet in the town gets the one-tap set-up instead of a dead end (live bug 13.11)', async () => {
+  const { doc } = installDom();
+  const { createTownWorksPanel } = await import('../../src/ui/town-works-panel.js');
+  const i18n = createPlayI18n('en'); const t = (k, a) => i18n.t(k, a);
+  const { installSilkModel, computeSilkView } = await import('../../src/net/silk-core.js');
+  let synced = 0, registered = false;
+  installSilkModel({ view: () => computeSilkView({}), subscribe: () => () => {}, syncNow: async () => { synced++; registered = true; return { ok: true }; }, refresh: async () => {} });
+  const p = createTownWorksPanel({ t, doc, client: { me: async () => ({ ok: true, me: { ...readMe(ME), registered } }), act: async () => assert.fail('no move before the set-up') } });
+  await p.open();
+  assert.ok(doc.querySelector('.tw').textContent.includes("Your town account isn't set up yet."));
+  assert.doesNotMatch(doc.querySelector('.tw').textContent, /earn some silk beyond the walls first/);
+  const setup = doc.querySelectorAll('button').find((b) => b.textContent === 'Set it up (free, one tap)');
+  setup.click(); await new Promise((r) => setTimeout(r, 0)); await new Promise((r) => setTimeout(r, 0)); await new Promise((r) => setTimeout(r, 0));
+  assert.equal(synced, 1);
+  assert.equal(doc.querySelectorAll('button').filter((b) => b.textContent === 'Pledge').length, 4, 'after the set-up the works open');
+  installSilkModel(null); p.close();
+});

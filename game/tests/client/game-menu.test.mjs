@@ -22,7 +22,7 @@ test('tabs render; a wheel spin pays into the inventory or the ledger; NFTs only
   const ledger = createTownLedger({ storage });
   const i18n = createPlayI18n('en'); const t = (k, a) => i18n.t(k, a);
   const m = openGameMenu({ doc, t, ledger, storage, manifest: Promise.resolve(MANIFEST), onChain: Promise.resolve({ state: 'loaded', items: [{ kind: 'shard', tokenId: 'x-7', owner: 'o.testnet', href: 'https://testnet.nearblocks.io/x', label: 'iris · call' }] }), base: '/', now: () => new Date(2026, 10, 12, 12).getTime() });
-  assert.deepEqual(TABS, ['profile', 'achievements', 'nfts', 'inventory', 'agents', 'log']);
+  assert.deepEqual(TABS, ['profile', 'achievements', 'nfts', 'inventory', 'friends', 'agents', 'log']);
   for (const tab of TABS) { m.show(tab); await new Promise((r) => setTimeout(r, 0)); assert.equal(m.tab, tab); }
   assert.equal(m.wheel.id, 'feed0001');
   const before = { silk: ledger.silk, xp: ledger.level.xp };

@@ -20,7 +20,7 @@ export function createCharacterPanel({ doc = globalThis.document, t, api }) {
   const head = el('header'), title = el('h2', null, t('char.title')), x = el('button', 'x', '×'); x.type = 'button'; x.setAttribute('aria-label', 'Close'); head.append(title, x);
   const body = el('div'); body.style.cssText = 'display:grid;grid-template-columns:minmax(0,280px) 1fr;gap:20px;padding:16px;';
   const left = el('div'), right = el('div');
-  const portrait = el('div'); portrait.style.cssText = 'width:160px;height:160px;border-radius:50%;border:2px solid #b8964a;background:#1a1d28 center/cover;';
+  const portrait = el('div'); portrait.style.cssText = 'width:160px;height:160px;border-radius:50%;border:2px solid var(--ftf-gold-dim, #8e7a50);background:#13241e center/cover;';
   const nm = el('div', null, 'Iris'); nm.style.cssText = 'font-weight:700;font-size:20px;margin-top:10px;';
   const lvl = el('div', 'hint'), xpb = el('div'); xpb.style.cssText = 'position:relative;height:10px;margin-top:8px;border-radius:5px;background:#1d1230;overflow:hidden;';
   const xpf = el('i'); xpf.style.cssText = 'position:absolute;inset:0 auto 0 0;background:#b06cff;'; xpb.append(xpf);
@@ -28,12 +28,12 @@ export function createCharacterPanel({ doc = globalThis.document, t, api }) {
   left.append(portrait, nm, lvl, xpb, xpt, pet);
   const statRows = {}; let sel = 0;
   for (const s of STATS) {
-    const r = el('div'); r.style.cssText = 'display:flex;align-items:center;gap:10px;min-height:44px;border-bottom:1px solid #2a2e40;';
+    const r = el('div'); r.style.cssText = 'display:flex;align-items:center;gap:10px;min-height:44px;border-bottom:1px solid var(--ftf-border, rgba(197,164,105,.4));';
     const lab = el('span', null, t('char.stat.' + s)); lab.style.flex = '1'; lab.title = t('char.tip.' + s);
     const note = el('small', 'hint', t('char.tip.' + s)); note.style.cssText = 'display:block;font-size:12px;'; lab.append(note);
     const val = el('b'); const plus = el('button', 'btn', '+'); plus.type = 'button'; plus.style.cssText = 'min-height:28px;width:28px;padding:0;';
     plus.setAttribute('aria-label', t('char.add', { stat: t('char.stat.' + s) }));
-    plus.addEventListener('click', () => { if (api.spend(s).ok) { plus.style.boxShadow = '0 0 0 3px #f6c860'; setTimeout(() => { plus.style.boxShadow = ''; }, 150); } refresh(); });
+    plus.addEventListener('click', () => { if (api.spend(s).ok) { plus.style.boxShadow = '0 0 0 3px var(--ftf-gold, #c5a469)'; setTimeout(() => { plus.style.boxShadow = ''; }, 150); } refresh(); });
     r.append(lab, val, plus); statRows[s] = { r, val, plus }; right.append(r);
   }
   const derivedList = el('dl'); derivedList.style.cssText = 'display:grid;grid-template-columns:1fr auto;gap:6px 12px;margin:14px 0 0;';
@@ -54,7 +54,9 @@ export function createCharacterPanel({ doc = globalThis.document, t, api }) {
     xpf.style.width = (xi.need ? (xi.into / xi.need) * 100 : 100).toFixed(1) + '%';
     xpt.textContent = xi.need ? t('hud.xp.tip', { level: L, into: xi.into.toLocaleString('en-US'), need: xi.need.toLocaleString('en-US') }) : t('hud.xp.cap', { level: L });
     const left = api.statLeft();
-    for (const s of STATS) { statRows[s].val.textContent = String(rec.stats[s] || 0); statRows[s].plus.disabled = left <= 0; }
+    for (const s of STATS) { statRows[s].val.textContent = String(rec.stats[s] || 0); statRows[s].plus.hidden = left <= 0; }   // no "+" at 0 points
+    const src = api.portrait; if (src && portrait.dataset.src !== src) { portrait.dataset.src = src; portrait.style.backgroundImage = `url(${src})`; portrait.style.backgroundPosition = '50% 12%'; }   // the HUD's own avatar
+    if (api.name && nm.textContent !== api.name) nm.textContent = api.name;
     const rows = [['char.maxHp', String(d.maxHP)], ['char.maxMana', String(d.maxMana)], ['char.regen', t('char.regenVal', { n: d.manaRegen.toFixed(1) })], ['char.crit', Math.round(d.crit * 100) + '%'], ['char.dmg', '+' + Math.round(d.damageBonus * 100) + '%']];
     const k = rows.map((r) => r[1]).join('|');
     if (derivedList.dataset.k !== k) { derivedList.dataset.k = k; derivedList.replaceChildren(...rows.flatMap(([key, v]) => [el('dt', 'hint', t(key)), el('dd', null, v)])); for (const dd of derivedList.querySelectorAll('dd')) dd.style.margin = '0'; }

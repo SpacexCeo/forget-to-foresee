@@ -5,18 +5,18 @@
 import { cue } from '../audio/town-audio.js';
 
 const CSS = `
-.d1 { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; font: 16px/1.45 system-ui, sans-serif; color: #fff7e6; pointer-events: none; }
+.d1 { position: fixed; inset: 0; z-index: var(--z-dialogue, 50); display: grid; place-items: center; font: 16px/1.45 var(--font-ui, system-ui, sans-serif); color: var(--ftf-text, #eef0ea); pointer-events: none; }
 .d1 > * { pointer-events: auto; }
 .d1-title { text-align: center; text-shadow: 0 2px 18px rgba(0,0,0,.6); animation: d1-in .9s ease both; }
-.d1-title h1 { margin: 0; font: 600 clamp(36px, 7vw, 72px)/1 Georgia, serif; letter-spacing: .04em; }
-.d1-title p { margin: 6px 0 0; font: 600 clamp(16px, 2.6vw, 24px)/1 system-ui, sans-serif; letter-spacing: .4em; text-indent: .4em; color: #ffd27a; }
-.d1-panel { background: linear-gradient(160deg, rgba(40, 28, 70, .92), rgba(16, 40, 60, .92)); border: 2px solid rgba(255, 210, 122, .8); border-radius: 22px; padding: 22px 24px; width: min(440px, calc(100% - 32px)); box-shadow: 0 12px 50px rgba(0,0,0,.5), inset 0 0 30px rgba(255, 210, 122, .15); text-align: center; animation: d1-pop .35s cubic-bezier(.2, 1.4, .4, 1) both; }
-.d1-panel h2 { margin: 0 0 12px; font: 700 22px/1.2 system-ui, sans-serif; }
-.d1-panel input { width: 100%; box-sizing: border-box; min-height: 48px; border-radius: 14px; border: 2px solid rgba(255,255,255,.35); background: rgba(0,0,0,.35); color: #fff; font: 600 20px system-ui, sans-serif; text-align: center; padding: 6px 12px; }
-.d1-btn { margin-top: 14px; min-height: 48px; min-width: 160px; padding: 8px 22px; border-radius: 24px; border: 0; cursor: pointer; font: 800 17px system-ui, sans-serif; color: #2a1600; background: linear-gradient(180deg, #ffe08a, #ffb238); box-shadow: 0 4px 0 #b86d00, 0 8px 24px rgba(255, 178, 56, .45); }
-.d1-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #b86d00; }
-.d1-btn.d1-ghost { background: rgba(255,255,255,.14); color: #fff; box-shadow: none; }
-.d1-btn:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+.d1-title h1 { margin: 0; font: 600 clamp(36px, 7vw, 72px)/1 var(--font-title, Georgia, serif); letter-spacing: .04em; }
+.d1-title p { margin: 6px 0 0; font: 600 clamp(16px, 2.6vw, 24px)/1 var(--font-ui, system-ui, sans-serif); letter-spacing: .4em; text-indent: .4em; color: var(--ftf-gold-bright, #dcc08a); }
+.d1-panel { background: var(--ftf-panel-solid, #101f1a); border: 1px solid var(--ftf-line, rgba(197, 164, 105, .4)); border-radius: var(--radius-modal, 14px); padding: 22px 24px; width: min(440px, calc(100% - 32px)); box-shadow: var(--shadow, 0 8px 32px rgba(0,0,0,.55)); text-align: center; }   /* opaque: nothing shows through (design review 13.11) */
+.d1-panel h2 { margin: 0 0 12px; font: 600 28px/1.15 var(--font-title, "Cormorant Garamond", Georgia, serif); color: var(--ftf-gold-bright, #dcc08a); }
+.d1-panel input { width: 100%; box-sizing: border-box; min-height: 48px; border-radius: 10px; border: 1px solid var(--ftf-line, rgba(197, 164, 105, .4)); background: rgba(0, 0, 0, .35); color: var(--ftf-text, #eef0ea); font: 600 20px var(--font-ui, system-ui, sans-serif); text-align: center; padding: 8px 12px; }
+.d1-btn { margin-top: 14px; min-height: 44px; min-width: 160px; padding: 8px 22px; border-radius: var(--radius, 10px); border: 1px solid var(--ftf-gold, #c5a469); cursor: pointer; font: 700 16px var(--font-ui, system-ui, sans-serif); color: #14110a; background: var(--ftf-gold, #c5a469); }   /* a flat gold primary */
+.d1-btn:active { transform: scale(.97); }
+.d1-btn.d1-ghost { background: transparent; color: var(--ftf-text, #eef0ea); border-color: var(--ftf-line, rgba(197, 164, 105, .4)); }
+.d1-btn:focus-visible { outline: 2px solid var(--ftf-gold-bright, #dcc08a); outline-offset: 2px; }
 .d1-burst { position: fixed; inset: 0; background: radial-gradient(circle at 50% 50%, rgba(255, 244, 200, .95), rgba(255, 190, 90, .35) 30%, transparent 62%); animation: d1-burst 1.1s ease-out both; pointer-events: none; }
 .d1-cards { display: flex; gap: clamp(14px, 4vw, 40px); justify-content: center; perspective: 900px; }
 .d1-card { width: clamp(130px, 28vw, 200px); aspect-ratio: 2 / 3; position: relative; transform-style: preserve-3d; transition: transform .8s cubic-bezier(.3, 1.3, .5, 1); cursor: pointer; border: 0; padding: 0; background: none; }
@@ -26,15 +26,15 @@ const CSS = `
 .d1-card .d1-back b { font: 900 64px/1 Georgia, serif; color: #fff; text-shadow: 0 0 16px rgba(255,255,255,.9); }
 .d1-card .d1-front { transform: rotateY(180deg); background: #e9e4f2; box-shadow: 0 0 34px rgba(255, 210, 122, .55); }
 .d1-card .d1-front img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.d1-free { margin-top: 8px; font: 800 14px/1 system-ui, sans-serif; letter-spacing: .12em; text-transform: uppercase; color: #ffe08a; }
+.d1-free { margin-top: 8px; font: 700 14px/1 var(--font-ui, system-ui, sans-serif); letter-spacing: .12em; text-transform: uppercase; color: var(--ftf-gold-bright, #dcc08a); }
 .d1-status { min-height: 1.5em; margin: 12px 0 0; font-weight: 700; }
 .d1-status.is-busy { background: linear-gradient(90deg, #fff7e6 30%, #ffd27a 50%, #fff7e6 70%); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: d1-shimmer 1.4s linear infinite; }
-.d1-status a { color: #ffe08a; }
-.d1-note { font-size: 12px; color: rgba(255,247,230,.75); margin: 10px 0 0; }
-.d1-hint { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: min(520px, calc(100% - 32px)); box-sizing: border-box; padding: 14px 16px; border-radius: 18px; background: linear-gradient(160deg, rgba(40, 28, 70, .94), rgba(16, 40, 60, .94)); border: 2px solid rgba(255, 210, 122, .7); color: #fff7e6; font: 15px/1.45 system-ui, sans-serif; z-index: 70; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; animation: d1-hint-pop .3s ease both; }
+.d1-status a { color: var(--ftf-gold-bright, #dcc08a); }
+.d1-note { font-size: 13px; color: var(--ftf-muted, #aab6b0); margin: 10px 0 0; }
+.d1-hint { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: min(520px, calc(100% - 32px)); box-sizing: border-box; padding: 14px 16px; border-radius: var(--radius-modal, 14px); background: var(--ftf-panel-solid, #101f1a); border: 1px solid var(--ftf-line, rgba(197, 164, 105, .4)); color: var(--ftf-text, #eef0ea); font: 15px/1.45 var(--font-ui, system-ui, sans-serif); z-index: var(--z-dialogue, 50); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; animation: d1-hint-pop .3s ease both; }
 .d1-hint p { margin: 0; flex: 1 1 240px; }
 .d1-hint .d1-btn { margin: 0; min-height: 40px; min-width: 0; font-size: 14px; }
-.d1-trailer { position: fixed; inset: 0; z-index: 85; display: grid; align-items: end; justify-items: center; padding-bottom: 12vh; background: linear-gradient(transparent 60%, rgba(0,0,0,.55)); }
+.d1-trailer { position: fixed; inset: 0; z-index: calc(var(--z-dialogue, 50) + 1); display: grid; align-items: end; justify-items: center; padding-bottom: 12vh; background: linear-gradient(transparent 60%, rgba(0,0,0,.55)); }
 .d1-trailer p { margin: 0; max-width: min(720px, 90vw); text-align: center; font: italic 400 clamp(18px, 2.6vw, 28px)/1.35 Georgia, serif; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,.8); animation: d1-in .6s ease both; }
 .d1-trailer button { position: fixed; right: 18px; bottom: 18px; }
 @keyframes d1-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
@@ -57,7 +57,7 @@ function btn(doc, text, fn, ghost = false) { const b = el(doc, 'button', 'd1-btn
  * @param {{doc?: Document, t: Function, mint: object, flyIn?: (ms: number) => void, reduced?: () => boolean, inventoryEl?: () => Element|null, nickname?: string}} o
  */
 let chimed = false;
-export async function runArrival({ doc = document, t, mint, flyIn = null, reduced = () => false, inventoryEl = () => null, nickname = '' }) {
+export async function runArrival({ doc = document, t, mint, flyIn = null, reduced = () => false, inventoryEl = () => null, nickname = '', signIn = null }) {
   ensureStyle(doc);
   const root = el(doc, 'div', 'd1'); root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-label', t('day1.welcome'));
   root.addEventListener('pointerdown', (e) => e.stopPropagation()); root.addEventListener('keydown', (e) => e.stopPropagation());
@@ -74,9 +74,20 @@ export async function runArrival({ doc = document, t, mint, flyIn = null, reduce
     const input = el(doc, 'input'); input.maxLength = 24; input.placeholder = t('day1.name.ph'); input.value = nickname; input.setAttribute('aria-label', t('day1.name.q'));
     const ok = el(doc, 'button', 'd1-btn', t('day1.name.ok')); ok.type = 'submit';
     p.append(el(doc, 'h2', null, t('day1.name.q')), input, ok);
+    if (signIn) { // flag accountLogin: Continue stays the guest path; signing in is a choice, never a wait
+      const s = el(doc, 'button', 'd1-btn d1-ghost', t('acct.open')); s.type = 'button';
+      s.addEventListener('click', async () => { const r = await signIn(input.value.trim() || null); if (r && r.status === 'restored') resolve({ restored: true }); });
+      p.append(s);
+    }
     p.addEventListener('submit', (e) => { e.preventDefault(); resolve(input.value.trim() || 'Guest'); });
     root.replaceChildren(p); input.focus();
   });
+  if (name && name.restored) { // a returning player on a new device: the account and its Elise are already there
+    const back = mint.record.nickname || 'Guest';
+    mint.setRecord({ claimed: true, nickname: back });
+    root.remove();
+    return { name: back, restored: true };
+  }
   // 3. the burst
   const burst = el(doc, 'div', 'd1-burst'); doc.body.append(burst); setTimeout(() => burst.remove(), 1200);
   const gift = el(doc, 'div', 'd1-title'); gift.append(el(doc, 'h1', null, t('day1.gift')));
@@ -99,7 +110,7 @@ export async function runArrival({ doc = document, t, mint, flyIn = null, reduce
       cards.append(holder);
     }
     wrap.append(el(doc, 'h2', null, t('day1.pick')), cards);
-    wrap.querySelector('h2').style.cssText = 'font: 700 22px system-ui; text-shadow: 0 2px 10px rgba(0,0,0,.6)';
+    wrap.querySelector('h2').style.cssText = 'font: 600 30px var(--font-title, Georgia, serif); color: var(--ftf-gold-bright, #dcc08a); text-shadow: 0 2px 10px rgba(0,0,0,.6)';
     root.replaceChildren(wrap);
   });
   await sleep(fast ? 100 : 900);
@@ -119,7 +130,7 @@ export async function runArrival({ doc = document, t, mint, flyIn = null, reduce
       const l = mint.links; if (l) { const a = el(doc, 'a', null, t('day1.mint.view')); a.href = l.token; a.target = '_blank'; a.rel = 'noopener noreferrer'; status.append(a); }
     } else if (ph === 'failed') {
       const r = el(doc, 'button', 'd1-btn d1-ghost', t('day1.mint.failed')); r.type = 'button'; r.addEventListener('click', () => mint.retry()); status.append(r);
-    } else if (ph === 'unavailable') status.textContent = t('day1.mint.unavailable');
+    } else if (ph === 'unavailable') status.textContent = t(mint.reason === 'fund_empty' || mint.reason === 'daily_cap' ? 'day1.mint.' + mint.reason : 'day1.mint.unavailable');
     else status.textContent = t('day1.mint.' + (ph === 'idle' ? 'keygen' : ph));
   };
   const off = mint.subscribe(paint); paint();

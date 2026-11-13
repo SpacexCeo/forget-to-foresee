@@ -55,6 +55,9 @@ export function rewardSilk(s, id, now) {
  *   partSource?: 'salvage'|'inventory', step?: string}} a
  * @param {{now?: number}} [ctx]
  */
+/** Progress already held (owner 13.11): a kill objective whose proof drop (crownrift -> crown_shard) is in the bag is done. */
+export const heldProof = (def, have) => !!(def && def.objective.type === 'kill' && def.objective.proof && have && (Number(have[def.objective.proof]) || 0) >= 1);
+
 export function applyQuest(state, a = {}, ctx = {}) {
   const s = state || initialQuests(); const now = ctx.now || 0;
   switch (a.type) {
@@ -70,14 +73,21 @@ export function applyQuest(state, a = {}, ctx = {}) {
       if (w.state === 'active' && n.guide.talked && n.guide.moved) { n.quests.q_welcome = { ...w, state: 'ready' }; ev.push({ kind: 'quest_ready', data: { questId: 'q_welcome' }, silkC: 0, trust: 'T2' }); }
       return { state: n, events: ev };
     }
+    case 'HELD': { // progress already held counts (owner 13.11): an active kill quest whose proof drop is in the bag is ready
+      const n = copy(s), ev = [];
+      for (const id of Object.keys(QUESTS)) { const def = QUESTS[id], q = get(n, id); if (q.state !== 'active' || !heldProof(def, a.have)) continue; n.quests[id] = { ...q, progress: def.objective.count, state: 'ready' }; ev.push({ kind: 'quest_ready', data: { questId: id }, silkC: 0, trust: 'T2' }); }
+      if (!ev.length) return rejected(s, 'nothing');
+      n.seq++; return { state: n, events: ev };
+    }
     case 'ACCEPT': {
       const def = QUESTS[a.questId]; if (!def) return rejected(s, 'quest');
       if (questStatus(s, a.questId, now) !== 'available') return rejected(s, 'not_available');
-      if (Object.keys(QUESTS).some((id) => QUESTS[id].giver === def.giver && id !== a.questId && ['active', 'ready'].includes(get(s, id).state))) return rejected(s, 'giver_busy');
+      if (!def.auto && Object.keys(QUESTS).some((id) => QUESTS[id].giver === def.giver && !QUESTS[id].auto && id !== a.questId && ['active', 'ready'].includes(get(s, id).state))) return rejected(s, 'giver_busy'); // auto quests (journal side/daily/tournament) never block a talk quest
       const n = copy(s); n.seq++;
       const prev = get(n, a.questId);
       const q = { state: 'active', progress: 0, attempt: prev.attempt + 1, acceptedSeq: n.seq, doneAt: prev.doneAt };
       if (def.objective.type === 'guide' && def.objective.steps.every((k) => n.guide[k])) q.state = 'ready';
+      if (heldProof(def, a.have)) { q.progress = def.objective.count; q.state = 'ready'; } // the drop is already in the bag: the objective is done
       n.quests[a.questId] = q;
       const ev = [{ kind: 'quest_accepted', data: { questId: a.questId, attempt: q.attempt }, silkC: 0, trust: 'T2' }];
       if (q.state === 'ready') ev.push({ kind: 'quest_ready', data: { questId: a.questId }, silkC: 0, trust: 'T2' });
@@ -111,7 +121,7 @@ export function applyQuest(state, a = {}, ctx = {}) {
       if (def.objective.type === 'fetch') {
         if (q.state !== 'active' && q.state !== 'ready') return rejected(s, 'not_ready');
         if (!a.partId) return rejected(s, 'no_part');
-      } else if (q.state !== 'ready') return rejected(s, 'not_ready');
+      } else if (q.state !== 'ready' && !(q.state === 'active' && heldProof(def, a.have))) return rejected(s, 'not_ready');
       const needs = def.needs || {}; // monster resources, consumed by the caller after the turn-in (counts in a.have)
       if (Object.entries(needs).some(([id, n]) => (Number(a.have && a.have[id]) || 0) < n)) return rejected(s, 'needs');
       const n = copy(s); n.seq++;

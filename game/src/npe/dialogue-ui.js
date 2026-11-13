@@ -5,8 +5,8 @@
 import { SPEAKERS, typedChars, typeMs } from './dialogue-script.js';
 
 const CSS = `
-.npe-dim { position: fixed; inset: 0; z-index: 9980; background: rgba(0, 0, 0, .25); }
-.npe-box { --uu: var(--u, calc(min(100vw, 100vh * 1.7778) / 1920)); position: fixed; z-index: 9981; left: 50%; bottom: max(16px, calc(40 * var(--uu)));
+.npe-dim { position: fixed; inset: 0; z-index: calc(var(--z-dialogue, 50) - 1); background: rgba(0, 0, 0, .25); }
+.npe-box { --uu: var(--u, calc(min(100vw, 100vh * 1.7778) / 1920)); position: fixed; z-index: var(--z-dialogue, 50); left: 50%; bottom: max(16px, calc(40 * var(--uu)));
   transform: translateX(-50%); width: min(calc(100vw - 24px), max(340px, calc(1200 * var(--uu)))); min-height: max(150px, calc(220 * var(--uu))); box-sizing: border-box;
   display: grid; grid-template-columns: auto 1fr; gap: max(12px, calc(22 * var(--uu))); padding: max(14px, calc(24 * var(--uu)));
   background: rgba(14, 16, 24, .94); border: 1px solid #3a3f55; border-radius: 14px; color: #eef0f6; font: 400 max(15px, calc(22 * var(--uu)))/1.45 system-ui, sans-serif; cursor: pointer; }
@@ -19,10 +19,10 @@ const CSS = `
 .npe-more { position: absolute; right: max(12px, calc(24 * var(--uu))); bottom: max(10px, calc(20 * var(--uu))); color: #f6c860; font-size: max(14px, calc(20 * var(--uu))); animation: npe-bob 1s ease-in-out infinite; }
 .npe-more[hidden] { display: none; }
 @keyframes npe-bob { 50% { transform: translateY(-4px); } }
-.npe-skip { position: fixed; z-index: 9982; top: max(12px, calc(24 * var(--uu, 1px))); right: max(12px, calc(24 * var(--uu, 1px))); min-width: 96px; min-height: 40px;
+.npe-skip { position: fixed; z-index: calc(var(--z-dialogue, 50) + 1); top: max(12px, calc(24 * var(--uu, 1px))); right: max(12px, calc(24 * var(--uu, 1px))); min-width: 96px; min-height: 40px;
   border-radius: 10px; border: 1px solid #3a3f55; background: rgba(255, 255, 255, .06); color: #eef0f6; font: 600 15px system-ui, sans-serif; cursor: pointer; }
 .npe-skip:focus-visible, .npe-box:focus-visible { outline: 2px solid #f6c860; outline-offset: 2px; }
-.npe-sub { position: fixed; z-index: 9979; left: 50%; bottom: max(70px, calc(120 * var(--u, 1px))); transform: translateX(-50%); max-width: min(calc(100vw - 24px), 1200px);
+.npe-sub { position: fixed; z-index: calc(var(--z-dialogue, 50) - 2); left: 50%; bottom: max(70px, calc(120 * var(--u, 1px))); transform: translateX(-50%); max-width: min(calc(100vw - 24px), 1200px);
   padding: 12px 20px; border-radius: 10px; background: rgba(0, 0, 0, .72); color: #eef0f6; font: 500 max(15px, calc(20 * var(--u, 1px)))/1.35 system-ui, sans-serif; text-align: center; transition: opacity .12s; }
 .npe-sub b { margin-right: .3em; }
 .npe-sub[hidden] { display: none; }

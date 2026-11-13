@@ -592,7 +592,7 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     closePanel: () => closeOpen(), expandPill: () => pills.expandLatest(), get pills() { return pills; }, minimise,
     /** The shop counter (scenes/town-shops.js): opens the panel the door used to open. */
     openSpot(id) { if (spotPanel || folkTalk) closeOpen(); remote = true; spotPanel = id; renderTalk(); renderVisibility(); const b = talkEl.querySelector('button:not([disabled]):not(.ftf-panel-min)'); if (b && b.focus) b.focus(); },
-    get questActive() { return !!(quest && quest.active); }, interact, register, walkRoute, walkTo, cancelRoute, routeWish, get routeEnd() { return state.routeEnd || null; },
+    get questActive() { return !!(quest && quest.active); }, get questStep() { return quest ? quest.step : null; }, interact, register, walkRoute, walkTo, cancelRoute, routeWish, get routeEnd() { return state.routeEnd || null; },
     /** The same transition to the archipelago from anywhere in town (the story's Gate-Loom, scenes/town-portal.js), with its own cover line. */
     depart(opts = {}) { if (state.registering || state.phase !== 'town') return state.registering || Promise.resolve(false); state.registering = run(opts); return state.registering; },
     get phase() { return state.phase; },

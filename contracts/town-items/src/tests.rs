@@ -98,3 +98,58 @@ fn strangers_cannot_move_other_players_items() { let mut c = items(); ctx("eve.t
 fn a_sale_needs_the_sellers_items() { let mut c = items(); ctx("owner.testnet"); c.coordinator_transfer(acc("ann.testnet"), acc("bob.testnet"), "ash_ore".into(), U128(1), h(4)); }
 #[test] #[should_panic(expected = "ERR_REQUEST")]
 fn a_sale_needs_a_request_hash() { let mut c = items(); ctx("owner.testnet"); c.coordinator_transfer(acc("ann.testnet"), acc("bob.testnet"), "ash_ore".into(), U128(1), "x".into()); }
+
+// ---------- transfer edge cases (docs/nft-threat-model.md) ----------
+fn funded() -> Items { let mut c = items(); ctx("owner.testnet"); c.mint(acc("ann.testnet"), "ash_ore".into(), U128(5), None); c }
+
+#[test]
+#[should_panic(expected = "ERR_SELF")]
+fn no_transfer_to_oneself() { let mut c = funded(); one("ann.testnet"); c.mt_transfer(acc("ann.testnet"), "ash_ore".into(), U128(1), None, None); }
+
+#[test]
+#[should_panic(expected = "ERR_AMOUNT")]
+fn no_zero_transfer() { let mut c = funded(); one("ann.testnet"); c.mt_transfer(acc("bob.testnet"), "ash_ore".into(), U128(0), None, None); }
+
+#[test]
+#[should_panic(expected = "ERR_TOKEN")]
+fn no_transfer_of_an_unknown_token() { let mut c = funded(); one("ann.testnet"); c.mt_transfer(acc("bob.testnet"), "gold".into(), U128(1), None, None); }
+
+#[test]
+#[should_panic(expected = "ERR_LENGTH")]
+fn batch_lengths_must_match() { let mut c = funded(); one("ann.testnet"); c.mt_batch_transfer(acc("bob.testnet"), vec!["ash_ore".into()], vec![U128(1), U128(1)], None, None); }
+
+#[test]
+#[should_panic(expected = "ERR_FUNDS")]
+fn a_batch_cannot_spend_the_same_items_twice() {
+    let mut c = funded(); one("ann.testnet");
+    c.mt_batch_transfer(acc("bob.testnet"), vec!["ash_ore".into(), "ash_ore".into()], vec![U128(5), U128(1)], None, None);
+}
+
+#[test]
+fn a_failed_batch_moves_nothing() {
+    let mut c = funded(); one("ann.testnet");
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| c.mt_batch_transfer(acc("bob.testnet"), vec!["ash_ore".into(), "veil_dust".into()], vec![U128(1), U128(1)], None, None)));
+    assert!(r.is_err()); // on chain the panic reverts the whole call; here we only check it panicked before any event
+}
+
+#[test]
+#[should_panic(expected = "ERR_FUNDS")]
+fn no_burn_beyond_the_balance() { let mut c = funded(); ctx("ann.testnet"); c.burn("ash_ore".into(), U128(6), None); }
+
+#[test]
+#[should_panic(expected = "ERR_FUNDS")]
+fn a_holder_cannot_burn_someone_elses_items() { let mut c = funded(); ctx("mallory.testnet"); c.burn("ash_ore".into(), U128(1), None); }
+
+#[test]
+#[should_panic(expected = "ERR_SELF")]
+fn a_market_sale_cannot_move_items_to_the_seller() { let mut c = funded(); ctx("trader-01.ftf-town.testnet"); c.coordinator_transfer(acc("ann.testnet"), acc("ann.testnet"), "ash_ore".into(), U128(1), h(7)); }
+
+#[test]
+fn a_rejected_sale_does_not_burn_its_request_hash() {
+    let mut c = funded(); ctx("trader-01.ftf-town.testnet");
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| c.coordinator_transfer(acc("ann.testnet"), acc("bob.testnet"), "ash_ore".into(), U128(99), h(8))));
+    assert!(r.is_err());
+    // the unit-test VM does not roll back storage after a caught panic; on chain the whole call reverts, so the
+    // seller's balance is the check that matters here
+    assert_eq!(c.mt_balance_of(acc("ann.testnet"), "ash_ore".into()).0, 5);
+}

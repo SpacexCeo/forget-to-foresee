@@ -17,6 +17,16 @@ v stall_of '{"trader":"trader-05.ftf-town.testnet"}'                            
 curl -s $RPC -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"tx","params":{"tx_hash":"<hash>","sender_account_id":"trader-01.ftf-town.testnet","wait_until":"FINAL"}}'   # Latest events
 ```
 
+## Independent count (public indexer)
+
+The section at the top of the page does not trust the contract's own counters. Since 00:00 UTC it walks the public
+NearBlocks v3 indexer (`https://api-testnet.nearblocks.io/v3/accounts/<contract>/txns`, 100 rows a page, CORS open, no
+key) for the town, `items.` and `gate.` sub-contracts and the seven `*.ftf-coordinator.testnet` contracts, de-duplicates
+by hash and shows successful transactions today, market trades today (`ftf-town.testnet : trade`), failures (each linked
+to the explorer), transactions in the last 60 minutes, distinct signing accounts and the contract : method mix. It
+recounts every 10 minutes. If a page fails four times the section says "unavailable" and shows no numbers. The same
+count from a terminal, for any UTC day or window: `node tools/count/count.mjs --day YYYY-MM-DD` (`tools/count/README.md`).
+
 What the relayer adds, and how the page keeps it honest:
 
 - **Latest events.** The relayer (`/api/market/stats`) names the latest transaction hashes. The page fetches each one

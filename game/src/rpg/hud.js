@@ -111,6 +111,7 @@ export function createHud(o) {
   log.append(tabs, body);
   const paintLog = () => {
     for (const id in tabBtn) tabBtn[id].setAttribute('aria-selected', String(id === tab));
+    tabBtn.chat.hidden = !lines.chat.length; if (tab === 'chat' && !lines.chat.length) { tab = 'log'; tabBtn.log.setAttribute('aria-selected', 'true'); tabBtn.chat.setAttribute('aria-selected', 'false'); }   // no empty chat tab
     const list = lines[tab]; body.replaceChildren(...(list.length ? list : (tab === 'chat' ? [{ text: t('hud.log.chatEmpty'), kind: 'sys' }] : [])).map((l) => el('p', l.kind, l.text)));
     body.scrollTop = body.scrollHeight;
   };
@@ -126,15 +127,16 @@ export function createHud(o) {
   const tray = el('div', 'rpg-tray px'); const trayBtn = {};
   for (const it of TRAY) {
     const b = el('button', it.id === 'menu' ? 'menu' : null); b.type = 'button'; b.id = 'rpg-tray-' + it.id; b.innerHTML = it.icon;
-    const k = el('span', 'k'), dot = el('span', 'dot'); b.append(k, dot); b.setAttribute('aria-label', t('hud.tray.' + it.id));
+    const k = el('span', 'k'), dot = el('span', 'dot'), lbl = el('span', 'lbl', t('hud.tray.' + it.id)); b.append(k, dot, lbl); b.setAttribute('aria-label', t('hud.tray.' + it.id));
     b.addEventListener('click', () => o.onTray && o.onTray(it.id));
-    attachTip(b, () => ({ title: t('hud.tray.' + it.id), lines: b.disabled ? [b.dataset.why || t('hud.tray.notNow')] : [] }));
+    attachTip(b, () => (b.disabled ? { title: t('hud.tray.' + it.id), lines: [b.dataset.why || t('hud.tray.notNow')] } : null));   // the label shows on hover; the tooltip only says why it is off
     trayBtn[it.id] = b; tray.append(b);
   }
   // banner
   const banner = el('div', 'rpg-banner px');
   root.append(vignette, frame, buffs, target, map, zoom, coords, cbar.b, hotbar, xp.b, log, silk, tray, banner);
   doc.body.append(root, tip); doc.documentElement.classList.add('rpg-on');
+  paintLog();
 
   let lastHp = null, ghostTimer = 0;
   return {
@@ -143,7 +145,7 @@ export function createHud(o) {
     render(v) {
       root.dataset.reduced = o.reduced && o.reduced() ? '1' : '0';
       lv.textContent = t('hud.level', { n: v.level });
-      if (v.name && name.textContent !== v.name) name.textContent = v.name;
+      if (v.name && name.textContent !== v.name) { name.textContent = v.name; name.title = v.name; }
       if (v.portrait && portrait.dataset.src !== v.portrait) { portrait.dataset.src = v.portrait; portrait.style.backgroundImage = `url(${v.portrait})`; }
       const hpPct = v.maxHP ? Math.max(0, Math.min(1, v.hp / v.maxHP)) : 0;
       hp.fill.style.width = (hpPct * 100).toFixed(1) + '%'; hp.txt.textContent = `${Math.ceil(v.hp)} / ${v.maxHP}`;
@@ -163,7 +165,8 @@ export function createHud(o) {
       if (buffs.dataset.k !== bk) { buffs.dataset.k = bk; buffs.replaceChildren(...(v.buffs || []).map((b) => { const d = el('div', 'rpg-buff', String(Math.ceil(b.left))); d.dataset.debuff = b.debuff ? '1' : '0'; d.title = b.name; return d; })); }
       // cast bar
       if (v.cast) { cbar.b.hidden = false; cbar.fill.style.width = (v.cast.p * 100).toFixed(1) + '%'; cbar.txt.textContent = v.cast.name; cbar.b.dataset.int = v.cast.interrupted ? '1' : '0'; } else cbar.b.hidden = true;
-      // hotbar
+      // hotbar (empty slots show only while the Skills window is open)
+      hotbar.dataset.edit = v.open && v.open.skills ? '1' : '0';
       v.slots.forEach((sv, i) => {
         const s = slots[i];
         if (s.id !== sv.id) { s.id = sv.id; const art = sv.id && SKILL_ART[sv.id]; s.ic.style.backgroundImage = art ? `url(${base}assets/ui/icons/${art}.webp)` : 'none'; s.ic.textContent = sv.id && !art ? (skillById(sv.id) || {}).name.slice(0, 1) : ''; s.b.setAttribute('aria-label', (sv.id ? skillById(sv.id).name : t('hud.slot.empty')) + ' (' + sv.key + ')'); }
@@ -178,7 +181,7 @@ export function createHud(o) {
       xpTip = { lines: [v.xpNeed ? t('hud.xp.tip', { level: v.level, into: v.xpInto.toLocaleString('en-US'), need: v.xpNeed.toLocaleString('en-US') }) : t('hud.xp.cap', { level: v.level })] };
       // silk
       const st = silkChipText(v.silk, t);
-      l1.textContent = st.line1; l2.textContent = st.line2 || ''; l2.dataset.off = st.line2Kind === 'offline' ? '1' : '0'; sync.hidden = !st.showSync;
+      l1.textContent = st.line1; l2.textContent = st.line2 || ''; l2.dataset.off = st.line2Kind === 'local' ? '1' : '0'; sync.hidden = !st.showSync;
       silkTip = { lines: [...st.tooltip.map((x) => ({ text: x.text, bold: x.bold })), { text: st.link, cls: 'm' }] };
       silk.setAttribute('aria-label', st.tooltip.map((x) => x.text).join('. '));
       if (v.silkPop) { silk.dataset.pop = '0'; void silk.offsetWidth; silk.dataset.pop = '1'; }

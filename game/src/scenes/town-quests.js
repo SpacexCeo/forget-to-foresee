@@ -34,7 +34,7 @@ export function flagOn(name, search = (globalThis.location && globalThis.locatio
 
 /** Which quest a giver talks about now (pure): the first of theirs that is not done, else the last. */
 export function giverQuest(qs, giver, now = 0) {
-  const ids = Object.keys(QUESTS).filter((id) => QUESTS[id].giver === giver);
+  const ids = Object.keys(QUESTS).filter((id) => QUESTS[id].giver === giver && !QUESTS[id].auto); // auto quests need no talk (journal only)
   for (const id of ids) { const st = questStatus(qs, id, now); if (st !== 'done') return { id, status: st }; }
   return ids.length ? { id: ids[ids.length - 1], status: 'done' } : null;
 }
@@ -108,9 +108,10 @@ export function markerFor(giver, story, qs, now = 0, have = {}) {
 export function questLog(story, qs, now = 0, have = {}) {
   const rows = [];
   for (const id of Object.keys(QUESTS)) {
+    if (QUESTS[id].auto) continue; // the journal's auto quests have English titles and need no talk: not in this log
     const st = questStatus(qs, id, now); if (!['active', 'ready', 'available'].includes(st)) continue;
     const q = QUESTS[id], cur = qs.quests[id] || {};
-    rows.push({ id, giver: q.giver, title: q.title, status: st, progress: q.objective.type === 'kill' ? (cur.progress || 0) : null, count: q.objective.type === 'kill' ? q.objective.count : null,
+    rows.push({ id, giver: q.giver, title: q.title, status: st, progress: q.objective.type === 'kill' ? (st === 'available' ? 0 : cur.progress || 0) : null, /* a repeat on offer starts from 0 */ count: q.objective.type === 'kill' ? q.objective.count : null,
       needs: Object.entries(q.needs || {}).map(([res, need]) => ({ id: res, need, have: Math.min(need, Math.max(0, Number(have[res]) || 0)) })), rewardSilk: q.reward.silk });
   }
   const rank = { ready: 0, active: 1, available: 2 };
@@ -227,8 +228,12 @@ export function createTownQuests({ scene = null, hudToast = null, storage, townL
   }
   function openLog() { closeLog(); logPanel = renderLog(); doc.body.append(logPanel); }
   function toggleLog() { if (journal) { if (journal.isOpen) journal.close(); else journal.open(); return; } if (logPanel) closeLog(); else openLog(); }
+  let onboarding = false;                                                          // ui/onboarding-queue.js: no window opens while a first-time overlay runs
+  const onOnboard = (e) => { onboarding = !!(e && e.detail && e.detail.active); };
+  const onCloseAll = () => { closeLog(); if (journal && journal.isOpen) journal.close(); };
+  win.addEventListener('ftf:onboarding', onOnboard); win.addEventListener('ftf:close-windows', onCloseAll);
   const onKey = (e) => {
-    const tag = e && e.target && e.target.tagName; if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    const tag = e && e.target && e.target.tagName; if (tag === 'INPUT' || tag === 'TEXTAREA' || onboarding) return;
     if (e.code === 'KeyJ' || e.key === 'j' || e.key === 'J') { toggleLog(); }
     else if (e.key === 'Escape' && logPanel) closeLog();
   };
@@ -275,7 +280,7 @@ export function createTownQuests({ scene = null, hudToast = null, storage, townL
     if (verb === 'close') { closeTalk(); return; }
     if (verb === 'line') { openTalk(giver, arg === 'steps' ? QUESTS.q_part.steps : [arg]); return; }
     if (verb === 'guide') { storyDo({ type: 'GUIDE_STEP', id: arg }); questDo({ type: 'GUIDE', step: arg }); if (questStatus(qs, 'q_welcome', now()) === 'available') questDo({ type: 'ACCEPT', questId: 'q_welcome' }); openTalk(giver, ['story.guide.go']); return; }
-    if (verb === 'accept') { questDo({ type: 'ACCEPT', questId: arg }); openTalk(giver, [arg === 'q_part' ? 'quest.part.accept' : arg === 'q_boss' ? 'quest.boss.accept' : arg === 'b_spiders' ? 'quest.bounty.accept' : 'quest.spiders.accept']); return; }
+    if (verb === 'accept') { questDo({ type: 'ACCEPT', questId: arg, have: have() }); openTalk(giver, [arg === 'q_part' ? 'quest.part.accept' : arg === 'q_boss' ? 'quest.boss.accept' : arg === 'b_spiders' ? 'quest.bounty.accept' : 'quest.spiders.accept']); return; }
     if (verb === 'turnin') {
       const part = arg === 'q_part' ? firstPart() : null;
       const r = questDo({ type: 'TURN_IN', questId: arg, partId: part, partSource: 'inventory', have: have() });
@@ -342,7 +347,7 @@ export function createTownQuests({ scene = null, hudToast = null, storage, townL
   // first-seen is loaded lazily: a static import from here would tie the play and sprint chunks into a cycle (TDZ at boot)
   let showTip = null;
   if (useGuide) import('../sprint/first-seen.js').then((fs) => { registerGuideCoach(fs.registerTip, (n, total) => say('guide.title', { n, total })); showTip = fs.showTip; }).catch(() => { /* no coach marks */ });
-  let coached = null; const bornAt = now();
+  let coached = null, heldT = 0; const bornAt = now();
   function coach() { const id = useGuide && active ? coachFor(guide) : null; if (id && showTip && id !== coached && now() - bornAt > 4000) { coached = id; showTip(id); } } // after the HUD has mounted
   let tracked = []; try { tracked = (JSON.parse((storage && storage.getItem('ftf.tracked.v1')) || '[]') || []).filter((id) => QUESTS[id]).slice(0, MAX_TRACKED); } catch { tracked = []; }
   const saveTracked = () => { try { storage.setItem('ftf.tracked.v1', JSON.stringify(tracked)); } catch { /* memory only */ } };
@@ -427,6 +432,7 @@ export function createTownQuests({ scene = null, hudToast = null, storage, townL
       if (tracker || journal) { autoTrack(); errandWatch(); if (tracker) tracker.refresh(); }
       if (waypoint) waypoint.update();
       if ((tracker || journal) && now() - markersT > 1000) { markersT = now(); publishMarkers(); coach(); }
+      if (now() - heldT > 1000) { heldT = now(); if (Object.values(qs.quests).some((q) => q.state === 'active')) questDo({ type: 'HELD', have: have() }); } // a proof drop in the bag completes its kill objective
       if (pos) { herPos = pos; if (now() - lineT > 1000) { lineT = now(); renderObjective(); } } // the distance to the next giver
       if (logPanel && now() - logT > 1000) { logT = now(); const fresh = renderLog(); logPanel.replaceWith ? logPanel.replaceWith(fresh) : (logPanel.remove(), doc.body.append(fresh)); logPanel = fresh; }
       if (pos && !start) start = [pos[0], pos[2]];

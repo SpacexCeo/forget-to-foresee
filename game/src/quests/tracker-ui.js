@@ -7,18 +7,18 @@
 
 const CSS = `
 .ft{position:fixed;right:calc(env(safe-area-inset-right,0px) + 16px);top:calc(env(safe-area-inset-top,0px) + 150px);width:min(320px,calc(100vw - 24px));max-height:min(420px,60vh);overflow:auto;z-index:12;
- box-sizing:border-box;padding:10px 12px;border-radius:10px;background:rgba(14,16,24,.72);color:#eef0f6;font:14px/1.4 "Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;pointer-events:auto}
+ box-sizing:border-box;padding:10px 12px;border-radius:10px;background:rgba(14, 20, 18,.72);color:var(--ftf-text, #eef0ea);font:14px/1.4 "Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;pointer-events:auto}
 .ft[hidden]{display:none}.ft button{font:inherit;color:inherit;cursor:pointer}
-.ft-head{display:flex;align-items:center;gap:6px;font-weight:700}.ft-head span{flex:1}.ft-key{color:#aab1c5;font-weight:400}
-.ft-ib{min-width:28px;min-height:28px;border-radius:8px;border:1px solid #3a3f55;background:rgba(255,255,255,.06);padding:0 6px}
-.ft-road{display:block;width:100%;text-align:left;margin:8px 0;padding:6px 8px;border-radius:8px;border:1px solid #3a3f55;background:rgba(255,255,255,.04)}
-.ft-road small{display:block;color:#aab1c5;font-size:12px}.ft-road b{color:#e8dcb4;font-size:16px}
+.ft-head{display:flex;align-items:center;gap:6px;font-weight:700}.ft-head span{flex:1}.ft-key{color:var(--ftf-muted, #aab6b0);font-weight:400}
+.ft-ib{min-width:28px;min-height:28px;border-radius:8px;border:1px solid var(--ftf-border, rgba(197,164,105,.4));background:rgba(255,255,255,.06);padding:0 6px}
+.ft-road{display:block;width:100%;text-align:left;margin:8px 0;padding:6px 8px;border-radius:8px;border:1px solid var(--ftf-border, rgba(197,164,105,.4));background:rgba(255,255,255,.04)}
+.ft-road small{display:block;color:var(--ftf-muted, #aab6b0);font-size:12px}.ft-road b{color:#e8dcb4;font-size:16px}
 .ft-bar{height:6px;border-radius:3px;background:rgba(255,255,255,.08);margin-top:4px;overflow:hidden}.ft-bar i{display:block;height:100%;background:#e8dcb4}
 .ft-q{padding:6px 0;border-top:1px solid rgba(255,255,255,.08)}
-.ft-qh{display:flex;gap:6px;align-items:flex-start}.ft-title{flex:1;text-align:left;border:0;background:transparent;padding:0;font-weight:700;color:#f6c860;white-space:normal}
-.ft-obj{display:flex;gap:8px;justify-content:space-between;white-space:normal}.ft-obj.done{color:#aab1c5;text-decoration:line-through}.ft-obj b{font-variant-numeric:tabular-nums}
-.ft-ready{color:#5ccf8a;font-weight:700}.ft-more{color:#aab1c5;font-size:13px;margin-top:4px;white-space:normal}
-.ft-q.compact .ft-title{color:#eef0f6;font-weight:600}.ft-none{color:#aab1c5;white-space:normal}
+.ft-qh{display:flex;gap:6px;align-items:flex-start}.ft-title{flex:1;text-align:left;border:0;background:transparent;padding:0;font-weight:700;color:var(--ftf-gold, #c5a469);white-space:normal}
+.ft-obj{display:flex;gap:8px;justify-content:space-between;white-space:normal}.ft-obj.done{color:var(--ftf-muted, #aab6b0);text-decoration:line-through}.ft-obj b{font-variant-numeric:tabular-nums}
+.ft-ready{color:#5ccf8a;font-weight:700}.ft-more{color:var(--ftf-muted, #aab6b0);font-size:13px;margin-top:4px;white-space:normal}
+.ft-q.compact .ft-title{color:var(--ftf-text, #eef0ea);font-weight:600}.ft-none{color:var(--ftf-muted, #aab6b0);white-space:normal}
 .ft-flash{animation:ft-flash 1.2s}@keyframes ft-flash{0%,60%{background:rgba(92,207,138,.25)}100%{background:transparent}}
 @media (max-width:599px){.ft{top:calc(env(safe-area-inset-top,0px) + 112px);right:12px;left:12px;width:auto;max-height:40vh}.ft.ft-short .ft-rest{display:none}}
 html[data-motion=reduce] .ft-flash{animation:none}
@@ -78,7 +78,7 @@ export function createTrackerUI({ doc, say, giverName, data, onOpen, onWalk, onH
     road.addEventListener('click', () => onOpen(null));
     root.append(road);
     const rest = el('div', 'ft-rest');
-    if (!d.tracked.length) root.append(el('div', 'ft-none', say('tracker.none')));
+    if (!d.tracked.length && !d.guide) root.append(el('div', 'ft-none', say('tracker.none')));   // one next action: the guide step stands in for "No quest tracked"
     d.tracked.forEach((v, n) => (n === 0 ? root : rest).append(block(v, n === 0)));
     if (d.guide) { // the starter guide's active step (sprint §4.11)
       const g = el('div', 'ft-q ft-guide'); g.dataset.step = d.guide.id;

@@ -65,6 +65,7 @@ import { createCompanion } from './scenes/companion.js';
 import { COMPANIONS_ENABLED, companionsToShow } from './scenes/companion-rules.js';
 import { createDoorGlow } from './scenes/door-glow.js';
 import { cue, cueAt, MOB_SOUNDS } from './audio/town-audio.js';
+import { expectOnboarding, blocksWindows } from './ui/onboarding-queue.js';
 
 /**
  * Builds the renderer, the island, the camera and the frame loop (the heavy chunk: three.js, scenes, render,
@@ -219,7 +220,7 @@ import('./net/silk-balance.js').then((m) => { const model = m.createSilkModel({ 
 // The player market (market/index.js; docs/market.md): loaded on the first 'ftf:market-open' {tab?}; the HUD's key and button send it.
 { let market = null; const openMarket = (e) => { if (market) return; window.removeEventListener('ftf:market-open', openMarket); import('./market/index.js').then((m) => { market = m.mount({ t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage, ledger: townLedger }); market.open((e && e.detail && e.detail.tab) || 'buy'); }).catch((err) => console.warn('[market]', err)); }; window.addEventListener('ftf:market-open', openMarket); }
 // The game menu (play/game-menu.js): Profile, Achievements, NFTs, Inventory + wheel, Agents, Log / Stats.
-const openProfileFor = (quest = null, tab = 'profile') => import('./play/game-menu.js').then((m) => { const d1 = loadDay1(ctx.storage); return m.openGameMenu({ t: (k, a) => ctx.i18n.t(k, a), ledger: townLedger, storage: ctx.storage, tab, chests: chestBag, heroineToken: (d1.guest || {}).token_id || null, owner: (d1.guest || {}).account_id || null, createGuest: () => day1Mint.mint(loadDay1(ctx.storage).nickname || undefined).then((r) => (r.phase === 'minted' && r.record.guest ? { account: r.record.guest.account_id } : { error: r.reason || 'failed' })), nickname: d1.nickname || null, eliseMinted: !!d1.minted, exportKey: d1.playerKey ? () => { const r = loadDay1(ctx.storage); return `account: ${(r.guest || {}).account_id || '(not created yet)'}\nsecret key: ${r.playerKey.secretKey}`; } : null }); }).catch((e) => console.warn('[menu]', e));
+const openProfileFor = (quest = null, tab = 'profile') => import('./play/game-menu.js').then((m) => { const d1 = loadDay1(ctx.storage); return m.openGameMenu({ t: (k, a) => ctx.i18n.t(k, a), ledger: townLedger, storage: ctx.storage, tab, chests: chestBag, heroineToken: (d1.guest || {}).token_id || null, owner: (d1.guest || {}).account_id || null, createGuest: () => day1Mint.mint(loadDay1(ctx.storage).nickname || undefined).then((r) => (r.phase === 'minted' && r.record.guest ? { account: r.record.guest.account_id } : { error: r.reason || 'failed' })), nickname: d1.nickname || null, eliseMinted: !!d1.minted, account: featureFlags.on('accountLogin') ? { open: () => openAccount(), login: d1.login ? `${d1.login.kind.toUpperCase()} ${String(d1.login.address).slice(0, 10)}…` : null } : null, exportKey: d1.playerKey ? () => { const r = loadDay1(ctx.storage); return `account: ${(r.guest || {}).account_id || '(not created yet)'}\nsecret key: ${r.playerKey.secretKey}`; } : null }); }).catch((e) => console.warn('[menu]', e));
 const judge = params.get('demo') === 'judge';
 if (judge) ctx.prefs.set({ hudMode: 'novice' });
 if (ctx.prefs && !params.has('tier')) { // a Quality change in the settings applies at once; a fixed choice switches the governor off
@@ -234,6 +235,28 @@ if (ctx.prefs && !params.has('tier')) { // a Quality change in the settings appl
 }
 const seedParam = judge ? JUDGE_SEED : params.get('seed') || '';
 let play = null, entering = null, season = null, entered = false;
+let demoPlayer = null, demoTried = false, demoShown = false, playerCard = null; // the demo player and the other-player card (Social track)
+/** Tap or click another player (or the demo player) in town: their card. A tap is a short press that barely moved. */
+function mountPlayerPicking() {
+  const el = renderer.domElement; let down = null;
+  // capture phase on window: the game's own input handlers on the canvas stop the event before a bubbling listener
+  // the tap is timed by the events' own timestamps: a slow frame must not turn a tap into a long press
+  window.addEventListener('pointerdown', (e) => { if (e.target === el) down = { x: e.clientX, y: e.clientY, t: e.timeStamp }; }, true);
+  window.addEventListener('pointerup', (e) => {
+    if (!down || e.timeStamp - down.t > 450 || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 8) { down = null; return; }
+    down = null;
+    const r = el.getBoundingClientRect(), ray = new THREE.Raycaster();
+    ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), camera);
+    let rec = null;
+    try { rec = (mp && mp.pick && mp.pick(ray)) || (demoPlayer && demoPlayer.pick(ray)); } catch (err) { console.warn('[player pick]', err); }
+    if (!rec) return;
+    import('./play/player-card.js').then((m) => {
+      const d1 = loadDay1(ctx.storage);
+      if (!playerCard) playerCard = m.createPlayerCard({ t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage, me: (d1.guest || {}).account_id || null, base: import.meta.env.BASE_URL, openMarket: () => window.dispatchEvent(new CustomEvent('ftf:market-open', { detail: { tab: 'buy' } })) });
+      playerCard.open(rec);
+    }).catch((err) => console.warn('[player card]', err));
+  }, true);
+}
 let mp = null, mpTried = false, mpShown = false; // the shared town (play/multiplayer.js), loaded once Iris is in
 // The play layer (room, engine, world HUD, hub, map) is its own chunk: not needed for the first frame.
 const loadPlayLayer = () => Promise.all([import('./play/game.js'), import('./play/audio-settings.js'), import('./play/all-ages.js')]);
@@ -290,8 +313,12 @@ function mountTownAudio() {
 let playerHud = null, touchSticks = null, panelCollapse = null;
 const stamina = createStamina();
 const _camFwd = new THREE.Vector3();
+/** The town errand's next townsperson (innkeeper, then baker, then shrinekeeper) gets a gold "!" too (owner 13.11). */
+const ERRAND_NPC = Object.freeze({ read: 'innkeeper', trade: 'baker', deliver: 'shrinekeeper' }); // scenes/town-quest.js QUEST_NPC
+function errandMarkers() { const k = townFlow && townFlow.questActive ? ERRAND_NPC[townFlow.questStep] : null; return k ? [{ giver: k, sym: '!' }] : []; }
 let hatchkeeper = null, hatchLoading = false; // the Hatchkeeper by the lower-lane stalls (scenes/hatchkeeper.js, live, owner 13.11)
 let townQuests = null, townPortal = null, townBoard = null, expeditionSync = null, questMarkers = null; // the Expedition (?story=1): scenes/town-quests.js, town-portal.js
+let glassShoal = null, shoalLoading = false;
 let town = null, townFlow = null, townCasting = null, townMobs = null, inTown = false, townGrounded = false, irisAvatar = null, killXp = null, endgamePass = null, stallMounted = false, worksMounted = false, tournMounted = false;
 let restoreCamera = () => {};
 const islandStart = { heading: player.heading };
@@ -355,7 +382,7 @@ if (townMode.town) {
       townBoard = bm.createTownBoard({ scene, position: townToWorld(bm.BOARD_TOWN), facing: Math.PI / 2, i18n: ctx.i18n, log: () => townQuests.ledger.log,
         load: () => bm.loadSnapshot({ base: import.meta.env.BASE_URL, relayer }) });
       spots.push(...townQuests.spots, townPortal.spot, townBoard.spot);
-      questMarkers = mm.createQuestMarkers({ scene, markers: () => townQuests.markers(), folkAt, reducedMotion: lookdev.reducedMotion }); // gold ! and ? over the givers
+      questMarkers = mm.createQuestMarkers({ scene, markers: () => [...townQuests.markers(), ...errandMarkers()], folkAt, reducedMotion: lookdev.reducedMotion }); // gold ! and ? over the givers
       // the log goes up to the relayer for the endgame pass (Q4): signed by the Day 1 guest key; quiet without a guest or relayer
       import('./net/expedition-sync.js').then((m) => { if (townQuests && !expeditionSync) expeditionSync = m.createExpeditionSync({ ledger: townQuests.ledger, storage: ctx.storage }); }).catch((e) => console.warn('[story] sync', e));
       // the first boss down (a crownrift kill in the log): the log goes up first, then the second dragon is claimed
@@ -371,6 +398,20 @@ if (townMode.town) {
   if (!hatchLoading) { hatchLoading = true; import('./scenes/hatchkeeper.js').then((m) => { hatchkeeper = m.createHatchkeeper({ scene, t: (k, a) => ctx.i18n.t(k, a), groundAt: (x, z) => town.groundAt(x, z), mobile: mobileDevice, reduced: () => lookdev.reducedMotion }); spots.push(hatchkeeper.spot); }).catch((e) => console.warn('[hatchkeeper]', e)); }
   if (!spotProps) spotProps = createSpotProps({ scene, town, near: (id) => { const s = spots.find((x) => x.id === id); return !!(s && inTown && s.near(player.pos)); } });
   refreshCompanions();
+  // The Glass Shoal (flag glassShoal, docs/plans/boss/glass-shoal-boss.md): the level-5 main quest, the dragon ride and
+  // the boss arena; scenes/glass-shoal.js loads only with the flag, the arena only when the ride starts.
+  const mountShoal = () => {
+    if (glassShoal || shoalLoading || !featureFlags.on('glassShoal') || !town) return;
+    shoalLoading = true;
+    import('./scenes/glass-shoal.js').then((m) => {
+      glassShoal = m.createGlassShoal({ THREE, scene, camera, rig, player, toWorld: townToWorld, groundAt: (x, z) => town.groundAt(x, z), folkAt, ledger: townLedger, chests: chestBag, storage: ctx.storage,
+        locale: () => (ctx.i18n && ctx.i18n.locale) || 'en', toast: (s) => toast(s), reduced: () => lookdev.reducedMotion, mobile: mobileDevice, touch: () => !!input.touchControls,
+        hero: () => (irisAvatar && irisAvatar.hero ? irisAvatar.hero.id : startHero.id), clip: (n) => { if (irisAvatar && irisAvatar.combat) irisAvatar.combat(n); }, axes: () => input.moveAxes() });
+      if (params.get('shoal')) glassShoal.debugStep(params.get('shoal')); // dev preview: ?ff=glassShoal&shoal=reach_stone
+      if (window.__ftf) window.__ftf.glassShoal = glassShoal;
+    }).catch((e) => { shoalLoading = false; console.warn('[shoal]', e); });
+  };
+  mountShoal(); featureFlags.subscribe(mountShoal);
   if (!townMonsters) {
     // chests: the hillside packs' kills drop them (play/mobs.js 'ftf:mob-killed'); the moss critters roam only when the
     // packs are off (?mobs=0)
@@ -445,6 +486,7 @@ if (townMode.town) {
   });
   mountCasting();
   // The player HUD (ui/player-hud.js): portrait frame, level, health, the silk wallet and the toast stack, town only.
+  if (!window.__ftfJudgePath && /[?&]judge=1(&|$)/.test(location.search)) window.__ftfJudgePath = import('./ui/judge-path.js').then((m) => import('./sprint/first-seen.js').then((f) => m.mountJudgePath({ t: (k, a) => ctx.i18n.t(k, a), touch: f.isTouch(document) }))).catch(() => null); // ?judge=1: the 90-second guided route (docs: README Judge path)
   if (!window.__ftfSprint) window.__ftfSprint = mountSprint({ THREE, scene, camera, renderer, player, ledger: townLedger, town, chests: chestBag, t: (k, a) => ctx.i18n.t(k, a), toast: (s) => toast(s), reduced: () => lookdev.reducedMotion, storage: ctx.storage, keys: input, flags: featureFlags, i18n: ctx.i18n, active: () => inTown, mobs: () => townMobs, base: import.meta.env.BASE_URL, floatNumber: numbersHook, openSettings: (tab) => openSettings(tab), skin: () => (irisAvatar ? irisAvatar.hero.id : startHero.id) }); // sprint seam (src/sprint, docs/sprint/CTX.md)
   if (!playerHud) playerHud = createPlayerHud({ t: (k, a) => ctx.i18n.t(k, a), ledger: townLedger, chests: chestBag, base: import.meta.env.BASE_URL,
     nickname: () => loadDay1(ctx.storage).nickname || null, skin: () => (irisAvatar ? irisAvatar.hero.id : startHero.id),
@@ -676,12 +718,19 @@ function startSeason() {
 
 // ---- Day 1 (docs/day1-free-mint-plan.md): arrival, name, the free Elise mint, hints, story trailers, the skin ----
 const day1Mint = createDay1Mint({ storage: ctx.storage });
+// Sign in / create account (flag accountLogin, docs/account-login.md): panel, flow and wallets load on the first tap.
+const openAccount = (nickname = null) => import('./play/account-panel.js').then((m) => m.openAccountPanel({
+  t: (k, a) => ctx.i18n.t(k, a), nickname,
+  makeLogin: () => Promise.all([import('./net/account-login.js'), import('./net/near-tx.js'), import('./net/day1-deployment.js'), import('./net/near-deployment.js')])
+    .then(([a, n, d, nd]) => a.createAccountLogin({ relayer: d.DAY1_DEPLOYMENT.relayer, guests: d.DAY1_DEPLOYMENT.guests, mint: day1Mint, client: n.createTxClient({ rpcUrls: nd.NEAR_DEPLOYMENT.rpcUrls }), storage: ctx.storage })),
+}).done).catch((e) => { console.warn('[account]', e); return { status: 'guest' }; });
 const day1On = () => {
   const q = params.get('day1');
   if (q === '0') return false;
   if (q === '1') return true;
   return !judge && !loadDay1(ctx.storage).claimed;
 };
+if (day1On()) expectOnboarding('name');   // the Day-1 name comes first: the intro and the card wait for it (ui/onboarding-queue.js)
 // The skin is the heroine herself: Elise wears her own model, clips and cel shading (play/iris-avatar.js setHero).
 // The wheel's skin NFT is read from the chain for the guest account (play/skins.js), never assumed. A function
 // declaration with its state on itself: the HUD asks canSwap() while this module is still being evaluated.
@@ -718,7 +767,7 @@ function updateAltarTimer() {
   if (!visible) return;
   // declutter: with the player HUD on, an altar icon (CSS) and the short state; the full line is the tooltip
   const full = ctx.i18n.t('day1.altar.timer') + ' · ' + ctx.i18n.t('day1.altar.open');
-  const text = playerHud ? ctx.i18n.t('day1.altar.open') : full;
+  const text = playerHud ? ctx.i18n.t('day1.altar.short') : full;   // says what is open (design review 13.11: a bare "Open now" told nothing)
   if (altarTimer.textContent !== text) { altarTimer.textContent = text; altarTimer.title = full; }
   // kept below the top-right chips (Controls, Profile) and inside the screen: on a phone the altar projects right under them
   const minTop = innerWidth < 700 || innerHeight < 500 ? (document.body.classList.contains('ph-on') ? 236 : 150) : 118, half = Math.min(altarTimer.offsetWidth / 2 || 110, innerWidth / 2 - 8);
@@ -781,12 +830,12 @@ async function startDay1() {
   // never over the loading screen: when the intro flight is skipped this runs before the cover lifts (phone pass, 12.11)
   for (let i = 0; i < 1200 && !(window.__ftfBootMarks && window.__ftfBootMarks.done); i++) await new Promise((r) => setTimeout(r, 150));
   const t = (k, a) => ctx.i18n.t(k, a);
-  const m = await import('./play/day1.js');
-  await m.runArrival({ t, mint: day1Mint, flyIn, reduced: () => lookdev.reducedMotion, inventoryEl: () => document.querySelector('.ftf-town-profile'), nickname: loadDay1(ctx.storage).nickname || '' });
+  const [m, q] = await Promise.all([import('./play/day1.js'), import('./ui/onboarding-queue.js')]);   // one onboarding queue: name -> intro -> guide
+  await q.runOnboarding('name', () => m.runArrival({ t, mint: day1Mint, flyIn, reduced: () => lookdev.reducedMotion, inventoryEl: () => document.querySelector('.ftf-town-profile'), nickname: loadDay1(ctx.storage).nickname || '', signIn: featureFlags.on('accountLogin') ? (nick) => openAccount(nick) : null }));
   refreshCompanions(); // a fresh heroine may already hold a dragon
   const orbit = (base) => (p) => { rig.dist = TOWN_CAMERA.dist + 9 * Math.sin(Math.PI * p); rig.rotate(base); };
   // No Day-1 tips on phones at all (owner 13.11, asked many times): the tracker and the quest log carry the same lines there.
-  if (!input.touchControls) await m.runHints({ t, steps: [
+  if (!input.touchControls) await q.runOnboarding('guide', () => m.runHints({ t, steps: [
     ...(input.touchControls ? [] : [{ key: 'day1.hint.skin' }]), // not on phones (owner 12.11: the tip took the screen there)
     { key: 'day1.hint.quest', when: () => !!(townFlow && townFlow.questActive) },
     { key: 'day1.hint.trailers', when: () => !input.touchControls, buttons: [ // not on phones (owner 12.11)
@@ -796,7 +845,7 @@ async function startDay1() {
       rig.dist = TOWN_CAMERA.dist;
     } }] },
     { key: 'day1.hint.tournament' },
-  ] });
+  ] }));
 }
 
 /** The player enters the world (the lobby's first contact, or at once on the direct path): the town, else the season. */
@@ -969,6 +1018,10 @@ function handleInput(dt) {
   input.poll();
   const { pad } = input;
   if (input.hit('F3')) hud.toggle();
+  if (glassShoal && glassShoal.owns()) { // the dragon ride or the boss fight: its own keys, the camera still turns
+    if ((input.hit('Escape') || pad.hit(PAD.menu)) && !document.querySelector('dialog[open]')) { openMenu(); return false; }
+    glassShoal.input(input); cameraInput(dt, pad); return false;
+  }
   const modal = document.querySelector('dialog[open]');
   if (modal) { navigateGamepadMenu(modal, pad); return false; }
   const townOn = inTown && entered; // walking the town: movement and the camera, no play keys (the season has not begun)
@@ -988,11 +1041,11 @@ function handleInput(dt) {
     if (inspecting) leaveInspect();
     else if (playOn && play.handleKey('Escape')) clearWorldInput();
     else if (moveTarget || (playOn && play.routeActive) || (townOn && townFlow.routeActive)) stopSteering();
-    else openMenu();
+    else if (!blocksWindows()) openMenu();   // no menu on top of a first-time overlay (its own Esc / Skip handles it)
     return false;
   }
   if (townShops && townShops.busy) return false; // the shop door's fade holds Iris
-  if (!playOn && townFlow) { if (input.hit('KeyE') || pad.hit(PAD.interact)) { if (!(townShops && townShops.inside && townShops.interact())) townFlow.interact(); } } // E at the Tournament altar, a shop door or counter
+  if (!playOn && townFlow) { if (input.hit('KeyE') || pad.hit(PAD.interact)) { if (glassShoal && townOn && glassShoal.interact()) { /* the Shoal's prompt took it */ } else if (!(townShops && townShops.inside && townShops.interact())) townFlow.interact(); } } // E at the Tournament altar, a shop door or counter
   if (townOn && townFlow && input.hit('KeyO')) townFlow.expandPill(); // O: the newest minimised panel
   if (townOn && townCasting) { // beyond the walls: Q/1 and V/2 arm the casts (scenes/town-casting.js)
     for (const k in CAST_KEYS) if (input.hit(k)) townCasting.handleKey(k);
@@ -1160,6 +1213,8 @@ function frame() {
   lean = damp(lean, lookdev.reducedMotion ? 0 : leanTarget, 8, dt);
   avatar.rotation.z = lean;
   focus.set(p[0], p[1] + 1.1, p[2]);
+  if (glassShoal && inTown) glassShoal.update(dt, clock.elapsedTime);
+  const shoalSpeed = glassShoal && glassShoal.owns() ? glassShoal.applyAvatar(avatar, focus) : null; // on the dragon or on the Shoal
   if (inTown && townFlow.focusK > 0) { // registering: the camera leaves Iris for the altar while its core flares
     const a = town.altar.focus, k = townFlow.focusK * townFlow.focusK * (3 - 2 * townFlow.focusK) * 0.7;
     focus.set(focus.x + (a[0] - focus.x) * k, focus.y + (a[1] - focus.y) * k, focus.z + (a[2] - focus.z) * k);
@@ -1168,11 +1223,26 @@ function frame() {
   world3d.update(lookdev.reducedMotion ? 0 : clock.elapsedTime);
   // the shared town (docs/multiplayer.md): others' avatars and the chat; never on the judge link, ?mp=0 turns it off
   const mpOn = !!(town && town.active && entered);
+  // the demo player (play/demo-player.js) and the player card (play/player-card.js): loaded lazily once Iris is in town
+  if (mpOn && !demoTried && !judge && params.get('demo') !== '0') {
+    demoTried = true;
+    import('./play/demo-player.js').then((m) => { demoPlayer = m.createDemoPlayer({ scene, t: (k, a) => ctx.i18n.t(k, a), origin: TOWN_ORIGIN_W, groundAt: (x, z, y) => (town && town.groundAt ? town.groundAt(x, z, y) : null), phone: mobileDevice }); if (window.__ftf) window.__ftf.demoPlayer = demoPlayer; }).catch((e) => console.warn('[demo player]', e));
+    mountPlayerPicking();
+  }
+  if (demoPlayer) {
+    if (mpOn) {
+      const others = [player.pos]; const tf = town && town.townsfolk;
+      if (tf) for (const p of tf.people) if (p.state === 'loaded' && p.root.visible) others.push([p.plan.x + TOWN_ORIGIN_W[0], p.plan.y + TOWN_ORIGIN_W[1], p.plan.z + TOWN_ORIGIN_W[2]]);
+      if (mp && mp.presence) for (const r of mp.presence.positions()) if (r.p) others.push([r.p[0] + TOWN_ORIGIN_W[0], r.p[1] + TOWN_ORIGIN_W[1], r.p[2] + TOWN_ORIGIN_W[2]]);
+      demoPlayer.update(dt, player.pos, lookdev.reducedMotion, others);
+    } else if (demoShown) demoPlayer.hide();
+    demoShown = mpOn;
+  }
   if (mp && mpOn !== mpShown) { mpShown = mpOn; mp.setVisible(mpOn); }
   if (mp && mpOn) mp.update(dt, { pos: player.pos, heading: player.heading, speed: Math.hypot(player.vel[0], player.vel[1]), grounded: player.grounded !== false, reducedMotion: lookdev.reducedMotion });
   else if (!mpTried && mpOn && !judge && params.get('mp') !== '0') {
     mpTried = true;
-    import('./play/multiplayer.js').then((m) => { const d1 = loadDay1(ctx.storage); mp = m.createMultiplayer({ scene, t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage, name: d1.nickname || '', skin: irisAvatar && irisAvatar.hero ? irisAvatar.hero.id : 'iris', phone: mobileDevice, bots: Math.max(0, Math.min(14, Number(params.get('bots')) || 0)) }); mpShown = true; if (window.__ftf) window.__ftf.mp = mp; })
+    import('./play/multiplayer.js').then((m) => { const d1 = loadDay1(ctx.storage); mp = m.createMultiplayer({ scene, t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage, name: d1.nickname || '', account: (d1.guest && d1.minted && d1.guest.account_id) || null, lv: townLedger && townLedger.level ? Math.min(99, townLedger.level.level) : null, skin: irisAvatar && irisAvatar.hero ? irisAvatar.hero.id : 'iris', phone: mobileDevice, bots: Math.max(0, Math.min(14, Number(params.get('bots')) || 0)) }); mpShown = true; if (window.__ftf) window.__ftf.mp = mp; })
       .catch((e) => console.warn('[mp]', e));
   }
   if (town && town.active) {
@@ -1181,6 +1251,10 @@ function frame() {
     townFrame.playerPos = player.pos; townFrame.reducedMotion = lookdev.reducedMotion; townFrame.lamps = lookdev.light.lamps; // lamps follow the hour and the weather (docs/atmosphere.md)
     townFrame.light.sun = lookdev.sun.color; townFrame.light.daylight = lookdev.weather.state.sun; townFrame.light.pixelsPerMetre = renderer.domElement.height / (2 * Math.tan(camera.fov * Math.PI / 360));
     town.update(clock.elapsedTime, dt, townFrame);
+    if (town.townsfolk) { // walkers never overlap her: a townsperson closer than 0.6 m eases her out (owner 13.11); other heroines count as bodies
+      if (!town.townsfolk.bodiesSet) { town.townsfolk.bodiesSet = true; town.townsfolk.setBodies(() => { const out = mp && mp.bodies ? mp.bodies() : []; if (hatchkeeper) { const h = hatchkeeper.root.position; out.push([h.x - TOWN_ORIGIN_W[0], h.y - TOWN_ORIGIN_W[1], h.z - TOWN_ORIGIN_W[2]]); } return out; }); }
+      const push = town.townsfolk.irisPush; if (push[0] || push[1]) { player.pos[0] += push[0]; player.pos[2] += push[1]; }
+    }
     if (fogCards) fogCards.update(clock.elapsedTime, camera, (lookdev.look.mistCards || 0) + lookdev.weather.state.rain * 0.3, scene.fog.color, { reducedMotion: lookdev.reducedMotion, enabled: lookdev.tier !== 'low' });
     if (townCasting) townCasting.update(dt, clock.elapsedTime, lookdev.reducedMotion, entered && !townFlow.busy && !(townShops && townShops.inside)); // no casts indoors
     if (townMobs) townMobs.update(dt, entered && !(townShops && townShops.inside));
@@ -1241,7 +1315,7 @@ function frame() {
   // Animation drives from the actual ground speed (after collisions: pushing into a wall is standing
   // still), smoothed per frame rather than toggled per physics step: at high frame rates many frames run
   // no 30 Hz step, and toggling walk/idle on those frames restarted the walk clip every other frame.
-  animSpeed = damp(animSpeed, player.speed, 14, dt);
+  animSpeed = damp(animSpeed, shoalSpeed != null ? shoalSpeed : player.speed, 14, dt);
   const speed = animSpeed;
   movingState = movingState ? speed > 0.08 : speed > 0.25;
   void moving;
@@ -1280,7 +1354,7 @@ function frame() {
 // Expose a small debug handle for manual checks in the browser console and for measurements.
 window.__ftf = {
   get features() { return featureFlags; },
-  scene, world, streamer, warmup, player, rig, renderer, lookdev, setQuality: (t) => lookdev.setQuality(t), setReducedMotion: (on) => lookdev.setReducedMotion(on), perf, detectedTier, dayCycle, // dayCycle: the loop clock, its start and the session's weather timeline (QA)
+  scene, world, streamer, warmup, player, rig, renderer, camera, lookdev, setQuality: (t) => lookdev.setQuality(t), setReducedMotion: (on) => lookdev.setReducedMotion(on), perf, detectedTier, dayCycle, // dayCycle: the loop clock, its start and the session's weather timeline (QA)
   get vfx() { return play ? play.hooks.vfx : null; }, get audio() { return play ? play.hooks.audio : null; },
   // QA (art/anim/ingame.mjs): Iris's avatar and a cue for one of her one-shot clips (e.g. 'understand', 'greet').
   get iris() { return irisAvatar; }, get storyProps() { return { portal: townPortal, board: townBoard }; },   // QA: the Gate-Loom and the Shell monument

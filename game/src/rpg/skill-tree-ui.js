@@ -5,36 +5,36 @@ import { NODES, NODE, BRANCHES } from './skills-data.js';
 
 const CSS = `
 .rpg-modal { position: fixed; z-index: 40; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(1100px, calc(100vw - 24px)); max-height: calc(100vh - 24px);
-  display: flex; flex-direction: column; background: #0e1018; border: 1px solid #3a3f55; border-radius: 14px; box-shadow: 0 8px 32px rgba(0,0,0,.55);
-  color: #eef0f6; font: 16px/1.4 "Atkinson Hyperlegible", system-ui, sans-serif; }
+  display: flex; flex-direction: column; background: var(--ftf-panel-solid, #101f1a); border: 1px solid var(--ftf-border, rgba(197,164,105,.4)); border-radius: 14px; box-shadow: 0 8px 32px rgba(0,0,0,.55);
+  color: var(--ftf-text, #eef0ea); font: 16px/1.4 "Atkinson Hyperlegible", system-ui, sans-serif; }
 .rpg-modal[hidden] { display: none; }
 .rpg-modal header, .rpg-modal footer { display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 0 16px; }
-.rpg-modal header { border-bottom: 1px solid #3a3f55; } .rpg-modal footer { border-top: 1px solid #3a3f55; justify-content: space-between; flex-wrap: wrap; padding: 8px 16px; }
-.rpg-modal h2 { margin: 0; flex: 1; font: 600 28px "Cormorant Garamond", Georgia, serif; color: #f6c860; }
-.rpg-modal .chip { padding: 4px 10px; border-radius: 999px; background: rgba(246,200,96,.15); color: #f6c860; font-weight: 700; font-size: 14px; }
-.rpg-modal .x { width: 40px; height: 40px; border-radius: 8px; border: 1px solid #3a3f55; background: transparent; color: inherit; font-size: 20px; cursor: pointer; }
-.rpg-modal .btn { min-height: 44px; padding: 0 18px; border-radius: 10px; border: 1px solid #3a3f55; background: transparent; color: inherit; cursor: pointer; font: inherit; }
-.rpg-modal .btn.primary { background: #f6c860; color: #1b1608; border-color: #f6c860; font-weight: 700; }
+.rpg-modal header { border-bottom: 1px solid var(--ftf-border, rgba(197,164,105,.4)); } .rpg-modal footer { border-top: 1px solid var(--ftf-border, rgba(197,164,105,.4)); justify-content: space-between; flex-wrap: wrap; padding: 8px 16px; }
+.rpg-modal h2 { margin: 0; flex: 1; font: 600 28px "Cormorant Garamond", Georgia, serif; color: var(--ftf-gold, #c5a469); }
+.rpg-modal .chip { padding: 4px 10px; border-radius: 999px; background: rgba(197,164,105,.15); color: var(--ftf-gold, #c5a469); font-weight: 700; font-size: 14px; }
+.rpg-modal .x { width: 40px; height: 40px; border-radius: 8px; border: 1px solid var(--ftf-border, rgba(197,164,105,.4)); background: transparent; color: inherit; font-size: 20px; cursor: pointer; }
+.rpg-modal .btn { min-height: 44px; padding: 0 18px; border-radius: 10px; border: 1px solid var(--ftf-border, rgba(197,164,105,.4)); background: transparent; color: inherit; cursor: pointer; font: inherit; }
+.rpg-modal .btn.primary { background: var(--ftf-gold, #c5a469); color: #14110a; border-color: var(--ftf-gold, #c5a469); font-weight: 700; }
 .rpg-modal .btn:disabled { opacity: .45; cursor: not-allowed; }
-.rpg-modal .hint { color: #aab1c5; font-size: 14px; }
+.rpg-modal .hint { color: var(--ftf-muted, #aab6b0); font-size: 14px; }
 .rpg-tree { display: grid; grid-template-columns: repeat(3, minmax(0, 340px)); gap: 20px; justify-content: center; padding: 16px; overflow: auto; }
 .rpg-branch h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 18px; }
 .rpg-node-row { display: grid; grid-template-columns: 56px 64px 1fr; align-items: center; gap: 10px; position: relative; }
 .rpg-node-row + .rpg-node-row { margin-top: 24px; }
-.rpg-node-row + .rpg-node-row::before { content: ""; position: absolute; left: 87px; top: -24px; width: 2px; height: 24px; background: #3a3f55; }
+.rpg-node-row + .rpg-node-row::before { content: ""; position: absolute; left: 87px; top: -24px; width: 2px; height: 24px; background: var(--ftf-border, rgba(197,164,105,.4)); }
 .rpg-node-row[data-learned="1"] + .rpg-node-row::before { background: var(--bc); }
-.rpg-node-row .tier { font-size: 12px; color: #aab1c5; }
-.rpg-node { width: 64px; height: 64px; border-radius: 10px; border: 2px solid #3a3f55; background: #171a26; color: inherit; font: 700 22px "Cormorant Garamond", Georgia, serif; cursor: pointer; position: relative; }
-.rpg-node:focus-visible { outline: 2px solid #f6c860; outline-offset: 2px; }
+.rpg-node-row .tier { font-size: 12px; color: var(--ftf-muted, #aab6b0); }
+.rpg-node { width: 64px; height: 64px; border-radius: 10px; border: 2px solid var(--ftf-border, rgba(197,164,105,.4)); background: rgba(255,255,255,.04); color: inherit; font: 700 22px "Cormorant Garamond", Georgia, serif; cursor: pointer; position: relative; }
+.rpg-node:focus-visible { outline: 2px solid var(--ftf-gold, #c5a469); outline-offset: 2px; }
 .rpg-node[data-state="learned"] { border-color: var(--bc); }
-.rpg-node[data-state="learned"]::after { content: "✓"; position: absolute; right: -6px; top: -6px; width: 20px; height: 20px; border-radius: 50%; background: var(--bc); color: #0e1018; font: 700 13px/20px system-ui; }
+.rpg-node[data-state="learned"]::after { content: "✓"; position: absolute; right: -6px; top: -6px; width: 20px; height: 20px; border-radius: 50%; background: var(--bc); color: var(--ftf-panel-solid, #101f1a); font: 700 13px/20px system-ui; }
 .rpg-node[data-state="available"] { border-color: var(--bc); animation: rpg-avail 1.2s ease-in-out infinite; }
 .rpg-node[data-state^="locked"], .rpg-node[data-state="poor"] { filter: grayscale(1); opacity: .6; cursor: not-allowed; }
 .rpg-node[data-state^="locked"]::before { content: "🔒"; position: absolute; left: -6px; top: -8px; font-size: 14px; }
 .rpg-node[data-flash="1"] { box-shadow: 0 0 0 4px var(--bc); }
-.rpg-node[aria-selected="true"] { outline: 2px dashed #f6c860; outline-offset: 3px; }
+.rpg-node[aria-selected="true"] { outline: 2px dashed var(--ftf-gold, #c5a469); outline-offset: 3px; }
 @keyframes rpg-avail { 50% { box-shadow: 0 0 10px var(--bc); } }
-.rpg-node-name { font-size: 14px; } .rpg-node-name small { display: block; color: #aab1c5; font-size: 12px; }
+.rpg-node-name { font-size: 14px; } .rpg-node-name small { display: block; color: var(--ftf-muted, #aab6b0); font-size: 12px; }
 html[data-motion="reduce"] .rpg-node { animation: none; }
 @media (max-width: 899px) { .rpg-tree { grid-template-columns: 1fr; } }
 `;
