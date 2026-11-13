@@ -387,21 +387,24 @@ def main():
     base_pelvis = rig.rest_wp[pp] + qrot(rig.rest_wr[pp], idle['pelvis'][0]) if idle['pelvis'] is not None else rig.rest_wp[ip]
     chain = [rig.names[i] for _, bs in chains.chain_bones(rig) for i in bs]
     bones = chain + [n for n in rig.names if n not in chain and (n in ('pelvis', 'spine', 'chest', 'neck', 'head') or n.split('_')[0] in ('thigh', 'shin', 'foot', 'toe', 'upperarm', 'forearm', 'hand', 'shoulder', 'thumb', 'index', 'fingers'))]
-    new = {}
+    new = {}; made = {}; baked = {}
     for name, fn in CLIPS.items():
         if a.only and name not in a.only.split(','):
             continue
         keys, secs = fn()
         if a.legs != 1.0:
             keys = [(t, scaled(pose, a.legs)) for t, pose in keys]
-        local, pel = keyed.build(rig, base_local, base_pelvis, keys, secs, fps=FPS)
+        made[name] = (keys, *keyed.build(rig, base_local, base_pelvis, keys, secs, fps=FPS))
+    if a.cloth:      # the cloth of every clip at once
+        from ftfanim import skirt
+        cr = skirt.ClothRig(a.cloth, rig)
+        baked = skirt.bake_many(cr, [(name, local, pel, FPS, False, 0.0, None) for name, (keys, local, pel) in made.items()])
+    for name, (keys, local, pel) in made.items():
         if a.cloth:
-            from ftfanim import skirt
-            cr = skirt.ClothRig(a.cloth, rig)
-            local = skirt.bake(cr, local, pel, FPS, False, 0.0)
+            local = baked[name]
             d, who = cr.distance(local, pel); ins, thr = cr.inside(local, pel)
             print(name, 'gown min %.4f' % d.min(), who[int(d.argmin())], 'through', int(thr.sum()))
-            if d.min() < 0 or thr.any():
+            if (d.min() < 0 or thr.any()) and not os.environ.get('FTF_ALLOW_FAIL'):      # (the switch: write anyway, to film what failed)
                 raise SystemExit(f'{name}: a leg cuts the gown')
         else:
             local = chains.simulate(rig, local, pel, fps=FPS, loop=False)

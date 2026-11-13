@@ -1,6 +1,6 @@
 # Elise v4 — the owner's generated model on her existing skeleton
 
-Status: **in the game** (`game/public/assets/models/agent_elise.glb`, `agent_elise_m.glb` are copies of `out/`). Reverting the swap commit restores v3 (`../v3/out/`).
+Status: **superseded by v5** (`../v5/README.md`, 13.11: both legs walk, the dress lies on the body). The source files in `src/` are still the model. Kept as the record of the first build on the owner's file.
 
 Two source files came from the owner. The second one is the base of v4.
 
