@@ -103,20 +103,24 @@ export function createCreditLedger(dir) {
 export async function syncCredit(guest, deps) {
   const { client, cfg, ledger } = deps, now = deps.now || Date.now;
   const price = BigInt(await client.view(cfg.town, 'gate_price', {}));
+  const key = deps.key || (await importSecretKey(cfg.coordKey));
+  // register first, always: an unregistered account cannot buy at a stall or pledge (ERR_UNKNOWN_ACCOUNT), even with
+  // no verified income yet (live bug 13.11)
+  const row = await client.view(cfg.town, 'balance_of', { account_id: guest });
+  let registeredNow = false;
+  if (!row) {
+    const r = await client.call({ key, signerId: cfg.coord, receiverId: cfg.town, methodName: 'register', args: { accounts: [guest] }, gas: GATE.gas });
+    if (!r.ok) return { status: 502, body: { error: 'register_failed', tx_hash: r.hash } };
+    registeredNow = true;
+  }
   const target = creditableMicro((deps.loadLog || loadLog)(cfg.logDir, guest), price);
-  if (target === null) return { status: 409, body: { error: 'no_verified_log' } };
+  if (target === null) return { status: 200, body: { registered: true, registered_now: registeredNow, credited_now: '0', credited_total: String(ledger.get(guest).credited || '0'), creditable: null, silk: row ? String(row.silk) : '0', gate_price: String(price), tx_hash: null, capped_today: false, reason: 'no_verified_log' } };
   const rec = ledger.get(guest);
   const day = Math.floor(now() / DAY);
   const today = rec.day === day ? BigInt(rec.today) : 0n;
   const room = BigInt(cfg.guestDaySilk) * MICRO - today;
   let delta = target - BigInt(rec.credited);
   if (delta > room) delta = room > 0n ? room : 0n;
-  const key = deps.key || (await importSecretKey(cfg.coordKey));
-  const row = await client.view(cfg.town, 'balance_of', { account_id: guest });
-  if (!row) {
-    const r = await client.call({ key, signerId: cfg.coord, receiverId: cfg.town, methodName: 'register', args: { accounts: [guest] }, gas: GATE.gas });
-    if (!r.ok) return { status: 502, body: { error: 'register_failed', tx_hash: r.hash } };
-  }
   let tx = null;
   if (delta > 0n) {
     // write-ahead: the ledger counts it first, so a crash never credits twice; a failed call rolls it back
@@ -128,7 +132,7 @@ export async function syncCredit(guest, deps) {
     if (deps.log) deps.log({ at: now(), guest, credited: String(delta), total: next.credited, tx });
   }
   const after = await client.view(cfg.town, 'balance_of', { account_id: guest });
-  return { status: 200, body: { registered: true, credited_now: String(delta > 0n ? delta : 0n), credited_total: String(BigInt(rec.credited) + (delta > 0n ? delta : 0n)), creditable: String(target), silk: after ? String(after.silk) : '0', gate_price: String(price), tx_hash: tx, capped_today: delta < target - BigInt(rec.credited) } };
+  return { status: 200, body: { registered: true, registered_now: registeredNow, credited_now: String(delta > 0n ? delta : 0n), credited_total: String(BigInt(rec.credited) + (delta > 0n ? delta : 0n)), creditable: String(target), silk: after ? String(after.silk) : '0', gate_price: String(price), tx_hash: tx, capped_today: delta < target - BigInt(rec.credited) } };
 }
 
 /**

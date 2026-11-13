@@ -70,3 +70,33 @@ test('stalls: every stall.* key in five locales', () => {
   assert.ok(keys.length >= 29);
   for (const lang of ['ru', 'uk', 'it', 'zh']) for (const k of keys) assert.ok(PLAY_MESSAGES[lang][k], `${lang}:${k}`);
 });
+
+test('stalls: an account not yet in the town is never sent to fail on chain; the panel offers the one-tap set-up (live bug 13.11)', async () => {
+  const store = new Map([['ftf.day1.v1', JSON.stringify({ minted: true, guest: { account_id: 'ann.guests.testnet' }, playerKey: { secretKey: 'x' } })]]);
+  const buy = readQuote(q('buy'), { side: 'buy', item: 'spider_silk_thread', qty: 2 });
+  let calls = 0, registered = false;
+  const client = { view: async (c, m) => (m === 'balance_of' ? (registered ? { silk: '5000000' } : null) : null), call: async () => { calls++; return { ok: false, failure: 'Smart contract panicked: ERR_UNKNOWN_ACCOUNT: the account is not registered in the town', hash: HASH }; } };
+  const c = createStallClient({ base: 'https://r', storage: { getItem: (k) => store.get(k) ?? null }, signer: async () => ({}), client });
+  assert.deepEqual(await c.trade(buy), { state: 'error', error: 'not_registered' });
+  assert.equal(calls, 0, 'nothing signed for an account not in the town');
+  registered = true; // the view says yes but the chain still refuses: mapped to the same plain next step
+  assert.equal((await c.trade(buy)).error, 'not_registered');
+  // the panel: the plain line and the Set it up button, which runs the relayer set-up (the silk Sync)
+  const { installDom } = await import('../lib/mini-dom.mjs');
+  const { doc } = installDom();
+  const { createPlayI18n } = await import('../../src/play/i18n.js');
+  const i18n = createPlayI18n('en'); const t = (k, a) => i18n.t(k, a);
+  const { installSilkModel, computeSilkView } = await import('../../src/net/silk-core.js');
+  let synced = 0;
+  installSilkModel({ view: () => computeSilkView({}), subscribe: () => () => {}, syncNow: async () => { synced++; return { ok: true }; }, refresh: async () => {} });
+  const { createStallPanel } = await import('../../src/ui/stall-panel.js');
+  const panel = createStallPanel({ t, doc, client: { guest: () => ({ accountId: 'ann.guests.testnet' }), quote: async (side, item, qty) => readQuote(q(side), { side, item, qty }), trade: async () => ({ state: 'error', error: 'not_registered' }) } });
+  panel.open('shrinekeeper'); await new Promise((r) => setTimeout(r, 0)); await new Promise((r) => setTimeout(r, 0));
+  const buyBtn = [...doc.body.querySelectorAll('button')].find((b) => b.textContent === t('stall.buy'));
+  buyBtn.disabled = false; buyBtn.click(); await new Promise((r) => setTimeout(r, 0)); await new Promise((r) => setTimeout(r, 0));
+  assert.match(doc.body.textContent, /Your town account isn't set up yet\./);
+  const setup = [...doc.body.querySelectorAll('button')].find((b) => b.textContent === 'Set it up (free, one tap)');
+  assert.ok(setup); setup.click(); await new Promise((r) => setTimeout(r, 0)); await new Promise((r) => setTimeout(r, 0));
+  assert.equal(synced, 1); assert.match(doc.body.textContent, /Your town account is set up\. Try again\./);
+  installSilkModel(null); panel.close();
+});

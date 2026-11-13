@@ -4,6 +4,7 @@
 // the endpoint shows "not available yet" and the buttons stay off. Words: pledge, reward share, rate. 390 px friendly.
 import { createTownAct, WORKS, toMicro, silkOf, deedActions } from '../net/town-act.js';
 import { artBox, deedCardPath } from '../market/art.js';
+import { syncSilkNow, refreshSilk } from '../net/silk-core.js';
 
 const EXPLORER = 'https://testnet.nearblocks.io/txns/';
 const CSS = `
@@ -104,7 +105,11 @@ export function createTownWorksPanel({ t, storage = null, client = null, flush =
     const r = await api.me();
     if (!box) return;
     if (!r.ok) kids.push(el('p', null, t('works.err.' + r.reason)));
-    else {
+    else if (!r.me.registered) { // not in the town yet: one tap sets the account up through the relayer (live bug 13.11)
+      const st = el('p', 'tw-note');
+      const b = button(t('town.setup'), async () => { b.disabled = true; b.textContent = t('town.settingUp'); const x = await syncSilkNow().catch(() => ({ ok: false })); st.textContent = x && x.ok ? t('town.setupDone') : t('town.setupFailed'); if (x && x.ok) { refreshSilk(true).catch(() => {}); render(); } }, 'act');
+      kids.push(el('p', null, t('works.err.not_registered')), b, st);
+    } else {
       const me = r.me;
       kids.push(el('p', null, t('works.balance', { silk: silkOf(me.silk) })));
       if (me.limits.perDay) kids.push(el('p', 'tw-note', t('works.limit', { n: me.limits.today, max: me.limits.perDay })));

@@ -68,14 +68,17 @@ export async function actFor(v, deps) {
   const hash = requestHash(v.message, v.signature);
   if (!deps.replay.use(hash) || (await client.view(cfg.town, 'act_request_used', { request_hash: hash }))) return { status: 409, body: { error: 'replayed' } };
   let credit = null;
+  const key = deps.key || (await (await import('./near-tx.js')).importSecretKey(cfg.coordKey));
   if (spec.spends && cfg.logDir) {
-    const c = await syncCredit(v.accountId, deps);
-    if (c.status === 200) credit = { credited_now: c.body.credited_now, silk: c.body.silk };
+    const c = await syncCredit(v.accountId, deps); // registers the account first, then credits the verified income
+    if (c.status === 200) credit = { credited_now: c.body.credited_now, silk: c.body.silk, registered_now: !!c.body.registered_now };
     else if (!(c.status === 409 && c.body.error === 'no_verified_log')) return c;
   } else if (!(await client.view(cfg.town, 'balance_of', { account_id: v.accountId }))) {
-    return { status: 409, body: { error: 'not_registered' } };
+    // not in the town yet: register it in the same request, then make the move (live bug 13.11: ERR_UNKNOWN_ACCOUNT)
+    const r = await client.call({ key, signerId: cfg.coord, receiverId: cfg.town, methodName: 'register', args: { accounts: [v.accountId] }, gas: GATE.gas });
+    if (!r.ok) return { status: 502, body: { error: 'register_failed', tx_hash: r.hash } };
+    credit = { credited_now: '0', registered_now: true };
   }
-  const key = deps.key || (await (await import('./near-tx.js')).importSecretKey(cfg.coordKey));
   const r = await client.call({ key, signerId: cfg.coord, receiverId: cfg.town, methodName: spec.method, args: { account_id: v.accountId, ...spec.args(v.args), request_hash: hash }, gas: GATE.gas });
   if (!r.ok) {
     const f = String(r.failure || ''), hit = REASON.find(([re]) => re.test(f));

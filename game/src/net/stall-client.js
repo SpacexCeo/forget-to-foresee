@@ -72,11 +72,14 @@ export function createStallClient({ base = relayerUrl(), fetch = globalThis.fetc
       const g = guestFrom(storage);
       const c = canTrade(q, g);
       if (!c.ok) return { state: 'error', error: c.why };
+      // a buy pays from the player's row on ftf-town: an account not yet in the town would be refused on chain
+      // (ERR_UNKNOWN_ACCOUNT, live bug 13.11), so ask first and offer the one-tap set-up instead of a failed transaction
+      if (q.side === 'buy') { try { if (!(await net().view(q.town, 'balance_of', { account_id: g.accountId }))) return { state: 'error', error: 'not_registered' }; } catch { /* the chain answers on the call */ } }
       onStep('signing');
       let tx;
       try { const key = await signer(g.secretKey); tx = await net().call({ key, signerId: g.accountId, ...playerCall(q) }); }
       catch { return { state: 'error', error: 'sign_failed' }; }
-      if (!tx || !tx.ok) return { state: 'error', error: 'tx_failed', playerUrl: txUrl(tx && tx.hash) };
+      if (!tx || !tx.ok) return { state: 'error', error: /ERR_UNKNOWN_ACCOUNT/.test(String(tx && tx.failure)) ? 'not_registered' : 'tx_failed', playerUrl: txUrl(tx && tx.hash) };
       onStep('settling');
       try {
         const r = await fetch(url + '/api/market/resource', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ side: q.side, item: q.item, qty: q.qty, account_id: g.accountId, tx_hash: tx.hash }) });
