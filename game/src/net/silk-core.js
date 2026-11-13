@@ -12,7 +12,7 @@ export function formatSilkC(c) {
  * The view from its inputs (pure). `creditedC` (what the relayer has credited so far) makes `pendingC` right after the
  * gate burned silk; without it the on-chain number stands in for it.
  */
-export function computeSilkView({ localTotalC = 0, onChainC = 0, creditableC = null, creditedC = null, feeC = EXPEDITION.PORTAL_FEE_C, chainOk = false, stale = false, syncing = false, lastSyncAt = null, dayRoomC = null } = {}) {
+export function computeSilkView({ localTotalC = 0, onChainC = 0, creditableC = null, creditedC = null, feeC = EXPEDITION.PORTAL_FEE_C, chainOk = false, stale = false, syncing = false, lastSyncAt = null, dayRoomC = null, noAccount = false } = {}) {
   const on = Math.max(0, Math.round(onChainC));
   const pendingC = creditableC == null ? 0 : Math.max(0, Math.round(creditableC) - Math.round(creditedC == null ? on : creditedC));
   const playC = Math.max(0, Math.round(localTotalC) - on - pendingC);
@@ -21,6 +21,7 @@ export function computeSilkView({ localTotalC = 0, onChainC = 0, creditableC = n
     feeC, onChainC: on, creditableC, pendingC, playC, localTotalC: Math.round(localTotalC), totalC: on + pendingC + playC, gateC,
     enoughForGate: chainOk && gateC >= feeC, canSyncToEnough: chainOk && gateC < feeC && gateC + pendingC >= feeC,
     chainOk, stale, syncing, lastSyncAt, dayRoomC,
+    noAccount, // no Day 1 account (or no relayer) in this browser: all its silk is on this device
   };
 }
 
