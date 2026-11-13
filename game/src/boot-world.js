@@ -1009,8 +1009,9 @@ function mouseKey(action, down) {
   if (code) renderer.domElement.dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { code, key: code, bubbles: true }));
 }
 const mouseAim = createMouseAim({ target: renderer.domElement, input,
-  mode: () => gameSettings.mouseMode, touch: () => mobileDevice || !!input.touchControls,
-  active: () => entered && !(townFlow && townFlow.busy) && !(photo && photo.on),
+  mode: () => (judge ? 'classic' : gameSettings.mouseMode), touch: () => mobileDevice || !!input.touchControls, // the jury path keeps click-to-walk (README)
+  // the town, the hillside and the Shoal; the archipelago's play layer keeps the classic mouse (its clicks are walk orders)
+  active: () => entered && (inTown || !!(glassShoal && glassShoal.owns())) && !(townFlow && townFlow.busy) && !(photo && photo.on),
   prompt: () => !!document.querySelector('.ftf-town-prompt:not([hidden]), .gs-prompt:not([hidden])'),
   onAction: mouseKey,
   // the browser took Esc to free the pointer: the page gets the Esc it never saw (the cast is put away, a panel closes, else the menu)

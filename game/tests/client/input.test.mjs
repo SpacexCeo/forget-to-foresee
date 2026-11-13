@@ -231,7 +231,7 @@ test('mouse aim: a held pointer turns the camera with no button, and its buttons
   assert.match(src, /if \(this\.lookLocked && e\.pointerType === 'mouse'\) \{ this\.dragX \+= e\.movementX \* AIM_LOOK_SCALE/);
   assert.match(src, /if \(this\.aimMode && e\.pointerType === 'mouse'\) return;/);
   const boot = readFileSync(new URL('../../src/boot-world.js', import.meta.url), 'utf8');
-  assert.match(boot, /mode: \(\) => gameSettings\.mouseMode/);
+  assert.match(boot, /mode: \(\) => \(judge \? 'classic' : gameSettings\.mouseMode\)/);
   assert.match(boot, /mouseAim\.update\(\);/);
 });
 
