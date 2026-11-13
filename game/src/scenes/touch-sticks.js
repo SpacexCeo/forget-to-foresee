@@ -31,7 +31,7 @@ const CSS = `
 .ts-btn.ts-charged { box-shadow: 0 0 18px #ffd27a, 0 6px 16px rgba(0, 0, 0, .4); }
 .ts-btn.ts-main { overflow: visible; }
 .ts-cd { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(rgba(0, 0, 0, .62) calc(var(--cd, 0) * 1turn), transparent 0); pointer-events: none; }
-.ts-btn.ts-use { right: 6px; bottom: 182px; width: 64px; height: 64px; background: rgba(216, 180, 106, .92); color: #1a1408; font-size: 15px; border-color: #f3d7a0; }
+.ts-btn.ts-use { right: 6px; bottom: 182px; width: auto; min-width: 72px; height: 48px; padding: 0 18px; border-radius: 999px; border-width: 1px; border-color: rgba(255, 255, 255, .35); background: rgba(10, 14, 14, .55); color: #fff; font: 500 15px/1 var(--font-ui, "Atkinson Hyperlegible"), system-ui, sans-serif; text-shadow: 0 1px 2px rgba(0, 0, 0, .6); box-shadow: 0 2px 8px rgba(0, 0, 0, .3); }   /* the quiet pill (owner 13.11) */
 .ts-btn.ts-use:not([hidden]) { animation: ts-pop .25s ease-out; }
 @keyframes ts-pop { from { transform: scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
 .ts-cancel { position: absolute; right: 230px; bottom: 120px; padding: 10px 14px; border-radius: 20px; background: rgba(160, 50, 40, .82); pointer-events: none; }

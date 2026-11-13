@@ -29,13 +29,20 @@ const CSS = `
 .ftf-town-objective[hidden], .ftf-town-prompt[hidden] { display: none; }
 body:has(.d1-panel) .ftf-town-prompt, body:has(.d1-card) .ftf-town-prompt { visibility: hidden; } /* Day 1's panels own the screen */
 .ftf-town-prompt { position: fixed; left: 50%; bottom: calc(132px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 12; pointer-events: auto;
-  display: inline-flex; align-items: center; gap: 10px; max-width: calc(100vw - 156px); min-height: 48px; padding: 10px 20px; border-radius: 999px; cursor: pointer;
-  border: 1.5px solid #fbe6a6; background: rgba(217, 164, 65, .92); color: #1d1708; font: 600 17px/1.2 "Libre Caslon Text", "WH Cyrillic", "Palatino Linotype", Palatino, Georgia, serif;
-  box-shadow: 0 0 0 4px rgba(251, 230, 166, .22), 0 6px 18px rgba(0, 0, 0, .4); touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
-.ftf-town-prompt:hover { background: rgba(232, 182, 84, .97); }
+  display: inline-flex; align-items: center; gap: 8px; max-width: calc(100vw - 156px); min-height: 40px; padding: 8px 18px; border-radius: 999px; cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, .35); background: rgba(10, 14, 14, .55); color: #fff; font: 500 15px/1.2 var(--font-ui, "Atkinson Hyperlegible"), system-ui, -apple-system, "Segoe UI", sans-serif;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .6); box-shadow: 0 2px 8px rgba(0, 0, 0, .3); touch-action: manipulation; -webkit-tap-highlight-color: transparent; }   /* quiet pill (owner 13.11): no gold fill, no glow */
+.ftf-town-prompt:hover { background: rgba(10, 14, 14, .7); border-color: rgba(255, 255, 255, .55); }
 .ftf-town-prompt:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
-.ftf-town-prompt kbd { border: 1px solid rgba(29, 23, 8, .55); border-bottom-width: 2px; border-radius: 5px; padding: 1px 8px; font: 600 14px ui-monospace, Consolas, monospace; color: #1d1708; background: rgba(255, 255, 255, .35); }
+.ftf-town-prompt kbd { border: 1px solid rgba(255, 255, 255, .45); border-radius: 4px; padding: 0 6px; font: 600 12px/18px ui-monospace, Consolas, monospace; color: #fff; background: none; }
 .ftf-town-prompt kbd[hidden] { display: none; }
+body.ts-touch .ftf-town-prompt kbd { display: none; }   /* touch: no key cap, the whole pill is the tap target */
+@media (pointer: coarse) { .ftf-town-prompt kbd { display: none; } }
+/* the talk picker's names: the same quiet pills; the selected one a little brighter */
+body .ftf-talk-pick button { border: 1px solid rgba(255, 255, 255, .35); border-radius: 999px; background: rgba(10, 14, 14, .55); color: #fff; font: 500 14px/1.2 var(--font-ui, "Atkinson Hyperlegible"), system-ui, sans-serif; box-shadow: none; text-shadow: 0 1px 2px rgba(0, 0, 0, .6); }
+body .ftf-talk-pick button:hover, body .ftf-talk-pick button[aria-selected="true"], body .ftf-talk-pick button.is-selected, body .ftf-talk-pick button[aria-pressed="true"] { border-color: rgba(255, 255, 255, .7); background: rgba(10, 14, 14, .72); color: #fff; }
+body .ftf-talk-pick kbd { border: 1px solid rgba(255, 255, 255, .45); border-radius: 4px; padding: 0 5px; background: none; color: #fff; font: 600 11px/16px ui-monospace, Consolas, monospace; }
+body.ts-touch .ftf-talk-pick kbd { display: none; }
 .ftf-town-cover { z-index: 9000; pointer-events: auto; opacity: 0; transition: opacity var(--ftf-town-fade, .9s) ease-in-out; }
 .ftf-town-cover.is-on { opacity: 1; }
 .ftf-town-cover .boot-sub { opacity: 0; transform: translateY(6px); transition: opacity .7s ease .25s, transform .7s ease .25s; }
