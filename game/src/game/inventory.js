@@ -6,12 +6,14 @@ export const RARITIES = Object.freeze(['common', 'uncommon', 'rare', 'epic', 'le
 
 export function createInventory({ storage = null, now = () => Date.now() } = {}) {
   let st = null;
-  try { st = JSON.parse((storage && storage.getItem(INVENTORY_KEY)) || 'null'); } catch { st = null; }
-  if (!st || st.v !== 1) st = { v: 1, items: {}, newest: null };
+  const read = () => { let s = null; try { s = JSON.parse((storage && storage.getItem(INVENTORY_KEY)) || 'null'); } catch { s = null; } return s && s.v === 1 ? s : { v: 1, items: {}, newest: null }; };
+  st = read();
   const save = () => { try { if (storage) storage.setItem(INVENTORY_KEY, JSON.stringify(st)); } catch { /* memory only */ } };
   const listeners = new Set();
   return {
     count: (id) => (st.items[id] ? st.items[id].n : 0),
+    /** Re-reads the saved inventory (another part of the game may have added items since this one was made). */
+    reload() { st = read(); for (const fn of [...listeners]) fn(null); },
     get newest() { return st.newest; },
     /** Adds `n` of an item; `source` is shown on the card ("wheel", "quest"). */
     add(id, n = 1, source = 'wheel') {

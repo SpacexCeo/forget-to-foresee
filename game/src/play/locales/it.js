@@ -1498,6 +1498,8 @@ export default {
   'menu.filter.all': "Tutti",
   'menu.filter.shard': "Frammenti",
   'menu.filter.part': "Parti",
+  'menu.refresh': 'Aggiorna',
+  'menu.refresh.tip': "Aggiorna l'inventario: oggetti, forzieri e NFT",
   'menu.detail.shard': "Un frammento di memoria: {n} nella borsa. Conservato in questo browser.",
   'menu.detail.part': "Un pezzo meccanico: {n} nella borsa. Conservato in questo browser.",
   'hub.busy.trial': "La prova si sta chiudendo… un momento",
