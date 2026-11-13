@@ -125,7 +125,8 @@ for q_, (bn, p0, p1, st) in enumerate(zip(d3['cap_bone'], d3['cap_p0'], d3['cap_
         if c_ < 0.006: cap_r[q_] = np.maximum(cap_r[q_] - (0.006 - c_), 0.02); c_ = float((dd - (cap_r[q_, 0] + (cap_r[q_, 1] - cap_r[q_, 0]) * tt)).min())
         clear[str(bn) + '#%d' % q_] = (round(c_, 4), [round(float(v_), 3) for v_ in cap_r[q_]])
 print('cloth grid re-seated: %.0f%% of the points found on the dress; mean radius %.3f -> %.3f m; leg capsules (rest clearance m, radii): %s' % (found * 100, r3.mean(), rn.mean(), clear))
-np.savez_compressed(WD + '/cloth_rig.npz', **{**{k_: d3[k_] for k_ in d3.files}, 'grid': g2(Gn), 'cap_r': cap_r, 'tail_names': np.array(list(tails)), 'tail_pos': np.array([tails[k_] for k_ in tails])})
+cap_set = d3['cap_set'].copy(); cap_set[np.isin(d3['cap_bone'], ['thigh_R', 'shin_R'])] = 9      # the right leg is not there (removed above the shoe): it shapes nothing; its shoe still kicks the hem
+np.savez_compressed(WD + '/cloth_rig.npz', **{**{k_: d3[k_] for k_ in d3.files}, 'grid': g2(Gn), 'cap_r': cap_r, 'cap_set': cap_set, 'tail_names': np.array(list(tails)), 'tail_pos': np.array([tails[k_] for k_ in tails])})
 gwn = [str(v_) for v_ in d3['gw_names']]; gw = d3['gw'].reshape(-1, len(gwn)).astype(float); gp = Gn.reshape(-1, 3)
 skirt = (DRESS | LACE) & (z < float(h3.max()))
 for i in np.nonzero(skirt)[0]:

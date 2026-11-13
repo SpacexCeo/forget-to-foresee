@@ -38,13 +38,14 @@ def mat_q(m):
 # Per-character gown tuning (clips.json: characters.<id>.cloth.tune). Defaults are the v3 gown's.
 #   drag, hold, margin: the simulation's air drag, pull back to the gown's own shape, and clearance from the legs;
 #   keep: the share of each node's swing away from the hips-carried rest shape that is kept (a narrow dress: under 1);
+#   enclosed: False when the leg the gown encloses is not there (no knee-inside-the-gown check);
 #   max_deg: the largest angle a chain segment may leave its hips-carried rest direction; resolve_margin: the
 #   clearance the skinned gown keeps from the leg capsules after that (the legs always win over the limits).
-TUNE = dict(drag=1.2, hold=0.04, margin=0.02, keep=1.0, max_deg=None, resolve_margin=0.008)
+TUNE = dict(drag=1.2, hold=0.04, margin=0.02, keep=1.0, max_deg=None, resolve_margin=0.008, enclosed=True)
 
 
 def use_character(char_spec):
-    TUNE.update(dict(drag=1.2, hold=0.04, margin=0.02, keep=1.0, max_deg=None, resolve_margin=0.008))
+    TUNE.update(dict(drag=1.2, hold=0.04, margin=0.02, keep=1.0, max_deg=None, resolve_margin=0.008, enclosed=True))
     TUNE.update(((char_spec or {}).get('cloth') or {}).get('tune', {}))
 
 
@@ -215,6 +216,8 @@ class ClothRig:
         (closed across the slit): (inside, through). `inside` is False when the knee stands outside that outline;
         `through` is True when it got there through the cloth and not through the open slit: a leg that passed
         through the cloth would clear every capsule and still be wrong."""
+        if not TUNE['enclosed']:      # a dress whose enclosed leg is not modelled: nothing to keep inside
+            return np.ones(len(local), bool), np.zeros(len(local), bool)
         rig = self.rig; wr, wp = rig.fk(local, pelvis); P = self.skin(wr, wp); ok = np.ones(len(local), bool)
         j = wp[:, rig.index['shin_' + side]]
         # the cross section at the knee's height: every grid column cut where it passes that height (its lowest point
