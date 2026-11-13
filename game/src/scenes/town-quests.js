@@ -123,6 +123,7 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
   const t = (k, a) => i18n.t(k, a);
   // The Gate-Loom is paid on chain (rev 4): its price and the player's silk are ftf-town's gate_price and balance_of,
   // paying is the guest's pay_gate (net/town-gate.js, injected as `gate`). Without a gate nothing can be paid.
+  let syncing = false;
   let chain = { ok: false, reason: gate ? 'loading' : 'not_configured', priceC: EXPEDITION.PORTAL_FEE_C, balanceC: 0, paid: null }, lastRead = -Infinity, reading = false, payError = null;
   const feeC = () => (chain.ok ? chain.priceC : EXPEDITION.PORTAL_FEE_C);
   // what the guest can pay with: the on-chain silk, or the verified income of the log, which the relayer credits before it pays
@@ -346,7 +347,9 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
     get story() { return story; }, get quests() { return qs; }, get ledger() { return ledger; }, get fee() { return fee; },
     get talking() { return !!panel; }, get twisting() { return twisting; },
     /** Live facts for the portal. */
-    portalFacts: () => ({ phase: story.phase, balanceC: balanceC(), feeC: feeC(), demo: false, blocker: chain.ok ? null : chain.reason, payError, paying: twisting }),
+    portalFacts: () => ({ phase: story.phase, balanceC: balanceC(), onChainC: chain.ok ? chain.balanceC : 0, totalC: balanceC(), feeC: feeC(), demo: false, blocker: chain.ok ? null : chain.reason, payError, paying: twisting, syncing }),
+    /** E at the Gate-Loom when the verified silk would cover the fee: the relayer credits it on chain (credit only). */
+    async syncGate() { if (!gate || !gate.sync || syncing) return false; syncing = true; changed(); try { const r = await gate.sync(); payError = r && r.ok ? null : ((r && r.reason) || 'network'); } catch { payError = 'network'; } syncing = false; await refreshChain(); return !payError; },
     refreshChain, get chain() { return chain; },
     payGate,
     /** Per frame: the guide's movement step, the gate opening with the balance, a talk closing when she walks off. */

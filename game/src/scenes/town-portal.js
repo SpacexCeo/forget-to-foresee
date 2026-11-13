@@ -7,28 +7,37 @@
 // twist: the veil is gone, the stone is cold), off (story flag off: nothing is created). E in reach shows its
 // line through the town's prompt; in `ready` a confirmation says what happens before the fee is paid. Behind ?story=1.
 import * as THREE from 'three';
+import { createSay } from '../quests/say.js';
+import { EXPEDITION } from '../game/expedition-config.js';
 
 /** Town-local metres beside the spawn, to Iris's right in the first frame (the spawn is (0, 0, 25), she faces -z). */
 export const PORTAL_TOWN = Object.freeze([4.4, 0, 24.8]);      // clear of the standing mirror at (2.8, 0, 21.5) and of the stall posts further right
 export const PORTAL_REACH = 3;
 
 /** The portal's state from the story phase and the balance (pure). */
-export function portalState({ on = false, phase = 'off', balanceC = 0, feeC = 20_000 } = {}) {
+export function portalState({ on = false, phase = 'off', balanceC = 0, onChainC = null, feeC = EXPEDITION.PORTAL_FEE_C } = {}) {
   if (!on || phase === 'off') return 'off';
   if (phase === 'twist' || phase === 'onward') return 'spent';
-  return balanceC >= feeC ? 'ready' : 'dormant';
+  return (onChainC ?? balanceC) >= feeC ? 'ready' : 'dormant'; // ready when the silk ON CHAIN covers the fee (sprint §4.12)
 }
 
-/** The prompt line for a state: {key, args} (locale keys story.portal.*). */
-export function portalPrompt(state, { balanceC = 0, feeC = 20_000, demo = false, blocker = null, payError = null, paying = false } = {}) {
-  const fee = Math.round(feeC / 100).toLocaleString('en-US'), held = Math.floor(balanceC / 100).toLocaleString('en-US');
-  if (state !== 'spent' && paying) return { key: 'story.portal.paying', args: {} };
-  if (state !== 'spent' && blocker === 'need_guest') return { key: 'story.portal.needGuest', args: {} };
-  if (state !== 'spent' && blocker && blocker !== 'loading') return { key: 'story.portal.offline', args: {} };
-  if (state !== 'spent' && payError) return { key: payError === 'no_silk' ? 'story.portal.noSilk' : 'story.portal.failed', args: { fee, n: held } };
-  if (state === 'ready') return { key: demo ? 'story.portal.payDemo' : 'story.portal.pay', args: { fee } };
+/**
+ * The prompt line for a state (sprint §4.12): {key, args}. The fee always comes in as feeC (from config or gate_price),
+ * never a literal. onChainC: silk on chain; totalC: everything that counts once synced (on chain + verified pending).
+ */
+export function portalPrompt(state, { balanceC = 0, onChainC = null, totalC = null, feeC = EXPEDITION.PORTAL_FEE_C, blocker = null, payError = null, paying = false, syncing = false } = {}) {
+  const whole = (c) => { const v = Math.floor(c / 100); return v.toLocaleString('en-US'); };
+  const chainC = onChainC ?? balanceC, allC = Math.max(totalC ?? balanceC, chainC);
+  const fee = Math.round(feeC / 100).toLocaleString('en-US'), gate = whole(chainC), total = whole(allC);
   if (state === 'spent') return { key: 'story.portal.quiet', args: {} };
-  return { key: demo ? 'story.portal.wantsDemo' : 'story.portal.wants', args: { fee, n: held } };
+  if (paying) return { key: 'story.portal.paying', args: {} };
+  if (syncing) return { key: 'story.portal.syncing', args: {} };
+  if (blocker === 'need_guest') return { key: 'story.portal.needGuest', args: {} };
+  if (blocker && blocker !== 'loading') return { key: 'story.portal.offline', args: {} };
+  if (payError) return { key: 'story.portal.failed', args: { fee } };
+  if (state === 'ready') return { key: 'story.portal.pay', args: { fee } };
+  if (allC >= feeC) return { key: 'story.portal.syncable', args: { total, gate, fee } };
+  return { key: 'story.portal.wants', args: { fee, gate } };
 }
 
 const LOOK = Object.freeze({
@@ -91,8 +100,8 @@ const VEIL_FRAG = /* glsl */`
  * @param {boolean} [o.reducedMotion] @param {boolean} [o.light] one point light (off on the phone / low tier)
  * @param {Document} [o.doc]
  */
-export function createTownPortal({ scene, position, facing = 0, i18n, read, onPay, reducedMotion = false, light = true, doc = globalThis.document }) {
-  const t = (k, a) => i18n.t(k, a);
+export function createTownPortal({ scene, position, facing = 0, i18n, read, onPay, onSync = null, reducedMotion = false, light = true, doc = globalThis.document }) {
+  const t = createSay(i18n); // the sprint's English copy (play/locales/en-quests.js), the locale otherwise
   const root = new THREE.Group(); root.name = 'story_portal';
   root.position.set(position[0], position[1], position[2]); root.rotation.y = facing;
   const disposables = [];
@@ -164,12 +173,12 @@ export function createTownPortal({ scene, position, facing = 0, i18n, read, onPa
     panel = doc.createElement('div'); panel.className = 'ftf-portal-panel'; panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-modal', 'true');
     panel.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:60;max-width:min(420px,calc(100vw - 32px));padding:18px 20px;border-radius:14px;'
       + 'background:rgba(12,16,18,.94);border:1px solid rgba(255,200,97,.55);color:#f3ead8;font:15px/1.45 system-ui,sans-serif;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.5)';
-    const h = doc.createElement('h3'); h.textContent = t('story.portal.title'); h.style.cssText = 'margin:0 0 8px;font:600 17px/1.2 system-ui;color:#ffc861';
-    const p = doc.createElement('p'); p.textContent = t(f.demo ? 'story.portal.confirmDemo' : 'story.portal.confirm', { fee: Math.round(f.feeC / 100).toLocaleString('en-US') }); p.style.margin = '0 0 14px';
+    const h = doc.createElement('h3'); h.textContent = t('story.portal.confirm.title'); h.style.cssText = 'margin:0 0 8px;font:600 17px/1.2 system-ui;color:#ffc861';
+    const p = doc.createElement('p'); p.textContent = t('story.portal.confirm.body', { fee: Math.round(f.feeC / 100).toLocaleString('en-US') }); p.style.margin = '0 0 14px';
     const row = doc.createElement('div'); row.style.cssText = 'display:flex;gap:10px;justify-content:center';
     const mk = (key, fn, primary) => { const b = doc.createElement('button'); b.type = 'button'; b.textContent = t(key); b.style.cssText = 'min-height:44px;min-width:120px;padding:8px 16px;border-radius:10px;font:600 15px system-ui;cursor:pointer;' + (primary ? 'background:#ffc861;color:#1a1408;border:0' : 'background:transparent;color:#f3ead8;border:1px solid rgba(243,234,216,.4)'); b.addEventListener('click', (e) => { e.stopPropagation(); fn(); }); return b; };
-    const pay = mk('story.portal.payButton', () => { closePanel(); onPay(); }, true);
-    row.append(pay, mk('story.portal.notYet', closePanel, false));
+    const pay = mk('story.portal.confirm.pay', () => { closePanel(); onPay(); }, true);
+    row.append(pay, mk('story.portal.confirm.no', closePanel, false));
     panel.append(h, p, row);
     doc.body.append(panel);
     if (pay.focus) pay.focus();
@@ -179,7 +188,13 @@ export function createTownPortal({ scene, position, facing = 0, i18n, read, onPa
     id: 'portal',
     near: (pos) => { const at = root.position; return state !== 'off' && Math.hypot(pos[0] - at.x, pos[2] - at.z) <= PORTAL_REACH && Math.abs(pos[1] - at.y) < 3; }, // grounded later by the caller
     prompt: () => { const f = facts(); const p = portalPrompt(state, f); return t(p.key, p.args); },
-    onInteract: () => { const f = facts(); if (state === 'ready' && !f.blocker && !f.paying) confirm(); return true; }, // pays on chain (pay_gate) after the confirmation
+    onInteract: () => {
+      const f = facts();
+      if (f.blocker || f.paying || f.syncing) return true;
+      if (state === 'ready') confirm(); // pays on chain after the confirmation (rule R9)
+      else if (portalPrompt(state, f).key === 'story.portal.syncable' && onSync) onSync(); // E moves the verified silk on chain
+      return true;
+    },
   };
 
   return {
