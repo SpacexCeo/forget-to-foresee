@@ -54,3 +54,20 @@ lighting and reflections; it has no licence, so nothing of its code, art or name
 - Behind a flag `glassShoal` until the owner says go; `?ff=glassShoal` previews it.
 - `npm test` green; boot-check the built page with `FTF_BASE=/forget-to-foresee/` (with and without the flag).
 - Phones: nothing auto-pops; taps outside close panels; the ride and the fight work with touch controls.
+
+## Elise's kit: flight, casts, stamina, ultimate (owner, 13 Nov)
+Elise "remembers her gift". Her full kit, on the RPG hotbar and skill tree:
+- **Cast**: Ember Palms (fire orbs from both palms, quick, low mana) and Gale Discs (2–3 flat spinning wind blades in a
+  fan, medium mana, pierce). Aim follows the cursor / the touch aim, like the existing quick-cast setting.
+- **Take-off and flight**: double-tap jump (or a Lift key / touch button) takes off; she hovers and flies.
+- **Air control**: WASD / the stick moves her in the air (slower than running, with momentum and a gentle bank);
+  Space rises, a "descend" key or releasing Lift lowers her; a soft ceiling (~6 m) and the arena bounds; landing plays
+  a land clip. She can cast while flying.
+- **Stamina**: a new bar beside HP and mana. Flight drains it (hover slow, move faster, climb fastest); dodge costs a
+  chunk; it refills on the ground. At zero she glides down and lands. Stamina pickups on the boss flat refill it.
+- **Ultimate**: "Tempest of Embers" — after a charge meter fills from hits dealt and taken, she rises, a ring of fire
+  orbs and wind blades spirals out for ~3 s, heavy damage in an area, a short hit-stop and screen shake (reduced under
+  reduced motion). One key (or a big touch button) when the meter is full.
+- Animations needed (Fable): take-off, hover idle, fly forward/back/side with bank, land, both casts in the air and on
+  the ground, the ultimate rise-and-release.
+- Iris gets the mirror of this on the ground: Loomblade combo, heavy slash, dodge, and her own ultimate later.
