@@ -23,6 +23,8 @@ export function createMultiplayer({ scene, t, storage = null, name = '', skin = 
   let since = 0;
   return {
     presence,
+    /** Other heroines' positions (town-local metres): the townsfolk walk round them (play/townsfolk-plan.js bodiesAround). */
+    bodies: () => presence.positions().filter((r) => r.p).map((r) => r.p),
     /** Per frame while the town is shown. pos is world metres; speed is the ground speed in m/s. */
     update(dt, { pos, heading, speed = 0, grounded = true, reducedMotion = false }) {
       local[0] = pos[0] - TOWN_ORIGIN[0]; local[1] = pos[1] - TOWN_ORIGIN[1]; local[2] = pos[2] - TOWN_ORIGIN[2];

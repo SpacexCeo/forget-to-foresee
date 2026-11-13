@@ -344,5 +344,7 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
     get outsideTriangles() { return state.outsideTriangles || 0; },
     get altar() { return state; },
     life, update, setFlare, setActive, setPointLights, groundAt, settled, status, townsfolk,
+    /** A ray through the town's colliders (world metres): the hit {point, distance} or null (the path-graph checks). */
+    rayHit: (origin, direction, maxDist) => rayCast(world, origin, direction, maxDist, MASK_PLAYER),
   };
 }

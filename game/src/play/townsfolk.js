@@ -17,6 +17,7 @@ import { TOWN_ORIGIN } from '../scenes/town-layout.js';
 import { FADE, findLookBones, applyLookTo } from './gait.js';
 import { townsfolkClips, mergeClips, faceLayerClip } from './anim-library.js';
 const MAX_STEP = 0.45; // the largest ground step a walker takes (play/town-paths.js MAX_STEP; no import: chunk order)
+import { MIN_GAP } from './townsfolk-plan.js';
 import { TOWNSFOLK, PROGRAMS, PersonPlan, tradeProgram, homeProgram, pickClip, animStride, LOOK_RADIUS } from './townsfolk-plan.js';
 
 const SIT_PELVIS_ABOVE = 0.10; // hip joint above the seat top when seated (m, scaled with the body)
@@ -124,7 +125,9 @@ export function createTownsfolk({ scene, library, groundAt = null }) {
   const people = TOWNSFOLK.map((def) => new Person(def, scene));
   const byKey = new Map(people.map((p) => [p.key = p.def.key, p]));
   const plans = new Map(people.map((p) => [p.def.key, p.plan]));
-  const ctx = { iris: null, reduced: false, others: plans };
+  let extraBodies = () => [];
+  const ctx = { iris: null, reduced: false, others: plans, bodies: () => extraBodies() };
+  const irisPush = [0, 0]; // where Iris is nudged this frame when a townsperson stands closer than MIN_GAP (owner 13.11)
   const phone = () => getModelVariant() === '_m';
   let started = false, loading = false, upgraded = false, frame = 0, active = true;
   const fileOf = (def, lite) => (library && library.fileFor ? library.fileFor(def.asset, { lite }) : def.asset);
@@ -171,6 +174,12 @@ export function createTownsfolk({ scene, library, groundAt = null }) {
     frame++;
     _local[0] = playerPos[0] - TOWN_ORIGIN[0]; _local[1] = playerPos[1] - TOWN_ORIGIN[1]; _local[2] = playerPos[2] - TOWN_ORIGIN[2];
     ctx.iris = _local; ctx.reduced = reducedMotion;
+    irisPush[0] = 0; irisPush[1] = 0;
+    for (const p of people) { // a body never overlaps Iris: she is eased out, at most 1.2 m/s
+      if (p.state !== 'loaded' || Math.abs(p.plan.y - _local[1]) > 1.2) continue;
+      const dx = _local[0] - p.plan.x, dz = _local[2] - p.plan.z, d = Math.hypot(dx, dz);
+      if (d < MIN_GAP && d > 1e-4) { const k = Math.min(MIN_GAP - d, 1.2 * dt) / d; irisPush[0] += dx * k; irisPush[1] += dz * k; }
+    }
     if (shown) started = true;
     if (started && frame % 6 === 0) pump(_local);
     if (camera) { _m.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse); _frustum.setFromProjectionMatrix(_m); }
@@ -263,7 +272,9 @@ export function createTownsfolk({ scene, library, groundAt = null }) {
   function setActive(on) { active = !!on; for (const p of people) if (!active) p.root.visible = false; }
 
   return {
-    people, byKey, update, setActive, setBadge, sendToTrade,
+    people, byKey, update, setActive, setBadge, sendToTrade, irisPush,
+    /** Other heroines (town-local [x, y, z] list) the townsfolk walk round. */
+    setBodies(fn) { extraBodies = typeof fn === 'function' ? fn : () => []; },
     /** For QA and the dev HUD: per person key -> state, file, position, clip. */
     status() { return people.map((p) => ({ key: p.def.key, state: p.state, file: p.file, clip: p.current, walk: p.walkName, at: [p.plan.x, p.plan.y, p.plan.z], visible: p.root.visible })); },
     get loaded() { return people.filter((p) => p.state === 'loaded').length; },
