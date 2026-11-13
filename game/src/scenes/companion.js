@@ -51,7 +51,7 @@ export function createCompanion({ scene, kind, slot = 0, mobile = false, perchAf
       o.frustumCulled = false;
       if (o.material && o.material.name === 'M_Spirit_Wing') { // light, not skin: no shadow, no depth write
         const tex = wingTexture(); tex.flipY = false;
-        o.material = new THREE.MeshBasicMaterial({ color: tint, map: tex, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false });
+        o.material = new THREE.MeshBasicMaterial({ color: tint.clone().lerp(new THREE.Color(0xffffff), 0.35), alphaMap: tex, transparent: true, opacity: 0.85, depthWrite: false, side: THREE.DoubleSide, fog: false }); // plain blending: additive light vanishes against a bright sky
         o.renderOrder = 3; fx.wings = o.material;
       } else o.castShadow = true;
     });

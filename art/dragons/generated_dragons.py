@@ -73,7 +73,7 @@ def spirit_wings(kind, K, J, rig):
     """Two small light wings on the wing bones: a strip of quads from the leading edge to a scalloped trailing edge."""
     y0, z0 = K['legs']['F'][1] + 0.02, None
     a, b = J['spine_1']; t = min(1.0, max(0.0, (y0 - a.y) / ((b.y - a.y) or 1e-6))); z0 = a.z + (b.z - a.z) * t + 0.035
-    half = 0.36; NS, NC = 9, 3; verts, faces, uvs, wts, bones = [], [], [], [], {}
+    half = 0.50; NS, NC = 9, 3; verts, faces, uvs, wts, bones = [], [], [], [], {}
     for side, sgn in (('L', -1), ('R', 1)):
         sh = Vector((sgn * 0.035, y0, z0)); X = lambda fx, dy, dz: Vector((sgn * half * fx, sh.y + dy * 0.6, sh.z + dz))
         el, wr, tip = X(0.34, -0.07, 0.05), X(0.68, -0.10, 0.06), X(0.98, 0.03, 0.03)
@@ -184,7 +184,7 @@ def build(kind, srcs, tris):
         bone(name, hip, knee, 'spine_1' if name[4] == 'F' else 'spine_2', up=(0, -1, 0)); bone(name + '_1', knee, foot, name, up=(0, -1, 0))
     for sd, sg in (('L', -1), ('R', 1)):                                                   # the spirit wings' bones: the same layout and signs as the procedural wings
         y0 = K['legs']['F'][1] + 0.02; a_, b_ = J['spine_1']; t_ = min(1.0, max(0.0, (y0 - a_.y) / ((b_.y - a_.y) or 1e-6))); z0 = a_.z + (b_.z - a_.z) * t_ + 0.035
-        sh = Vector((sg * 0.035, y0, z0)); X = lambda fx, dy, dz: Vector((sg * 0.36 * fx, sh.y + dy * 0.6, sh.z + dz))
+        sh = Vector((sg * 0.035, y0, z0)); X = lambda fx, dy, dz: Vector((sg * 0.50 * fx, sh.y + dy * 0.6, sh.z + dz))
         el_, wr, tip = X(0.34, -0.07, 0.05), X(0.68, -0.10, 0.06), X(0.98, 0.03, 0.03)
         bone(f'wing_{sd}_0', sh, el_, 'spine_1'); bone(f'wing_{sd}_1', el_, wr, f'wing_{sd}_0'); bone(f'wing_{sd}_2', wr, tip, f'wing_{sd}_1')
     bpy.ops.object.mode_set(mode='OBJECT'); el.parent = rig; md = el.modifiers.new('rig', 'ARMATURE'); md.object = rig
