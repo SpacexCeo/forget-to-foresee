@@ -27,7 +27,7 @@ export const bossInLog = (log) => Array.isArray(log) && log.some((e) => e && ((e
  * Asks the relayer for a dragon. {ok: true, kind, tokenId, owner, tx, already} | {ok: false, reason}
  * (reasons: need_guest, not_configured, boss_not_down, no_heroine, rate_limited, network, …).
  */
-export async function claimCompanion({ reason = 'welcome', storage, base = relayerUrl(), fetch = globalThis.fetch, now = Date.now } = {}) {
+export async function claimCompanion({ reason = 'welcome', storage, base = relayerUrl(), fetch = globalThis.fetch, now = Date.now, seasonId = '', heroineToken = '' } = {}) {
   if (claimed(storage, reason)) return { ok: true, already: true, cached: true };
   const g = guestFrom(storage);
   if (!g) return { ok: false, reason: 'need_guest' };
@@ -35,8 +35,8 @@ export async function claimCompanion({ reason = 'welcome', storage, base = relay
   try {
     const key = await importSecretKey(g.secretKey);
     const at = now();
-    const signature = b58encode(await key.sign(new TextEncoder().encode(`ftf-companion|${g.accountId}|${at}|${reason}`)));
-    const r = await withTimeout(fetch(base + '/api/companion/claim', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ account_id: g.accountId, public_key: key.publicKey, at, signature, reason }) }), 60000);
+    const signature = b58encode(await key.sign(new TextEncoder().encode(`ftf-companion|${g.accountId}|${at}|${reason}` + (reason === 'tournament' ? `|${seasonId}|${heroineToken}` : ''))));
+    const r = await withTimeout(fetch(base + '/api/companion/claim', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ account_id: g.accountId, public_key: key.publicKey, at, signature, reason, ...(reason === 'tournament' ? { season_id: seasonId, heroine_token: heroineToken } : {}) }) }), 60000);
     const ans = await r.json().catch(() => ({}));
     if (!r.ok) return { ok: false, reason: ans.error === 'companion_not_configured' ? 'not_configured' : ans.error || 'network' };
     remember(storage, reason, { token_id: ans.token_id, kind: ans.kind, tx: ans.tx_hash || null });

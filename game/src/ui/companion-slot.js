@@ -11,6 +11,17 @@ export function lockedCompanionSlot(doc, t) {
   const lock = doc.createElement('span'); lock.className = 'ftf-companion-lock'; lock.textContent = '🔒'; lock.setAttribute('aria-hidden', 'true'); lock.style.fontSize = '22px';
   const txt = doc.createElement('span'); txt.textContent = tip; txt.style.cssText = 'font-size:13px;white-space:normal';
   slot.append(lock, txt);
+  // a Hatchkeeper pet owned by this heroine unlocks the slot (boot-world dispatches 'ftf:pet' after the chain read)
+  const win = doc.defaultView || globalThis;
+  const onPet = (e) => {
+    const d = e && e.detail; if (!d || !d.kind) return;
+    const name = t('hatch.kind.' + d.kind), text = t('companion.yours', { name });
+    slot.classList.remove('is-locked'); slot.dataset.locked = 'false'; slot.title = text; slot.setAttribute('aria-label', t('companion.slot') + ': ' + text);
+    slot.style.opacity = '1'; slot.style.cursor = 'default'; slot.style.borderStyle = 'solid'; slot.style.color = '#f3ead8';
+    lock.textContent = '🐉'; txt.textContent = text;
+  };
+  if (win && win.addEventListener) win.addEventListener('ftf:pet', onPet);
+  if (win && win.__ftfPet) onPet({ detail: win.__ftfPet }); // already known
   for (const ev of ['dragover', 'drop']) if (slot.addEventListener) slot.addEventListener(ev, (e) => { if (e.preventDefault) e.stopPropagation(); }); // nothing can be equipped
   return slot;
 }

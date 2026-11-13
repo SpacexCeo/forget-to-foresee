@@ -131,3 +131,17 @@ test('auto-walk: held off by the giver at talking range counts as arrived, not b
   t = 2000; w.update();
   assert.deepEqual(events.at(-1), ['autowalk.arrived', null]);
 });
+
+test('portraits: the five givers have one next to "From:" (letter fallback for anyone else)', async () => {
+  const { portraitPath, PORTRAIT_GIVERS } = await import('../../src/quests/portraits.js');
+  const { existsSync } = await import('node:fs');
+  for (const g of PORTRAIT_GIVERS) for (const size of [128, 256]) {
+    const p = portraitPath(g, size, '/'); assert.ok(existsSync(new URL('../../public' + p, import.meta.url)), p + ' ships');
+  }
+  assert.equal(portraitPath('baker'), null);
+  const doc = makeDoc(), win = makeWin(); const s = spidersActive();
+  const j = createJournalUI({ doc, win, say, giverName: gname, model: (q) => journalModel({ qs: s, now: T0, search: q, giverName: gname }), onWalk: () => {}, onTrack: () => ({ ok: true }), now: () => T0 });
+  j.open(); doc.querySelector('[data-quest="q_spiders"]').click();
+  const pic = doc.querySelector('.fj-portrait'); assert.ok(pic && /giver/.test(pic.parent.className), 'the journal detail shows the giver portrait in the From chip');
+  j.close();
+});

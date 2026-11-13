@@ -29,7 +29,7 @@ function nameplate(text) {
  * @param {{scene: THREE.Scene, t: (k: string) => string, groundAt?: (x: number, z: number) => (number|null), mobile?: boolean,
  *   reduced?: () => boolean, doc?: Document, win?: Window, base?: string, coarse?: boolean}} o
  */
-export function createHatchkeeper({ scene, t, groundAt = null, mobile = false, reduced = () => false, doc = globalThis.document, win = globalThis.window, base = (import.meta.env && import.meta.env.BASE_URL) || '/' }) {
+export function createHatchkeeper({ pet = null, scene, t, groundAt = null, mobile = false, reduced = () => false, doc = globalThis.document, win = globalThis.window, base = (import.meta.env && import.meta.env.BASE_URL) || '/' }) {
   const at = townToWorld(HATCHKEEPER.pos);
   const root = new THREE.Group(); root.name = 'hatchkeeper'; root.position.set(at[0], at[1], at[2]); root.rotation.y = HATCHKEEPER.heading; scene.add(root);
   const sign = nameplate(t('hatch.sign')); if (sign) { sign.position.set(0, 2.35, 0); root.add(sign); }
@@ -74,10 +74,33 @@ export function createHatchkeeper({ scene, t, groundAt = null, mobile = false, r
       + 'padding:14px 16px;border-radius:14px;background:rgba(12,16,18,.92);border:1px solid rgba(217,178,106,.45);color:#f3ead8;font:15px/1.45 system-ui,sans-serif';
     const h = doc.createElement('b'); h.textContent = t('hatch.title'); h.style.cssText = 'display:block;color:#f6c860;margin-bottom:6px';
     panel.append(h);
-    for (const k of HATCH_LINES) { const p = doc.createElement('p'); p.textContent = t(k); p.style.margin = '0 0 8px'; panel.append(p); }
-    const st = doc.createElement('p'); st.className = 'ftf-hatch-status'; st.textContent = t('hatch.status'); st.style.cssText = 'margin:4px 0 0;color:#aab1c5;font-style:italic';
-    panel.append(st);
+    const body = doc.createElement('div'); panel.append(body);
+    const line = (text, css = 'margin:0 0 8px') => { const p = doc.createElement('p'); p.textContent = text; p.style.cssText = css; body.append(p); return p; };
+    const status = (text) => { const st = line(text, 'margin:4px 0 0;color:#aab1c5;font-style:italic'); st.className = 'ftf-hatch-status'; return st; };
+    const riddle = () => { body.replaceChildren(); for (const k of HATCH_LINES) line(t(k)); status(t('hatch.status')); };
+    riddle();
     doc.body.append(panel);
+    // "prove you are real" (owner 13.11): after the first finished tournament the riddle becomes the claim; a pet already
+    // chosen shows who it flies with. The view decides nothing: `pet` asks the chain and the relayer (net/pet.js).
+    if (pet) pet.state().then((ps) => {
+      if (!panel || !ps || ps.state === 'riddle') return;
+      body.replaceChildren();
+      if (ps.state === 'owned') { line(t('hatch.owned', { name: t('hatch.kind.' + ps.pet.kind), heroine: ps.pet.heroine })); return; }
+      line(t('hatch.proven')); line(t('hatch.pick'));
+      let chosen = ps.heroines[0] || null; const opts = doc.createElement('div'); opts.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px';
+      const btn = (text, primary) => { const b = doc.createElement('button'); b.type = 'button'; b.textContent = text; b.style.cssText = `min-height:40px;padding:0 12px;border-radius:8px;cursor:pointer;font:inherit;border:1px solid #d9b26a;${primary ? 'background:#e9b44c;color:#1a1408;font-weight:700' : 'background:rgba(255,255,255,.06);color:#f3ead8'}`; return b; };
+      const marks = ps.heroines.map((h) => { const b = btn(h, false); b.setAttribute('aria-pressed', String(h === chosen)); b.addEventListener('click', () => { chosen = h; for (const m of marks) m.setAttribute('aria-pressed', String(m.textContent === h)); }); opts.append(b); return b; });
+      body.append(opts);
+      const claim = btn(t('hatch.claim'), true); body.append(claim);
+      const st = status('');
+      claim.addEventListener('click', async () => {
+        if (!chosen) return; claim.disabled = true; st.textContent = t('hatch.claiming');
+        const r = await pet.claim(chosen, ps.seasonId).catch(() => ({ ok: false, reason: 'network' }));
+        if (!panel) return;
+        if (r && r.ok) { body.replaceChildren(); line(t('hatch.owned', { name: t('hatch.kind.' + (r.kind || 'nacre')), heroine: chosen })); }
+        else { claim.disabled = false; st.textContent = t('hatch.failed', { reason: (r && r.reason) || 'network' }); }
+      });
+    }).catch(() => { /* the riddle stays */ });
     play('talk');
     onDocDown = (e) => { if (panel && !panel.contains(e.target)) close(); }; // a tap outside closes it
     onKey = (e) => { if (e.key === 'Escape') { e.stopPropagation(); close(); } };
