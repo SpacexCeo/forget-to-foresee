@@ -1,5 +1,6 @@
 // Ukrainian strings of the 3D play layer; keys mirror en.js exactly (tests/ui-i18n-locales.test.mjs).
 // Same vocabulary as src/locales/uk.js: Мушля, шовк, тик, якір, Сувій; clans Ірис, Сіль, Попіл, Мох, Бурштин, Іній.
+import quests from './uk-quests.js';
 export default {
   // ---- badge, help ----
   'play.badge': 'Локальне демо · правила працюють у вашому браузері через ту саму кімнату, що й API агентів',
@@ -1959,4 +1960,5 @@ export default {
   "quest.log.progress": "Прогрес {n} / {count}",
   "quest.track.offer": "Для тебе є квест: {giver}",
   "quest.track.near": "{m} м",
+  ...quests, // last: the journal, the tracker and the starter guide (en-quests.js keys) replace older copies above
 };

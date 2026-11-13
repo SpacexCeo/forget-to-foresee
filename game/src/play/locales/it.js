@@ -1,6 +1,7 @@
 // Italian strings of the 3D play layer; keys mirror en.js exactly (tests/ui-i18n-locales.test.mjs).
 // Same vocabulary as src/locales/it.js: Conchiglia, seta, tick, ancora, Pergamena; clans Iris, Sale, Cenere,
 // Muschio, Ambra, Brina.
+import quests from './it-quests.js';
 export default {
   // ---- badge, help ----
   'play.badge': 'Demo locale · le regole girano nel tuo browser attraverso la stessa stanza dell’API degli agenti',
@@ -1960,4 +1961,5 @@ export default {
   "quest.log.progress": "Avanzamento {n} / {count}",
   "quest.track.offer": "{giver} ha una missione per te",
   "quest.track.near": "a {m} m",
+  ...quests, // last: the journal, the tracker and the starter guide (en-quests.js keys) replace older copies above
 };
