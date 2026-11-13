@@ -1,6 +1,7 @@
 // The wake-up dialogue as data (sprint 7.3): 19 lines, speaker, string key, camera beat. Pure; the text lives in
 // play/locales/en-npe.js and placeholders ({fee}, {stipend}) are filled from config by `lineVars`.
 import { EXPEDITION, portalFee } from '../game/expedition-config.js';
+import { formatSilkC } from '../net/silk-core.js';
 
 /** Speaker -> plate colour and whether lines are Iris's own (italic, cream). */
 export const SPEAKERS = Object.freeze({
@@ -34,7 +35,7 @@ export const WAKEUP = Object.freeze([
 export const BARKS = Object.freeze(Array.from({ length: 10 }, (_, i) => `npe.bark.${i + 1}`));
 
 /** Whole silk text: 200, or 12.5 when not whole (rule: at most two decimals, whole numbers when whole). */
-export const silkWhole = (c) => { const v = Math.round(Number(c) || 0) / 100; return Number.isInteger(v) ? String(v) : v.toFixed(2).replace(/0$/, ''); };
+export const silkWhole = (c) => formatSilkC(c); // the shared silk format (net/silk-core.js)
 
 /** The placeholder values: the portal fee from config (or the visible QA fee), the arrival stipend, the season end. */
 export function lineVars(search = (globalThis.location && globalThis.location.search) || '', end = SEASON_END) {

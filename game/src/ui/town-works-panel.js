@@ -3,6 +3,7 @@
 // unbond. Every action goes through the relayer (net/town-act.js); nothing here simulates a result: a relayer without
 // the endpoint shows "not available yet" and the buttons stay off. Words: pledge, reward share, rate. 390 px friendly.
 import { createTownAct, WORKS, toMicro, silkOf, deedActions } from '../net/town-act.js';
+import { artBox, deedCardPath } from '../market/art.js';
 
 const EXPLORER = 'https://testnet.nearblocks.io/txns/';
 const CSS = `
@@ -78,7 +79,11 @@ export function createTownWorksPanel({ t, storage = null, client = null, flush =
   function deedRow(d, me) {
     const r = el('div', 'tw-row');
     const head = el('div', 'tw-head');
-    head.append(el('span', 'tw-name', t('works.deed', { works: t('works.name.' + (WORKS[d.asset] || 'loom')), silk: silkOf(d.principal) })), el('span', 'tw-num', t('works.share', { silk: silkOf(d.claimable) })));
+    const works = WORKS[d.asset] || 'loom';
+    const nameEl = el('span', 'tw-name');
+    nameEl.style.cssText = 'display:inline-flex;align-items:center;gap:10px;';
+    nameEl.append(artBox(doc, deedCardPath(works), t('works.name.' + works), { size: 48, radius: 4 }), el('span', null, t('works.deed', { works: t('works.name.' + works), silk: silkOf(d.principal) }))); // the works' deed card (600 x 900), its letter if it fails
+    head.append(nameEl, el('span', 'tw-num', t('works.share', { silk: silkOf(d.claimable) })));
     const can = deedActions(d, me.day);
     const why = d.state === 'unbonding' ? (can.finish_unbond ? t('works.ready') : t('works.cooling', { n: Math.max(0, d.readyDay - me.day) })) : (can.begin_unbond ? t('works.unlocked') : t('works.lockedFor', { n: Math.max(0, d.lockedUntil - me.day) }));
     r.append(head, el('div', 'tw-note', why));

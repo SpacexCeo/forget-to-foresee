@@ -56,3 +56,16 @@ test('reduced motion: a shorter film on the same clock, cuts skipped, cue order 
   let st, end = null; for (now = 0; now <= 39000; now += 100) { st = tl.tick(); if (st.done && end == null) end = now; }
   assert.deepEqual(seen, CUES.map((c) => c.id)); assert.ok(Math.abs(end / 1000 - REDUCED_S) < 0.11);
 });
+
+test('wake-up ring: people stand on the circle facing in, with a gap left open', async () => {
+  const { ringPlaces, RING } = await import('../../src/cinematic/prologue/townsfolk-ring.js');
+  const places = ringPlaces(RING.people.length);
+  assert.equal(places.length, RING.people.length);
+  for (const p of places) {
+    assert.ok(Math.abs(Math.hypot(p.x, p.z) - RING.radius) < 1e-9);
+    // facing the centre: one step along the heading comes closer to it
+    assert.ok(Math.hypot(p.x + Math.sin(p.heading) * 0.1, p.z + Math.cos(p.heading) * 0.1) < RING.radius);
+    const a = Math.atan2(p.x, p.z), d = Math.abs(Math.atan2(Math.sin(a - RING.gapAt), Math.cos(a - RING.gapAt)));
+    assert.ok(d > RING.gap / 2 - 1e-9, 'nobody in the gap');
+  }
+});

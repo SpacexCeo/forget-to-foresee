@@ -19,8 +19,8 @@ Players trade monster resources for silk with each other (sprint 6.4). The rules
 
 ## Endpoints (`relayer/api/market/p2p.js`, `relayer/lib/p2p.js`)
 
-- `GET /api/market/p2p/book?item=<id>` → `{listings, referenceUnitC, band: {minC, maxC}, settlement}`.
-- `GET /api/market/p2p/mine?account_id=` → `{listings, fills, demo, volumeTodayC, settlement}`.
+- `GET /api/market/p2p/book?item=<id>` → `{listings, referenceUnitC, band: {minC, maxC}, settlement: "chain", live}`.
+- `GET /api/market/p2p/mine?account_id=` → `{listings, fills, volumeTodayC, settlement, live}`.
 - `GET /api/market/p2p/stats` → `{today, volumeC, lastTrades, settlement}`.
 - `POST /api/market/p2p/list` `{account_id, public_key, at, signature, item, qty, unit_price_c}` → `{listing}`.
 - `POST /api/market/p2p/buy` `{..., listing_id, qty, request_id}` → `{fill: {qty, totalC, feeC, sellerGetsC, txItems,
@@ -36,25 +36,27 @@ Errors: `outside_band` (with `minC`, `maxC`), `not_enough_items`, `not_enough_si
 `limit_listings`, `daily_cap`, `self_trade`, `too_small`, `bad_qty`, `not_tradable`, `rate_limited`, `replayed`,
 `bad_signature`, `not_your_key`.
 
-## Settlement
+## Settlement: NEAR testnet only
 
-- **demo** (the default, `P2P_SETTLEMENT` unset): the relayer keeps demo balances per account. They are seeded once
-  from the account's real holdings, read only: `ftf-town` `balance_of` and the items contract's balances. A listing
-  escrows its items; a buy moves silk and items between the two rows and burns the fee. Every answer says `settlement:
-  "demo"`, and the game shows the Demo chip: **recorded by the game server, not on the blockchain**.
-- **chain** (`P2P_SETTLEMENT=chain`, after the owner deploys the contract updates). For each fill the items move first
-  (`items.coordinator_transfer` from seller to buyer, signed by `FTF_ITEMS_MINTER`), then the silk (`ftf-town`
-  `trade_for` from buyer to seller with the fee burned, signed by the town coordinator). If the silk call fails, the
-  items are moved back. Both transaction hashes are returned.
+The owner's rule is no demo modes, so every sale settles on NEAR testnet. For each fill the items move first
+(`items.coordinator_transfer` from seller to buyer, signed by `FTF_ITEMS_MINTER`). Then the silk moves (`ftf-town`
+`trade_for` from buyer to seller, fee burned, signed by the town coordinator). If the silk call fails, the items are
+moved back with a fresh request hash. Both transaction hashes are returned and shown as NearBlocks links.
 
-## What the owner deploys for chain settlement
+**Not live yet**: the market is live only when both keys are on the relayer and both contract methods are deployed.
+The relayer checks this once a minute. Until then `book` and `mine` answer `live: false`, list and buy answer `503
+market_not_live`, and the window says so plainly with its buttons off. The listings themselves (the book) are kept by
+the relayer.
+
+## What the owner deploys to make the market live
 
 1. `ftf-town` v5 (`trade_for`), with `bash contracts/scripts/town-upgrade.sh`. It is state-compatible: two raw keys,
    no stored struct changes. Add `trade_for` to the coordinator's function-call key methods.
 2. `items.ftf-town.testnet` v2 (`coordinator_transfer`). It is state-compatible: one new collection
    (`StorageKey::Requests`) at the end. Redeploy without an init call. The market key must be one of the items
    minters (`set_minters` replaces the list).
-3. `P2P_SETTLEMENT=chain` in `relayer/.env`, then restart the relayer.
+3. `FTF_ITEMS_MINTER` and `FTF_ITEMS_KEY` and the coordinator key on the relayer server, then restart it. The market
+   turns live within a minute.
 
 Tests: `relayer/tests/p2p.test.mjs` (6) and the contract tests (`trade_for` 8, `coordinator_transfer` 5).
 

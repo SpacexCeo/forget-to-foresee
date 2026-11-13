@@ -68,3 +68,12 @@ test('HUD strings: every key the HUD uses is in en-hud, the fallback fills place
   for (const [k, v] of Object.entries(EN_HUD)) assert.ok(!banned.test(v), k);
   assert.ok(!Object.values(EN_HUD).some((v) => /\b200\b|20000|10,000/.test(v)), 'no literal portal price');
 });
+
+test('F1 cheat sheet rows: every bindable action once, grouped, with its current key', async () => {
+  const { cheatRows } = await import('../../src/rpg/cheat-sheet.js');
+  const KB = await import('../../src/ui/keybinds.js');
+  const rows = cheatRows({ ...KB.defaultBindings(), strike: 'KeyG' });
+  assert.deepEqual(rows.map((g) => g.group), [...KB.KEY_GROUPS]);
+  assert.equal(rows.flatMap((g) => g.rows).length, KB.KEY_ACTIONS.length);
+  assert.equal(rows.flatMap((g) => g.rows).find((r) => r.id === 'strike').key, 'G');
+});
