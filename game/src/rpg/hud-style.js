@@ -117,6 +117,9 @@ export const HUD_CSS = `
 .rpg-tip b { display: block; font-size: 16px; margin-bottom: 2px; } .rpg-tip .m { color: var(--ftf-muted); } .rpg-tip .w { color: var(--ftf-warn); }
 /* the old HUD's frame, wallet and skill bar give way to this layer (its toasts stay) */
 html.rpg-on .ph-frame, html.rpg-on .ph-wallet, html.rpg-on .ph-xp, html.rpg-on .ph-vignette, html.rpg-on .ftf-cast-bar { display: none !important; }
+/* the quest tracker (A1) sits in its plan slot (1576, 268) under the minimap, not over it */
+html.rpg-on .ft { top: calc(min(100vw, 100vh * 1.7778) / 1920 * 268) !important; }
+@media (max-width: 899px) { html.rpg-on .ft { top: calc(116px + env(safe-area-inset-top, 0px)) !important; } }
 /* the town market ticker and the chat / online chip move clear of the Log panel (desktop: stacked above it; phone: one
    row above the hotbar, the Log hidden) */
 html.rpg-on .ftf-chat { left: calc(min(100vw, 100vh * 1.7778) / 1920 * 24) !important; bottom: calc(min(100vw, 100vh * 1.7778) / 1920 * 252) !important; }
