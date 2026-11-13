@@ -7,6 +7,7 @@
 import { MARKET, TRADABLE, feeOf, bandOf } from './market-rules.js';
 import { formatSilkC, silkView, subscribeSilk, refreshSilk } from '../net/silk-core.js';
 import { DICE, oddsTable, payoutOf, stakeAllowed, rollOf } from './dice.js';
+import { artBox, resIconPath } from './art.js';
 
 const TX = /^[1-9A-HJ-NP-Za-km-z]{32,64}$/;
 const CSS = `
@@ -80,7 +81,7 @@ export function createMarketUi({ t, client, dice = null, storage = null, doc = g
   const txLinks = (f) => [f.txItems, f.txSilk].filter((h) => TX.test(String(h || ''))).map((h) => { const a = el('a', null, t('p2p.viewTx')); a.href = `${explorer}/txns/${h}`; a.target = '_blank'; a.rel = 'noopener noreferrer'; return a; });
   function itemChips(onPick) {
     const row = el('div', 'mk2-items');
-    for (const id of TRADABLE) { const b = btn(name(id), () => { item = id; onPick(); }, ''); b.setAttribute('aria-pressed', String(id === item)); row.append(b); }
+    for (const id of TRADABLE) { const b = btn('', () => { item = id; onPick(); }, ''); b.append(artBox(doc, resIconPath(id), name(id), { size: 22, radius: 11 }), ' ' + name(id)); b.setAttribute('aria-pressed', String(id === item)); row.append(b); }
     return row;
   }
   const loading = () => body.replaceChildren(el('p', 'mk2-note', t('p2p.loading')));
@@ -103,7 +104,8 @@ export function createMarketUi({ t, client, dice = null, storage = null, doc = g
       const row = el('tr');
       const seller = el('td', null, l.seller.split('.')[0]); seller.append(el('span', 'mk2-badge' + (l.sellerKind === 'agent' ? ' agent' : ''), t(l.sellerKind === 'agent' ? 'p2p.agent' : 'p2p.player')));
       const act = el('td'); const b = btn(t('p2p.buy'), () => confirmBuy(l, state)); b.disabled = l.seller === me || !live; if (b.disabled) b.title = !live ? t('p2p.notLive') : t('p2p.err.self_trade'); act.append(b);
-      row.append(el('td', 'mk2-name', name(l.item)), el('td', null, String(l.qtyLeft)), el('td', null, silk(l.unitPriceC)), el('td', null, silk(l.qtyLeft * l.unitPriceC)), seller, el('td', null, age(t, now() - l.createdAt)), act);
+      const nm = el('td', 'mk2-name'); nm.append(artBox(doc, resIconPath(l.item), name(l.item), { size: 32 }), ' ' + name(l.item));
+      row.append(nm, el('td', null, String(l.qtyLeft)), el('td', null, silk(l.unitPriceC)), el('td', null, silk(l.qtyLeft * l.unitPriceC)), seller, el('td', null, age(t, now() - l.createdAt)), act);
       table.append(row);
     }
     body.replaceChildren(head, ref, table, state);
@@ -179,7 +181,8 @@ export function createMarketUi({ t, client, dice = null, storage = null, doc = g
       const act = el('td');
       if (l.status === 'active' || l.status === 'partial') act.append(btn(t('p2p.cancelBtn'), async () => { const c = await client.cancel(l.id); state.className = 'mk2-state' + (c.ok ? '' : ' err'); state.textContent = c.ok ? t('p2p.done.cancelled') : errText(c); if (c.ok) mineTab(); }, 'mk2-act mk2-ghost'));
       const stTd = el('td', null, st); for (const f of l.fills || []) for (const a of txLinks(f)) stTd.append(' ', a);
-      row.append(el('td', 'mk2-name', name(l.item)), el('td', null, `${l.qtyLeft}/${l.qtyTotal}`), el('td', null, silk(l.unitPriceC)), stTd, act);
+      const nm = el('td', 'mk2-name'); nm.append(artBox(doc, resIconPath(l.item), name(l.item), { size: 32 }), ' ' + name(l.item));
+      row.append(nm, el('td', null, `${l.qtyLeft}/${l.qtyTotal}`), el('td', null, silk(l.unitPriceC)), stTd, act);
       table.append(row);
     }
     body.replaceChildren(table, state);

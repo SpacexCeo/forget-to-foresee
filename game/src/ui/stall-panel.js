@@ -4,6 +4,7 @@
 // while the relayer's desk is in dry run the buttons stay off and say why (nothing would be minted or paid back).
 import { stallItems, silkText, canTrade, MAX_QTY } from '../net/stall-client.js';
 import { toMicro, silkOf, STALL_TRADER } from '../net/town-act.js';
+import { artBox, resIconPath } from '../market/art.js';
 
 const CSS = `
 .sp-wrap { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; padding: 16px; background: rgba(0, 0, 0, .45); }
@@ -40,7 +41,8 @@ export function createStallPanel({ t, client, town = null, doc = globalThis.docu
 
   function row(item) {
     const r = el('div', 'sp-row');
-    const head = el('div', 'sp-head'); const name = el('span', 'sp-name', t('res.' + item)); const price = el('span', 'sp-price', '…');
+    const head = el('div', 'sp-head'); const name = el('span', 'sp-name'); const price = el('span', 'sp-price', '…');
+    name.style.cssText = 'display:inline-flex;align-items:center;gap:8px;'; name.append(artBox(doc, resIconPath(item), t('res.' + item), { size: 32 }), el('span', null, t('res.' + item))); // the resource icon, its letter if it fails
     head.append(name, price);
     const why = el('div', 'sp-why', '');
     const ctl = el('div', 'sp-ctl');
