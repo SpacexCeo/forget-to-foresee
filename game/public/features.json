@@ -7,6 +7,21 @@
     "loomMeter": false,
     "presenceChip": false,
     "tuneOverlay": false,
-    "statusBanner": false
+    "statusBanner": false,
+    "questJournal": false,
+    "questTracker": false,
+    "autoWalk": false,
+    "starterGuide": false,
+    "rpgHud": false,
+    "skillTree": false,
+    "hotbar": false,
+    "marketplace": false,
+    "lootFx": false,
+    "playGames": false,
+    "silkView": false,
+    "newPlayerIntro": false,
+    "labPrologue": false,
+    "agentTournament": false,
+    "firstSeenTips": false
   }
 }
