@@ -103,7 +103,9 @@ export const HUD_CSS = `
 .rpg-tray button[aria-pressed="true"] { border-color: var(--ftf-gold); }
 .rpg-tray button:disabled { opacity: .45; cursor: not-allowed; }
 .rpg-tray svg { width: calc(24 * var(--u)); height: calc(24 * var(--u)); }
-.rpg-tray .k { position: absolute; right: 2px; bottom: 1px; font-size: max(9px, calc(11 * var(--u))); font-weight: 700; color: var(--ftf-muted); }
+.rpg-tray .k { position: absolute; right: 2px; bottom: 2px; min-width: 14px; padding: 0 3px; border: 1px solid var(--ftf-line, rgba(197,164,105,.4)); border-radius: 3px; background: rgba(0,0,0,.55); font: 700 12px/14px ui-monospace, monospace; color: var(--ftf-text); }   /* 12 px keycaps */
+.rpg-tray .lbl { position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%); padding: 4px 8px; border: 1px solid var(--ftf-line, rgba(197,164,105,.4)); border-radius: 6px; background: var(--ftf-panel-solid, #101f1a); color: var(--ftf-text); font: 600 13px var(--font-ui); white-space: nowrap; pointer-events: none; display: none; }
+.rpg-tray button:hover .lbl, .rpg-tray button:focus-visible .lbl { display: block; }   /* a text label on hover and focus */
 .rpg-tray .dot { position: absolute; right: 3px; top: 3px; width: 8px; height: 8px; border-radius: 50%; background: var(--ftf-gold); display: none; }
 .rpg-tray button[data-badge="1"] .dot { display: block; }
 /* level-up banner, toasts */

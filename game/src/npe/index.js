@@ -109,7 +109,9 @@ export function mount(ctx) {
   // the A4 first-seen tips (sprint 1.5), when the tips are on
   const tipsOn = ctx.flags ? (typeof ctx.flags.on === 'function' ? ctx.flags.on('firstSeenTips') : typeof ctx.flags.get === 'function' ? ctx.flags.get('firstSeenTips') : !!ctx.flags.firstSeenTips) : false;
   if (tipsOn) registerTips(firstSeen, lineVars(search));
-  const run = shouldRun({ flag, search, rec }) ? runIntro({ ...ctx, search }) : null;
+  // phones never auto-pop anything (owner 13.11): there the intro runs only when asked (?intro=1); the card stays in the menu
+  const touch = (ctx.keys && ctx.keys.touchControls) || firstSeen.isTouch(ctx.doc || globalThis.document);
+  const run = shouldRun({ flag, search, rec }) && (!touch || /[?&]intro=1\b/.test(search)) ? runIntro({ ...ctx, search }) : null;
   return { intro: run, tips: tipsOn, dispose() { if (run) run.skip(); } };
 }
 

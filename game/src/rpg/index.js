@@ -208,6 +208,9 @@ export function mount(ctx) {
   win.addEventListener('ftf:mob-killed', onKill);
   const onCloseAll = () => { for (const w of [tree, sheet, cheat]) if (w && w.isOpen) w.close(); };
   win.addEventListener('ftf:close-windows', onCloseAll);
+  // a tap or click outside closes the open window (the tray and the frame toggle them themselves)
+  const onOutside = (e) => { const el = e.target; if (el && el.closest && !el.closest('.rpg-modal, .rpg-tray, .rpg-frame, .rpg-hotbar')) onCloseAll(); };
+  doc.addEventListener('pointerdown', onOutside, true);
 
   // ------------------------------------------------------------------ the API the tree, the sheet and e2e use
   const api = {
@@ -218,6 +221,8 @@ export function mount(ctx) {
     spend(stat) { const r = spendStat(L, rec, stat); if (!r.ok) return r; rec = r.rec; refreshStats(); save(); emit('stat.spent', { stat, value: rec.stats[stat] }); return r; },
     place(slot, id) { bar = S.placeOnSlot(bar, slot, id); save(); },
     get xp() { return levelNow(); },
+    get portrait() { const sk = (ctx.skin ? ctx.skin() : (win.__ftf && win.__ftf.iris && win.__ftf.iris.hero && win.__ftf.iris.hero.id)) || 'iris'; return (ctx.base || '/') + 'assets/cards/' + sk + '.webp'; },
+    get name() { return playerName(); },
   };
   if (win.location && /[?&]test=1\b/.test(win.location.search)) {
     win.__ftfTest = win.__ftfTest || {};
@@ -271,7 +276,7 @@ export function mount(ctx) {
       if (tree && tree.isOpen) tree.refresh(); if (sheet && sheet.isOpen) sheet.refresh();
     },
     dispose() {
-      win.removeEventListener('keydown', onKey, true); win.removeEventListener('keyup', onKey, true); win.removeEventListener('ftf:cast', onCastEvent); win.removeEventListener('ftf:mob-killed', onKill); win.removeEventListener('ftf:close-windows', onCloseAll);
+      win.removeEventListener('keydown', onKey, true); win.removeEventListener('keyup', onKey, true); win.removeEventListener('ftf:cast', onCastEvent); win.removeEventListener('ftf:mob-killed', onKill); win.removeEventListener('ftf:close-windows', onCloseAll); doc.removeEventListener('pointerdown', onOutside, true);
       if (offLedger) offLedger(); if (offHit) offHit(); offBind(); hud.dispose(); if (tree) tree.dispose(); if (sheet) sheet.dispose(); if (cheat) cheat.dispose();
     },
   };

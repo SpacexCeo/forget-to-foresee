@@ -54,7 +54,9 @@ export function createCharacterPanel({ doc = globalThis.document, t, api }) {
     xpf.style.width = (xi.need ? (xi.into / xi.need) * 100 : 100).toFixed(1) + '%';
     xpt.textContent = xi.need ? t('hud.xp.tip', { level: L, into: xi.into.toLocaleString('en-US'), need: xi.need.toLocaleString('en-US') }) : t('hud.xp.cap', { level: L });
     const left = api.statLeft();
-    for (const s of STATS) { statRows[s].val.textContent = String(rec.stats[s] || 0); statRows[s].plus.disabled = left <= 0; }
+    for (const s of STATS) { statRows[s].val.textContent = String(rec.stats[s] || 0); statRows[s].plus.hidden = left <= 0; }   // no "+" at 0 points
+    const src = api.portrait; if (src && portrait.dataset.src !== src) { portrait.dataset.src = src; portrait.style.backgroundImage = `url(${src})`; portrait.style.backgroundPosition = '50% 12%'; }   // the HUD's own avatar
+    if (api.name && nm.textContent !== api.name) nm.textContent = api.name;
     const rows = [['char.maxHp', String(d.maxHP)], ['char.maxMana', String(d.maxMana)], ['char.regen', t('char.regenVal', { n: d.manaRegen.toFixed(1) })], ['char.crit', Math.round(d.crit * 100) + '%'], ['char.dmg', '+' + Math.round(d.damageBonus * 100) + '%']];
     const k = rows.map((r) => r[1]).join('|');
     if (derivedList.dataset.k !== k) { derivedList.dataset.k = k; derivedList.replaceChildren(...rows.flatMap(([key, v]) => [el('dt', 'hint', t(key)), el('dd', null, v)])); for (const dd of derivedList.querySelectorAll('dd')) dd.style.margin = '0'; }

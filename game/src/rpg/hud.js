@@ -127,9 +127,9 @@ export function createHud(o) {
   const tray = el('div', 'rpg-tray px'); const trayBtn = {};
   for (const it of TRAY) {
     const b = el('button', it.id === 'menu' ? 'menu' : null); b.type = 'button'; b.id = 'rpg-tray-' + it.id; b.innerHTML = it.icon;
-    const k = el('span', 'k'), dot = el('span', 'dot'); b.append(k, dot); b.setAttribute('aria-label', t('hud.tray.' + it.id));
+    const k = el('span', 'k'), dot = el('span', 'dot'), lbl = el('span', 'lbl', t('hud.tray.' + it.id)); b.append(k, dot, lbl); b.setAttribute('aria-label', t('hud.tray.' + it.id));
     b.addEventListener('click', () => o.onTray && o.onTray(it.id));
-    attachTip(b, () => ({ title: t('hud.tray.' + it.id), lines: b.disabled ? [b.dataset.why || t('hud.tray.notNow')] : [] }));
+    attachTip(b, () => (b.disabled ? { title: t('hud.tray.' + it.id), lines: [b.dataset.why || t('hud.tray.notNow')] } : null));   // the label shows on hover; the tooltip only says why it is off
     trayBtn[it.id] = b; tray.append(b);
   }
   // banner
