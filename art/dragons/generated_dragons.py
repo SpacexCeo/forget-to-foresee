@@ -1,9 +1,12 @@
 """Companion dragons from the owner's generated models (two sculpts: an amber one and a pearl one, wingless, standing
 on four legs; they come with a humanoid auto-rig that is of no use here). Each is welded (it arrives as a triangle
 soup), decimated, given UVs of its own with the colour baked from the source, weighted BY RULE to the companions' skeleton (root, spine_0..2, neck,
-head, tail_0..4, leg_<FL|FR|BL|BR> and leg_.._1; no wing bones: these dragons have none) and given the same clips as
-the procedural build (build_dragons.py: idle, follow, fly, glide, perch, flip, cheer, land), so scenes/companion.js
-flies them unchanged. Kinds: cinder = the amber sculpt, nacre = the pearl sculpt, rill = the pearl sculpt with its
+head, tail_0..4, leg_<FL|FR|BL|BR> and leg_.._1, wing_<L|R>_0..2) and given the same clip names as the procedural build
+(build_dragons.py: idle, follow, fly, glide, perch, flip, cheer, land), so scenes/companion.js flies them unchanged.
+The sculpts are wingless: the wing bones carry a pair of small "spirit wings" (a separate mesh `spirit_wings`, material
+M_Spirit_Wing, about 50 triangles a wing; the game draws it as tinted light). The flight clips are livelier than the
+procedural ones (pose() below): the legs paddle and tuck, front and back out of phase, and dangle in the hover; an
+S-wave runs down the tail; the wings beat softly. There are no frill or fin bones on these sculpts: nothing to flutter. Kinds: cinder = the amber sculpt, nacre = the pearl sculpt, rill = the pearl sculpt with its
 texture turned teal.
     blender -b --factory-startup -P art/dragons/generated_dragons.py -- <amber.glb> <pearl.glb> <out dir> [--lite]
 """
@@ -29,6 +32,79 @@ KINDS = {
 }
 KINDS['rill'] = dict(KINDS['nacre'], length=0.64, tint=(0.16, 0.50, 0.52))
 ss = lambda a, b, x: (lambda t: t * t * (3 - 2 * t))(np.clip((x - a) / (b - a), 0, 1))
+
+WING_TINT = {'nacre': (1.0, 0.93, 0.82), 'rill': (0.35, 0.92, 0.86), 'cinder': (1.0, 0.68, 0.25)}
+BASE_POSE = BD.pose
+#          legs: (beats, swing, L/R offset)   tail yaw, tail pitch wave   wings: (beats, mean, amp)
+ALIVE = {'idle': dict(leg=(1, 0.16, 0.9), yaw=0.24, wave=0.07, wing=(2, 0.16, 0.34)),
+         'follow': dict(leg=(2, 0.30, math.pi), yaw=0.30, wave=0.09, wing=(2, 0.14, 0.44)),
+         'fly': dict(leg=(2, 0.36, math.pi), yaw=0.26, wave=0.10, wing=(2, 0.10, 0.56)),
+         'glide': dict(leg=(1, 0.10, 0.6), yaw=0.16, wave=0.05, wing=(1, 0.26, 0.10))}
+
+
+def pose(name, u, S):
+    """The procedural build's pose with the flight made livelier (every term loops: whole beats per clip)."""
+    R = BASE_POSE(name, u, S); A = ALIVE.get(name)
+    if not A: return R
+    ph = math.tau * u
+    n, sw, lr = A['leg']
+    for leg in ('leg_FL', 'leg_FR', 'leg_BL', 'leg_BR'):
+        a, b = R[leg][0], R[leg + '_1'][0]
+        th = ph * n + (math.pi if leg[4] == 'B' else 0.0) + (lr if leg[5] == 'R' else 0.0)      # front and back out of phase; left and right alternate
+        tuck = 0.5 + 0.5 * math.sin(th - 1.2)                                                     # the shin folds as the thigh comes forward
+        R[leg] = (a + sw * math.sin(th), 0, 0.05 * math.sin(th + 0.6) * (-1 if leg[5] == 'L' else 1))
+        R[leg + '_1'] = (b - sw * 0.5 + sw * 1.3 * tuck, 0, 0)
+    for k in range(5):                                                                            # an S-wave down the tail: a full wave from root to tip
+        g = 0.45 + 0.2 * k
+        R[f'tail_{k}'] = (R[f'tail_{k}'][0] + A['wave'] * g * math.sin(ph * 2 - k * 1.1), 0, A['yaw'] * g * math.sin(ph - k * 1.25))
+    R['spine_2'] = (0, 0, 0.07 * math.sin(ph + 1.0)); R['spine_1'] = (0.02 * math.sin(ph * 2), 0, -0.03 * math.sin(ph + 2.0))
+    beats, mean, amp = A['wing']; beat = ph * beats; st = math.sin(beat + 0.3 * math.sin(beat))
+    for side, sgn in (('L', -1), ('R', 1)):
+        R[f'wing_{side}_0'] = (mean + amp * st, 0, sgn * 0.12 * amp * math.cos(beat))
+        R[f'wing_{side}_1'] = (0.45 * amp * math.sin(beat - 0.8) - 0.06, 0, sgn * 0.2 * amp * max(0.0, math.cos(beat)))
+        R[f'wing_{side}_2'] = (0.5 * amp * math.sin(beat - 1.5) + 0.04 * math.sin(ph * 3 + sgn), 0, 0)
+    return R
+
+
+BD.pose = pose
+
+
+def spirit_wings(kind, K, J, rig):
+    """Two small light wings on the wing bones: a strip of quads from the leading edge to a scalloped trailing edge."""
+    y0, z0 = K['legs']['F'][1] + 0.02, None
+    a, b = J['spine_1']; t = min(1.0, max(0.0, (y0 - a.y) / ((b.y - a.y) or 1e-6))); z0 = a.z + (b.z - a.z) * t + 0.035
+    half = 0.36; NS, NC = 9, 3; verts, faces, uvs, wts, bones = [], [], [], [], {}
+    for side, sgn in (('L', -1), ('R', 1)):
+        sh = Vector((sgn * 0.035, y0, z0)); X = lambda fx, dy, dz: Vector((sgn * half * fx, sh.y + dy * 0.6, sh.z + dz))
+        el, wr, tip = X(0.34, -0.07, 0.05), X(0.68, -0.10, 0.06), X(0.98, 0.03, 0.03)
+        lead = [sh, el, wr, tip, X(1.0, 0.11, 0.02)]
+        trail = [Vector((sgn * 0.03, sh.y + 0.13, sh.z - 0.03)), X(0.26, 0.30, 0.0), X(0.52, 0.33, 0.0), X(0.76, 0.27, 0.0), X(0.93, 0.17, 0.01), X(1.0, 0.11, 0.02)]
+        Ls = BD.resample(BD.smooth_poly(lead), NS - 1); Ts = BD.resample(BD.smooth_poly(trail), NS - 1)
+        bones[side] = (sh, el, wr, tip); segs = [(sh, el), (el, wr), (wr, tip)]; base = len(verts)
+        for i in range(NS):
+            for j in range(NC):
+                c = j / (NC - 1); scal = 1.0 - 0.10 * abs(math.sin(i * math.pi * 3 / (NS - 1))) * c          # the trailing edge scallops
+                p = Vector(Ls[i]).lerp(Vector(Ts[i]), c * scal); verts.append(p); uvs.append((i / (NS - 1), c))
+                d = []
+                for (q0, q1) in segs:
+                    ab = q1 - q0; tt = min(1.0, max(0.0, (p - q0).dot(ab) / ab.dot(ab))); d.append(abs(p.x - (q0 + ab * tt).x) + 0.004)
+                w = [1 / x ** 2 for x in d]; tw = sum(w); wts.append({f'wing_{side}_{k}': w[k] / tw for k in range(3)})
+        for i in range(NS - 1):
+            for j in range(NC - 1):
+                q = [base + i * NC + j, base + (i + 1) * NC + j, base + (i + 1) * NC + j + 1, base + i * NC + j + 1]; faces.append(q if sgn > 0 else q[::-1])
+    me = bpy.data.meshes.new('spirit_wings'); me.from_pydata([v[:] for v in verts], [], faces); me.update()
+    uv = me.uv_layers.new(name='UVMap')
+    for l in me.loops: uv.data[l.index].uv = uvs[l.vertex_index]
+    ob = bpy.data.objects.new('spirit_wings', me); bpy.context.scene.collection.objects.link(ob)
+    for i, w in enumerate(wts):
+        for nm, x in w.items():
+            g = ob.vertex_groups.get(nm) or ob.vertex_groups.new(name=nm)
+            if x > 0.01: g.add([i], x, 'REPLACE')
+    m = bpy.data.materials.new('M_Spirit_Wing'); m.use_nodes = True; bs = m.node_tree.nodes['Principled BSDF']; c = WING_TINT[kind]
+    bs.inputs['Base Color'].default_value = (*c, 1); bs.inputs['Emission Color'].default_value = (*c, 1); bs.inputs['Emission Strength'].default_value = 1.2; bs.inputs['Alpha'].default_value = 0.45
+    m.blend_method = 'BLEND'; m.use_backface_culling = False; me.materials.append(m)
+    ob.parent = rig; md = ob.modifiers.new('rig', 'ARMATURE'); md.object = rig
+    return bones, len(faces) * 2
 
 
 def build(kind, srcs, tris):
@@ -106,7 +182,13 @@ def build(kind, srcs, tris):
     for k in range(5): bone(f'tail_{k}', J[f'tail_{k}'][0], J[f'tail_{k}'][1], prev); prev = f'tail_{k}'
     for name, (hip, knee, foot) in legs.items():
         bone(name, hip, knee, 'spine_1' if name[4] == 'F' else 'spine_2', up=(0, -1, 0)); bone(name + '_1', knee, foot, name, up=(0, -1, 0))
+    for sd, sg in (('L', -1), ('R', 1)):                                                   # the spirit wings' bones: the same layout and signs as the procedural wings
+        y0 = K['legs']['F'][1] + 0.02; a_, b_ = J['spine_1']; t_ = min(1.0, max(0.0, (y0 - a_.y) / ((b_.y - a_.y) or 1e-6))); z0 = a_.z + (b_.z - a_.z) * t_ + 0.035
+        sh = Vector((sg * 0.035, y0, z0)); X = lambda fx, dy, dz: Vector((sg * 0.36 * fx, sh.y + dy * 0.6, sh.z + dz))
+        el_, wr, tip = X(0.34, -0.07, 0.05), X(0.68, -0.10, 0.06), X(0.98, 0.03, 0.03)
+        bone(f'wing_{sd}_0', sh, el_, 'spine_1'); bone(f'wing_{sd}_1', el_, wr, f'wing_{sd}_0'); bone(f'wing_{sd}_2', wr, tip, f'wing_{sd}_1')
     bpy.ops.object.mode_set(mode='OBJECT'); el.parent = rig; md = el.modifiers.new('rig', 'ARMATURE'); md.object = rig
+    spirit_wings(kind, K, J, rig)
     # ---- material: its own texture (tinted for the teal kind)
     mat = bpy.data.materials.new('M_Dragon_Body'); mat.use_nodes = True; bs = mat.node_tree.nodes['Principled BSDF']; bs.inputs['Roughness'].default_value = 0.5
     if img:
