@@ -721,7 +721,7 @@ function updateAltarTimer() {
   if (!visible) return;
   // declutter: with the player HUD on, an altar icon (CSS) and the short state; the full line is the tooltip
   const full = ctx.i18n.t('day1.altar.timer') + ' · ' + ctx.i18n.t('day1.altar.open');
-  const text = playerHud ? ctx.i18n.t('day1.altar.open') : full;
+  const text = playerHud ? ctx.i18n.t('day1.altar.short') : full;   // says what is open (design review 13.11: a bare "Open now" told nothing)
   if (altarTimer.textContent !== text) { altarTimer.textContent = text; altarTimer.title = full; }
   // kept below the top-right chips (Controls, Profile) and inside the screen: on a phone the altar projects right under them
   const minTop = innerWidth < 700 || innerHeight < 500 ? (document.body.classList.contains('ph-on') ? 236 : 150) : 118, half = Math.min(altarTimer.offsetWidth / 2 || 110, innerWidth / 2 - 8);

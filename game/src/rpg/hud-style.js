@@ -60,7 +60,8 @@ export const HUD_CSS = `
 .rpg-slot { position: relative; flex: 0 0 calc(56 * var(--u)); height: calc(56 * var(--u)); border: 2px solid var(--ftf-border); border-radius: 8px; background: rgba(14,16,24,.88); padding: 0; pointer-events: auto; overflow: hidden; transition: transform 80ms; }
 .rpg-slot:hover { border-color: var(--ftf-gold); }
 .rpg-slot:focus-visible { outline: 2px solid var(--ftf-gold); outline-offset: 2px; }
-.rpg-slot[data-state="empty"] { border-style: dashed; border-width: 1px; }
+.rpg-slot[data-state="empty"] { border-style: dashed; border-width: 1px; visibility: hidden; }   /* only filled slots show (design review 13.11) ... */
+.rpg-hotbar[data-edit="1"] .rpg-slot[data-state="empty"] { visibility: visible; }   /* ... and the empty ones while the Skills window is open, to drop on */
 .rpg-slot[data-pressed="1"] { transform: scale(.94); border-color: var(--ftf-gold); }
 .rpg-slot .ic { position: absolute; left: 50%; top: 50%; width: calc(40 * var(--u)); height: calc(40 * var(--u)); transform: translate(-50%, -50%); background: center / contain no-repeat; }
 .rpg-slot[data-state="cooldown"] .ic { filter: brightness(.35); }

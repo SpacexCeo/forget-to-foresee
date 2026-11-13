@@ -601,6 +601,7 @@ export default {
   "day1.skin.sheriffchenko": "Sheriffchenko 皮肤",
   "day1.altar.timer": "下一轮锦标赛",
   "day1.altar.open": "现在开放",
+  "day1.altar.short": "锦标赛祭坛 · 开放",
   "day1.trailer.hero.1": "她只记得在阳台上醒来，之前的一切都不记得。",
   "day1.trailer.hero.2": "她读的每个符号，都让她失去一点过去的自己。",
   "day1.trailer.hero.3": "今天她要选择保留什么，又要遗忘什么来预见未来。",

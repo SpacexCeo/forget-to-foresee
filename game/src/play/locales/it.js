@@ -602,6 +602,7 @@ export default {
   "day1.skin.sheriffchenko": "Skin Sheriffchenko",
   "day1.altar.timer": "Prossimo turno del Torneo",
   "day1.altar.open": "Aperto ora",
+  "day1.altar.short": "Altare del torneo · aperto",
   "day1.trailer.hero.1": "Ricorda di essersi svegliata sul balcone, e niente prima.",
   "day1.trailer.hero.2": "Ogni segno che legge le costa un po' di ciò che era.",
   "day1.trailer.hero.3": "Oggi sceglie cosa tenere e cosa dimenticare per prevedere.",

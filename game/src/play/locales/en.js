@@ -609,6 +609,7 @@ const EN = {
   "day1.skin.sheriffchenko": "Sheriffchenko",
   "day1.altar.timer": "Next Tournament round",
   "day1.altar.open": "Open now",
+  "day1.altar.short": "Tournament altar · open",
   "day1.trailer.hero.1": "She remembers waking on the balcony, and nothing before it.",
   "day1.trailer.hero.2": "Every sign she reads costs her a little of what she was.",
   "day1.trailer.hero.3": "Today she chooses what to keep, and what to forget to foresee.",
