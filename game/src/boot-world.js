@@ -22,6 +22,7 @@ import { on as onBus } from './sprint/bus.js';
 import { setIntroHud } from './ui/intro-hud.js';
 import { createStrikeTrail } from './render/strike-trail.js';
 import { fixedSteps, rayCast, moveCapsule, MASK_PLAYER } from './physics/collision.js';
+import { createNav, setTownNav } from './physics/nav-grid.js';
 import { PHYSICS_DT, steerTo, clickStuck } from './physics/character.js';
 import { damp } from './physics/motion.js';
 import { Input } from './ui/input.js';
@@ -1075,7 +1076,7 @@ async function enterWorld() {
     if (boot.closeLobby) boot.closeLobby();
     document.body.classList.add('in-world');
     entered = true;
-    if (inTown) { townFlow.begin(); introFly().then(startDay1); return; } // the first visit flies in, then Day 1
+    if (inTown) { townFlow.begin(); introFly().then(startDay1); setTimeout(warmNav, 4000); return; } // the first visit flies in, then Day 1; the walk grid fills behind
     await startSeason();
   })();
   return entering;
@@ -1238,8 +1239,44 @@ function nearestInteractable() {
   return best;
 }
 
+/*
+ * Click-to-move in the town (owner 14.11: a click walked a straight line into walls and props): the click plans a route
+ * over the town's colliders (physics/nav-grid.js; cached, the grid fills in the background after the town is shown) and
+ * Iris follows it with the town's route steering; an unreachable click walks to the nearest reachable point (the marker
+ * shows where she goes). No progress for 1.2 s plans again from where she stands (twice), then she stops.
+ */
+let navTown = null, clickNav = null;
+function townNav() {
+  if (!navTown && town && town.world) {
+    const w = town.world;
+    navTown = createNav({ ray: (o, d, m) => rayCast(w, o, d, m, MASK_PLAYER), version: () => w.count + ':' + w.liveCount });
+    setTownNav(navTown);
+  }
+  return navTown;
+}
+function warmNav() { const n = inTown && townNav(); if (n && !n.warm(player.pos, { sliceMs: 5 })) setTimeout(warmNav, 40); }
+function clickWalk(target, run) {
+  const n = townFlow && townNav(); if (!n) return false;
+  const r = n.plan(player.pos, target);
+  if (!r || !r.path.length) return false;
+  moveTarget = null; if (play) play.cancelRoute();
+  if (!townFlow.walkTo(r.path)) return false;
+  const end = r.path[r.path.length - 1];
+  clickNav = { target: end, run, best: Infinity, bestAt: performance.now(), replans: 0, ms: r.ms };
+  marker.position.set(end[0], end[1] + 0.06, end[2]); marker.visible = true;
+  return true;
+}
+function followClickWalk() {
+  if (!townFlow.routeActive) { clickNav = null; if (!moveTarget) marker.visible = false; return; } // arrived, or a key took over
+  const now = performance.now(), d = Math.hypot(clickNav.target[0] - player.pos[0], clickNav.target[2] - player.pos[2]);
+  if (d < clickNav.best - 0.2) { clickNav.best = d; clickNav.bestAt = now; return; }
+  if (now - clickNav.bestAt < 1200) return;
+  const r = clickNav.replans++ < 2 && townNav().plan(player.pos, clickNav.target);
+  if (r && r.path.length) { townFlow.walkTo(r.path); clickNav.best = Infinity; clickNav.bestAt = now; }
+  else { townFlow.cancelRoute(); clickNav = null; marker.visible = false; }
+}
 function stopSteering() {
-  moveTarget = null;
+  moveTarget = null; clickNav = null;
   marker.visible = false;
   if (play) play.cancelRoute();
   if (townFlow) townFlow.cancelRoute();
@@ -1351,6 +1388,7 @@ function handleInput(dt) {
         const doubleTap = now - lastTap.t < 350 && Math.hypot(c.x - lastTap.x, c.y - lastTap.y) < 40;
         lastTap = { t: now, x: c.x, y: c.y };
         moveRun = doubleTap || (coarse && Math.hypot(hit.point[0] - player.pos[0], hit.point[2] - player.pos[2]) > 8);
+        if (inTown && clickWalk(hit.point, moveRun)) continue; // the town: a route round walls and props (physics/nav-grid.js)
         moveTarget = hit.point; stuck.stuckTime = 0; stuck.lastDist = Infinity; if (play) play.cancelRoute(); if (townFlow) townFlow.cancelRoute();
         marker.position.set(hit.point[0], hit.point[1] + 0.06, hit.point[2]);
         marker.visible = true;
@@ -1453,7 +1491,7 @@ function frame() {
   accumulator = f.accumulator;
   physics.steps = f.steps; physics.substeps = 0;
   let moving = false;
-  player.run = input.down('ShiftLeft', 'ShiftRight') || (moveTarget ? moveRun : coarse && !!(play && play.routeActive)) || !!(inTown && townFlow && townFlow.routeActive); // A1 auto-walk runs
+  player.run = input.down('ShiftLeft', 'ShiftRight') || (moveTarget ? moveRun : coarse && !!(play && play.routeActive)) || !!(inTown && townFlow && townFlow.routeActive && (!clickNav || clickNav.run)); // A1 auto-walk runs
   // outside the walls, a winded Iris walks until 20 % stamina is back (game/stamina.js)
   const fieldOn = !!(inTown && townMobs && townMobs.iris && townMobs.iris.outside);
   if (fieldOn && !stamina.canRun()) player.run = false;
@@ -1464,8 +1502,9 @@ function frame() {
     if (wish[0] || wish[1]) moving = true;
     player.step(wish, PHYSICS_DT);
     physics.substeps += player.lastSubsteps;
+    if (clickNav) followClickWalk();
     if (moveTarget) {
-      // Give up on a click target we cannot reach (no pathfinding yet): pressed against a wall with no
+      // Give up on a click target we cannot reach (outside the town: no pathfinding there): pressed against a wall with no
       // progress. Braking and pivoting toward a target behind us also makes no progress, so a wall
       // contact is required (otherwise a reversal would cancel its own order).
       const d = Math.hypot(moveTarget[0] - player.pos[0], moveTarget[2] - player.pos[2]);

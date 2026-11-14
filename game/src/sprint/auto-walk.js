@@ -61,7 +61,7 @@ export function stopPoint(from, to, stop) {
  * @param {(k: string, a?: object) => string} [o.say] @param {Document} [o.doc] @param {(x: number, z: number) => boolean} [o.blocked]
  * @param {() => number} [o.now]
  */
-export function createAutoWalk({ driver, emit = () => {}, toast = () => {}, say = (k) => k, doc = globalThis.document, blocked = null, now = () => performance.now() }) {
+export function createAutoWalk({ driver, emit = () => {}, toast = () => {}, say = (k) => k, doc = globalThis.document, blocked = null, planner = null, now = () => performance.now() }) {
   let walk = null, label = null;
   const showLabel = (text) => {
     if (!doc) return;
@@ -79,6 +79,9 @@ export function createAutoWalk({ driver, emit = () => {}, toast = () => {}, say 
   }
   function plan(w) {
     const p = driver.pos(), here = [p[0], p[2]], stop = stopPoint(here, w.to, w.stopRadius * 0.85);
+    // the host's own route over the real colliders when it has one (scenes/town-quests.js: physics/nav-grid.js)
+    const routed = planner ? planner([p[0], p[1], p[2]], [stop[0], p[1], stop[1]]) : null;
+    if (routed && routed.length) { w.path = routed.map((q) => q.slice()); driver.setRoute(w.path); return true; }
     const path = planPath(here, stop, { blocked });
     if (!path) return false;
     w.path = path.map(([x, z]) => [x, p[1], z]);

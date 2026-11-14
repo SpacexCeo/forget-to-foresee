@@ -28,6 +28,7 @@ import { artBox, resIconPath } from '../market/art.js';
 import { portraitPath } from '../quests/portraits.js';
 import { registerWindow, claimWindow } from '../ui/window-toggle.js';
 import { CHEST_EVENT } from '../game/chests.js';
+import { getTownNav } from '../physics/nav-grid.js';
 
 /** A sprint flag: features.json (sprint §3.6), or ?ff=questJournal,questTracker,autoWalk for a local check. */
 export function flagOn(name, search = (globalThis.location && globalThis.location.search) || '') {
@@ -367,6 +368,7 @@ export function createTownQuests({ scene = null, hudToast = null, storage, townL
   const lvl = () => { try { return Math.max(1, Number(level()) || 1); } catch { return 1; } };
   const jModel = (q2 = '') => journalModel({ qs, now: now(), have: have(), level: lvl(), tracked, search: q2, giverName: gname, tr: say });
   const walker = useWalk ? createAutoWalk({ driver: walkDriver, say, toast: notify, doc,
+    planner: (from, to) => { const n = getTownNav(), r = n && n.plan(from, to); return r && r.path.length ? r.path : null; }, // round walls and props (physics/nav-grid.js)
     emit: (n, pl) => { try { win.dispatchEvent(new CustomEvent('ftf:' + n, { detail: pl })); } catch { /* none */ } } }) : null;
   if (walker) setAutoWalker(walker);
   function walkTo(v) {
