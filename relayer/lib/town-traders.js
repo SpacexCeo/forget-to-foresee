@@ -5,6 +5,7 @@
 // DRY RUN BY DEFAULT: nothing is signed or sent unless FTF_TOWN_SEND=1; keys only on the relayer's server.
 import { CATALOG as ITEMS, START_BALANCE, traderKey } from '../market/catalog.js';
 import { priceOf, nextDemand, stallClosed, choiceWeight, STOCK_START, STOCK_CAP, RESTOCK_PER_HOUR, CLOSED_MAKES } from '../market/prices.js';
+import { netOf } from './network.js';
 
 export const TOWN_TARGET = 22_000; // attempts a day: ~1,100 per trader (the spec's margin over 20,000); a stock-out skips an attempt
 export const MICRO = 1_000_000;
@@ -102,6 +103,6 @@ export const TOWN_POLICY = Object.freeze({
 export const townEnv = (env = process.env) => ({
   enabled: env.FTF_TOWN === '1',
   send: env.FTF_TOWN_SEND === '1',
-  contract: env.FTF_TOWN_CONTRACT || 'ftf-town.testnet',
+  contract: env.FTF_TOWN_CONTRACT || netOf(env).town,
   target: Math.max(1, Math.min(100_000, Number(env.FTF_TOWN_TARGET) || TOWN_TARGET)),
 });

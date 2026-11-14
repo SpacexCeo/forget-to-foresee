@@ -1,19 +1,25 @@
 // Quest markers over the givers (owner, 12.11: "I can't see the quests"): a gold "!" over a townsperson with a quest on
 // offer and a gold "?" over one whose quest can be turned in, bobbing gently above the head, always facing the camera
 // (sprites), drawn over the scene so a wall never hides them. Which giver shows which mark comes from
-// scenes/town-quests.js `markers()`; positions from the townsfolk (folkAt). Procedural canvas texture, no art file.
+// scenes/town-quests.js `markers()`; positions from the townsfolk (folkAt). A procedural canvas texture, replaced by the open
+// icon set's tile (assets/ui/icons/open/quest_*; art/ui/build_open_icons.py) once that loads.
 import * as THREE from 'three';
 
 export const MARK_HEIGHT = 2.55;
 
-/** A canvas texture of the mark: a dark disc with a gold ring and the gold glyph. */
+const MARK_ART = Object.freeze({ '!': 'quest_available', '?': 'quest_turn_in' });
+
+/** A canvas texture of the mark: a dark disc with a gold ring and the gold glyph (then the icon tile, in a browser). */
 export function markTexture(sym, doc = globalThis.document) {
   const c = doc.createElement('canvas'); c.width = 128; c.height = 128;
   const g = c.getContext('2d');
   g.fillStyle = 'rgba(12,16,18,0.82)'; g.beginPath(); g.arc(64, 64, 54, 0, Math.PI * 2); g.fill();
   g.lineWidth = 8; g.strokeStyle = '#ffc861'; g.stroke();
   g.fillStyle = '#ffc861'; g.font = '700 82px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(sym, 64, 70);
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  const base = import.meta.env && import.meta.env.BASE_URL;
+  if (base && MARK_ART[sym] && typeof Image === 'function') { const im = new Image(); im.onload = () => { g.clearRect(0, 0, 128, 128); g.drawImage(im, 0, 0, 128, 128); t.needsUpdate = true; }; im.src = `${base}assets/ui/icons/open/${MARK_ART[sym]}_96.webp`; }
+  return t;
 }
 
 /**

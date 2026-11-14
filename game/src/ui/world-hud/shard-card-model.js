@@ -11,12 +11,13 @@
 // Read-only: nothing here signs or sends anything.
 import { shardData, shardDataFromAuction, shardExtra, shardSvg, shardMetadata } from '../../net/shard-nft.js';
 import { NEAR_DEPLOYMENT } from '../../net/near-deployment.js';
+import { EXPLORER } from '../../net/network.js';
 
 const svgCache = new Map(); // tokenId + media → verified svg | null
 
 /** The explorer page of one token on nearblocks. */
 export const tokenUrl = (deployment, tokenId) =>
-  `${(deployment.explorer || 'https://testnet.nearblocks.io').replace(/\/$/, '')}/nft-token/${deployment.shardContractId}/${tokenId}`;
+  `${(deployment.explorer || EXPLORER).replace(/\/$/, '')}/nft-token/${deployment.shardContractId}/${tokenId}`;
 
 /**
  * The local shard's data, or null when the shard has not been sold or burned yet (the token is minted after the
@@ -53,7 +54,7 @@ export function shardCardModel({ status, season, shard, deployment = NEAR_DEPLOY
 
 /** A real token's card from the chain record alone (the contract's data, owner and media). */
 export function chainShardCard({ rec, chain, tokenId, seasonId, deployment = NEAR_DEPLOYMENT }) {
-  const explorer = (deployment.explorer || 'https://testnet.nearblocks.io').replace(/\/$/, '');
+  const explorer = (deployment.explorer || EXPLORER).replace(/\/$/, '');
   const rec2 = deployment.seasons && deployment.seasons[seasonId];
   const mintTx = deployment.shardMints && deployment.shardMints[seasonId] ? deployment.shardMints[seasonId][String(chain.shard_id)] || null : null;
   const revealTx = chain.unlocked_index != null && rec2 && rec2.revealTx ? rec2.revealTx[String(chain.unlocked_index)] || null : null;

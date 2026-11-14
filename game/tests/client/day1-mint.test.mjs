@@ -140,3 +140,30 @@ test('receipts: valid hashes kept once with explorer links; the chain block read
   assert.equal(m.receipts.length, 3); assert.equal(m.linked, null);
   assert.ok(m.contracts.some((c) => c.id.startsWith('guests.')) && m.contracts.every((c) => /\/address\//.test(c.url)));
 });
+
+// Mainnet-ready (docs/deploy/mainnet.md): one switch, net/network.js. The mainnet rows and records carry no testnet
+// value, the copy swaps the network's name, and no client module hard-codes a testnet account, host or label.
+test('network switch: the mainnet table is clean and no client module hard-codes testnet', async () => {
+  const { readdirSync, readFileSync, statSync } = await import('node:fs');
+  const { join } = await import('node:path');
+  const { fileURLToPath } = await import('node:url');
+  const { NETWORKS, NEAR_NETWORK, forNetwork } = await import('../../src/net/network.js');
+  const { NEAR_DEPLOYMENT_MAINNET } = await import('../../src/net/near-deployment.mainnet.js');
+  const { DAY1_DEPLOYMENT_MAINNET } = await import('../../src/net/day1-deployment.mainnet.js');
+  assert.equal(NEAR_NETWORK, 'testnet', 'tests and the default build run on testnet');
+  for (const v of [NETWORKS.mainnet, NEAR_DEPLOYMENT_MAINNET, DAY1_DEPLOYMENT_MAINNET]) assert.ok(!/testnet/.test(JSON.stringify(v)), JSON.stringify(v));
+  assert.equal(forNetwork('Pay on NEAR testnet to x.testnet, see https://testnet.nearblocks.io/txns/a', 'mainnet'), 'Pay on NEAR mainnet to x.near, see https://nearblocks.io/txns/a');
+  assert.equal(forNetwork('NEAR testnet'), 'NEAR testnet');
+  const src = fileURLToPath(new URL('../../src/', import.meta.url));
+  const files = [];
+  const walk = (d) => { for (const n of readdirSync(d)) { const p = join(d, n); if (statSync(p).isDirectory()) { if (n !== 'locales') walk(p); } else if (/\.js$/.test(n) && !/(^network|\.testnet|\.mainnet)\.js$/.test(n)) files.push(p); } };
+  walk(src);
+  const BAD = /[a-z0-9_-]\.testnet['"`]|testnet\.nearblocks|rpc\.testnet\.near|test\.rpc\.fastnear|testnet\.mynearwallet|NEAR testnet/;
+  const hits = [];
+  for (const f of files) {
+    const code = readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, '')).split('\n') // comments out, lines kept
+      .map((l) => (/^\s*\/\//.test(l) ? '' : l.replace(/\s\/\/\s.*$/, '').replace(/\bt\(['"][\w.]+['"]/g, ''))); // and i18n keys such as 'acct.testnet'
+    code.forEach((l, i) => { if (BAD.test(l)) hits.push(`${f.slice(src.length)}:${i + 1}`); });
+  }
+  assert.deepEqual(hits, [], 'take these from net/network.js');
+});

@@ -10,9 +10,12 @@
 //     view accepts the browser's proof but no transaction recorded it (contracts/season-commit/README.md).
 // No DOM here: the world HUD renders the badge model this module computes (docs/collab-requests.md, Task F).
 import { NEAR_DEPLOYMENT } from './near-deployment.js';
+import { NETWORKS, NET, EXPLORER, NEAR_NETWORK } from './network.js';
 
 // fastnear first: rpc.testnet.near.org refuses browser requests (CORS) from most origins, which only cluttered the console
-export const NEAR_TESTNET_RPC = ['https://test.rpc.fastnear.com', 'https://rpc.testnet.near.org'];
+export const NEAR_TESTNET_RPC = NETWORKS.testnet.rpcUrls;
+/** This build's RPC hosts (net/network.js). */
+export const NEAR_RPC = NET.rpcUrls;
 
 const b64 = (s) => (typeof btoa === 'function' ? btoa(s) : Buffer.from(s, 'utf8').toString('base64'));
 const utf8 = (bytes) => new TextDecoder().decode(Uint8Array.from(bytes));
@@ -92,7 +95,7 @@ export function leafArgs(proof) {
 
 /** Explorer links (nearblocks testnet layout). */
 export function explorerLinks(deployment, { txHash = null, accountId = null } = {}) {
-  const base = (deployment.explorer || 'https://testnet.nearblocks.io').replace(/\/$/, '');
+  const base = (deployment.explorer || EXPLORER).replace(/\/$/, '');
   return {
     contract: `${base}/address/${deployment.contractId}`,
     account: accountId ? `${base}/address/${accountId}` : null,
@@ -311,7 +314,7 @@ export function createNearWatcher({ season, proof, deployment = NEAR_DEPLOYMENT,
  * `near-testnet:<height>:<blockHash>`. Read-only JSON-RPC `block`; null when no host answers within `timeoutMs`.
  * Used by protocol ftf-seed/1 (docs/verify.md): fetched after the room's entropy commitment, mixed into the seed.
  */
-export async function fetchNearBeacon({ rpcUrls = NEAR_TESTNET_RPC, fetch = globalThis.fetch, timeoutMs = 2500, network = 'testnet' } = {}) {
+export async function fetchNearBeacon({ rpcUrls = NEAR_RPC, fetch = globalThis.fetch, timeoutMs = 2500, network = NEAR_NETWORK } = {}) {
   for (const url of rpcUrls) {
     const ac = typeof AbortController === 'function' ? new AbortController() : null;
     const timer = ac ? setTimeout(() => ac.abort(), timeoutMs) : null;

@@ -5,6 +5,7 @@
 // read and write positions, discoveries and drafts and never change a rules outcome.
 
 import { EXPEDITION } from '../game/expedition-config.js';
+import { NEAR_NETWORK } from './network.js';
 
 export const API_VERSION = 'v1';
 export const CATALOG_VERSION = '1.2.0'; // 1.2.0: the Expedition actions (kind 'expedition')
@@ -71,7 +72,7 @@ export const ACTIONS = [
     params: { type: 'object', properties: {
       phrase: { type: 'string', maxLength: 64, description: 'Your secret owner phrase; only its salted commitment is shown to others.' },
       nonce: { type: 'string', pattern: '^[^|]{1,128}$', description: 'Your contribution to the season seed (protocol ftf-seed/1): any text without "|". The room committed its own random bytes before you sent it, so neither side can steer the season. Ignored in fixed-seed test sessions.' },
-      beacon: { type: 'string', pattern: '^[^|]{1,200}$', description: 'Optional public randomness nobody chose, e.g. "near-testnet:<height>:<blockHash>" fetched after the commitment; mixed into the seed and recorded for verifiers.' },
+      beacon: { type: 'string', pattern: '^[^|]{1,200}$', description: `Optional public randomness nobody chose, e.g. "near-${NEAR_NETWORK}:<height>:<blockHash>" fetched after the commitment; mixed into the seed and recorded for verifiers.` },
     }, additionalProperties: false },
     preconditions: ['phase_intro'], costs: {}, errors: { rules: [], world: [] },
   }),
@@ -246,7 +247,7 @@ export const ACTIONS = [
   planned({ type: 'propose_trade', kind: 'rules', summary: 'Planned: player-initiated trade proposals to a clan. The engine models only clan-initiated offers (accept_offer / decline_offer) today.' }),
   planned({ type: 'chat', kind: 'world', roles: ['controller', 'helper'], summary: 'Planned: free-text dialogue with a clan (LLM with a template fallback, never computing outcomes). Today: talk returns template dialogue.' }),
   planned({ type: 'helper_contribute', kind: 'rules', roles: ['helper'], summary: 'Planned: shared-room helpers (QR) holding and contributing fragments. The engine has one human player today.' }),
-  planned({ type: 'mint_final_card', kind: 'chain', summary: 'Planned, and never available to agents: minting the final card is a voluntary testnet action the human signs in their own wallet. The API has no signing or transfer endpoints.' }),
+  planned({ type: 'mint_final_card', kind: 'chain', summary: `Planned, and never available to agents: minting the final card is a voluntary ${NEAR_NETWORK} action the human signs in their own wallet. The API has no signing or transfer endpoints.` }),
 ];
 
 export const ACTIONS_BY_TYPE = new Map(ACTIONS.map((a) => [a.type, a]));

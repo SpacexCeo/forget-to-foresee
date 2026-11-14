@@ -1,13 +1,13 @@
 // Settings -> Controls: the control mode as two cards side by side (owner 14.11), "Aim mode" and "Classic", each with
-// its picture and its lines, the chosen one outlined in gold. The pictures are cut from the owner's infographic, one
-// per language (docs/art/requests/in/ui/control_modes/<lang>.png -> art/ui/control_modes.sh ->
-// assets/ui/control-modes/<lang>-<mode>.webp); Italian shows the English one. Until a language's pictures exist the
-// card draws a mouse with the buttons that mode uses (CONTROL_ART lists the languages that have them).
+// its picture and its lines, the chosen one outlined in gold. The pictures are drawn by art/ui/build_control_cards.py
+// (HUD style, the words from the play locales) into assets/ui/control-modes/<lang>-<mode>.webp; the owner's
+// infographic, if it comes, replaces them through art/ui/control_modes.sh. A language without pictures shows the
+// English ones; with none at all the card draws a mouse with the buttons that mode uses.
 // Plain DOM, no play imports.
 
 export const CONTROL_MODES = Object.freeze(['aim', 'classic']);
-/** Languages whose card pictures ship (assets/ui/control-modes/<lang>-<mode>.webp). Add one when its PNG is cut. */
-export const CONTROL_ART = Object.freeze([]);
+/** Languages whose card pictures ship (assets/ui/control-modes/<lang>-<mode>.webp). */
+export const CONTROL_ART = Object.freeze(['en', 'ru', 'uk', 'zh', 'it']);
 /** The picture's language for a locale: its own, else English when English ships, else none (the drawn mouse). Pure. */
 export function artLocale(locale, have = CONTROL_ART) {
   if (have.includes(locale)) return locale;

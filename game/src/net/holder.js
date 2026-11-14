@@ -5,8 +5,9 @@
 import { NEAR_DEPLOYMENT } from './near-deployment.js';
 import { DAY1_DEPLOYMENT } from './day1-deployment.js';
 import { createTxClient } from './near-tx.js';
+import { EXPLORER, NET } from './network.js';
 
-export const JUDGE_ACCOUNT = 'lambada_eth.testnet';
+export const JUDGE_ACCOUNT = 'lambada_eth' + NET.suffix;
 export const HOLDER_KEY = 'ftf.holder.v1';
 const ACCOUNT_RE = /^(([a-z\d]+[-_])*[a-z\d]+\.)*([a-z\d]+[-_])*[a-z\d]+$/;
 
@@ -39,7 +40,7 @@ export async function checkHolder(account, { deployment = NEAR_DEPLOYMENT, day1 
   const acc = String(account || '').trim().toLowerCase();
   if (!isAccountId(acc)) return { state: 'invalid', account: acc, tokens: [], title: null, perks: [] };
   const client = createTxClient({ rpcUrls: (deployment && deployment.rpcUrls) || [], fetch, timeoutMs });
-  const explorer = ((deployment && deployment.explorer) || 'https://testnet.nearblocks.io').replace(/\/$/, '');
+  const explorer = ((deployment && deployment.explorer) || EXPLORER).replace(/\/$/, '');
   const tokens = []; let failed = false;
   for (const { kind, contractId } of holderContracts(deployment, day1)) {
     try {

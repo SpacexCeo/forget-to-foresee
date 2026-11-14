@@ -6,6 +6,7 @@ import { stallItems, silkText, canTrade, MAX_QTY } from '../net/stall-client.js'
 import { toMicro, silkOf, STALL_TRADER } from '../net/town-act.js';
 import { artBox, resIconPath } from '../market/art.js';
 import { syncSilkNow, refreshSilk } from '../net/silk-core.js';
+import { txUrl } from '../net/network.js';
 
 const CSS = `
 .sp-wrap { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; padding: 16px; background: rgba(0, 0, 0, .45); }
@@ -123,7 +124,7 @@ export function createStallPanel({ t, client, town = null, doc = globalThis.docu
       await backSection();
       const s2 = back && back.querySelector('.sp-state'); if (!s2) return;
       s2.textContent = r.ok ? t(done) : t('works.err.' + r.reason);
-      if (r.ok && r.hash) { const a = el('a', null, ' ' + t('works.viewTx')); a.href = 'https://testnet.nearblocks.io/txns/' + r.hash; a.target = '_blank'; a.rel = 'noopener noreferrer'; s2.append(a); }
+      if (r.ok && r.hash) { const a = el('a', null, ' ' + t('works.viewTx')); a.href = txUrl(r.hash); a.target = '_blank'; a.rel = 'noopener noreferrer'; s2.append(a); }
     };
     const go = el('button', null, t('stall.back.go')); go.type = 'button';
     go.addEventListener('click', () => { const amount = toMicro(amt.value); if (!amount) { state.textContent = t('works.err.bad_args'); return; } act('invest_stall', { trader, amount }, 'stall.back.done'); });

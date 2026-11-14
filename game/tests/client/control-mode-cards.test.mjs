@@ -2,9 +2,10 @@
 // the owner's pictures per language when cut, English for Italian, a drawn mouse until then; five locales.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { installDom } from '../lib/mini-dom.mjs';
-import { controlModeCards, artLocale, CONTROL_MODES, LINES } from '../../src/ui/control-mode-cards.js';
+import { controlModeCards, artLocale, CONTROL_MODES, CONTROL_ART, LINES } from '../../src/ui/control-mode-cards.js';
 
 test('cards: two radio cards, the current mode checked, a click on the other picks it', () => {
   const { doc } = installDom();
@@ -20,13 +21,14 @@ test('cards: two radio cards, the current mode checked, a click on the other pic
   assert.equal(foot.textContent, 'set.ctl.mode.foot');
 });
 
-test('cards: the picture language falls back to English (Italian), and to the drawn mouse while none is cut', () => {
+test('cards: the picture language falls back to English, and to the drawn mouse with none; every shipped picture exists', () => {
   assert.equal(artLocale('ru', ['ru', 'en']), 'ru');
   assert.equal(artLocale('it', ['ru', 'en', 'uk', 'zh']), 'en');
   assert.equal(artLocale('it', []), null);
+  for (const l of CONTROL_ART) for (const m of CONTROL_MODES) assert.ok(existsSync(fileURLToPath(new URL(`../../public/assets/ui/control-modes/${l}-${m}.webp`, import.meta.url))), `${l}-${m}`);
   const { doc } = installDom();
-  const [wrap] = controlModeCards({ doc, t: (k) => k, mode: 'classic', onPick() {} });
-  assert.equal(wrap.querySelectorAll('img').length, 0, 'no picture file requested before it exists');
+  const [wrap] = controlModeCards({ doc, t: (k) => k, mode: 'classic', locale: 'uk', base: '/', onPick() {} });
+  assert.deepEqual(wrap.querySelectorAll('img').map((i) => i.src), ['/assets/ui/control-modes/uk-aim.webp', '/assets/ui/control-modes/uk-classic.webp']);
 });
 
 test('cards: every locale has the titles, the lines and the footer; Settings uses the cards, not the dropdown', async () => {

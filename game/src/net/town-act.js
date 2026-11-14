@@ -13,6 +13,7 @@ import { b58encode, importSecretKey } from './near-tx.js';
 import { guestFrom } from './agent-ledger.js';
 import { relayerUrl } from './tee-agent.js';
 import { recordTx } from './receipts.js';
+import { NET } from './network.js';
 
 export const UNIT = 1_000_000;
 export const WORKS = Object.freeze(['loom', 'caravan', 'archive', 'observatory']);
@@ -22,7 +23,7 @@ export const ACTIONS = Object.freeze({
   invest_stall: ['trader', 'amount'], claim_stall: ['trader'], enter_tournament: ['season_id'],
 });
 /** Which ftf-town trader account keeps each stall keeper's stall (relayer market/catalog.js traderAccount). */
-export const STALL_TRADER = Object.freeze({ guard: 'trader-01.ftf-town.testnet', shardkeeper: 'trader-02.ftf-town.testnet', shrinekeeper: 'trader-06.ftf-town.testnet' });
+export const STALL_TRADER = Object.freeze({ guard: `trader-01.${NET.accounts.town}`, shardkeeper: `trader-02.${NET.accounts.town}`, shrinekeeper: `trader-06.${NET.accounts.town}` });
 const REASON = Object.freeze({
   not_enough_silk: 'no_silk', locked: 'locked', cooling_down: 'not_ready', pledge_cap: 'cap', too_small: 'min_trade',
   already_entered: 'entered', no_open_season: 'season', no_stall: 'no_stall', paused: 'paused', not_your_deed: 'not_owner', wrong_state: 'state', no_exit_yet: 'state',
@@ -140,7 +141,7 @@ export function createTownAct({ storage, base = relayerUrl(), fetch = globalThis
         const signature = b58encode(await key.sign(new TextEncoder().encode(actMessage(g.accountId, action, a, at))));
         const r = await fetch(url + '/api/town/act', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ account_id: g.accountId, public_key: key.publicKey, at, action, args: a, signature }) });
         let b = {}; try { b = await r.json(); } catch { /* empty */ }
-        if (r.status === 200 && b.ok) { const h = String(b.tx_hash || '').replace(/^https:\/\/testnet\.nearblocks\.io\/txns\//, ''); recordTx('act', h, { note: action }); return { ok: true, hash: /^[1-9A-HJ-NP-Za-km-z]{32,64}$/.test(h) ? h : null, result: b.result ?? null }; }
+        if (r.status === 200 && b.ok) { const h = String(b.tx_hash || '').replace(/^https:\/\/(testnet\.)?nearblocks\.io\/txns\//, ''); recordTx('act', h, { note: action }); return { ok: true, hash: /^[1-9A-HJ-NP-Za-km-z]{32,64}$/.test(h) ? h : null, result: b.result ?? null }; }
         if (r.status === 404 && !b.error) return { ok: false, reason: 'not_available' };
         return { ok: false, reason: REASON[b.error] || (r.status === 503 ? 'not_available' : r.status >= 500 ? 'tx_failed' : 'network'), hash: null };
       } catch { return { ok: false, reason: 'network' }; }

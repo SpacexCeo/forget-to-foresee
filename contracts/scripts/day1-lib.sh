@@ -1,14 +1,25 @@
 #!/usr/bin/env bash
-# Shared helpers for the Day 1 scripts (testnet only). Sourced, not run.
-SIGNER=${SIGNER:-ftf-coordinator.testnet}
-RPC=${RPC:-https://test.rpc.fastnear.com}
+# Shared helpers for the deploy scripts. Sourced, not run. The network comes from FTF_NEAR_NETWORK (mainnet, else
+# testnet), the same switch as the game and the relayer (docs/deploy/mainnet.md); day1-write.mjs then writes
+# game/src/net/day1-deployment.<network>.js.
+NETWORK=${FTF_NEAR_NETWORK:-testnet}; [ "$NETWORK" = mainnet ] || NETWORK=testnet
+export FTF_NEAR_NETWORK=$NETWORK
+if [ "$NETWORK" = mainnet ]; then
+  TLD=near; DEFAULT_RPC=https://free.rpc.fastnear.com
+  # mainnet spends real NEAR: only with the owner's explicit go-ahead
+  if [ "${FTF_MAINNET_YES:-}" != 1 ]; then echo "Refusing mainnet without FTF_MAINNET_YES=1 (it spends real NEAR; docs/deploy/mainnet.md)." >&2; exit 1; fi
+else
+  TLD=testnet; DEFAULT_RPC=https://test.rpc.fastnear.com
+fi
+SIGNER=${SIGNER:-ftf-coordinator.$TLD}
+RPC=${RPC:-$DEFAULT_RPC}
 HEROINE=${HEROINE:-heroine.$SIGNER}
 COMPANIONS=${COMPANIONS:-companions.$SIGNER}
 GUESTS=${GUESTS:-guests.$SIGNER}
 AGENTS=${AGENTS:-agents.$SIGNER}
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 # Signing: the keys in ~/.near-credentials (the near CLI's legacy keychain).
-SIGN=(network-config testnet sign-with-legacy-keychain send)
+SIGN=(network-config "$NETWORK" sign-with-legacy-keychain send)
 
 rpc() { curl -s -X POST "$RPC" -H 'Content-Type: application/json' -d "$1"; }
 view_account() { rpc '{"jsonrpc":"2.0","id":1,"method":"query","params":{"request_type":"view_account","finality":"final","account_id":"'"$1"'"}}'; }

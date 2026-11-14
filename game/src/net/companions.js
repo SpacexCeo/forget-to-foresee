@@ -4,6 +4,7 @@
 import { createNearClient } from './near.js';
 import { NEAR_DEPLOYMENT } from './near-deployment.js';
 import { DAY1_DEPLOYMENT } from './day1-deployment.js';
+import { EXPLORER } from './network.js';
 
 export const DRAGON_KINDS = Object.freeze(['nacre', 'rill', 'cinder']);
 
@@ -23,7 +24,7 @@ export const heroineAccount = (tokenId, deployment = DAY1_DEPLOYMENT) => (tokenI
  * {state: 'none'} (no heroine yet or no contract) | {state: 'offline'}.
  * @param {{tokenId?: string|null, deployment?: object, rpcUrls?: string[], fetch?: Function}} o
  */
-export async function readCompanions({ tokenId = null, deployment = DAY1_DEPLOYMENT, rpcUrls = NEAR_DEPLOYMENT.rpcUrls, fetch = globalThis.fetch, explorer = 'https://testnet.nearblocks.io' } = {}) {
+export async function readCompanions({ tokenId = null, deployment = DAY1_DEPLOYMENT, rpcUrls = NEAR_DEPLOYMENT.rpcUrls, fetch = globalThis.fetch, explorer = EXPLORER } = {}) {
   const account = heroineAccount(tokenId, deployment);
   if (!account || !deployment.companions) return { state: 'none' };
   try {

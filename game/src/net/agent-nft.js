@@ -17,12 +17,13 @@ import { sha256 } from '../game/crypto.js';
 import { NEAR_DEPLOYMENT } from './near-deployment.js';
 import { createNearClient } from './near.js';
 import { CLANS, KIND_COLOR } from './shard-nft.js';
+import { NET, EXPLORER } from './network.js';
 
 export const AGENT_SPEC = 'ftf-agent/1';
 /** The agent's state version: 1 = the first season card. */
 export const AGENT_STATE_VERSION = 1;
 /** Where the owner deploys the contract (docs/agent-nft.md); `NEAR_DEPLOYMENT.agentContractId` overrides it. */
-export const DEFAULT_AGENT_CONTRACT = 'ftf-agents.testnet';
+export const DEFAULT_AGENT_CONTRACT = NET.accounts.agentCards;
 export const MEMORY_KINDS = ['first', 'call', 'gift', 'betrayal', 'debt', 'promise'];
 export const OUTCOMES = ['gift', 'weapon', 'survived', 'lost', 'gone', 'proof_failed'];
 export const READING_RULES = ['unknown', 'top', 'dots'];
@@ -236,7 +237,7 @@ export function agentMetadata(input) {
       + `Remembered: ${rem}. Forgotten: ${forg}. `
       + `Reading rule ${t.reading_rule}, ${t.words_known} of 16 words known, ${t.confident_cells} confident cells, ${t.wild ? 'wild' : 'obedient'} (${t.attention} attention), ${t.silk} silk. `
       + `State hash ${hash} = sha256 of this token's extra (${s.spec}, version ${s.version}). `
-      + `The season's schedule root is ${s.schedule_root} (contracts/season-commit). Minted by the season coordinator; Forget to Foresee, NEAR testnet.`,
+      + `The season's schedule root is ${s.schedule_root} (contracts/season-commit). Minted by the season coordinator; Forget to Foresee, ${NET.label}.`,
     media: `data:image/svg+xml;base64,${b64(svg)}`,
     media_hash: hexToB64(sha256(svg)),
     copies: 1,
@@ -273,7 +274,7 @@ export function agentContractOf(deployment = NEAR_DEPLOYMENT) {
 const ABSENT = new Set(['UNKNOWN_ACCOUNT', 'NO_CONTRACT_CODE', 'CONTRACT_EXECUTION_ERROR', 'MethodNotFound']);
 
 function linksFor(deployment, contractId, tokenId, owner, seasonId) {
-  const explorer = ((deployment && deployment.explorer) || 'https://testnet.nearblocks.io').replace(/\/$/, '');
+  const explorer = ((deployment && deployment.explorer) || EXPLORER).replace(/\/$/, '');
   const season = deployment && deployment.seasons ? deployment.seasons[seasonId] : null;
   const mintTx = deployment && deployment.agentMints ? deployment.agentMints[seasonId] || null : null;
   return {

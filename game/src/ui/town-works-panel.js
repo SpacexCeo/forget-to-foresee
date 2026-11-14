@@ -6,9 +6,10 @@ import { createTownAct, WORKS, toMicro, silkOf, deedActions, STALL_TRADER } from
 import { artBox, deedCardPath } from '../market/art.js';
 import { syncSilkNow, refreshSilk } from '../net/silk-core.js';
 import { loadGoals, recordGoal, goalsView, shareView } from './town-goals.js';
+import { EXPLORER as NET_EXPLORER } from '../net/network.js';
 
-const EXPLORER = 'https://testnet.nearblocks.io/txns/';
-const ACCOUNT = 'https://testnet.nearblocks.io/address/';
+const EXPLORER = NET_EXPLORER + '/txns/';
+const ACCOUNT = NET_EXPLORER + '/address/';
 const CSS = `
 .tw-wrap { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; padding: 12px; background: rgba(0, 0, 0, .45); }
 .tw { width: min(560px, 100%); max-height: calc(100vh - 24px); overflow: auto; box-sizing: border-box; background: #141a1c; color: #f3ead6; border: 1px solid rgba(233, 180, 76, .45); border-radius: 14px; padding: 16px; font: 14px/1.4 system-ui, sans-serif; box-shadow: 0 16px 40px rgba(0, 0, 0, .5); }

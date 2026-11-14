@@ -207,7 +207,7 @@
 .wh-root .wh-m .wh-m-objective__tag { display: inline-flex; align-items: center; gap: 5px; height: 20px; padding: 0 9px 0 7px; border: 1px solid var(--wh-pill-border); border-radius: 999px; background: var(--wh-pill-bg); color: var(--wh-gold-text); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; }
 .wh-root .wh-m .wh-m-objective__spark { width: 10px; height: 10px; }
 .wh-root .wh-m .wh-m-objective__spark svg path { fill: currentColor; stroke: none; }
-.wh-root .wh-m .wh-m-objective__title { font-family: var(--wh-font); font-size: 15.5px; line-height: 1.15; color: var(--wh-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; -webkit-text-stroke: var(--wh-stroke-text) currentColor; text-shadow: var(--wh-text-glow); }
+.wh-root .wh-m .wh-m-objective__title { font-family: var(--wh-font); font-size: 15.5px; line-height: 1.15; color: var(--wh-text); overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; /* long locales wrap, never cut (UI fit 14.11) */ -webkit-text-stroke: var(--wh-stroke-text) currentColor; text-shadow: var(--wh-text-glow); }
 .wh-root .wh-m .wh-m-objective__chev, .wh-root .wh-m .wh-m-iris__chev { width: 14px; height: 14px; color: var(--wh-text-muted); transition: transform var(--wh-m-dur) var(--wh-m-ease); }
 .wh-root .wh-m .wh-is-expanded .wh-m-objective__chev, .wh-root .wh-m .wh-is-expanded .wh-m-iris__chev { transform: rotate(180deg); }
 .wh-root .wh-m .wh-m-objective__more, .wh-root .wh-m .wh-m-iris__more { display: grid; grid-template-rows: 0fr; transition: grid-template-rows var(--wh-m-dur) var(--wh-m-ease); }

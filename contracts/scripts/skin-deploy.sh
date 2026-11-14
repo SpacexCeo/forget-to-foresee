@@ -23,7 +23,7 @@ if [ -n "${MINTER_PUB:-}" ]; then
   if rpc '{"jsonrpc":"2.0","id":1,"method":"query","params":{"request_type":"view_access_key","finality":"final","account_id":"'"$SKINS"'","public_key":"'"$MINTER_PUB"'"}}' | grep -q '"permission"'; then echo "    already added"; else
     near account add-key "$SKINS" grant-function-call-access --allowance "${ALLOWANCE:-1} NEAR" --contract-account-id "$SKINS" --function-names mint_skin use-manually-provided-public-key "$MINTER_PUB" "${SIGN[@]}"
   fi
-  near contract call-function as-transaction "$SKINS" add_minter json-args '{"account_id":"'"$SKINS"'"}' prepaid-gas '30.0 Tgas' attached-deposit '0 NEAR' sign-as "$SIGNER" network-config testnet sign-with-legacy-keychain send
+  near contract call-function as-transaction "$SKINS" add_minter json-args '{"account_id":"'"$SKINS"'"}' prepaid-gas '30.0 Tgas' attached-deposit '0 NEAR' sign-as "$SIGNER" network-config "$NETWORK" sign-with-legacy-keychain send
 else echo "    skipped (set MINTER_PUB)"; fi
 node "$ROOT/contracts/scripts/day1-write.mjs" skins="$SKINS"
 echo

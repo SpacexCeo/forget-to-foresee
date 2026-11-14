@@ -69,8 +69,9 @@ export function createChatBubbles({ doc = globalThis.document, camera, THREE }) 
         let el = els.get(b.key);
         if (!el) { el = doc.createElement('div'); el.className = 'ftf-say'; doc.body.append(el); els.set(b.key, el); }
         if (el.textContent !== b.text) el.textContent = b.text;
-        el.style.left = ((v.x + 1) / 2 * innerWidth).toFixed(1) + 'px';
-        el.style.top = ((1 - v.y) / 2 * innerHeight).toFixed(1) + 'px';
+        const bw = el.offsetWidth || 0, bh = el.offsetHeight || 0; // keep the whole bubble on screen near the edges (UI fit 14.11)
+        el.style.left = Math.min(Math.max((v.x + 1) / 2 * innerWidth, bw / 2 + 8), innerWidth - bw / 2 - 8).toFixed(1) + 'px';
+        el.style.top = Math.min(Math.max((1 - v.y) / 2 * innerHeight, bh + 14), innerHeight - 8).toFixed(1) + 'px';
         keep.add(b.key);
       }
       for (const [k, el] of els) if (!keep.has(k)) { el.remove(); els.delete(k); }
