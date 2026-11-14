@@ -357,5 +357,6 @@ CAST["wayfarer"] = dict(
                  over="vest_long", over_col=("sand", "brass"), over_len=0.05, over_open=0.05,
                  belt=("leather", "brass"), shoes=("boots", "leather_dark"), hat=("felt", "sand", "brass"),
                  extras=("crystal_camera", "pouch", "pouch_r", "cross_strap")),      # a fitted suit: no baggy trousers
-    style=style(lean=-1, chin=2, tilt=1, swing=1.25, sway=0.8, bounce=1.8, walk=1.35, cycle=34),
+    style=dict(style(lean=-1, chin=2, tilt=1, swing=1.25, sway=0.8, bounce=0.9, walk=1.35, cycle=29),
+               hips_walk=(-0.05, 0.02)),   # springy but a 3-5 cm bob: a quicker step (stride 1.3 m) and hips a little lower so the long legs never over-reach (review W1)
 )

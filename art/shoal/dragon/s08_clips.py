@@ -61,7 +61,7 @@ def legs_tucked(p, k=1.0):
     """The flight pose: hind legs trailing back along the tail, forelegs folded under the chest. Moderate angles on
     purpose: a hard tuck tears the generated skin at the leg roots (s07 pose test `legs_tucked` is this pose)."""
     both(p, 'leg_h_upper', q(x=-28 * k)); both(p, 'leg_h_lower', q(x=18 * k)); both(p, 'leg_h_foot', q(x=38 * k)); both(p, 'leg_h_paw', q(x=15 * k))
-    both(p, 'leg_f_upper', q(x=34 * k)); both(p, 'leg_f_lower', q(x=-72 * k)); both(p, 'leg_f_paw', q(x=40 * k)); return p
+    both(p, 'leg_f_upper', q(x=30 * k)); both(p, 'leg_f_lower', q(x=-58 * k)); both(p, 'leg_f_paw', q(x=36 * k)); return p   # the elbow folds 58 deg: more tears the armpit
 
 
 def fly_body(p, k=1.0):

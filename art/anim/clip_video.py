@@ -33,6 +33,7 @@ for tr in rig.animation_data.nla_tracks: tr.mute = True
 speed = float(A['speed']) if 'speed' in A else float(acts[SEQ[0]].get('speed', 0.0) or 0.0)
 fwd = Vector((0, -1, 0))                               # the way the character faces (glTF +Z = Blender -Y)
 mover = bpy.data.objects.new('mover', None); sc.collection.objects.link(mover); rig.parent = mover
+LIFT = Vector((0, 0, float(A.get('lift', 0))))          # a flyer is shown this high over the floor (the game lifts it too)
 if len(SEQ) == 1:                                      # one clip, looped over the whole video
     act = acts[SEQ[0]]; rig.animation_data.use_nla = False; rig.animation_data.action = act
     if hasattr(rig.animation_data, 'action_slot') and getattr(act, 'slots', None): rig.animation_data.action_slot = act.slots[0]
@@ -40,12 +41,12 @@ if len(SEQ) == 1:                                      # one clip, looped over t
     try: curves = list(act.fcurves) or [fc for layer in act.layers for strip in layer.strips for bag in strip.channelbags for fc in bag.fcurves]
     except Exception: curves = [fc for layer in act.layers for strip in layer.strips for bag in strip.channelbags for fc in bag.fcurves]
     for fc in curves: m = fc.modifiers.new('CYCLES'); m.mode_before = m.mode_after = 'REPEAT'
-    mover.location = (0, 0, 0); mover.keyframe_insert('location', frame=1 * K)
-    mover.location = fwd * speed * (N - 1) / FPS; mover.keyframe_insert('location', frame=N * K)
+    mover.location = LIFT; mover.keyframe_insert('location', frame=1 * K)
+    mover.location = LIFT + fwd * speed * (N - 1) / FPS; mover.keyframe_insert('location', frame=N * K)
     travel = speed * SEC
 else:                                                  # a sequence on one NLA track; travel only while walking or running
     rig.animation_data.action = None; rig.animation_data.use_nla = True
-    at = 1.0 * K; pos = Vector((0, 0, 0)); LEN = 0.0    # one track per clip: exact (fractional) starts never collide
+    at = 1.0 * K; pos = LIFT.copy(); LEN = 0.0    # one track per clip: exact (fractional) starts never collide
     mover.location = pos; mover.keyframe_insert('location', frame=at)
     for _i, name in enumerate(SEQ):
         _last = _i == len(SEQ) - 1; act = acts[name]; ln = act.frame_range[1] - act.frame_range[0]
@@ -55,7 +56,7 @@ else:                                                  # a sequence on one NLA t
         at += ln; LEN += ln
         if name in ('walk', 'run'): pos = pos + fwd * speed * (ln / SRC_FPS)
         mover.location = pos; mover.keyframe_insert('location', frame=at)
-    travel = pos.length
+    travel = (pos - LIFT).length
 for fc in mover.animation_data.action.fcurves if hasattr(mover.animation_data.action, 'fcurves') else []:
     for kp in fc.keyframe_points: kp.interpolation = 'LINEAR'
 
