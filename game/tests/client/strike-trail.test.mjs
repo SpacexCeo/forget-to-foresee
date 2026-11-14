@@ -29,11 +29,11 @@ test('the fastest limb leads the ribbon, which shows through the swing and fades
   const posArr = trail.ribbon.geometry.attributes.position.array;
   trail.start(R.root, 'strike1', 0.2);
   const dt = 1 / 60; let shown = 0;
-  for (let i = 0; i < 18; i++) { R.armR.rotation.z = -i * 0.12; R.root.updateMatrixWorld(true); trail.update(dt); if (trail.ribbon.visible) shown++; if (i === 12) trail.impact(); }
+  for (let i = 0; i < 26; i++) { R.armR.rotation.z = -i * 0.09; R.root.updateMatrixWorld(true); trail.update(dt); if (trail.ribbon.visible) shown++; if (i === 12) trail.impact(); }
   assert.equal(trail.lead, 'hand_R', 'the swinging fist leads, not the still foot');
   assert.ok(shown >= 12, 'the ribbon shows through the swing');
   assert.equal(trail.flash.visible, true, 'the contact flash blooms at the impact');
-  assert.ok((0.2 + AFTER_IMPACT) < 18 * dt + 0.05);
+  assert.ok((0.2 + AFTER_IMPACT) < 26 * dt + 0.05);
   for (let i = 0; i < Math.ceil((TRAIL_FADE + 0.3) * 60); i++) trail.update(dt);
   assert.equal(trail.active, false); assert.equal(trail.ribbon.visible, false, 'gone after the fade'); assert.equal(trail.flash.visible, false);
   assert.equal(trail.ribbon.geometry.attributes.position.array, posArr, 'the same buffer: nothing reallocated');
@@ -80,4 +80,9 @@ test('the blade swoosh: its head runs along the arc, the tail dissolves, sparks 
   for (let i = 0; i < 120; i++) fx.update(1 / 60);
   assert.equal(mesh.visible, false, 'faded out');
   assert.ok(!('vertexColors' in mesh.material) || !mesh.material.vertexColors, 'no flat vertex-coloured crescent');
+});
+
+test('the arena draws no fixed arc in front of her: the strike's light rides the limb or blade that swings (owner)', () => {
+  const src = readFileSync(new URL('../../src/scenes/shoal-arena.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(src, /fx.slash(/);
 });

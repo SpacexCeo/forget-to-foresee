@@ -17,7 +17,7 @@ export const STRIKE_LOOK = Object.freeze({
   slash: { color: 0xfff1c9, width: 0.0 },   // the blade: the ribbon spans hilt to tip, no extra width
   cast: { color: 0xa8e4ff, width: 0.26 },
 });
-export const RIBBON = 24, TRAIL_FADE = 0.28, AFTER_IMPACT = 0.12;
+export const RIBBON = 32, TRAIL_FADE = 0.42, AFTER_IMPACT = 0.18;
 
 /** Which look a clip takes (pure). */
 export function lookFor(clip) {
@@ -35,24 +35,29 @@ export function isLimbBone(name) {
   return /(hand|wrist|foot|ankle)/i.test(n) && !/(thumb|index|middle|ring|pinky|finger|toe|ball|end|twist|ik|pole)/i.test(n);
 }
 
-const VERT = `attribute float aA; varying float vA; varying float vU; attribute float aU; void main(){ vA = aA; vU = aU; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
-const FRAG = `uniform vec3 uColor; varying float vA; varying float vU; void main(){ float edge = 1.0 - abs(vU * 2.0 - 1.0); gl_FragColor = vec4(mix(uColor, vec3(1.0), edge * 0.5), vA * (0.35 + 0.65 * edge)); }`;
+const VERT = `attribute float aA; attribute float aU; attribute float aT; varying float vA; varying float vU; varying float vT; void main(){ vA = aA; vU = aU; vT = aT; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
+// vU: across the ribbon (0 at the joint side, 1 at the fist, foot or blade tip); vT: along it (0 oldest, 1 newest)
+const FRAG = `uniform vec3 uColor; uniform float uSeed; varying float vA; varying float vU; varying float vT;
+void main(){ float tip = smoothstep(0.25, 1.0, vU); float soft = 1.0 - pow(abs(vU * 2.0 - 1.0), 3.0);
+  float streak = 0.6 + 0.4 * sin(vU * 31.0 + uSeed) * sin(vU * 13.0 - vT * 22.0 + uSeed * 0.6);
+  float head = smoothstep(0.75, 1.0, vT);
+  gl_FragColor = vec4(mix(uColor, vec3(1.0), clamp(tip * 0.55 + head * tip * 0.4, 0.0, 1.0)), vA * (0.25 + 0.75 * tip) * soft * streak); }`;
 
 /** @param {{THREE: object, parent: object}} o */
 export function createStrikeTrail({ THREE, parent }) {
-  const pos = new Float32Array(RIBBON * 2 * 3), alpha = new Float32Array(RIBBON * 2), across = new Float32Array(RIBBON * 2);
+  const pos = new Float32Array(RIBBON * 2 * 3), alpha = new Float32Array(RIBBON * 2), across = new Float32Array(RIBBON * 2), along = new Float32Array(RIBBON * 2);
   const age = new Float32Array(RIBBON); // seconds since each sample was taken (Infinity: empty)
   age.fill(Infinity);
   const idx = [];
   for (let i = 0; i < RIBBON - 1; i++) { const a = i * 2, b = a + 1, c = a + 2, d = a + 3; idx.push(a, b, c, b, d, c); }
-  for (let i = 0; i < RIBBON; i++) { across[i * 2] = 0; across[i * 2 + 1] = 1; }
+  for (let i = 0; i < RIBBON; i++) { across[i * 2] = 0; across[i * 2 + 1] = 1; along[i * 2] = along[i * 2 + 1] = i / (RIBBON - 1); }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3).setUsage(THREE.DynamicDrawUsage));
   geo.setAttribute('aA', new THREE.BufferAttribute(alpha, 1).setUsage(THREE.DynamicDrawUsage));
-  geo.setAttribute('aU', new THREE.BufferAttribute(across, 1));
+  geo.setAttribute('aU', new THREE.BufferAttribute(across, 1)); geo.setAttribute('aT', new THREE.BufferAttribute(along, 1));
   geo.setIndex(idx);
   geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e5);
-  const mat = new THREE.ShaderMaterial({ uniforms: { uColor: { value: new THREE.Color() } }, vertexShader: VERT, fragmentShader: FRAG, transparent: true, depthWrite: false, side: THREE.DoubleSide });
+  const mat = new THREE.ShaderMaterial({ uniforms: { uColor: { value: new THREE.Color() }, uSeed: { value: 0 } }, vertexShader: VERT, fragmentShader: FRAG, transparent: true, depthWrite: false, side: THREE.DoubleSide });
   const ribbon = new THREE.Mesh(geo, mat); ribbon.frustumCulled = false; ribbon.visible = false; ribbon.name = 'strike_trail';
   parent.add(ribbon);
   // the contact flash: one soft sprite
@@ -77,7 +82,7 @@ export function createStrikeTrail({ THREE, parent }) {
       if (!m) return;
       if (m !== model) { model = m; collect(m); } else { m.updateMatrixWorld(true); for (const l of limbs) { l.bone.getWorldPosition(l.last); l.path = 0; } }
       blade = sword || null; look = STRIKE_LOOK[lookFor(clip)] || STRIKE_LOOK.strike;
-      mat.uniforms.uColor.value.setHex(look.color);
+      mat.uniforms.uColor.value.setHex(look.color); mat.uniforms.uSeed.value = (mat.uniforms.uSeed.value + 2.39) % 6.28;
       active = true; t = 0; impactAt = impactS; until = (impactS != null ? impactS : 0.35) + AFTER_IMPACT; lead = null;
       age.fill(Infinity); head = 0;
     },
@@ -115,7 +120,7 @@ export function createStrikeTrail({ THREE, parent }) {
         if (t >= until) active = false;
       }
       // the strip is drawn oldest -> newest: rebuild the order from the ring (copy into place is cheaper than an index rebuild)
-      const fade = reduced ? TRAIL_FADE * 0.5 : TRAIL_FADE, peak = reduced ? 0.5 : 0.9;
+      const fade = reduced ? TRAIL_FADE * 0.5 : TRAIL_FADE, peak = reduced ? 0.55 : 1;
       let any = false;
       for (let i = 0; i < RIBBON; i++) { const a = age[i] < fade ? peak * (1 - age[i] / fade) : 0; alpha[i * 2] = a * 0.4; alpha[i * 2 + 1] = a; if (a > 0) any = true; }
       ribbon.visible = any;
