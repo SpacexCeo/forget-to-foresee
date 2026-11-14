@@ -53,5 +53,5 @@ test('boot-world: the Shoal holds the queue, and the town keys stay asleep under
   const { readFileSync } = await import('node:fs');
   const src = readFileSync(new URL('../../src/boot-world.js', import.meta.url), 'utf8');
   assert.match(src, /setOnboardingHold\(\(\) => \{ const owns = !!\(glassShoal && glassShoal\.owns && glassShoal\.owns\(\)\);/);
-  assert.match(src, /if \(day1Open\(\) \|\| blocksWindows\(\)\) return false;/);
+  assert.match(src, /\(input\.hit\('KeyE'\) \|\| pad\.hit\(PAD\.interact\)\) && !day1Open\(\) && !blocksWindows\(\)/, 'E is held back under a Day-1 card; walking never is');
 });
