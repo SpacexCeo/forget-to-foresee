@@ -15,6 +15,10 @@ test('townsfolk pack: one small shared file with the social clips, body tracks o
   assert.ok(json.nodes.some((n) => n.name === 'pelvis'), 'the agent rig skeleton the game retargets from');
   for (const a of json.animations) {
     assert.equal(typeof a.extras.loop, 'boolean', a.name); assert.equal(a.extras.speed, 0, a.name + ' stands');
+    // the retarget reads every track at the first track's key times: different key counts gave NaN poses (bodies gone)
+    const counts = new Set(a.channels.map((c) => json.accessors[a.samplers[c.sampler].input].count));
+    assert.equal(counts.size, 1, a.name + ' tracks share their key times: ' + [...counts]);
+    assert.equal(a.samplers.length, a.channels.length, a.name + ' carries no unused tracks');
     for (const c of a.channels) {
       const n = json.nodes[c.target.node].name;
       assert.ok(BODY.test(n), a.name + ' moves only body bones, not ' + n);
