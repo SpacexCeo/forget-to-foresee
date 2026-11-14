@@ -50,7 +50,18 @@ const uid = () => {
  * The chest bag in this browser. Each chest: {id, tier, source, foundAt, state: 'sealed'|'opened', opening?}.
  * @param {{storage?: object, now?: () => number}} [o]
  */
-export function createChestBag({ storage = null, now = () => Date.now() } = {}) {
+/**
+ * Chest moments as window events (owner P0 14.11: "pick up a chest" must count, kept apart from the rest): 'pickup'
+ * (Iris walked onto a dropped chest: scenes/town-monsters.js), 'bagged' (a chest went into the bag, from any source),
+ * 'open' (a sealed chest was opened) and 'contents' (what it held). detail: {phase, id, tier, source?, outcome?}.
+ */
+export const CHEST_EVENT = 'ftf:chest';
+export const CHEST_PHASES = Object.freeze(['pickup', 'bagged', 'open', 'contents']);
+export function chestEvent(phase, detail = {}, win = globalThis) {
+  try { if (win && typeof win.dispatchEvent === 'function' && typeof CustomEvent === 'function') win.dispatchEvent(new CustomEvent(CHEST_EVENT, { detail: { phase, ...detail } })); } catch { /* no page */ }
+}
+
+export function createChestBag({ storage = null, now = () => Date.now(), win = globalThis } = {}) {
   const read = () => { try { const raw = storage && storage.getItem(CHEST_KEY); return raw ? (JSON.parse(raw).chests || []).filter((c) => c && c.id && CHEST_TIERS.includes(c.tier)) : []; } catch { return []; } };
   let list = read();
   const subs = new Set();
@@ -65,12 +76,17 @@ export function createChestBag({ storage = null, now = () => Date.now() } = {}) 
     /** A new sealed chest found in the world. */
     add({ tier = 'common', source = 'monster' } = {}) {
       const c = { id: uid(), tier: CHEST_TIERS.includes(tier) ? tier : 'common', source, foundAt: now(), state: 'sealed' };
-      list = [c, ...list]; save(); return c;
+      list = [c, ...list]; save();
+      chestEvent('bagged', { id: c.id, tier: c.tier, source }, win);
+      return c;
     },
     /** The chest service opened it: keep the opening (outcome, proof, verification) with the chest. */
     settle(id, opening) {
       const c = list.find((x) => x.id === id); if (!c || c.state !== 'sealed') return null;
-      c.state = 'opened'; c.opening = opening; c.openedAt = now(); save(); return c;
+      c.state = 'opened'; c.opening = opening; c.openedAt = now(); save();
+      chestEvent('open', { id: c.id, tier: c.tier }, win);
+      chestEvent('contents', { id: c.id, tier: c.tier, outcome: (opening && opening.outcome) || null }, win);
+      return c;
     },
     subscribe(f) { subs.add(f); return () => subs.delete(f); },
   };

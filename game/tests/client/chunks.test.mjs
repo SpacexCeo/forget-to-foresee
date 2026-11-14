@@ -19,6 +19,28 @@ test('every module main.js imports statically is pinned to the boot chunk', () =
   }
 });
 
+// Lead, 14.11: play/locales/en-quests.js imported game/journal-data.js (a ui-chunk module) while ui imports the locales,
+// so locales <-> ui became a chunk cycle and the build died at boot. Rule: a locale module only imports modules that the
+// plan puts in the locales chunk, and those import nothing outside it.
+test('the locales chunk imports nothing from another chunk', async () => {
+  const { readdirSync } = await import('node:fs');
+  const root = new URL('../../src/', import.meta.url);
+  const bad = [];
+  const seen = new Set();
+  const visit = (rel) => {
+    if (seen.has(rel)) return; seen.add(rel);
+    const src = readFileSync(new URL(rel, root), 'utf8');
+    for (const m of src.matchAll(/^import\s+(?:[^'"]+from\s+)?['"](\.\.?\/[^'"]+)['"]/gm)) {
+      const target = new URL(m[1], new URL(rel, root)).pathname.replace(/^.*\/src\//, '');
+      if (chunkFor('/repo/game/src/' + target) !== 'locales') bad.push(`${rel} -> ${m[1]} (${chunkFor('/repo/game/src/' + target)})`);
+      else visit(target);
+    }
+  };
+  for (const dir of ['locales', 'play/locales']) for (const f of readdirSync(new URL(dir + '/', root)).filter((n) => n.endsWith('.js'))) visit(`${dir}/${f}`);
+  assert.equal(chunkFor('/repo/game/src/game/journal-data.js'), 'locales');
+  assert.deepEqual(bad, []);
+});
+
 // Lead, 12.11: the merged build died at boot with "Cannot access 'TOWNSFOLK' before initialization": scenes/barks.js
 // (client-core) read a play-chunk export at module level, and play imports client-core, so the cycle evaluated it
 // first. Rule: render/, physics/, scenes/ may import play/ or net/ values but only use them inside functions.
