@@ -8,6 +8,8 @@
 // pose with a bob, a lean and a bank; the casts reuse the strike clips.
 import * as R from '../game/shoal-rules.js';
 import { shoalSkillsFor, shoalExtrasFor, comboStep } from '../rpg/shoal-skills.js';
+/** The sword clips of the Loomblade combo, per step (null: the old strike stays until its cut is approved). */
+export const COMBO_CLIPS = Object.freeze(['slash1', null, null]);
 import { hasModelFile, fetchGltf, getModelVariant } from '../render/assets.js';
 import { bossAnimStep, freshBossAnim, fadeWeights, BOSS_ANIM } from '../game/shoal-boss-anim.js';
 import { createAddsView } from './shoal-adds-view.js';
@@ -287,7 +289,8 @@ export function createShoalArena(o) {
     faceBoss();
     if (s.id === 'loom_combo') {
       combo = comboT > 0 ? combo + 1 : 1; comboT = 0.9;
-      const i = comboStep(combo); clip('strike' + (i + 1));
+      // the Loomblade's own cuts where they exist (art/anim/iris_combat.py), the old strikes otherwise (Elise, older files)
+      const i = comboStep(combo); if (!(COMBO_CLIPS[i] && clip(COMBO_CLIPS[i]))) clip('strike' + (i + 1));
       melee(s.range, s.damage[i], false, i);
     } else if (s.id === 'loom_heavy') { heavyT = s.windup; clip('strike3'); cue('cast_charge_frost'); }
   }
