@@ -27,6 +27,6 @@ export function silkChipText(v, t) {
   const tip = [{ text: t('silk.tip.gate', { n: fmtSilk(v.gateC) }), bold: true }, { text: t('silk.tip.chain', { n: fmtSilk(v.onChainC) }) }];
   if (v.pendingC > 0) tip.push({ text: t('silk.tip.pending', { n: fmtSilk(v.pendingC) }) });
   if (v.playC > 0) tip.push({ text: t('silk.tip.play', { n: fmtSilk(v.playC) }) });
-  tip.push({ text: t('silk.tip.total', { n: fmtSilk(v.totalC) }) }, { text: t('silk.tip.fee', { n: fmtSilk(v.feeC) }) }, { text: t('silk.tip.help') });
+  tip.push({ text: t('silk.tip.total', { n: fmtSilk(v.totalC) }) }, { text: t('silk.tip.fee', { n: fmtSilk(v.feeC) }) }, { text: t('silk.tip.earn') }, { text: t('silk.tip.spend') }, { text: t('silk.tip.help') });
   return { line1, line2, line2Kind: kind, showSync: kind === 'pending', tooltip: tip, link: t('silk.tip.what') };
 }

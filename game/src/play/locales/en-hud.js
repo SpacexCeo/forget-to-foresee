@@ -67,6 +67,7 @@ export default {
   'hud.name.default': 'Traveller',
   'silk.tip.gate': 'Silk that counts for the Gate-Loom: {n}', 'silk.tip.chain': 'Recorded on NEAR: {n}', 'silk.tip.pending': 'Waiting to be recorded: {n}',
   'silk.tip.play': 'Play silk (saved on this device only): {n}', 'silk.tip.total': 'All silk you hold: {n}', 'silk.tip.fee': 'Gate price: {n}',
+  "silk.tip.earn": "Earn silk: quests, monsters, chests, verified trials, selling at stalls and the market.", "silk.tip.spend": "Spend silk: the Gate-Loom portal, stall goods, market buys, hiring townsfolk agents.",
   'silk.tip.help': 'Press Sync to record the waiting silk now. It also syncs by itself every minute.', 'silk.tip.what': 'What is silk?',
   'silk.unit': '{n} silk',
 };

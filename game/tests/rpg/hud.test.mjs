@@ -18,10 +18,10 @@ test('silk chip: line 1 is the Gate number; pending, syncing and offline lines; 
   const a = silkChipText(view({ totalC: 12864, gateC: 3800, onChainC: 3800, pendingC: 300, playC: 8764 }), t);
   assert.equal(a.line1, '38'); assert.equal(a.line2, '+3 waiting'); assert.equal(a.line2Kind, 'pending'); assert.ok(a.showSync);
   assert.deepEqual(a.tooltip.map((x) => x.text), ['Silk that counts for the Gate-Loom: 38', 'Recorded on NEAR: 38', 'Waiting to be recorded: 3', 'Play silk (saved on this device only): 87.64',
-    'All silk you hold: 128.64', 'Gate price: 200', 'Press Sync to record the waiting silk now. It also syncs by itself every minute.']);
+    'All silk you hold: 128.64', 'Gate price: 200', 'Earn silk: quests, monsters, chests, verified trials, selling at stalls and the market.', 'Spend silk: the Gate-Loom portal, stall goods, market buys, hiring townsfolk agents.', 'Press Sync to record the waiting silk now. It also syncs by itself every minute.']);
   assert.ok(a.tooltip[0].bold); assert.equal(a.link, 'What is silk?');
   const b = silkChipText(view({ gateC: 5000, onChainC: 5000, totalC: 5000 }), t);
-  assert.equal(b.line2, null); assert.equal(b.showSync, false); assert.equal(b.tooltip.length, 5, 'pending and play lines hidden at 0');
+  assert.equal(b.line2, null); assert.equal(b.showSync, false); assert.equal(b.tooltip.length, 7, 'pending and play lines hidden at 0');
   const c = silkChipText(view({ pendingC: 100, syncing: true, chainOk: true }), t); assert.equal(c.line2, 'Syncing…'); assert.equal(c.showSync, false);
   const d = silkChipText(view({ pendingC: 100, chainOk: false, localTotalC: 10000, totalC: 10100 }), t); assert.equal(d.line2, 'Playing locally'); assert.equal(d.line2Kind, 'local'); assert.equal(d.line1, '100', 'local: this device\'s silk');
   assert.equal(silkChipText(view({ noAccount: true, localTotalC: 12345 }), t).line1, '123.45');

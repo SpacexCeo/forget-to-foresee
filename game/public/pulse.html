@@ -39,13 +39,6 @@
     <span class="label">Rates are measured past fee flow, variable, can be zero</span>
   </div>
   <div id="state" class="state">Reading the town…</div>
-  <section id="count">
-    <h2>Independent count (public indexer)</h2>
-    <p class="note" id="countstate">Counting today's transactions from the public indexer…</p>
-    <div class="grid" id="counttiles"></div>
-    <table><thead><tr><th>Contract : method</th><th>Successful</th><th>Failed</th></tr></thead><tbody id="countmethods"></tbody></table>
-    <p class="note" id="countnote"></p>
-  </section>
   <section id="body" hidden>
     <div class="grid" id="tiles"></div>
     <h2>The town works</h2>
@@ -80,6 +73,13 @@
       <li>Players' own inventories and story progress (not on this contract), and anything the relayer says that the chain does not confirm: such numbers are marked.</li>
     </ul>
     <p class="note" id="calls"></p>
+  </section>
+  <section id="count">
+    <h2>Independent count (public indexer)</h2>
+    <p class="note" id="countstate">Counting today's transactions from the public indexer…</p>
+    <div class="grid" id="counttiles"></div>
+    <table id="counttable" hidden><thead><tr><th>Contract : method</th><th>Successful</th><th>Failed</th></tr></thead><tbody id="countmethods"></tbody></table>
+    <p class="note" id="countnote"></p>
   </section>
 </main>
 <script>
@@ -263,6 +263,7 @@
     const link = (text, href) => el('a', text, { href, target: '_blank', rel: 'noopener' });
     const at = new Date(now).toISOString().slice(11, 16);
     $('countstate').textContent = `Today (UTC), 00:00 to ${at}: counted from ${pages} indexer pages.`;
+    $('counttable').hidden = false;
     $('counttiles').replaceChildren(tile('successful transactions today', ok.toLocaleString('en')), tile('market trades today', trades.toLocaleString('en')),
       tile('transactions in the last 60 min', hour.toLocaleString('en')), tile('distinct signing accounts today', String(signers.size)));
     $('countmethods').replaceChildren(...Object.entries(methods).sort((a, b) => b[1][0] + b[1][1] - a[1][0] - a[1][1]).map(([k, v]) => {

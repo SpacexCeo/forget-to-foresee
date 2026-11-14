@@ -53,6 +53,7 @@ export default {
   "hud.name.default": "旅人",
   "silk.tip.gate": "可用于织门的丝：{n}", "silk.tip.chain": "已记录在 NEAR：{n}", "silk.tip.pending": "等待记录：{n}",
   "silk.tip.play": "游戏丝（仅保存在本设备）：{n}", "silk.tip.total": "你持有的全部丝：{n}", "silk.tip.fee": "织门价格：{n}",
+  "silk.tip.earn": "获得丝：任务、怪物、宝箱、已验证的试炼、在摊位和市场出售。", "silk.tip.spend": "花费丝：织门传送门、摊位商品、市场购买、雇用镇民代理。",
   "silk.tip.help": "按“记录”立即记录待记录的丝。它也会每分钟自动记录。", "silk.tip.what": "丝是什么？",
   "silk.unit": "{n} 丝",
 };
