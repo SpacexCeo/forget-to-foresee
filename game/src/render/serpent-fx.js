@@ -122,9 +122,9 @@ const STK_FRAG = `varying vec4 vC; void main(){ gl_FragColor = vC; }`;
 const WAVE_VERT = `varying vec2 vUv; varying vec2 vQ; void main(){ vUv = uv; vQ = position.xy; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
 const WAVE_FRAG = `uniform vec3 uColor; uniform float uA, uSeed; varying vec2 vUv; varying vec2 vQ;
 void main(){ float ang = atan(vQ.y, vQ.x);
-  float broken = clamp(0.3 + 0.9 * sin(ang * 7.0 + uSeed) * sin(ang * 13.0 - uSeed * 1.7) + 0.3 * sin(ang * 23.0 + uSeed * 0.4), 0.0, 1.0);  // a ripple of frost, broken round its circle
+  float broken = clamp(0.2 + 0.9 * sin(ang * 19.0 + uSeed) * sin(ang * 31.0 - uSeed * 1.7) + 0.3 * sin(ang * 53.0 + uSeed * 0.4), 0.0, 1.0);  // a ripple of frost, broken round its circle
   float lead = vUv.y + 0.12 * sin(ang * 9.0 + uSeed * 2.3);
-  gl_FragColor = vec4(uColor * 0.8, 0.7 * uA * broken * smoothstep(0.0, 0.7, lead) * (1.0 - smoothstep(0.8, 1.0, lead))); }`;
+  gl_FragColor = vec4(uColor * 0.8, 0.6 * uA * broken * smoothstep(0.6, 0.85, lead) * (1.0 - smoothstep(0.88, 1.0, lead))); }`;
 const GEY_FRAG = `uniform vec3 uColor; uniform float uA; varying vec2 vUv; void main(){ float h = vUv.y; float fil = pow(max(0.0, sin(vUv.x * 113.0 + h * 3.0)), 6.0) + 0.25 * pow(max(0.0, sin(vUv.x * 41.0 - h * 5.0)), 4.0); gl_FragColor = vec4(uColor * (0.75 - h * 0.35), uA * (1.0 - h) * (1.0 - h) * fil); }`;
 const UV_VERT = `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
 
