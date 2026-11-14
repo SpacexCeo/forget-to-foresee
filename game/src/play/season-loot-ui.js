@@ -37,6 +37,7 @@ const CSS = `
 
 /** The text of one row (play/locales loot.row.*). */
 export function lootRowText(row, t) {
+  if (row.text) return row.text; // a row already written by its caller (the Glass Shoal's chapter card)
   switch (row.kind) {
     case 'level': return t('loot.row.level', { n: row.level });
     case 'title': return t('loot.row.title', { title: t('profile.title.' + row.title) });
@@ -51,7 +52,7 @@ export function lootRowText(row, t) {
  * Opens the card. Returns {close, root}; `onClose` runs once when it goes.
  * @param {{rows: Array, outcome?: string|null, t: Function, base?: string, reduced?: boolean, onClose?: Function, doc?: Document}} o
  */
-export function openSeasonLoot({ rows, outcome = null, t, base = '/', reduced = false, onClose = null, doc = globalThis.document }) {
+export function openSeasonLoot({ rows, outcome = null, t, base = '/', reduced = false, onClose = null, doc = globalThis.document, kicker = null, heading = null, line = null, cont = null }) {
   if (!doc.getElementById('sl-css')) { const st = doc.createElement('style'); st.id = 'sl-css'; st.textContent = CSS; doc.head.append(st); }
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   // an open <dialog> (not modal: the page keeps its own layers): the world's keys and the mouse aim stand down while it shows
@@ -59,9 +60,10 @@ export function openSeasonLoot({ rows, outcome = null, t, base = '/', reduced = 
   // the homecoming scene behind the card (owner's GPT art: the town gate at dusk, the trophies by the doors)
   wrap.style.setProperty('--sl-bg', `url("${base}assets/ui/season/season_return_bg_${(globalThis.innerWidth || 1280) > 900 ? 1600 : 800}.webp")`);
   const card = el('div', 'sl-card'); wrap.append(card);
-  const title = el('h2', 'sl-title', t('loot.title')); title.id = 'sl-title';
-  card.append(el('p', 'sl-kicker', t('loot.kicker')), title);
-  if (outcome) card.append(el('p', 'sl-outcome', t('goal.season_over', { outcome })));
+  const title = el('h2', 'sl-title', heading || t('loot.title')); title.id = 'sl-title';
+  card.append(el('p', 'sl-kicker', kicker || t('loot.kicker')), title);
+  if (line) card.append(el('p', 'sl-outcome', line));
+  else if (outcome) card.append(el('p', 'sl-outcome', t('goal.season_over', { outcome })));
   if (rows.length) {
     const list = el('ul', 'sl-list');
     rows.forEach((row, i) => {
@@ -78,7 +80,7 @@ export function openSeasonLoot({ rows, outcome = null, t, base = '/', reduced = 
     card.append(list);
     if (rows.some((r) => r.kind === 'chest')) card.append(el('p', 'sl-hint', t('loot.hint.chests')));
   } else card.append(el('p', 'sl-empty', t('loot.empty')));
-  const go = el('button', 'sl-go', t('loot.continue')); go.type = 'button'; card.append(go);
+  const go = el('button', 'sl-go', cont || t('loot.continue')); go.type = 'button'; card.append(go);
   let closed = false;
   const close = () => {
     if (closed) return; closed = true;

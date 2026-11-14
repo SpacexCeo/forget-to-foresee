@@ -174,7 +174,15 @@ export function createGlassShoal(o) {
   function flyHome() {
     if (arena) arena.leave();
     mode = 'town'; backToStone();
-    if (event('home')) toast(say('shoal.home') + ' ' + say('shoal.reward', { xp: R.REWARD.xp, title: say('shoal.title.' + R.REWARD.title) }));
+    if (event('home')) { toast(say('shoal.home')); chapterCard(); }
+  }
+  /** The episode's end (owner: the boss as a finished episode, a chapter close): the homecoming card with the rewards. */
+  function chapterCard() {
+    const title = say('shoal.title.' + R.REWARD.title);
+    import('../play/season-loot-ui.js').then((m) => m.openSeasonLoot({ t: (k) => k, base: (import.meta.env && import.meta.env.BASE_URL) || '/', reduced: reduced(),
+      kicker: say('shoal.chapter.kicker'), heading: say('shoal.quest'), line: say('shoal.victory'), cont: say('shoal.chapter.continue'),
+      rows: [{ kind: 'title', text: say('shoal.chapter.title', { title }) }, { kind: 'boss_chest', tier: R.REWARD.chest, text: say('shoal.chapter.chest') }, { kind: 'xp', text: say('shoal.chapter.xp', { xp: R.REWARD.xp }) }] }))
+      .catch((e) => { console.warn('[shoal] chapter card', e); toast(say('shoal.reward', { xp: R.REWARD.xp, title })); });
   }
 
   // ---- per frame
@@ -200,7 +208,7 @@ export function createGlassShoal(o) {
     stone.visible = active; // the placeholder slab stands only once the quest is taken: the first hours of the town stay as they were
     bladeRay.visible = blade.visible;
     stoneRay.visible = mode === 'town' && active && R.stoneOpen(save);
-    if (mode === 'town' && R.homeDue(save) && event('home')) toast(say('shoal.home') + ' ' + say('shoal.reward', { xp: R.REWARD.xp, title: say('shoal.title.' + R.REWARD.title) }));
+    if (mode === 'town' && R.homeDue(save) && event('home')) { toast(say('shoal.home')); chapterCard(); }
     if (!reduced()) blade.rotation.y += dt * 0.6;
     // the tracker line
     const tk = mode === 'town' ? R.trackerKey(save, lv) : null;
