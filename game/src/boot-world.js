@@ -491,7 +491,7 @@ if (townMode.town) {
     import('./scenes/glass-shoal.js').then((m) => {
       glassShoal = m.createGlassShoal({ THREE, scene, camera, rig, player, toWorld: townToWorld, groundAt: (x, z) => town.groundAt(x, z), folkAt, ledger: townLedger, chests: chestBag, storage: ctx.storage,
         locale: () => (ctx.i18n && ctx.i18n.locale) || 'en', toast: (s) => toast(s), reduced: () => lookdev.reducedMotion, mobile: mobileDevice, touch: () => !!input.touchControls,
-        hero: () => (irisAvatar && irisAvatar.hero ? irisAvatar.hero.id : startHero.id), clip: (n) => { if (irisAvatar && irisAvatar.combat) irisAvatar.combat(n); }, axes: () => input.moveAxes(),
+        hero: () => (irisAvatar && irisAvatar.hero ? irisAvatar.hero.id : startHero.id), clip: (n) => !!(irisAvatar && irisAvatar.combat && irisAvatar.combat(n)), axes: () => input.moveAxes(),
         // her own companion dragons fight beside her at the Shoal (game/shoal-allies.js): only the ones flying with her now
         allies: () => companions.filter((c) => c.ready && c.root.visible).map((c) => ({ kind: c.kind, pos: c.root.getWorldPosition(new THREE.Vector3()), flourish: () => c.flourish(lookdev.reducedMotion) })) });
       const shoalJump = params.get('shoal'), gs = glassShoal;

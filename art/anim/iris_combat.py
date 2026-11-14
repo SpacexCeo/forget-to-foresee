@@ -1,6 +1,6 @@
 """Iris's combat clips for the field outside the walls, keyed by hand on her own rig and added to her side-car file.
 
-    python3 art/anim/iris_combat.py            # reads and rewrites game/public/assets/anim/iris.glb
+    python3 art/anim/iris_combat.py --only slash1   # reads and rewrites game/public/assets/anim/iris.glb
     python3 art/anim/iris_combat.py --model game/public/assets/models/agent_elise.glb --in <uncompressed elise clips>
         --out <file> --legs 0.4                # Elise: her gown hides the legs, so the leg keys are scaled down
                                                # (the compressed game file is made from --out by compress-glb.sh)
@@ -10,6 +10,9 @@ Clips (30 fps, in place, one-shots that start and end in her idle pose so a comb
   strike2  light: the mirror, left palm                                                  0.50 s, impact at 0.20 s
   strike3  heavy finisher: both arms gather high, a crouching lunge, two-handed push     0.80 s, impact at 0.38 s
   dash     a low forward lean, arms swept back, then up again                            0.36 s
+  slash1   Loomblade combo, cut 1: a diagonal forehand cut with the sword in her right hand, high right to low
+           left; the body coils right in the wind-up, uncoils into the cut over a step of the left foot,
+           follows through past the body line and settles back                           0.80 s, impact at 0.30 s
 Motion style (docs/art/animation-pipeline.md): calm, weighty, precise - short anticipation, a firm impact pose held
 for two frames, an unhurried settle. Each key is a set of rotations in world axes (Y up, Z her front, X her left)
 applied to a bone and everything below it, on top of her idle pose; keys are eased (smoothstep).
@@ -151,6 +154,28 @@ def finisher():
     return [(0.0, IDLE), (0.26, up), (0.38, hit), (0.48, hit), (0.80, IDLE)], 0.80
 
 
+def slash1():
+    """The first cut of the Loomblade combo: diagonal, forehand, right hand (the sword sits in her right fist)."""
+    guard_l = {'upperarm_L': [('x', -38), ('z', 22)], 'forearm_L': [('x', -55)], 'hand_L': [('x', 10)]}
+    # the wind-up: the sword comes up over the right shoulder, the chest coils to her right, weight on the back foot
+    wind = {**guard_l, 'spine': [('y', -12), ('x', -3)], 'chest': [('y', -24), ('x', -4)], 'neck': [('y', 18)],
+            'upperarm_R': [('x', -150), ('z', -28)], 'forearm_R': [('x', -75)], 'hand_R': [('x', 28), ('z', -10)],
+            'thigh_R': [('x', 6)], '_move': [0, -0.025, -0.035]}
+    # the cut: the chest uncoils to the left and leans in, the arm sweeps down across the body, the left foot steps in
+    cut = {'upperarm_L': [('x', -20), ('z', 28)], 'forearm_L': [('x', -40)],
+           'spine': [('y', 12), ('x', 6)], 'chest': [('y', 26), ('x', 12)], 'neck': [('y', -14), ('x', -6)],
+           'upperarm_R': [('x', -62), ('z', 34)], 'forearm_R': [('x', -12)], 'hand_R': [('x', -38), ('z', 8)],
+           'thigh_L': [('x', -24)], 'shin_L': [('x', 20)], 'foot_L': [('x', -4)], 'thigh_R': [('x', 10)], 'shin_R': [('x', 12)],
+           '_move': [0, -0.06, 0.13]}
+    # the follow-through: the blade passes the body line low on her left, the chest keeps turning a little
+    follow = {'upperarm_L': [('x', -15), ('z', 30)], 'forearm_L': [('x', -35)],
+              'spine': [('y', 15), ('x', 7)], 'chest': [('y', 32), ('x', 12)], 'neck': [('y', -16), ('x', -6)],
+              'upperarm_R': [('x', -35), ('z', 48)], 'forearm_R': [('x', -14)], 'hand_R': [('x', -46), ('z', 12)],
+              'thigh_L': [('x', -24)], 'shin_L': [('x', 22)], 'foot_L': [('x', -4)], 'thigh_R': [('x', 12)], 'shin_R': [('x', 14)],
+              '_move': [0, -0.065, 0.14]}
+    return [(0.0, IDLE), (0.17, wind), (0.24, wind), (0.30, cut), (0.36, cut), (0.48, follow), (0.80, IDLE)], 0.80
+
+
 def dash():
     low = {'spine': [('x', 14)], 'chest': [('x', 22)], 'neck': [('x', -16)],
            'upperarm_R': [('x', 40), ('z', -12)], 'forearm_R': [('x', -20)], 'upperarm_L': [('x', 40), ('z', 12)], 'forearm_L': [('x', -20)],
@@ -180,6 +205,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--model', default=MODEL); ap.add_argument('--in', dest='src', default=SIDECAR); ap.add_argument('--out', default=SIDECAR)
     ap.add_argument('--legs', type=float, default=1.0)
+    ap.add_argument('--only', default='', help='comma list: build only these clips, keep every other clip of the file as it is '
+                    '(the shipped strike1-3 and dash were refined after this script; rebuild them only on purpose)')
     ap.add_argument('--cloth', default='', help='a cloth rig (.npz): bake the gown, ribbons and strands over the new clips and check the legs against it')
     a = ap.parse_args()
     rig = Rig(a.model)
@@ -191,7 +218,10 @@ def main():
     if a.cloth:
         bones += [n for n in rig.names if n.split('_')[0] in ('skirt', 'hair', 'ribbon')]
     new = {}; made = {}; baked = {}
-    for name, (keys, secs) in {'strike1': strike('R'), 'strike2': strike('L'), 'strike3': finisher(), 'dash': dash()}.items():
+    wanted = {'strike1': strike('R'), 'strike2': strike('L'), 'strike3': finisher(), 'dash': dash(), 'slash1': slash1()}
+    if a.only:
+        wanted = {k: v for k, v in wanted.items() if k in a.only.split(',')}
+    for name, (keys, secs) in wanted.items():
         local, pel = build(rig, base_local, base_pelvis, scaled(keys, a.legs) if a.legs != 1.0 else keys, secs)
         lpos = np.repeat(rig.rest_t[None], len(local), 0); lpos[:, rig.index['pelvis']] = pel
         made[name] = (local, pel, rig.fk(local, None, lpos)[1][:, rig.index['pelvis']])
@@ -209,7 +239,7 @@ def main():
             if (d.min() < 0 or thr.any()) and not os.environ.get('FTF_ALLOW_FAIL'):      # (the switch: write anyway, to film what failed)
                 raise SystemExit(f'{name}: a leg cuts the gown')
         new[name] = {'name': name, 'local': local, 'pelvis': pel, 'bones': bones, 'fps': FPS,
-                     'extras': {'loop': False, 'source': 'keyed by hand (art/anim/iris_combat.py)', 'impact_s': {'strike1': 0.2, 'strike2': 0.2, 'strike3': 0.38}.get(name)}}
+                     'extras': {'loop': False, 'source': 'keyed by hand (art/anim/iris_combat.py)', 'impact_s': {'strike1': 0.2, 'strike2': 0.2, 'strike3': 0.38, 'slash1': 0.30}.get(name)}}
         print(name, local.shape[0], 'frames')
     keep = [c for n, c in clips.items() if n not in new]
     b = open(a.src, 'rb').read(); root_extras = json.loads(b[20:20 + struct.unpack_from('<I', b, 12)[0]]).get('extras')

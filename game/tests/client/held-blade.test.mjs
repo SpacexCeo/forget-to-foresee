@@ -59,3 +59,17 @@ test('held blade glow: the pulse climbs the blade from the guard to the tip once
   assert.ok(glowBand(G.to, G.period / 2) < 0.01, 'the rest of the blade is quiet');
   assert.ok(Math.abs(glowBand(mid, G.period * 1.5) - glowBand(mid, G.period / 2)) < 1e-9, 'loops');
 });
+
+test('loomblade combo: the first cut ships in Iris\'s clip file and the combo plays it, the old strike as the fallback', () => {
+  const b = readFileSync(new URL('../../public/assets/anim/iris.glb', import.meta.url));
+  const j = JSON.parse(b.subarray(20, 20 + b.readUInt32LE(12)).toString());
+  const a = j.animations.find((x) => x.name === 'slash1');
+  assert.ok(a, 'slash1 in iris.glb');
+  const t = j.accessors[a.samplers[0].input];
+  assert.ok(Math.abs(t.max[0] - 0.8) < 0.02, 'about 0.8 s long');
+  assert.equal(a.extras && a.extras.impact_s, 0.3);
+  for (const n of ['strike1', 'strike2', 'strike3', 'dash']) assert.ok(j.animations.some((x) => x.name === n), n + ' kept');
+  const arena = readFileSync(new URL('../../src/scenes/shoal-arena.js', import.meta.url), 'utf8');
+  assert.match(arena, /export const COMBO_CLIPS = Object\.freeze\(\['slash1'/);
+  assert.match(arena, /if \(!\(COMBO_CLIPS\[i\] && clip\(COMBO_CLIPS\[i\]\)\)\) clip\('strike' \+ \(i \+ 1\)\);/);
+});
