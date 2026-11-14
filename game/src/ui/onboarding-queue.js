@@ -65,8 +65,14 @@ export function expectOnboarding(id, ms = 20000) { expected.set(id, Date.now() +
 export const onboardingActive = () => active;
 /** Listen for changes (the running id or null). Returns an unsubscribe. */
 export const onOnboarding = (fn) => { subs.add(fn); return () => subs.delete(fn); };
-/** Window hotkeys (J, C, N, B, M, I) must not open anything while this is true. */
-export const blocksWindows = () => active != null;
+/**
+ * Steps that are only tips at the foot of the screen, not overlays: the game's windows may open while they show
+ * (owner P0 14.11: the hints tour waits on a button, and while it ran I and the tray Bag did nothing at all, so the
+ * starter guide's "press I to open your bag" step could never complete).
+ */
+export const NON_BLOCKING = Object.freeze(['guide']);
+/** Window hotkeys (J, C, N, B, M, I) must not open anything while this is true (a real overlay runs). */
+export const blocksWindows = () => active != null && !NON_BLOCKING.includes(active);
 
 /** Tests only: forget everything. */
 export function _resetOnboarding() { active = null; pending.length = 0; subs.clear(); gate = null; seq = 0; expected.clear(); }
