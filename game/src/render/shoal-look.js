@@ -22,6 +22,7 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { GodRaysPass } from './post.js';
 import { clampParams, shoalQuality, sunDirection, sunColor, buildLut, SHOAL_DEFAULT } from './shoal-look-data.js';
 
+const ICE_AIR = new THREE.Color(0.7, 0.8, 0.88), ICE_FOG = new THREE.Color(0.66, 0.76, 0.84), _fwd = new THREE.Vector3();
 export const SHOAL_SIZE = 900;          // the flat's side in metres (it reads as endless under the fog)
 const SKY_R = 1600;
 
@@ -84,6 +85,7 @@ const FLAT_FS = /* glsl */`
     // the sun's glitter on the ripples
     vec3 H = normalize(uSun + V);
     c += uSunColor * pow(max(dot(N, H), 0.0), 36.0) * 0.5 * wetMask * (0.4 + uRipple);   // a broad sheen, not a sun path
+    c += vec3(0.55, 0.75, 0.95) * pow(1.0 - max(dot(N, V), 0.0), 5.0) * 0.22 * wetMask;   // the ice's cold grazing sheen
     // fog and the low mist (thicker toward the horizon, it hugs the flat)
     float d = length(vWorld - uCam);
     float fog = 1.0 - exp(-pow(uFogDensity * d, 2.0));
@@ -135,7 +137,10 @@ export function createShoalLook({ renderer, scene, camera, tier = 'high', profil
     uniforms: { uSun: { value: sunDir }, uSunColor: { value: sunCol }, uZenith: { value: zenith }, uHorizon: { value: horizon }, uGround: { value: ground }, uHaze: { value: 0.22 } } });
   const sky = new THREE.Mesh(new THREE.SphereGeometry(SKY_R, 48, 24), skyMat); sky.name = 'shoal_sky'; sky.frustumCulled = false; sky.renderOrder = -10; root.add(sky);
   // light: the low sun (cascaded on desktop), a cool sky fill
-  const hemi = new THREE.HemisphereLight(0x9fb4c4, 0x6e5b48, 0.55); root.add(hemi);
+  const hemi = new THREE.HemisphereLight(0x9fb8cc, 0x56636e, 0.55); root.add(hemi);
+  // a cold back light from beyond what the camera looks at: an icy rim on the serpent's edges, its silhouette reads
+  // against the warm haze (no shadow, follows the camera in update())
+  const rim = new THREE.DirectionalLight(0xa8d8ff, 2.4); rim.name = 'shoal_rim'; root.add(rim, rim.target);
   let csm = null, sun = null;
   if (Q.cascades > 1) {
     csm = new CSM({ maxFar: 600, cascades: Q.cascades, mode: 'practical', parent: scene, shadowMapSize: Q.shadowSize, lightDirection: new THREE.Vector3(0, -1, 0), camera, lightIntensity: 3.2, lightMargin: 120 });
@@ -186,6 +191,10 @@ export function createShoalLook({ renderer, scene, camera, tier = 'high', profil
     const a = (i / 10) * Math.PI * 2, m = new THREE.Mesh(new THREE.PlaneGeometry(520, 34), mistMat);
     m.position.set(Math.sin(a) * 330, 12, Math.cos(a) * 330); m.lookAt(0, 12, 0); m.renderOrder = 2; mist.add(m);
   }
+  for (let i = 0; i < 8; i++) { // a lower, nearer layer that hugs the ice between the crystals
+    const a = ((i + 0.5) / 8) * Math.PI * 2, m = new THREE.Mesh(new THREE.PlaneGeometry(260, 9), mistMat);
+    m.position.set(Math.sin(a) * 150, 2.6, Math.cos(a) * 150); m.lookAt(0, 2.6, 0); m.renderOrder = 2; mist.add(m);
+  }
   root.add(mist);
 
   // the post stack
@@ -209,8 +218,8 @@ export function createShoalLook({ renderer, scene, camera, tier = 'high', profil
   function apply() {
     const d = sunDirection(P.sunHeight, P.sunBearing); sunDir.set(d[0], d[1], d[2]).normalize();
     const c = sunColor(P.sunHeight); sunCol.setRGB(c[0], c[1], c[2]);
-    horizon.setRGB(0.91 * (0.75 + 0.25 * c[1]), 0.76 * (0.7 + 0.3 * c[1]), 0.6 * (0.6 + 0.4 * c[2]));
-    fogColor.copy(horizon).lerp(new THREE.Color(0xc9ccc8), 0.35);
+    horizon.setRGB(0.91 * (0.75 + 0.25 * c[1]), 0.76 * (0.7 + 0.3 * c[1]), 0.6 * (0.6 + 0.4 * c[2])).lerp(ICE_AIR, 0.55);
+    fogColor.copy(horizon).lerp(ICE_FOG, 0.45);
     fog.color.copy(fogColor); fog.density = P.fog;
     if (csm) { csm.lightDirection.copy(sunDir).negate(); for (const l of csm.lights) l.color.copy(sunCol); }
     if (sun) { sun.color.copy(sunCol); }
@@ -241,6 +250,9 @@ export function createShoalLook({ renderer, scene, camera, tier = 'high', profil
       if (csm) csm.update();
       if (sun) { const f = focus || camera.position, o = root.position; sun.target.position.set(f.x - o.x, 0, f.z - o.z); sun.position.set(f.x - o.x + sunDir.x * 200, sunDir.y * 200, f.z - o.z + sunDir.z * 200); }
       if (rays) rays.setSun(sunDir, camera);
+      camera.getWorldDirection(_fwd); _fwd.y = 0; _fwd.normalize();
+      rim.target.position.copy(camera.position).sub(root.position);
+      rim.position.copy(rim.target.position).addScaledVector(_fwd, 200); rim.position.y += 90;
     },
     render() { composer.render(); },
     /** Show or hide everything this look added (the arena look turns it on for the fight only). */
