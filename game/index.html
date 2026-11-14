@@ -100,7 +100,7 @@
     #boot .boot-nogl a { color: #9fd8ff; font: 15px/1.3 system-ui, sans-serif; }
     #boot .boot-retry { position: relative; z-index: 3; margin: 14px auto 0; display: block; min-height: 44px; padding: 8px 22px; border-radius: 22px; border: 1px solid #5fd3c6; background: rgba(95, 211, 198, .12); color: #e8f3f1; font: 600 15px/1 system-ui, sans-serif; cursor: pointer; }
     @media (max-aspect-ratio: 4/5) {
-      .boot { --u: min(2.2vw, 1.2vh); }
+      #boot, .boot { --u: min(2.2vw, 1.2vh); } /* #boot carries the id: the portrait unit must match it or the stage stays landscape-sized */
       .boot .boot-stage { width: calc(44 * var(--u)); height: calc(78 * var(--u)); }
       .boot .boot-diagram { left: 0; top: 0; width: 100%; }
       .boot .boot-world { right: calc(-22 * var(--u)); top: calc(20 * var(--u)); height: calc(40 * var(--u)); opacity: .6; }
@@ -288,6 +288,8 @@
     }
     /* phones (owner 14.11): fast repeated taps on the fight buttons must never zoom the page */
     html, body, button { touch-action: manipulation; }
+    /* iOS Safari zooms the page into any focused text field under 16px (chat, sign-in, names): touch screens get 16px */
+    @media (pointer: coarse) { input:not([type=range]):not([type=checkbox]):not([type=radio]):not([type=color]), textarea, select { font-size: 16px !important; } }
   </style>
   <script>(function () { try { var stop = function (e) { e.preventDefault(); }; document.addEventListener("gesturestart", stop, { passive: false }); document.addEventListener("gesturechange", stop, { passive: false }); } catch (e) { /* zoom guard is optional */ } })();</script>
 </head>

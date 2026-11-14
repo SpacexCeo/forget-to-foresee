@@ -40,7 +40,7 @@ export function saveEntry(storage, rec) { try { if (storage) storage.setItem(ENT
 
 const CSS = `
 #boot .entry-gate { position: relative; z-index: 3; display: flex; flex-direction: column; align-items: center; gap: 14px; margin-top: 6px; }
-#boot .entry-btn { min-height: 52px; min-width: 240px; padding: 12px 34px; border-radius: 26px; border: 1px solid #5fd3c6; background: rgba(95, 211, 198, .16); color: #f2fbf9; font: 600 18px/1 system-ui, -apple-system, 'Segoe UI', sans-serif; letter-spacing: .02em; cursor: pointer; box-shadow: 0 0 24px rgba(95, 211, 198, .22); }
+#boot .entry-btn { min-height: 52px; min-width: min(240px, calc(100vw - 32px)); padding: 12px 34px; border-radius: 26px; border: 1px solid #5fd3c6; background: rgba(95, 211, 198, .16); color: #f2fbf9; font: 600 18px/1 system-ui, -apple-system, 'Segoe UI', sans-serif; letter-spacing: .02em; cursor: pointer; box-shadow: 0 0 24px rgba(95, 211, 198, .22); }
 #boot .entry-btn:hover, #boot .entry-btn:focus-visible { background: rgba(95, 211, 198, .3); outline: none; box-shadow: 0 0 0 2px rgba(95, 211, 198, .55), 0 0 28px rgba(95, 211, 198, .35); }
 #boot .entry-title { margin: 0; font: 600 15px/1.3 system-ui, -apple-system, 'Segoe UI', sans-serif; color: #cfe7e4; letter-spacing: .03em; }
 #boot .entry-langs { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; max-width: 640px; }
