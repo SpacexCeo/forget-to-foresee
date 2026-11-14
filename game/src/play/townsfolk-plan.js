@@ -24,6 +24,10 @@ export const SIDE_STEP = 0.45;
 export const BODY_RADIUS = 0.35, MIN_GAP = 0.6;
 /** How far ahead a walker looks for bodies, and how wide it leans round a standing one. */
 export const LOOK_AHEAD = 2.2, PASS_STEP = 0.75;
+/** Metres of lean past which a walker keeps leaning to the same side (no left-right flip while passing someone). */
+export const SIDE_KEEP = 0.1;
+/** Seconds a walker keeps waiting after what stopped it has cleared, and seconds it takes to pick up its walk again. */
+export const WAIT_HOLD = 0.4, RESUME_S = 0.35;
 /**
  * The bodies a walker must keep clear of (pure): other townsfolk (ctx.others, a Map of plans), Iris (ctx.iris) and
  * other heroines (ctx.bodies(): [[x, y, z], ...]). Same level only. `oncoming`: walking towards me; `iYield`: of two
@@ -376,6 +380,14 @@ export class PersonPlan {
         else if (b.walking) { if (d < MIN_GAP + 0.35 && !clear) wait = true; } // the same way: keep a step behind
         else if (!clear && d < MIN_GAP + 0.5) wait = true; // a standing body: lean round it first
       }
+      // keep leaning the way already started: the side flipped each time the other body crossed the line, and a walker
+      // waiting for someone slid left and right on the spot (seen at the Exchange on the GPU box, 14.11)
+      if (sideWant && this.side * sideWant < 0 && Math.abs(this.side) > SIDE_KEEP) sideWant = Math.sign(this.side) * Math.abs(sideWant);
+      // stop-and-go (14.11, GPU box): a wait condition hovering at its threshold made a walker step three frames and stand
+      // five; a wait now holds WAIT_HOLD s after its cause clears, and the walk picks up over RESUME_S instead of at once
+      if (wait) this.waitHold = WAIT_HOLD; else if (this.waitHold > 0) { this.waitHold -= dt; wait = true; }
+      this.resume = wait ? 0 : Math.min(RESUME_S, (this.resume ?? RESUME_S) + dt);
+      v *= 0.25 + 0.75 * (this.resume / RESUME_S);
       this.yielding = wait;
       if (wait) v = 0;
       if (run || this.len - this.s < 1.5) sideWant = 0; // no lean while running, nor on the last 1.5 m: a walk ends on its own line
@@ -386,7 +398,7 @@ export class PersonPlan {
       const closer = (x1, z1) => bodies.some((b) => { const d1 = Math.hypot(b.x - x1, b.z - z1); return d1 < MIN_GAP && d1 < Math.hypot(b.x - this.x, b.z - this.z) - 1e-6; });
       let off = easeOffset(this.ox, this.oz, q.dz * this.side, -q.dx * this.side, dt);
       if (closer(q.x + off[0], q.z + off[1])) off = [this.ox, this.oz]; // the lean may not swing into someone: keep it, try the step alone
-      if (closer(q.x + off[0], q.z + off[1])) { this.side = side0; this.yielding = true; this.speed = 0; this.clip = 'idle'; return; }
+      if (closer(q.x + off[0], q.z + off[1])) { this.side = side0; this.yielding = true; this.waitHold = WAIT_HOLD; this.resume = 0; this.speed = 0; this.clip = 'idle'; return; }
       this.s = s1; this.speed = dt > 0 ? ds / dt : 0; this.gait = run ? 'run' : 'walk';
       polyAt(st.walk, this.s, p);
       this.ox = off[0]; this.oz = off[1]; // the lean, eased (a corner turns the side direction: no jump)

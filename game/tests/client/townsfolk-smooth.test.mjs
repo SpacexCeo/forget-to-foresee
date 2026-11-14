@@ -46,3 +46,22 @@ test('townsfolk.js shows the smoothed position and drops the lean with a refused
   assert.match(src, /const sm = smoothStep\(p\.smooth, x, y, z, plan\.speed, dt\);\n\s*p\.root\.position\.set\(sm\.x \+ TOWN_ORIGIN\[0\]/);
   assert.match(src, /plan\.side = 0; plan\.ox = 0; plan\.oz = 0; plan\.x = plan\.px; plan\.z = plan\.pz;/);
 });
+
+test('a walker behind a slower one waits and walks in calm stretches, not three frames on and five off (GPU box, 14.11)', async () => {
+  const M = await import('../../src/play/townsfolk-plan.js');
+  const def = M.TOWNSFOLK.find((d) => d.key === 'shardkeeper');
+  const a = new M.PersonPlan(def, { home: [0, 0, 0], heading: 0, steps: [{ walk: [[0, 0, 0], [0, 0, 30]] }, { clip: 'idle', seconds: 600 }] });
+  const lead = { key: 'aa', x: 0, y: 0, z: 1.2, speed: 0.6, current: { walk: [] }, yielding: false, _p: { dx: 0, dz: 1 } };
+  const ctx = { iris: null, reduced: false, others: new Map([['shardkeeper', a], ['aa', lead]]), bodies: () => [] };
+  let toggles = 0, prev = null, minGap = Infinity;
+  for (let i = 0; i < 1200; i++) { // 20 s; the one ahead dawdles and walks in turns
+    lead.z += (0.6 / 60) * (Math.floor(i / 40) % 2 ? 1 : 0.2);
+    a.step(1 / 60, ctx);
+    const moving = a.speed > 0.05; if (prev !== null && moving !== prev) toggles++; prev = moving;
+    minGap = Math.min(minGap, Math.hypot(a.x - lead.x, a.z - lead.z));
+  }
+  assert.ok(toggles < 80, `${toggles} stop/go switches in 20 s (it was 712)`);
+  assert.ok(minGap >= M.MIN_GAP, 'and never closer than the body rule allows');
+  assert.ok(a.z > 5, 'it still follows along');
+  assert.equal(M.WAIT_HOLD, 0.4); assert.equal(M.RESUME_S, 0.35);
+});
