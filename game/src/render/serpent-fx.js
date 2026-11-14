@@ -17,7 +17,7 @@
 /** Numbers of the effects (pure, for the tests and tuning). */
 export const SERPENT_FX = Object.freeze({
   frost: 640, frostPhone: 240, waves: 8, ice: 0x9fe8ff, deep: 0x3a8cff, warm: 0xff9a5a,
-  waveLife: 0.75, geyserLife: 0.9, arcLife: 0.45, crustLife: 1.6,
+  waveLife: 0.75, geyserLife: 0.9, breathRun: 0.5, arcLife: 0.45, crustLife: 1.6,
 });
 
 /**
@@ -122,14 +122,25 @@ export function createSerpentFx({ THREE, parent, mobile = false, rand = Math.ran
     return crust;
   }
 
-  let inhaleT = 0, inhaleAt = [0, 0, 0];
+  let inhaleT = 0, inhaleAt = [0, 0, 0], breathT = 0, breathIdle = 1;
   const api = {
     group,
     /** The inhale before the breath: motes drawn into the jaws for `secs`. */
     inhale(mouth, secs) { inhaleT = secs; inhaleAt[0] = mouth[0]; inhaleAt[1] = mouth[1]; inhaleAt[2] = mouth[2]; },
     /** One frame of the breath (call while it is active): a stream of frost from the jaws along the cone, mist at its tip. */
-    breathFrame(mouth, dir, half, length, dt) {
+    breathFrame(mouth, dir, half, length, dt, origin = mouth) { // origin: the cone's apex on the mirror (the tell's)
       inhaleT = 0;
+      if (breathIdle > 0.3) breathT = 0; // a new breath
+      breathIdle = 0; breathT += dt;
+      // the frost front: it races along the mirror from the jaws to the cone's end in BREATH_RUN s, a wall of mist and shards
+      // at its edge (what the camera behind her sees; the stream from the jaws is high above the frame)
+      const front = Math.min(1, breathT / F.breathRun) * length, ang = Math.atan2(dir[0], dir[1]);
+      const m2 = Math.max(1, Math.round((mobile ? 110 : 260) * dt));
+      for (let i = 0; i < m2; i++) {
+        const u = Math.max(0.5, front - rand() * 3.5), s2 = (rand() * 2 - 1) * half * 0.95, a2 = ang + s2, mist = rand() < 0.35;
+        emit(origin[0] + Math.sin(a2) * u, 0.15 + rand() * (mist ? 0.6 : 1.4), origin[2] + Math.cos(a2) * u, Math.sin(a2) * 3, 1 + rand() * 2.5, Math.cos(a2) * 3,
+          mist ? 0x3d7896 : rand() < 0.4 ? 0xffffff : F.ice, mist ? 1.8 + rand() * 1.6 : 0.5 + rand() * 0.7, 0.55 + rand() * 0.4, 1.2, mist ? 0 : 5);
+      }
       const n = Math.max(1, Math.round((mobile ? 160 : 420) * dt));
       for (let i = 0; i < n; i++) {
         const s = (rand() * 2 - 1) * half, a = Math.atan2(dir[0], dir[1]) + s, sp = 16 + rand() * 10;
@@ -138,7 +149,7 @@ export function createSerpentFx({ THREE, parent, mobile = false, rand = Math.ran
           Math.sin(a) * sp, -mouth[1] / (length / sp) * (0.8 + rand() * 0.4), Math.cos(a) * sp,
           c, sz, length / sp * (0.9 + rand() * 0.3), 0.6, 0);
       }
-      const c = crustFor(half, length); c.position.set(mouth[0], 0.04, mouth[2]); c.rotation.y = Math.atan2(dir[0], dir[1]); crustT = 0;
+      const c = crustFor(half, length); c.position.set(origin[0], 0.04, origin[2]); c.rotation.y = ang; c.scale.setScalar(Math.max(0.03, front / length)); crustT = 0; // the crust grows with the front
     },
     /** A blow landing: `info` {at: [x, z] arena-local, dir: [dx, dz], A: the attack's numbers, boss: [x, z]}. */
     strike(kind, info) {
@@ -176,7 +187,7 @@ export function createSerpentFx({ THREE, parent, mobile = false, rand = Math.ran
     wave(at, color, radius, opts) { wave(at, color, radius, opts); },
     /** Per frame. */
     update(dt, reduced = false) {
-      reducedNow = reduced;
+      reducedNow = reduced; breathIdle += dt;
       if (inhaleT > 0) { // motes from a shell around the jaws, drawn in
         inhaleT -= dt;
         const n = Math.max(1, Math.round((mobile ? 50 : 120) * dt));

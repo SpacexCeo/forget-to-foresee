@@ -137,7 +137,7 @@ export function createShoalArena(o) {
   // slams on the mirror, and the camera kick of the blows (added in shakeCamera). Sounds through audio/town-audio.js.
   const fx = createHitFx({ THREE, parent: root, doc, scale: mobile ? 0.6 : 1 });
   const sfx = createSerpentFx({ THREE, parent: root, mobile }); // the ice serpent's attacks: breath stream, geyser, waves, frost (render/serpent-fx.js)
-  let headBone = null; const _mouthV = new THREE.Vector3(), _mouth = [0, 0, 0];
+  let headBone = null; const _mouthV = new THREE.Vector3(), _mouth = [0, 0, 0], _apex = [0, 0, 0];
   /** The serpent's jaws, arena-local: its head bone once the model is in, else above the body toward her. */
   function mouth(dir) {
     if (!headBone && bossModel) bossModel.traverse((o) => { if (!headBone && o.isBone && /head|jaw/i.test(o.name)) headBone = o; });
@@ -508,7 +508,7 @@ export function createShoalArena(o) {
       if (a.kind === 'slam') { ring.visible = true; ring.position.set(a.at[0], 0.05, a.at[1]); const r = R.BOSS.attacks.slam.radius; ring.scale.set(r, r, r); setTele(ring.material, k, op, tt); }
       if (a.kind === 'sweep') { band.visible = true; setTele(band.material, k, op, tt); }
       if (a.kind === 'dive') { ring.visible = true; ring.position.set(a.at[0], 0.05, a.at[1]); const r = R.BOSS.attacks.dive.radius; ring.scale.set(r, r, r); setTele(ring.material, k, op, tt); }
-      if (a.kind === 'breath' || a.kind === 'claw') { const m = a.kind === 'breath' ? breathFan : clawFan; m.visible = true; m.position.set(a.at[0], 0.06, a.at[1]); m.rotation.y = Math.atan2(a.dir[0], a.dir[1]); setTele(m.material, k, op, tt); if (a.kind === 'breath' && B.state === 'active') sfx.breathFrame(mouth(a.dir), a.dir, R.BOSS.attacks.breath.half, R.BOSS.attacks.breath.length, sdt); }
+      if (a.kind === 'breath' || a.kind === 'claw') { const m = a.kind === 'breath' ? breathFan : clawFan; m.visible = true; m.position.set(a.at[0], 0.06, a.at[1]); m.rotation.y = Math.atan2(a.dir[0], a.dir[1]); setTele(m.material, k, op, tt); if (a.kind === 'breath' && B.state === 'active') { _apex[0] = a.at[0]; _apex[2] = a.at[1]; sfx.breathFrame(mouth(a.dir), a.dir, R.BOSS.attacks.breath.half, R.BOSS.attacks.breath.length, sdt, _apex); } }
       if (a.kind === 'lunge') { line.visible = true; line.position.set(a.at[0], 0.05, a.at[1]); line.rotation.y = Math.atan2(a.dir[0], a.dir[1]); setTele(line.material, k, op, tt); }
     }
     sfx.update(sdt, red);
