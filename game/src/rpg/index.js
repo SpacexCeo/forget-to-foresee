@@ -229,7 +229,7 @@ export function mount(ctx) {
     spend(stat) { const r = spendStat(L, rec, stat); if (!r.ok) return r; rec = r.rec; refreshStats(); save(); emit('stat.spent', { stat, value: rec.stats[stat] }); return r; },
     place(slot, id) { bar = S.placeOnSlot(bar, slot, id); save(); },
     get xp() { return levelNow(); },
-    get portrait() { const sk = (ctx.skin ? ctx.skin() : (win.__ftf && win.__ftf.iris && win.__ftf.iris.hero && win.__ftf.iris.hero.id)) || 'iris'; return (ctx.base || '/') + 'assets/cards/' + sk + '.webp'; },
+    get portrait() { const sk = (ctx.skin ? ctx.skin() : (win.__ftf && win.__ftf.iris && win.__ftf.iris.hero && win.__ftf.iris.hero.id)) || 'iris'; return (ctx.base || '/') + 'assets/ui/portraits/' + sk + '_128.webp'; },
     get name() { return playerName(); },
   };
   if (win.location && /[?&]test=1\b/.test(win.location.search)) {
@@ -270,7 +270,7 @@ export function mount(ctx) {
       const sp = S.pointsLeft(L, rec), tp = statPointsLeft(L, rec);
       const skin = (ctx.skin ? ctx.skin() : (win.__ftf && win.__ftf.iris && win.__ftf.iris.hero && win.__ftf.iris.hero.id)) || 'iris';
       hud.render({
-        portrait: (ctx.base || '/') + 'assets/cards/' + skin + '.webp', name: playerName(),
+        portrait: (ctx.base || '/') + 'assets/ui/portraits/' + skin + '_128.webp', name: playerName(),
         level: L, hp: self.hp, maxHP: stats.maxHP, mana: caster.mana, maxMana: stats.maxMana, manaPulse: manaPulseUntil > tnow,
         target: tg ? { name: mobDisplayName(tg.mob.type).replace(/^./, (c) => c.toUpperCase()), hp: tg.mob.hp, maxHp: tg.mob.T.hp, elite: !!tg.mob.T.elite } : null,
         buffs: Object.entries(self.buffs).map(([id, b]) => ({ id, name: id, left: (b.until - tnow) / 1000, debuff: false })),
