@@ -39,8 +39,8 @@ contract is deployed; do not say items were minted until `items.ftf-town.testnet
 
 > Iris, a doctor-linguist from another planet (2048), pays for prophecy with her memories. Every season is sealed before play (the judge season on NEAR); forgotten memories become NEP-171 shards.
 >
-> A market week in a minute: https://spacexceo.github.io/forget-to-foresee/economy-lab.html
-> Play: https://spacexceo.github.io/forget-to-foresee/
+> A market week in a minute: https://ftf-game.xyz/economy-lab.html
+> Play: https://ftf-game.xyz/
 
 (275 characters as X counts them. Iris canon (README top, loading tip): a doctor-linguist from another planet, year 2048, who came through the glass.
 The seal holds for every season (local commitment); the judge season is also committed on `ftf-seasons.testnet`.)

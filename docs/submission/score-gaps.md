@@ -51,5 +51,5 @@ each one. Scored on the published criteria: technical implementation, design, im
 
 Suggested GitHub About: "3D strategy game on NEAR testnet: prophecies sealed on chain before play, memory-shard NFTs,
 and a town of 20 NPC traders with their own keys trading on chain all day. Play in the browser, no wallet."
-Website: `https://spacexceo.github.io/forget-to-foresee/`. Topics: `near`, `near-protocol`, `nep-171`, `nep-245`,
+Website: `https://ftf-game.xyz/`. Topics: `near`, `near-protocol`, `nep-171`, `nep-245`,
 `web3-game`, `threejs`, `commit-reveal`, `tee`, `nearhackathon`.

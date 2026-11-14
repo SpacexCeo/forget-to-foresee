@@ -7,7 +7,7 @@ bounds them, and what an attacker can and cannot do. Each claim names the code o
 Detailed models: [docs/nft-threat-model.md](docs/nft-threat-model.md) (every NFT and the NEP-245 items),
 [docs/security-town.md](docs/security-town.md) (the town contract, 13 threats with their tests),
 [docs/verify.md](docs/verify.md) (what the season commitment proves and what it does not).
-Try the guards yourself: [cheat.html](https://spacexceo.github.io/forget-to-foresee/cheat.html) (six attacks, the guard,
+Try the guards yourself: [cheat.html](https://ftf-game.xyz/cheat.html) (six attacks, the guard,
 the error and the test for each).
 
 ## Keys

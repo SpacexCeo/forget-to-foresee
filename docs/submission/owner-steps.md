@@ -47,7 +47,7 @@ the whole work. The README already links this URL. Re-tag only if something must
 
 ### 2. Check the published build
 The Pages workflow runs on every push to `main` (Settings → Pages → Source: GitHub Actions is already on).
-Open https://spacexceo.github.io/forget-to-foresee/ (one entry: the whole game) once, then walk the README table "How to see it": the town with the
+Open https://ftf-game.xyz/ (one entry: the whole game) once, then walk the README table "How to see it": the town with the
 objective line, the Gate-Loom and the Shell monument, then the altar and "Verified ✓" in Signs & Visions. Check that
 the page opens in English (add `&lang=en` if your browser is set to another language). Keep the site up until at least
 18.11, ideally 25.11.
@@ -60,7 +60,7 @@ shards are minted in every season. The older renders in this folder (`trailer_*.
 ### 3b. Repository settings (GitHub → the repo → About ⚙, 2 minutes)
 - **Description** (matches the README; Iris is a character, not an AI, and not a token):
   `3D strategy game on NEAR testnet: 20 merchants with their own accounts trade on chain all day, prophecies are sealed before play, forgotten memories become NFTs. Play in the browser, no wallet. Built at NEAR HACKATHON.`
-- **Website:** `https://spacexceo.github.io/forget-to-foresee/`
+- **Website:** `https://ftf-game.xyz/`
 - **Topics:** `near`, `near-protocol`, `nearhackathon`, `nep-171`, `nep-245`, `web3-game`, `threejs`, `commit-reveal`, `tee`, `nft`
 - Check the link preview after the next Pages deploy: the page already has `og:` / `twitter:` tags and `og.jpg`.
 
