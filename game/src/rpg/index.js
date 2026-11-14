@@ -276,7 +276,7 @@ export function mount(ctx) {
         cast: cast && cast.dur > 300 ? { name: cast.name, p: Math.min(1, (tnow - cast.t0) / cast.dur) } : null,
         slots, xpInto: xi.into, xpNeed: xi.need, silk: sv, silkPop,
         // the desktop tray has no Skills button (owner 13.11): the Character button carries its dot too
-        open: { skills: !!(tree && tree.isOpen), character: !!(sheet && sheet.isOpen), journal: isWindowOpen('journal'), bag: isWindowOpen('menu'), market: isWindowOpen('market') }, badges: { skills: sp > 0 && L >= 2, character: tp > 0 || (sp > 0 && L >= 2) },
+        open: { skills: !!(tree && tree.isOpen), character: !!(sheet && sheet.isOpen), journal: isWindowOpen('journal'), bag: isWindowOpen('menu'), market: isWindowOpen('market'), map: isWindowOpen('map') }, badges: { skills: sp > 0 && L >= 2, character: tp > 0 || (sp > 0 && L >= 2) },
         coords: ctx.player && map ? map.coords() : null, zoomMin: map && map.atMin, zoomMax: map && map.atMax,
         zone: M && M.iris && M.iris.outside ? 'field' : 'town', stamina: ctx.stamina || null,
       });
