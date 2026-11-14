@@ -21,7 +21,7 @@ The game's own music and sounds; no voice-over.
 | 7 | 38–46 s | Combat outside the walls (strike, dash, Q / V), a chest drops and opens with its rarity | "Chests roll from a deck sealed on chain." | `chests.ftf-coordinator.testnet`, `node tools/verify-chest/verify.mjs` |
 | 8 | 46–52 s | Profile → NFTs: the dragon card, "owned by elise-…heroine.ftf-coordinator.testnet" | "An NFT that owns an NFT." | `companions.ftf-coordinator.testnet` (`nft_tokens`) |
 | 9 | 52–62 s | The Tournament altar, trial 1 of 17; **V**: Signs & Visions, Resolved, "Verified ✓"; **M**: forget a memory for a vision, the shard card | "Every prophecy is sealed before the first move." / "Pay with a memory. It becomes a shard." | `ftf-seasons.testnet` `get_season`, `ftf-shards.testnet` |
-| 10 | 62–70 s | The Town works window: pledges as deeds, "your share today", the goals strip | "Pledge silk to the town works. Your share, shown live." | the window on the live page (only if `wip/defi-pass` is merged and live) |
+| 10 | 62–70 s | The Town works window: pledges as deeds, "your share today", the goals strip | "Pledge silk to the town works. Your share, shown live." | the window on the live page (live since 14 Nov) |
 | 11 | 70–78 s | Townsfolk line from NEAR AI Cloud; the small "checked in TEE" mark | "Townsfolk speak through NEAR AI Cloud, checked in a TEE." | `/api/health` `tee` |
 | 12 | 78–86 s | End card: FORGET TO FORESEE · spacexceo.github.io/forget-to-foresee · Built at NEAR HACKATHON · @Lambada_eth · "Testnet. Free to play. No real value." | "What would you forget to see the future?" | — |
 
