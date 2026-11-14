@@ -56,6 +56,12 @@ The seal holds for every season (local commitment); the judge season is also com
 
 (258 characters as X counts them. Honesty line: testnet, free, no money value, scripted traders. Never "invest", "APY", "profit" or "returns".)
 
+## Optional post 5 (reply, what is new on 14 Nov)
+
+> New today: every blow shows its element, a loot card when you come back from a season, lit shop interiors with a hidden grotto, and two town tales, "The Ink That Remembers" and "The Lost Tourist".
+
+(196 characters. Everything named is on the live page; the boss fight stays off and is not mentioned.)
+
 Character counts: X counts each URL as 23 characters; recount after any edit.
 
 ## Optional teaser

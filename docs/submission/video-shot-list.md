@@ -25,6 +25,15 @@ The game's own music and sounds; no voice-over.
 | 11 | 70–78 s | Townsfolk line from NEAR AI Cloud; the small "checked in TEE" mark | "Townsfolk speak through NEAR AI Cloud, checked in a TEE." | `/api/health` `tee` |
 | 12 | 78–86 s | End card: FORGET TO FORESEE · spacexceo.github.io/forget-to-foresee · Built at NEAR HACKATHON · @Lambada_eth · "Testnet. Free to play. No real value." | "What would you forget to see the future?" | — |
 
+Live since the night of 14 Nov, for the 90 s cut or to swap in (each is on the live page, no flag to set):
+
+| # | Picture | Caption |
+| --- | --- | --- |
+| 7a | A Frost Lance hit throws ice shards, a Storm Snare flickers violet, damage numbers float up | "Every blow has its element." |
+| 9a | "Return to town" on the Biography, then the loot card in town: new level, the shard NFT, chests | "Back from a season, you see what you brought home." |
+| 9b | Inside a shop with its baked light; through the curtain into the hidden grotto behind the Shard Exchange | "Walk into the shops. One hides a grotto." |
+| 9c | The Scribe with a gold "!" ("The Ink That Remembers"), or the Wayfarer from Kallima on the main street | "Small stories, told by the townsfolk." |
+
 Cut to 60 s: drop shots 5, 10 and 11 (and trim 9 to 6 s).
 
 Export: H.264 High, 1080p60, ≤ 90 MB, captions as SRT and burned in; a 9:16 version for phones crops shots 2, 4 and 8
