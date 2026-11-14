@@ -138,6 +138,8 @@ export function createHeldBlade({ THREE, model, held, fetchGltf, hasModelFile, m
   return {
     get attached() { return !!on; },
     get visible() { return shown; },
+    /** The sword object while it sits in her hand and shows (its +Y runs hilt to tip: render/strike-trail.js follows it). */
+    get sword() { return on && shown ? sword : null; },
     /** Per frame, after the avatar's mixer has run. Reduced motion holds the glow still. */
     update(dt = 0, reduced = false) {
       if (!reduced) time += dt;

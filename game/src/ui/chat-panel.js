@@ -15,6 +15,9 @@ const CSS = `.ftf-chat { position: fixed; left: calc(12px + env(safe-area-inset-
 .ftf-chat-chip[data-on="1"] i { background: #9fd49a; }
 .ftf-chat-box { margin-bottom: 6px; border-radius: 12px; border: 1px solid rgba(233,180,76,.45); background: rgba(16,22,24,.84); padding: 8px; }
 .ftf-chat-box[hidden] { display: none; }
+.ftf-chat-box { position: relative; }
+.ftf-chat-x { position: absolute; top: 2px; right: 4px; z-index: 1; width: 26px; height: 26px; border: 0; border-radius: 6px; background: rgba(0,0,0,.35); color: #f3ead2; font: 700 16px/1 system-ui, sans-serif; cursor: pointer; }
+.ftf-chat-x:hover, .ftf-chat-x:focus-visible { background: rgba(0,0,0,.6); outline: 2px solid #f6c860; outline-offset: 1px; }
 .ftf-chat-log { max-height: 180px; overflow-y: auto; margin: 0 0 6px; padding: 0; list-style: none; }
 .ftf-chat-log li { margin: 0 0 3px; overflow-wrap: anywhere; }
 .ftf-chat-log button { all: unset; cursor: pointer; color: #e9b44c; font-weight: 600; }
@@ -57,7 +60,7 @@ const NAME_SLOT = '\u0001';
  * @param {{doc?: Document, t: (k: string, a?: object) => string, presence: object, phone?: boolean, isFriend?: (m: {name: string, account?: string|null}) => boolean}} o
  * @returns {{render(): void, destroy(): void, el: HTMLElement}}
  */
-export function createChatPanel({ doc = globalThis.document, t, presence, phone = false, isFriend = () => false }) {
+export function createChatPanel({ doc = globalThis.document, t, presence, phone = false, isFriend = () => false, onClose = () => {} }) {
   if (!doc.getElementById('ftf-chat-css')) { const s = doc.createElement('style'); s.id = 'ftf-chat-css'; s.textContent = CSS; doc.head.append(s); }
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const root = el('div', 'ftf-chat'); root.setAttribute('role', 'region'); root.setAttribute('aria-label', t('mp.chat'));
@@ -68,7 +71,9 @@ export function createChatPanel({ doc = globalThis.document, t, presence, phone 
   const input = el('input'); input.type = 'text'; input.maxLength = 140; input.placeholder = t('mp.placeholder'); input.setAttribute('aria-label', t('mp.placeholder')); input.autocomplete = 'off';
   const send = el('button', null, t('mp.send')); send.type = 'submit';
   form.append(input, send);
-  box.append(log, menu, form);
+  // a way out that needs no key (owner 14.11: in mouse-aim mode the chat could not be closed)
+  const shut = el('button', 'ftf-chat-x', '×'); shut.type = 'button'; shut.setAttribute('aria-label', t('mp.close'));
+  box.append(shut, log, menu, form);
   const chip = el('button', 'ftf-chat-chip'); chip.type = 'button'; chip.append(el('i'), el('span'));
   root.append(box, chip);
   doc.body.append(root);
@@ -77,8 +82,12 @@ export function createChatPanel({ doc = globalThis.document, t, presence, phone 
   let open = false, menuFor = null;
   const setOpen = (on) => { open = on; box.hidden = !on; chip.setAttribute('aria-expanded', String(on)); if (on) render(); };
   chip.addEventListener('click', () => { setOpen(!open); if (open && !phone) input.focus(); });
-  form.addEventListener('submit', (e) => { e.preventDefault(); presence.say(input.value); input.value = ''; });
-  input.addEventListener('keydown', (e) => { if (e.key === 'Escape') { input.blur(); if (phone) setOpen(false); } });
+  /** Closes the chat and hands the game its keys and, in mouse-aim mode, the mouse back (onClose). */
+  function close() { setOpen(false); input.blur(); try { onClose(); } catch { /* the chat closes anyway */ } }
+  // Enter on an empty line closes it (Enter opens it, so Enter twice is the round trip); Escape closes it too
+  form.addEventListener('submit', (e) => { e.preventDefault(); if (!input.value.trim()) { close(); return; } presence.say(input.value); input.value = ''; });
+  input.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); close(); } });
+  shut.addEventListener('click', close);
   const onKey = (e) => {
     if (!isAction(e.code, 'chat') || e.altKey || e.ctrlKey || e.metaKey) return;
     const a = doc.activeElement; if (a && a !== doc.body && a.tagName !== 'CANVAS') return; // another field or button has the key
@@ -138,5 +147,5 @@ export function createChatPanel({ doc = globalThis.document, t, presence, phone 
     if (atBottom) log.scrollTop = log.scrollHeight;
   }
   render();
-  return { render, el: root, destroy() { doc.removeEventListener('keydown', onKey); root.remove(); } };
+  return { render, el: root, close, get open() { return open; }, destroy() { doc.removeEventListener('keydown', onKey); root.remove(); } };
 }

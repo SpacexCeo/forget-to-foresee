@@ -23,14 +23,14 @@ import { watchFeats } from './feats.js';
  *          me?: string|null, ledger?: object, chests?: object}} o me: the account the friends list is saved for; ledger, chests: watched for the action feed
  * @returns {object|null} null when no presence URL is configured and no ?bots=N demo was asked for
  */
-export function createMultiplayer({ scene, camera = null, THREE = null, t, storage = null, name = '', skin = 'iris', account = null, lv = null, phone = false, url = presenceUrl(), bots = 0, me = account, ledger = null, chests = null, hitFx: fxIn = null, win = globalThis }) {
+export function createMultiplayer({ scene, camera = null, THREE = null, t, storage = null, name = '', skin = 'iris', account = null, lv = null, phone = false, url = presenceUrl(), bots = 0, me = account, ledger = null, chests = null, hitFx: fxIn = null, win = globalThis, onChatClose = () => {} }) {
   const hitFx = fxIn || (THREE && scene ? createHitFx({ THREE, parent: scene }) : null);
   if (!url && !bots) return null; // no service deployed: the town is single-player, as before
   let panel = null;
   // ?bots=N with no service: demo walkers simulated here (never sent anywhere); with a service the real room wins
   const presence = url ? createPresence({ url, name, skin, account, lv, storage, onChange: () => panel && panel.render() }) : createDemoPresence({ count: bots, onChange: () => panel && panel.render() });
   const friends = storage ? createFriends({ storage, me }) : null;
-  panel = createChatPanel({ t, presence, phone, isFriend: (m) => !!friends && friends.has(m) });
+  panel = createChatPanel({ t, presence, phone, isFriend: (m) => !!friends && friends.has(m), onClose: onChatClose });
   const unwatch = url ? watchFeats({ act: (k, v) => presence.act(k, v), ledger, chests }) : () => {};
   const remote = createRemotePlayers({ scene, phone, aiLabel: t('mp.ai') });
   // chat lines over the speakers' heads (owner 13.11); only when the game passes its camera
