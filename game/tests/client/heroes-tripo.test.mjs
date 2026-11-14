@@ -54,11 +54,11 @@ test('the rider: every heroine\'s clip file has `ride` (astride, a loop) with th
   assert.match(boot, /irisAvatar\.react\('ride', clock\.elapsedTime\)/);
 });
 
-test('the run: one stride of flee_01 (a jog, not the pack sprint), foot contacts for the footsteps, in phase with the walk', () => {
+test('the run: one stride of the pack run (picked by the owner from five), foot contacts for the footsteps, in phase with the walk', () => {
   for (const id of ['iris', 'elise']) {
     const { json } = glb('anim/' + id + '.glb'), by = new Map(json.animations.map((a) => [a.name, a]));
     const run = by.get('run'), walk = by.get('walk');
-    assert.match(run.extras.take, /flee_01/); assert.ok(run.extras.speed > 3.3 && run.extras.speed < 5, id + ' run ' + run.extras.speed);
+    assert.match(run.extras.take, /tripo_pack:run.001/); assert.ok(run.extras.speed > 4 && run.extras.speed < 5, id + ' run ' + run.extras.speed);
     for (const c of [run, walk]) for (const f of ['L', 'R']) assert.ok(c.extras.contact[f][0] >= 0 && c.extras.contact[f][0] < 1, id + ' ' + c.name + ' ' + f);
     const d = Math.abs(run.extras.contact.L[0] - walk.extras.contact.L[0]); assert.ok(Math.min(d, 1 - d) < 0.1, id + ': the left foot lands in the same phase in walk and run');
     assert.ok(walk.extras.speed > 1 && walk.extras.speed < 1.4, id + ' walk ' + walk.extras.speed);

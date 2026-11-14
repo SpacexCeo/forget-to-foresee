@@ -10,7 +10,7 @@ import { DEFAULT_MOTION, NPC_MOTION, createMotion, stepMotion, gaitBlend, turnRa
 import { CameraRig } from '../../src/render/camera-rig.js';
 import { floorWorld, makePlayer, simulate, measureAll } from './movement-measure.mjs';
 
-const WALK = 1.7, RUN = WALK * 1.94, DEG = 180 / Math.PI;
+const WALK = 1.7, RUN = WALK * 2.6, DEG = 180 / Math.PI; // run: the heroines' run clip speed (owner 14.11)
 const place = (ch, pos) => { ch.pos = pos.slice(); ch.prevPos = pos.slice(); ch.lastSafe = pos.slice(); return ch; };
 
 test('quick start: 90 % of the walk speed within 0.3 s, run tops out at 2.1x and takes longer', () => {
