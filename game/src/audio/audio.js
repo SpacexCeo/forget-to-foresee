@@ -99,7 +99,6 @@ export function createAudio(opts = {}) {
     const d = duckCount > 0;
     ramp(nodes.musicDuck.gain, d ? DUCK.music : 1, d ? 0.05 : 0.4);
     ramp(nodes.ambDuck.gain, d ? DUCK.amb : 1, d ? 0.05 : 0.4);
-    bedVolume(d ? 0.05 : 0.4);
   }
 
   /** A short dip of the music under one sound effect (retriggers cleanly: the newest effect sets the release). */
@@ -231,11 +230,10 @@ export function createAudio(opts = {}) {
     } catch { streams = null; }
   }
 
-  /** The streamed bed's volume: its level x the music slider x the duck (html5 audio sits outside the WebAudio graph). */
+  /** The streamed bed's level (the music slider and the duck act on the bus it is wired into, see howlBed). */
   function bedVolume(tc = 0.1) {
     if (!H || !musicBed || !musicBed.h.howl) return;
-    const v = musicBed.h.level * sliderGain(vols.music) * (duckCount > 0 ? DUCK.music : 1);
-    const howl = musicBed.h.howl; howl.fade(howl.volume(), v, Math.max(30, tc * 3000));
+    const howl = musicBed.h.howl; howl.fade(howl.volume(), musicBed.h.level, Math.max(30, tc * 3000));
   }
 
   /** A looping bed streamed by howler (html5 Howl), faded in and out with Howl.fade. */
@@ -243,10 +241,18 @@ export function createAudio(opts = {}) {
     const meta = manifest.sounds[name];
     const howl = new H.Howl({ src: [base + meta.file], html5: true, loop: true, volume: 0, preload: true });
     const h = { name, stopped: false, howl, level: 0 };
+    // howler streams the file through an <audio> element; it is wired into the music bus so the slider, the duck and
+    // the dips act on it like on every other sound (one source node per element, made once)
+    howl.on('play', () => {
+      for (const snd of howl._sounds || []) {
+        const el = snd._node; if (!el || el._ftfWired || !ctx.createMediaElementSource) continue;
+        try { el.crossOrigin = 'anonymous'; const src = ctx.createMediaElementSource(el); src.connect(nodes.musicDuck); el._ftfWired = src; } catch { /* plays outside the graph */ }
+      }
+    });
     howl.play();
     Object.assign(h, {
       get playing() { return !h.stopped; },
-      setGain(g, tc = 0.1) { h.level = g; if (musicBed && musicBed.h === h) bedVolume(tc); else howl.fade(howl.volume(), g * sliderGain(vols.music), Math.max(30, tc * 3000)); },
+      setGain(g, tc = 0.1) { h.level = g; howl.fade(howl.volume(), g, Math.max(30, tc * 3000)); },
       stop(fade = 0.05) {
         if (h.stopped) return; h.stopped = true;
         howl.fade(howl.volume(), 0, Math.max(30, fade * 1000));
@@ -364,7 +370,6 @@ export function createAudio(opts = {}) {
       saveVolumes(storage, vols);
       if (H && bus === 'master') H.Howler.volume(sliderGain(vols.master));
       else if (nodes) ramp(nodes[bus].gain, sliderGain(vols[bus]), 0.05);
-      if (bus === 'music') bedVolume(0.05);
     },
     getVolumes() { return { ...vols }; },
     /** Decodes sounds ahead of time; a group name loads every variant (steps must not miss their first beat). */

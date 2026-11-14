@@ -1,6 +1,22 @@
 # Audio
 
-All sound is synthesized from scratch. There are no samples and no third-party audio.
+Engine: **howler.js 2.2.4** (MIT, https://github.com/goldfire/howler.js, licence in `docs/licenses/howler.md`), loaded lazily
+on the first gesture by `game/src/audio/audio.js`. Howler owns the AudioContext (unlocks it on the first tap on phones)
+and streams the music beds; the game's own graph (buses, ducking, HRTF panning, zone beds, tension stems) hangs under
+`Howler.masterGain`, and the master slider is Howler's global volume.
+
+Most effects are synthesized from scratch (below). The weakest ones are replaced by recordings:
+
+| Sounds | Source | Licence |
+|---|---|---|
+| `step_wood_1..6`, `step_stone_1..6` (stone: brightened and pitched up), `strike_swing_1..4` | Kenney, RPG Audio (footstep00-09, knifeSlice, knifeSlice2, drawKnife1-2) | CC0 (`docs/licenses/kenney-rpg-audio.txt`) |
+| `ui_click`, `ui_hover`, `ui_confirm`, `ui_error`, `ui_notify` | Kenney, Interface Sounds (click_002, tick_001, confirmation_002, error_004, maximize_006) | CC0 (`docs/licenses/kenney-interface-sounds.txt`) |
+
+They live in `game/public/assets/audio/k_<name>.ogg`, level-matched to the synthesized file they replace and listed in
+the generated overlay `game/src/audio/sample-manifest.js` (`art/audio/samples.py <packs> <out> <manifest>`); the
+synthesized originals stay in place and rebuildable.
+
+The synthesized sounds:
 - Sources: `art/audio/synth.py` (DSP toolkit) and `art/audio/build_audio.py` (one generator per sound). Seeds come from the crc32 of each asset name.
 - Output: `game/public/assets/audio/*.ogg` (Ogg Opus, 48 kHz; 60 files, 5.8 MB) plus the generated `game/src/audio/manifest.js`.
 - Rebuild: `python3 art/audio/build_audio.py` (numpy, scipy, ffmpeg with libopus; about 1 min on CPU). Use `--only <names>` for single assets and `--wav DIR` to keep the float masters.
