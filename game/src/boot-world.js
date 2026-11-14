@@ -56,7 +56,7 @@ import { createDay1Mint, loadDay1 } from './play/day1-mint.js';
 import { nextSkin, wearPlan } from './play/skins.js';
 import { TALK_RADIUS } from './scenes/town-quest.js';
 import { PROGRAMS, TOWNSFOLK } from './play/townsfolk-plan.js';
-import { createTownCasting, CAST_KEYS } from './scenes/town-casting.js';
+import { createTownCasting, CAST_KEYS, assistPoint } from './scenes/town-casting.js';
 import { townToWorld, TOWN_SHOPS, shopDoorAt, TOWN_SPOTS, TOWN_ORIGIN as TOWN_ORIGIN_W, TOWN_SPAWN, TOWN_ALTAR, TOWN_ALTAR_SPAWN, TOWN_ALTAR_ASSET, TOWN_KILL_Y, TOWN_CAMERA, TOWN_ATMOSPHERE, TOWN_ROUTE } from './scenes/town-layout.js';
 import { createFogCards } from './render/fog-cards.js';
 import { createTownShops } from './scenes/town-shops.js';
@@ -681,6 +681,8 @@ const ISLAND_FIRST_VIEW = ASSETS.filter((a) => a.kind !== 'interior').map((a) =>
 function mountCasting() {
   if (townCasting || !town) return;
   townCasting = createTownCasting({ scene, camera, town, player, i18n: ctx.i18n, coarse: mobileDevice, storage: ctx.storage,
+    // phones: a skill tap fires at once at the targeted creature, else the soft lock, else the nearest in range (owner 14.11)
+    assist: (id, range) => assistPoint(player.pos, range, { target: typeof window.__ftfTarget === 'function' ? window.__ftfTarget() : null, locked: townMobs ? townMobs.locked : null, mobs: townMobs && townMobs.brain ? townMobs.brain.mobs : [] }),
     // her cast clip (art/anim/iris_actions.py): a wind-up, then the release frame on which the cast leaves her hand; the
     // effect, the sound and the hits wait for that frame. Without the clip (?anim=v1) her hand goes up and it leaves at once.
     onCastStart: (id) => { interruptMove(0); castWindup = { id, t: 0 }; cue(id === 'snare' ? 'cast_charge_storm' : 'cast_charge_frost'); /* the build through the wind-up */ const c = irisAvatar && irisAvatar.cast('cast_' + id); if (!c && irisAvatar) irisAvatar.react('greet', clock.elapsedTime); return c ? quickRelease(c) : 0; },
@@ -892,6 +894,9 @@ const day1On = () => {
 { let seen = false; const t0 = Date.now();
   setOnboardingHold(() => { const owns = !!(glassShoal && glassShoal.owns && glassShoal.owns()); if (owns) seen = true; return owns || (!!params.get('shoal') && !seen && Date.now() - t0 < 60_000); }); }
 if (day1On()) expectOnboarding('name');   // the Day-1 name comes first: the intro and the card wait for it (ui/onboarding-queue.js)
+// The entry gate (ui/entry-gate.js) keeps the loading screen up for as long as the player reads it, longer than the name's
+// 20-s hold: the hold starts again when the screen lifts, so the lab intro never jumps ahead of the name.
+{ const rearm = () => { if (window.__ftfBootMarks && window.__ftfBootMarks.done) { if (day1On()) expectOnboarding('name'); } else setTimeout(rearm, 200); }; rearm(); }
 // The skin is the heroine herself: Elise wears her own model, clips and cel shading (play/iris-avatar.js setHero).
 // The wheel's skin NFT is read from the chain for the guest account (play/skins.js), never assumed. A function
 // declaration with its state on itself: the HUD asks canSwap() while this module is still being evaluated.
@@ -1644,7 +1649,7 @@ window.__ftf = {
   } : null,
 };
 requestAnimationFrame(frame);
-return { enterWorld, world3d, player, rig, lookdev, renderer, streamer, get play() { return play; }, town, townMode, 
+return { enterWorld, signIn: () => openAccount(), world3d, player, rig, lookdev, renderer, streamer, get play() { return play; }, town, townMode, 
   /** The first town view is complete: ground under Iris, every street piece real and warmed, her own model in (main.js gates the loading screen on it). */
   get townReady() { return !town || !inTown || (town.shown && townGrounded && (!irisLoad.hasModel || irisLoad.loaded || (irisLoad.failed && import.meta.env.DEV))); } };
 }

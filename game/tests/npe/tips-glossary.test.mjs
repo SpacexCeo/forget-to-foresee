@@ -105,3 +105,20 @@ test('first-seen wiring: the intro registers the A4 tips when tips are on, block
   assert.ok(doc.querySelector('.ftf-tip').textContent.includes('Players and agents compete. Agents wear a badge.'));
   fs._reset();
 });
+
+test('a tip never pops over an open game window, waits under it, and shows once the window closes (jury path 14.11)', async () => {
+  const doc = dom();
+  const fs = await import('../../src/sprint/first-seen.js');
+  const { memoryStorage } = await import('../../src/ui/storage.js');
+  fs._reset(); fs._configure({ storage: memoryStorage(), doc, touch: false });
+  fs.registerTip({ id: 'x_tip', title: 'Experience', body: 'Fights fill this bar.' });
+  const menu = doc.createElement('div'); menu.className = 'gm'; doc.body.append(menu);
+  assert.equal(fs.showTip('x_tip'), true, 'queued');
+  assert.equal(doc.querySelectorAll('.ftf-tip').length, 0, 'not over the open menu');
+  menu.remove();
+  await new Promise((r) => setTimeout(r, 1700));
+  const tip = doc.querySelector('.ftf-tip');
+  assert.ok(tip, 'shown once the menu closed');
+  assert.match(tip.style.cssText, /z-index:var\(--z-coach,35\)/, 'under the game windows (z 40) if one opens later');
+  fs._reset();
+});

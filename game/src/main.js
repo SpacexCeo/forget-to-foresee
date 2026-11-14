@@ -116,6 +116,29 @@ const premise = (ctx) => showPremise(document, (k) => ctx.i18n.t(k), {
   params, reducedMotion: !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches),
 });
 
+/**
+ * The entry gate (ui/entry-gate.js; owner 14.11): everything is loaded, the screen shows one "Enter the world" button,
+ * then the language and the account panel over the same screen; the screen lifts after that. Never blocks on a failure.
+ */
+async function entryGate(ctx, w) {
+  try {
+    const m = await retryImport(() => import('./ui/entry-gate.js'));
+    await features.load();
+    const rec = m.readEntry(ctx.storage);
+    const p = m.entryPlan({ entry: params.get('entry'), webdriver: !!navigator.webdriver, skipLink: m.isSkipLink(params), flag: features.on('entryGate'), seen: !!rec });
+    if (!p.gate) return;
+    clearInterval(slowTimer); // everything is in: no slow-link note or Reload while the player reads the gate
+    loading.set(1);
+    const r = await m.runEntryGate({
+      t: (k) => ctx.i18n.t(k), steps: p.steps,
+      locale: params.get('lang') || m.preferredLocale(ctx.prefs.get().locale, navigator.languages || [navigator.language]),
+      setLocale: (l) => ctx.prefs.set({ locale: l }),
+      signIn: features.on('accountLogin') && w.signIn ? () => w.signIn() : null,
+    });
+    if (p.steps) m.saveEntry(ctx.storage, { locale: r.locale, at: Date.now() });
+  } catch (e) { console.warn('[entry]', e); }
+}
+
 ctxP.then(async (ctx) => {
   loading.setTranslator((k) => ctx.i18n.t(k));
   // ?replay=r1.…: replay a linked season and show its NEAR root check over whatever loads beneath (net/replay.js)
@@ -155,6 +178,7 @@ ctxP.then(async (ctx) => {
     });
     await entered.catch(() => {});
     marks.gate = Math.round(performance.now() - t0);
+    if (town) await entryGate(ctx, w);
     await loading.finish();
     if (town) premise(ctx);
   }

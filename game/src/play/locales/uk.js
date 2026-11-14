@@ -2,8 +2,10 @@
 // Same vocabulary as src/locales/uk.js: Мушля, шовк, тик, якір, Сувій; clans Ірис, Сіль, Попіл, Мох, Бурштин, Іній.
 import quests from './uk-quests.js';
 import hud from './uk-hud.js';
+import account from './uk-account.js';
 export default {
   ...hud, // first: the RPG HUD (en-hud.js keys); this file's own copies below win
+  ...account, // the account panel (en-account.js keys)
   // ---- badge, help ----
   'play.badge': 'Локальне демо · правила працюють у вашому браузері через ту саму кімнату, що й API агентів',
   'play.help.title': 'Керування',
@@ -636,6 +638,10 @@ export default {
   'ledger.copy': "Скопіювати кроки перевірки",
   'ledger.copied': "Скопійовано",
   'ledger.view': "Відкрити транзакцію",
+  // ---- entry gate (ui/entry-gate.js): the one button after loading, then the language ----
+  'entry.enter': "Увійти у світ",
+  'entry.lang': "Оберіть мову",
+  'entry.ready': "Місто готове",
   'intro.skip': "Пропустити",
   'spot.wheel': "Крутити колесо",
   'item.prop_wheel_of_fortune': "Колесо фортуни",
@@ -1400,10 +1406,10 @@ export default {
   'town.cast.quickTip': 'Q / V одразу в бік курсора (у межах дальності, інакше на максимум)',
   'set.ctl.quick': 'Швидкий каст (ПК)',
   'set.ctl.quickNote': 'Q / V кастуються одразу в бік курсора миші, без кроку прицілювання.',
-  'set.ctl.mouse': 'Миша',
+  'set.ctl.mouse': 'Режим керування',
   'set.ctl.mouse.aim': 'Приціл (миша повертає камеру)',
-  'set.ctl.mouse.classic': 'Класика (затиснути праву кнопку)',
-  'set.ctl.mouseNote': 'Приціл: клацніть по сцені, щоб захопити мишу. Ліва кнопка: удар або дія підказки. Права кнопка: Спис. Утримуйте Ctrl для курсора; Esc відкриває меню.',
+  'set.ctl.mouse.classic': 'Класика (лівий клік — іти, права кнопка — камера)',
+  'set.ctl.mouseNote': 'Приціл: клацніть по сцені, щоб захопити мишу. Ліва кнопка: удар або дія підказки. Права кнопка: Спис. Утримуйте Ctrl для курсора; Esc відкриває меню. Класика: лівий клік веде в точку, затисніть праву кнопку й тягніть, щоб повернути камеру.',
   'bark.role.guard': "Кам'яні павуки й гірші потвори хазяйнують на схилі за нижньою брамою. Відбий їх: з них випадають скрині!",
   'bark.role.baker': "Свіжий хліб із печі, ще теплий!",
   'bark.role.lamplighter': "Усі ліхтарі горять, усі кути видно.",

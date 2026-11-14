@@ -149,12 +149,12 @@ html.rpg-mk .rpg-log { padding-top: max(28px, calc(36 * var(--k))); }
   .rpg { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; --ts: 0 1px 2px rgba(0,0,0,.9), 0 0 6px rgba(0,0,0,.5); text-shadow: var(--ts); }
   .rpg .panel { background: none; border: 0; box-shadow: none; border-radius: 0; }
   /* player: a small round portrait, "Name  Lv n", then thin HP / mana / stamina lines with their numbers to the right */
-  .rpg-frame { left: calc(28 * var(--k)); top: calc(28 * var(--k)); width: calc(330 * var(--k)); height: calc(60 * var(--k)); display: flex; align-items: baseline; align-content: flex-start; gap: calc(8 * var(--k)); padding-left: calc(66 * var(--k)); }
+  .rpg-frame { left: calc(28 * var(--k)); top: calc(28 * var(--k)); width: calc(330 * var(--k)); height: calc(68 * var(--k)); display: flex; align-items: baseline; align-content: flex-start; gap: calc(8 * var(--k)); padding-left: calc(66 * var(--k)); }
   .rpg-portrait { left: 0; top: 0; width: calc(52 * var(--k)); height: calc(52 * var(--k)); border: 0; box-shadow: 0 1px 3px rgba(0,0,0,.55); }
   .rpg-name { position: static; max-width: calc(170 * var(--k)); font: 600 max(13px, calc(16 * var(--k)))/1.25 system-ui, -apple-system, "Segoe UI", sans-serif; color: #fff; letter-spacing: 0; }
   .rpg-lv { position: static; min-width: 0; height: auto; padding: 0; border: 0; border-radius: 0; background: none; font-size: max(11px, calc(13 * var(--k))); font-weight: 500; line-height: 1.25; color: rgba(235,238,235,.62); }
   .rpg-hp, .rpg-mana, .rpg-stam { left: calc(66 * var(--k)); width: calc(178 * var(--k)); height: max(2px, calc(3 * var(--k))); border: 0; border-radius: 2px; overflow: visible; background: rgba(0,0,0,.4); box-shadow: 0 1px 1px rgba(0,0,0,.35); }
-  .rpg-hp { top: calc(29 * var(--k)); } .rpg-mana { top: calc(43 * var(--k)); } .rpg-stam { top: calc(57 * var(--k)); }
+  .rpg-hp { top: calc(36 * var(--k)); } .rpg-mana { top: calc(50 * var(--k)); } .rpg-stam { top: calc(64 * var(--k)); }   /* a clear gap under the name (owner 14.11) */
   .rpg-hp::after, .rpg-mana::after { display: none; }
   .rpg-bar i { border-radius: 2px; }
   .rpg-hp i.fill { background: #e2493e; } .rpg-mana i.fill { background: #4c8ee6; } .rpg-stam i.fill { background: #8fd694; }
