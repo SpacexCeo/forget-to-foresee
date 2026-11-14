@@ -8,6 +8,7 @@
 //   Storm Snare  (far cast)   a leash of current to the point, the ring snaps open past its radius and settles,
 //                             a violet column re-strikes in the middle, tendrils crawl to the rim, then it collapses.
 import * as THREE from 'three';
+import { createStreaks } from '../render/spell-fx.js';
 
 export const CASTS = Object.freeze({
   lance: Object.freeze({ shape: 'line', range: 13, minRange: 0, width: 1.5, cooldown: 1.1, hold: 1.5 }),
@@ -231,45 +232,18 @@ function crystalGeometry() {
   return g.toNonIndexed();
 }
 
-/** Spark/chip particles: one Points draw call, simulated on the CPU (a few hundred at most). */
+/** Spark/chip particles: velocity-stretched streaks cooling from white-hot to `color` (render/spell-fx.js), one draw call. */
 class Sparks {
-  constructor(parent, max, color, size) {
-    this.max = max; this.n = 0;
-    this.p = new Float32Array(max * 3); this.v = new Float32Array(max * 3); this.life = new Float32Array(max); this.age = new Float32Array(max);
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.BufferAttribute(this.p, 3).setUsage(THREE.DynamicDrawUsage));
-    this.points = new THREE.Points(g, new THREE.PointsMaterial({ color, size, sizeAttenuation: true, transparent: true, opacity: 0.95, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
-    this.points.frustumCulled = false; this.points.renderOrder = 4;
-    parent.add(this.points);
-  }
-
+  constructor(parent, max, color, size) { this.s = createStreaks(THREE, parent, max); this.color = color; this.size = size; }
+  get n() { return this.s.live; }
   emit(x, y, z, count, speed, up, life, rand) {
     for (let i = 0; i < count; i++) {
-      let k = this.n < this.max ? this.n++ : Math.floor(rand() * this.max);
       const a = rand() * Math.PI * 2, s = speed * (0.35 + rand() * 0.65);
-      this.p.set([x, y, z], k * 3);
-      this.v.set([Math.cos(a) * s, up * (0.4 + rand() * 0.8), Math.sin(a) * s], k * 3);
-      this.life[k] = life * (0.6 + rand() * 0.6); this.age[k] = 0;
+      this.s.emit(x, y, z, Math.cos(a) * s, up * (0.4 + rand() * 0.8), Math.sin(a) * s, life * (0.6 + rand() * 0.6), 0xffffff, this.color, 2.6, this.size * 0.3, 0.035, 1.2, -5.9);
     }
   }
-
-  update(dt) {
-    let w = 0;
-    for (let i = 0; i < this.n; i++) {
-      this.age[i] += dt;
-      if (this.age[i] >= this.life[i]) continue;
-      const o = i * 3;
-      this.v[o + 1] -= 9.8 * dt * 0.6;
-      this.p[o] += this.v[o] * dt; this.p[o + 1] += this.v[o + 1] * dt; this.p[o + 2] += this.v[o + 2] * dt;
-      if (w !== i) { this.p.copyWithin(w * 3, o, o + 3); this.v.copyWithin(w * 3, o, o + 3); this.life[w] = this.life[i]; this.age[w] = this.age[i]; }
-      w++;
-    }
-    this.n = w;
-    this.points.geometry.setDrawRange(0, this.n);
-    this.points.geometry.attributes.position.needsUpdate = true;
-  }
-
-  dispose() { this.points.removeFromParent(); this.points.geometry.dispose(); this.points.material.dispose(); }
+  update(dt) { this.s.update(dt); }
+  dispose() { this.s.dispose(); }
 }
 
 /** Camera-facing ribbons for lightning: `bolts` polylines of `pts` points each, rewritten on every re-strike. */
