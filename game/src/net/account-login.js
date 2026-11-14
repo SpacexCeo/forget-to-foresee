@@ -8,6 +8,7 @@
 //   3. the relayer maps login -> account; the device key is added to the guest account (AddKey, signed by the guest key);
 //   4. on another device the same wallet derives the same key, the relayer names the account, the key is already on it.
 // Playing as a guest never touches any of this: nothing here runs until the player picks a login.
+import { NET } from './network.js';
 
 export const DEVICE_KEY_TEXT = 'Forget to Foresee: unlock my game key on this device.\nSign this only on the Forget to Foresee page. It sends no transaction and costs nothing.';
 export const DEVICE_KEY_DOMAIN = 'ftf-device-key-v1';
@@ -23,7 +24,7 @@ export function loginMessage(f) {
     `Device key: ${f.deviceKey || 'none'}`,
     `Nonce: ${f.nonce}`,
     `Expires: ${f.expires}`,
-    'This proves you own this login. It sends no transaction and costs nothing. Your account lives on NEAR testnet; nothing here has real-world value.',
+    `This proves you own this login. It sends no transaction and costs nothing. Your account lives on ${NET.label}${NET.network === 'testnet' ? '; nothing here has real-world value' : ''}.`,
   ].join('\n');
 }
 

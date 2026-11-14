@@ -9,6 +9,7 @@
 //   POST /api/auth/methods {account}   POST /api/auth/unlink {id, account}   the account's linked sign-in methods
 import { cors, createBucket, envConfig, clientIp, DEFAULTS } from '../lib/core.js';
 import { createTxClient } from '../lib/near-tx.js';
+import { NETWORKS } from '../lib/network.js';
 import { AUTH, createNonces, createIdentityStore, createLinker, identityFile } from '../lib/auth.js';
 import { createEmailAuth, createCodes, createMailer, keyFromEnv } from '../lib/email-auth.js';
 
@@ -19,7 +20,7 @@ async function readBody(req) {
   try { return JSON.parse(s || '{}'); } catch { return null; }
 }
 
-export const MAINNET_RPC = ['https://free.rpc.fastnear.com', 'https://rpc.mainnet.near.org'];
+export const MAINNET_RPC = NETWORKS.mainnet.rpcUrls;
 /** The network of a NEAR account id: *.testnet (and the guests) on testnet, every other named account on mainnet. */
 export const networkOf = (account_id) => (/.testnet$/.test(account_id) ? 'testnet' : 'mainnet');
 /** RPC view_access_key on the account's own network -> {permission: 'FullAccess' | {FunctionCall}} or null. */

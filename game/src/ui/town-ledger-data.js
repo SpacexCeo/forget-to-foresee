@@ -5,9 +5,10 @@
 // checked against a narrow shape and anything else is dropped, so a bad answer can never put markup on the page.
 // The pure part (formatting, accounts, the stats narrowed to what the window shows) lives in ui/: the window imports it
 // statically and a ui chunk must not import a play chunk (boot TDZ). net/town-ledger.js adds the fetch.
+import { EXPLORER, NET } from '../net/network.js';
 
-export const EXPLORER = 'https://testnet.nearblocks.io';
-export const TOWN_ACCOUNT = 'ftf-town.testnet';
+export { EXPLORER };
+export const TOWN_ACCOUNT = NET.accounts.town;
 export const POLL_MS = 20_000;
 export const MICRO = 1_000_000; // silk is kept in millionths on ftf-town
 export const PRICE_UNIT = 5; // stall prices are in fifths of a silk (relayer lib/town-traders.js PRICE_UNIT)

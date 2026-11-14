@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import { appendFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { b58decode, createTxClient, importSecretKey } from './near-tx.js';
+import { NET, netOf } from './network.js';
 
 /** Segment ids and weights in wheel order (game/src/game/wheel.js SEGMENTS). */
 export const WHEEL_WEIGHTS = Object.freeze([['silk5', 20], ['part_common', 18], ['shard_common', 14], ['xp25', 14], ['part_uncommon', 10], ['chest', 9],
@@ -14,7 +15,7 @@ export const GRAND = 'skin_sheriffchenko';
 /** Day 1 of the wheel (UTC): the spin number may not exceed the days since then plus the spins play can earn. */
 export const WHEEL_LAUNCH_MS = Date.UTC(2026, 10, 11);
 export const EARNED_ALLOWANCE = 20;
-export const WHEEL_DEFAULTS = Object.freeze({ skins: 'skins.ftf-coordinator.testnet', maxSkewMs: 5 * 60 * 1000 });
+export const WHEEL_DEFAULTS = Object.freeze({ skins: NET.skins, maxSkewMs: 5 * 60 * 1000 });
 
 const sha256hex = (s) => createHash('sha256').update(s).digest('hex');
 export const wheelIdFor = (accountId) => sha256hex('ftf-wheel:' + accountId).slice(0, 8);
@@ -102,4 +103,4 @@ export async function mintSkin({ accountId, publicKey, seed, n }, { secretKey, s
   return { status: 200, body: { token_id: token ? token.token_id : null, tx_hash: r.hash, contract: skins } };
 }
 
-export const wheelEnv = (env = process.env) => ({ secretKey: env.FTF_SKIN_KEY || '', skins: env.FTF_SKINS_CONTRACT || WHEEL_DEFAULTS.skins, dataDir: env.FTF_DATA_DIR || new URL('../data', import.meta.url).pathname });
+export const wheelEnv = (env = process.env) => ({ secretKey: env.FTF_SKIN_KEY || '', skins: env.FTF_SKINS_CONTRACT || netOf(env).skins, dataDir: env.FTF_DATA_DIR || new URL('../data', import.meta.url).pathname });

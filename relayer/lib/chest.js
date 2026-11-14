@@ -3,8 +3,9 @@
 // open_chest-only key, and answers with the recorded opening, the outcome at that deck position and its Merkle proof.
 import { b58decode, createTxClient, importSecretKey } from './near-tx.js';
 import { buildDeck, commitment, leafHash, merkleProof, hexOf } from './chest-deck.js';
+import { NET, netOf } from './network.js';
 
-export const CHEST_DEFAULTS = Object.freeze({ chests: 'chests.ftf-coordinator.testnet', season: 's1', maxSkewMs: 5 * 60 * 1000 });
+export const CHEST_DEFAULTS = Object.freeze({ chests: NET.chests, season: 's1', maxSkewMs: 5 * 60 * 1000 });
 const ACCOUNT_RE = /^(?=.{2,64}$)[a-z0-9]+([-_][a-z0-9]+)*(\.[a-z0-9]+([-_][a-z0-9]+)*)*$/;
 
 /** The text a player's key signs to open a chest. */
@@ -161,6 +162,6 @@ export async function openChests({ accountId, publicKey, count, requestId }, { s
 
 export const chestEnv = (env = process.env) => ({
   secretKey: env.FTF_CHEST_KEY || '',
-  chests: env.FTF_CHESTS_CONTRACT || CHEST_DEFAULTS.chests,
+  chests: env.FTF_CHESTS_CONTRACT || netOf(env).chests,
   season: env.FTF_CHEST_SEASON || CHEST_DEFAULTS.season,
 });

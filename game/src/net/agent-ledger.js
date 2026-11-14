@@ -6,6 +6,7 @@ import { createTxClient, importSecretKey } from './near-tx.js';
 import { DAY1_DEPLOYMENT } from './day1-deployment.js';
 import { NEAR_DEPLOYMENT } from './near-deployment.js';
 import { trackArgs, verifyTrack } from '../game/track-record.js';
+import { NET } from './network.js';
 
 /** 0.01 NEAR for storage (a record is a few hundred bytes; the contract refunds the rest). */
 export const LEDGER_DEPOSIT = 10n ** 22n;
@@ -59,10 +60,10 @@ export async function recordHire({ storage, npc, result, deployment = DAY1_DEPLO
 
 /** Copy-paste steps for a person or any AI agent to verify one record independently (English on purpose). */
 export function verificationSteps({ accountId, npc, epoch, deployment = DAY1_DEPLOYMENT }) {
-  const ledger = ledgerContract(deployment) || 'ledger.ftf-coordinator.testnet';
+  const ledger = ledgerContract(deployment) || NET.accounts.ledger;
   return [
-    `Verify the Forget to Foresee agent "${npc}" (account ${accountId}, epoch ${epoch}) on NEAR testnet:`,
-    `1. Read the record: call the view method get_track({"account_id":"${accountId}","npc":"${npc}","epoch":${epoch}}) on ${ledger} through any testnet RPC (e.g. https://rpc.testnet.near.org, method "query", request_type "call_function").`,
+    `Verify the Forget to Foresee agent "${npc}" (account ${accountId}, epoch ${epoch}) on ${NET.label}:`,
+    `1. Read the record: call the view method get_track({"account_id":"${accountId}","npc":"${npc}","epoch":${epoch}}) on ${ledger} through any ${NET.network} RPC (e.g. ${NET.rpcUrls[NET.rpcUrls.length - 1]}, method "query", request_type "call_function").`,
     `2. Load the sealed price snapshot from ${REPO}/blob/main/game/src/game/exchange/snapshot-v1.js and check that sha256 of its canonical payload equals the record's snapshot_sha256.`,
     `3. Check sha256(params) equals params_hash, then re-run hireResult() from game/src/game/town-economy.js with the record's seed and the temperament, price, rounds and "before" state from params.`,
     `4. Compare: the re-computed trades must equal trades_compact (echo index, bar, arm index, stake, back per trade) and the PnL in basis points must equal pnl_bp.`,

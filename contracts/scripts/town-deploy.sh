@@ -14,7 +14,7 @@
 #   MODE=day bash contracts/scripts/town-deploy.sh                                # the daily sweep_fees + distribute
 set -euo pipefail
 source "$(dirname "$0")/day1-lib.sh"
-TOWN=${TOWN:-ftf-town.testnet}
+TOWN=${TOWN:-ftf-town.$TLD}
 near_of() { view_account "$1" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{process.stdout.write(String(Number(BigInt(JSON.parse(s).result.amount)/10n**20n)/1e4))}catch{process.stdout.write("0")}})'; }
 call() { near contract call-function as-transaction "$TOWN" "$1" json-args "$2" prepaid-gas "${3:-100.0} Tgas" attached-deposit '0 NEAR' sign-as "$SIGNER" "${SIGN[@]}"; }
 
@@ -36,7 +36,8 @@ echo "2/6 Town account…"
 if exists "$TOWN"; then echo "    $TOWN exists"; else
   case "$TOWN" in
     *."$SIGNER") create "$TOWN" "${TOWN_FUND:-6}" ;;
-    *) near account create-account sponsor-by-faucet-service "$TOWN" autogenerate-new-keypair save-to-legacy-keychain network-config testnet create; sleep 3 ;;
+    *) if [ "$NETWORK" = mainnet ]; then echo "Create $TOWN first (mainnet has no faucet; docs/deploy/mainnet.md)" >&2; exit 1; fi
+       near account create-account sponsor-by-faucet-service "$TOWN" autogenerate-new-keypair save-to-legacy-keychain network-config testnet create; sleep 3 ;;
   esac
 fi
 echo "3/6 Contract…"

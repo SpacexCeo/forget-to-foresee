@@ -8,6 +8,7 @@ import { MARKET, TRADABLE, feeOf, bandOf } from './market-rules.js';
 import { formatSilkC, silkView, subscribeSilk, refreshSilk } from '../net/silk-core.js';
 import { DICE, oddsTable, payoutOf, stakeAllowed, rollOf } from './dice.js';
 import { artBox, resIconPath } from './art.js';
+import { EXPLORER } from '../net/network.js';
 
 const TX = /^[1-9A-HJ-NP-Za-km-z]{32,64}$/;
 const CSS = `
@@ -89,7 +90,7 @@ const age = (t, ms) => (ms < 3_600_000 ? t('p2p.age.min', { n: Math.max(1, Math.
  * @param {{t: Function, client: object, doc?: Document, now?: () => number, explorer?: string}} o
  * @returns {{open(tab?: string): void, close(): void, readonly isOpen: boolean}}
  */
-export function createMarketUi({ t, client, dice = null, storage = null, doc = globalThis.document, now = () => Date.now(), explorer = 'https://testnet.nearblocks.io' }) {
+export function createMarketUi({ t, client, dice = null, storage = null, doc = globalThis.document, now = () => Date.now(), explorer = EXPLORER }) {
   if (!(doc.getElementById && doc.getElementById('mk2-style'))) { const s = doc.createElement('style'); s.id = 'mk2-style'; s.textContent = CSS; doc.head.append(s); }
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const btn = (label, fn, cls = 'mk2-act') => { const b = el('button', cls, label); b.type = 'button'; b.addEventListener('click', fn); return b; };

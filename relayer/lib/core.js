@@ -2,10 +2,11 @@
 // bucket, and the create-guest flow with injected RPC so it is unit-tested without a network. The serverless entry
 // points in api/ and server.js only adapt the platform's req/res to these functions.
 import { b58decode, createTxClient, importSecretKey } from './near-tx.js';
+import { NET, netOf } from './network.js';
 
 export const DEFAULTS = Object.freeze({
-  guests: 'guests.ftf-coordinator.testnet',
-  rpcUrls: ['https://test.rpc.fastnear.com', 'https://rpc.testnet.near.org'],
+  guests: NET.guests,
+  rpcUrls: NET.rpcUrls,
   origins: ['https://spacexceo.github.io'],
 });
 
@@ -115,8 +116,8 @@ export function cors(req, res, origins) {
 
 export const envConfig = (env = process.env) => ({
   secretKey: env.FTF_GUEST_KEY || '',
-  guests: env.FTF_GUESTS_CONTRACT || DEFAULTS.guests,
-  rpcUrls: env.FTF_RPC_URLS ? env.FTF_RPC_URLS.split(',').map((s) => s.trim()).filter(Boolean) : DEFAULTS.rpcUrls,
+  guests: env.FTF_GUESTS_CONTRACT || netOf(env).guests,
+  rpcUrls: env.FTF_RPC_URLS ? env.FTF_RPC_URLS.split(',').map((s) => s.trim()).filter(Boolean) : netOf(env).rpcUrls,
   origins: originList(env.FTF_ALLOWED_ORIGINS || env.ALLOWED_ORIGIN, DEFAULTS.origins),
 });
 

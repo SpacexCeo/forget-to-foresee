@@ -6,7 +6,7 @@
 #   bash contracts/scripts/items-deploy.sh
 set -euo pipefail
 source "$(dirname "$0")/day1-lib.sh"
-TOWN=${TOWN:-ftf-town.testnet}
+TOWN=${TOWN:-ftf-town.$TLD}
 ITEMS=${ITEMS:-items.$TOWN}
 echo "1/4 Building the wasm…"
 IW=$(wasm town-items); echo "    $IW ($(wc -c < "$IW") bytes)"

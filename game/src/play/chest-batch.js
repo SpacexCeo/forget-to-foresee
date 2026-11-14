@@ -5,6 +5,7 @@
 // closing early never loses one. No answer, no outcome: the chests stay sealed and the panel says why.
 import { outcomeView } from './chest-open.js';
 import { cue } from '../audio/town-audio.js';
+import { EXPLORER } from '../net/network.js';
 // the plain message keys (net/chest-client.js CHEST_ERRORS; kept here so this panel loads without the net code)
 const ERR_KEYS = ['off', 'soon', 'rate', 'daily', 'sold_out', 'no_guest', 'no_key', 'network', 'tx_failed', 'no_opening', 'stale', 'replayed', 'deck_mismatch', 'request'];
 
@@ -43,7 +44,7 @@ export function byRarity(openings) {
  * Opens `count` chests at once. `chests` are the sealed chests (bag order) the openings settle, one each.
  * @returns {{result: Promise<object>, close(): void, skip(): void}}
  */
-export function openChestBatch({ doc = document, t, client, chests, count, items = [], base = (import.meta.env && import.meta.env.BASE_URL) || '/', onSettled = () => {}, explorer = 'https://testnet.nearblocks.io', timers = globalThis }) {
+export function openChestBatch({ doc = document, t, client, chests, count, items = [], base = (import.meta.env && import.meta.env.BASE_URL) || '/', onSettled = () => {}, explorer = EXPLORER, timers = globalThis }) {
   if (!(doc.getElementById && doc.getElementById('cb-style'))) { const st = doc.createElement('style'); st.id = 'cb-style'; st.textContent = CSS; doc.head.append(st); }
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const reduced = (() => { try { return doc.documentElement.dataset.motion === 'reduce' || !!(doc.defaultView && doc.defaultView.matchMedia && doc.defaultView.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch { return false; } })();

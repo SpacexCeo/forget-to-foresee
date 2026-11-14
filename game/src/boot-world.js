@@ -991,7 +991,10 @@ function updateAltarTimer() {
   if (!visible) return;
   // declutter: with the player HUD on, an altar icon (CSS) and the short state; the full line is the tooltip
   const full = ctx.i18n.t('day1.altar.timer') + ' · ' + ctx.i18n.t('day1.altar.open');
-  const text = playerHud ? ctx.i18n.t('day1.altar.short') : full;   // says what is open (design review 13.11: a bare "Open now" told nothing)
+  // before ten stone spiders (game/tourney-gate.js) the label shows the lock and the spider count, the open icon set's padlock
+  const tg = tourneyGate(townLedger.stats, { judge: judge || params.get('judge') === '1' }), locked = !tg.open;
+  if (altarTimer.dataset.locked !== String(locked)) { altarTimer.dataset.locked = String(locked); if (locked) altarTimer.style.setProperty('--ph-i-altar', `url("${import.meta.env.BASE_URL}assets/ui/icons/open/tournament_locked_glyph_48.webp")`); else altarTimer.style.removeProperty('--ph-i-altar'); }
+  const text = locked ? ctx.i18n.t('town.altar.locked', { n: tg.n, need: tg.need }) : playerHud ? ctx.i18n.t('day1.altar.short') : full;   // says what is open (design review 13.11: a bare "Open now" told nothing)
   if (altarTimer.textContent !== text) { altarTimer.textContent = text; altarTimer.title = full; }
   // kept below the top-right chips (Controls, Profile) and inside the screen: on a phone the altar projects right under them
   const minTop = innerWidth < 700 || innerHeight < 500 ? (document.body.classList.contains('ph-on') ? 236 : 150) : 118, half = Math.min(altarTimer.offsetWidth / 2 || 110, innerWidth / 2 - 8);

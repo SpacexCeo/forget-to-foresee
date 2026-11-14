@@ -10,8 +10,10 @@ import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { MARKET, TRADABLE, checkListing, checkBuy, applyFill, isOpen, dayOf } from './market-rules.js';
+import { NET } from './network.js';
 
 const MICRO_PER_CENT = 10_000n;
+const AGENT_RE = new RegExp('\\.' + NET.town.replace(/\./g, '\\.') + '$'); // the town's NPC wallets: <name>.<town>
 const empty = () => ({ v: 1, seq: 0, listings: {}, volume: {}, trades: [] });
 
 export function loadBook(file) { try { const b = JSON.parse(readFileSync(file, 'utf8')); return b && b.v === 1 ? b : empty(); } catch { return empty(); } }
@@ -73,7 +75,7 @@ export function createP2P({ file = null, refUnitC, holdings = async () => ({ sil
         if (!c.ok) return { status: c.error === 'not_enough_items' || c.error === 'limit_listings' ? 409 : 400, body: c };
         book.seq += 1;
         const id = 'lst_' + createHash('sha256').update(account + '|' + book.seq + '|' + now()).digest('hex').slice(0, 8);
-        const l = { id, seller: account, sellerKind: /\.ftf-town\.testnet$/.test(account) ? 'agent' : 'player', item, tokenId: item, qtyTotal: qty, qtyLeft: qty, unitPriceC: unitC, referenceUnitC: refUnitC(item),
+        const l = { id, seller: account, sellerKind: AGENT_RE.test(account) ? 'agent' : 'player', item, tokenId: item, qtyTotal: qty, qtyLeft: qty, unitPriceC: unitC, referenceUnitC: refUnitC(item),
           createdAt: now(), expiresAt: now() + MARKET.durationMs, status: 'active', settlement, fills: [] };
         book.listings[id] = l; save();
         return { status: 200, body: { listing: listView(l) } };

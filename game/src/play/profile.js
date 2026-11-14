@@ -6,6 +6,7 @@ import { createShardNftClient } from '../net/shard-nft.js';
 import { NEAR_DEPLOYMENT } from '../net/near-deployment.js';
 import { DAY1_DEPLOYMENT } from '../net/day1-deployment.js';
 import { createTxClient } from '../net/near-tx.js';
+import { EXPLORER } from '../net/network.js';
 
 const CSS = `
 .ftf-prof { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; background: rgba(6, 10, 12, .6); font: 15px/1.45 system-ui, sans-serif; color: #f3ead6; }
@@ -36,7 +37,7 @@ export async function readOnChain({ deployment = NEAR_DEPLOYMENT, fetch = global
   if (owner && day1 && day1.heroine && typeof fetch === 'function') {
     try {
       const list = await createTxClient({ rpcUrls: deployment.rpcUrls, fetch, timeoutMs: 8000 }).view(day1.heroine, 'nft_tokens_for_owner', { account_id: owner });
-      const explorer = (deployment.explorer || 'https://testnet.nearblocks.io').replace(/\/$/, '');
+      const explorer = (deployment.explorer || EXPLORER).replace(/\/$/, '');
       for (const t of list || []) mine.push({ kind: 'heroine', mine: true, tokenId: t.token_id, owner: t.owner_id, contractId: day1.heroine, href: `${explorer}/nft-token/${day1.heroine}/${t.token_id}`, label: (t.metadata && t.metadata.title) || 'Elise' });
     } catch { /* the shard read below still runs; nothing invented */ }
   }
@@ -50,7 +51,7 @@ async function readShards({ deployment = NEAR_DEPLOYMENT, fetch = globalThis.fet
   try {
     const client = createShardNftClient({ contractId: deployment.shardContractId, rpcUrls: deployment.rpcUrls, fetch, timeoutMs: 8000 });
     const items = [];
-    const explorer = (deployment.explorer || 'https://testnet.nearblocks.io').replace(/\/$/, '');
+    const explorer = (deployment.explorer || EXPLORER).replace(/\/$/, '');
     for (const sid of seasons) for (const t of (await client.shardsOfSeason(sid)) || []) items.push({ kind: 'shard', tokenId: t.token_id, owner: t.owner_id || null, contractId: deployment.shardContractId, href: `${explorer}/nft-token/${deployment.shardContractId}/${t.token_id}`, clan: t.data ? t.data.owner_clan : null, shardKind: t.data ? t.data.kind : null, label: t.data ? `${t.data.owner_clan} · ${t.data.kind}` : '' });
     return { state: 'loaded', items };
   } catch {
