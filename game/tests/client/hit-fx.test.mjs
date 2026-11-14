@@ -11,7 +11,7 @@ import { MobBrain, CAST_DAMAGE, ACTIONS } from '../../src/play/mobs.js';
 const seeded = (s = 1) => () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
 
 test('every source has its own look; only the finishers (combo third blow, super strike, Loomblade heavy) are crits; only the super rings the ground', () => {
-  assert.deepEqual(Object.keys(IMPACT).sort(), ['blade', 'blade_heavy', 'ember', 'gale', 'lance', 'seed', 'snare', 'strike', 'strike3', 'super']);
+  assert.deepEqual(Object.keys(IMPACT).sort(), ['blade', 'blade_heavy', 'dragon', 'ember', 'gale', 'lance', 'seed', 'snare', 'strike', 'strike3', 'super']);
   assert.equal(IMPACT.lance.frag, 'ice'); assert.ok(IMPACT.snare.crackle > 0);
   assert.equal(new Set(Object.values(IMPACT).map((i) => i.color)).size, Object.keys(IMPACT).length, 'a colour each');
   assert.deepEqual(Object.entries(IMPACT).filter(([, i]) => i.crit).map(([k]) => k).sort(), ['blade_heavy', 'strike3', 'super']);

@@ -21,6 +21,7 @@ export const IMPACT = Object.freeze({
   gale: Object.freeze({ color: 0xc8f0ff, flash: 0.55, frags: 5, frag: 'ice', crackle: 0, ring: 0, shake: 0.03, kick: 0.03, stop: 0, crit: false }),
   blade: Object.freeze({ color: 0xfff4dc, flash: 0.55, frags: 4, frag: 'spark', crackle: 0, ring: 0, shake: 0.06, kick: 0.08, stop: 0.04, crit: false }),
   blade_heavy: Object.freeze({ color: 0xffe2a0, flash: 0.9, frags: 9, frag: 'spark', crackle: 0, ring: 0, shake: 0.28, kick: 0.2, stop: 0.08, crit: true }),
+  dragon: Object.freeze({ color: 0xfff4e2, flash: 0.6, frags: 5, frag: 'spark', crackle: 0, ring: 0, shake: 0, kick: 0.02, stop: 0, crit: false }), // a companion's bolt (game/shoal-allies.js); the caller tints it by kind
   seed: Object.freeze({ color: 0x9ff5ea, flash: 0.45, frags: 5, frag: 'spark', crackle: 0, ring: 0, shake: 0, kick: 0, stop: 0, crit: false }),
 });
 /** What a finishing blow adds. */

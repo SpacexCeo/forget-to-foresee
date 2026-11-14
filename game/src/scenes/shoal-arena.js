@@ -11,7 +11,8 @@ import { shoalSkillsFor, shoalExtrasFor, comboStep } from '../rpg/shoal-skills.j
 import { hasModelFile, fetchGltf } from '../render/assets.js';
 import { createHitFx } from '../render/hit-fx.js';
 import { impactOf, IMPACT } from '../render/hit-fx-core.js';
-import { cue } from '../audio/town-audio.js';
+import { cue, cueAt } from '../audio/town-audio.js';
+import { ALLY, ALLY_COLOR, freshAllies, alliesStep, allyTarget } from '../game/shoal-allies.js';
 
 const CSS = `
 .sa-boss{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 14px);transform:translateX(-50%);width:min(520px,calc(100vw - 32px));z-index:14;color:#f3ead2;font:600 14px/1.2 "Atkinson Hyperlegible",system-ui,sans-serif;text-align:center;text-shadow:0 1px 3px #000;pointer-events:none}
@@ -50,6 +51,8 @@ html[data-motion=reduce] .sa-skill.sa-ultb.sa-ready{animation:none}
  */
 export function createShoalArena(o) {
   const { THREE, scene, center, camera = null, say, reduced, mobile, hero, clip, axes, rig, onWin, onDeath, onHome } = o;
+  // the heroine's own companion dragons (their world positions, kinds and a flourish), when the chain says she has any
+  const allies = typeof o.allies === 'function' ? o.allies : () => [];
   const doc = globalThis.document;
   if (!doc.getElementById('sa-css')) { const st = doc.createElement('style'); st.id = 'sa-css'; st.textContent = CSS; doc.head.append(st); }
   const root = new THREE.Group(); root.name = 'glass-shoal'; root.position.copy(center); root.visible = false; scene.add(root);
@@ -112,12 +115,29 @@ export function createShoalArena(o) {
   const fx = createHitFx({ THREE, parent: root, doc, scale: mobile ? 0.6 : 1 });
   let bossFlashT = 0;
   /** A blow of `src` (hit-fx-core IMPACT) landing at `at` (arena-local): the look, a short shake, its hit-stop. */
-  function landFx(src, at, kill = false) {
+  function landFx(src, at, kill = false, color = null) {
     const red = reduced(), imp = impactOf(src, { radius: 0.7, kill, reduced: red });
+    if (color != null) imp.color = color;
     const dx = at[0] - me3.x, dz = at[2] - me3.z, l = Math.hypot(dx, dz) || 1;
     fx.impact(at, [dx / l, dz / l], imp, 0);
     if (imp.shake > 0) { if (shakeT <= 0) shakeAmp = 0; shakeAmp = Math.max(shakeAmp, imp.shake * 0.5); shakeT = 0.22; }
     if (!red && imp.stop) stopT = Math.max(stopT, imp.stop);
+  }
+  // ---- the dragon allies (game/shoal-allies.js): a small bolt each every few seconds at the nearest foe
+  let allyTimers = [];
+  const allyGeo = new THREE.SphereGeometry(0.2, 8, 6), _ap = new THREE.Vector3();
+  function allyShoot(a) {
+    if (!a || !a.pos) return;
+    _ap.copy(a.pos).sub(root.position);
+    const tgt = allyTarget([_ap.x, _ap.z], B.adds, R.ARENA.boss, R.BOSS.contact, !B.dead); if (!tgt) return;
+    const color = ALLY_COLOR[a.kind] || IMPACT.dragon.color;
+    const dx = tgt.at[0] - _ap.x, dz = tgt.at[1] - _ap.z, dist = Math.hypot(dx, dz) || 1;
+    const mesh = new THREE.Mesh(allyGeo, new THREE.MeshBasicMaterial({ color })); mesh.position.copy(_ap); root.add(mesh);
+    const s = { id: 'ally', ally: true, src: 'dragon', color, speed: ALLY.speed, radius: ALLY.radius, damage: ALLY.damage, range: dist + 6, pierce: false, hitCue: a.kind === 'cinder' ? 'ember_hit' : 'hit_frost' };
+    shots.push({ s, mesh, x: _ap.x, y: _ap.y, z: _ap.z, dx: dx / dist, dz: dz / dist, vy: ((1.4 - _ap.y) / dist) * ALLY.speed, left: s.range, hitBoss: false, hit: new Set() });
+    fx.burst([_ap.x, _ap.y, _ap.z], color, 3, 0.35);
+    cueAt(a.kind === 'cinder' ? 'ember_cast' : 'gale_cast', null, 0.45);
+    if (a.flourish) a.flourish();
   }
   /** Where a blow reaches the serpent: its body on her side, at chest height. */
   function bossHitAt(y = 2) {
@@ -376,27 +396,30 @@ export function createShoalArena(o) {
     }
     H = R.heroTick(H, sdt, { drain, air: R.airborne(FL) });
     const ready = R.ultReady(H); if (ready && !wasReady && elise() && !won) flash(say('shoal.ultReady'), 1.6); wasReady = ready;
+    // the dragons join in while she fights (not while she is down, after the win, or inside the Tempest)
+    { const al = allies() || []; if (al.length !== allyTimers.length) allyTimers = freshAllies(al.length);
+      for (const i of alliesStep(allyTimers, sdt, active && !won && deadT <= 0 && ultT <= 0)) allyShoot(al[i]); }
     // projectiles
     for (let i = shots.length - 1; i >= 0; i--) {
       const sh = shots[i], step = sh.s.speed * sdt;
       sh.x += sh.dx * step; sh.z += sh.dz * step; sh.left -= step; sh.y = Math.max(0.6, sh.y + sh.vy * sdt);
       sh.mesh.position.set(sh.x, sh.y, sh.z); if (sh.s.id === 'gale_discs') sh.mesh.rotation.y += sdt * 20;
-      const gale = sh.s.id === 'gale_discs', src = gale ? 'gale' : 'ember';
-      sh.wake = (sh.wake || 0) - sdt; if (sh.wake <= 0) { sh.wake = (gale ? 0.035 : 0.018) * (mobile ? 2 : 1); fx.trail([sh.x, sh.y, sh.z], IMPACT[src].color, gale ? 0.22 : 0.32, gale ? 0.25 : 0.12); }
+      const gale = sh.s.id === 'gale_discs', src = sh.s.src || (gale ? 'gale' : 'ember'), col = sh.s.color || IMPACT[src].color, hitCue = sh.s.hitCue || (gale ? 'gale_hit' : 'ember_hit');
+      sh.wake = (sh.wake || 0) - sdt; if (sh.wake <= 0) { sh.wake = (gale ? 0.035 : 0.018) * (mobile ? 2 : 1); fx.trail([sh.x, sh.y, sh.z], col, gale ? 0.22 : 0.32, gale ? 0.25 : 0.12); }
       let spent = sh.left <= 0;
-      if (!won && !sh.hitBoss && Math.hypot(sh.x - R.ARENA.boss[0], sh.z - R.ARENA.boss[1]) <= R.BOSS.contact * 0.6 + sh.s.radius) { damageBoss(sh.s.damage); sh.hitBoss = true; landFx(src, [sh.x, sh.y, sh.z]); cue(gale ? 'gale_hit' : 'ember_hit'); if (!sh.s.pierce) spent = true; }
+      if (!won && !sh.hitBoss && Math.hypot(sh.x - R.ARENA.boss[0], sh.z - R.ARENA.boss[1]) <= R.BOSS.contact * 0.6 + sh.s.radius) { damageBoss(sh.s.damage, { noCharge: !!sh.s.ally }); sh.hitBoss = true; landFx(src, [sh.x, sh.y, sh.z], false, col); cue(hitCue); if (!sh.s.pierce) spent = true; }
       if (B.adds.length && sh.y < 3) {
         const h = R.hitAdds(B.adds.filter((a) => !sh.hit.has(a.id)), [sh.x, sh.z], sh.s.radius, sh.s.damage, !sh.s.pierce);
         if (h.hit) {
           const before = new Map(B.adds.map((a) => [a.id, a])); const after = new Map(h.adds.map((a) => [a.id, a]));
           B = { ...B, adds: B.adds.map((a) => (sh.hit.has(a.id) ? a : after.get(a.id))).filter(Boolean) };
-          for (const id of before.keys()) if (!after.has(id) || after.get(id).hp !== before.get(id).hp) { sh.hit.add(id); const a = before.get(id); landFx(src, [a.x, 0.9, a.z], !after.has(id)); }
-          cue(gale ? 'gale_hit' : 'ember_hit');
-          charge(sh.s.damage * h.hit * R.BOSS.armor, 0);
+          for (const id of before.keys()) if (!after.has(id) || after.get(id).hp !== before.get(id).hp) { sh.hit.add(id); const a = before.get(id); landFx(src, [a.x, 0.9, a.z], !after.has(id), col); }
+          cue(hitCue);
+          if (!sh.s.ally) charge(sh.s.damage * h.hit * R.BOSS.armor, 0); // the dragons never fill her Tempest
           if (!sh.s.pierce) spent = true;
         }
       }
-      if (spent) { if (sh.left <= 0 && !sh.hitBoss && !sh.hit.size) fx.burst([sh.x, sh.y, sh.z], IMPACT[src].color, 3, 0.3); sh.mesh.removeFromParent(); shots.splice(i, 1); }
+      if (spent) { if (sh.left <= 0 && !sh.hitBoss && !sh.hit.size) fx.burst([sh.x, sh.y, sh.z], col, 3, 0.3); sh.mesh.removeFromParent(); if (sh.s.ally) sh.mesh.material.dispose(); shots.splice(i, 1); }
     }
     draw(dt, sdt);
   }
