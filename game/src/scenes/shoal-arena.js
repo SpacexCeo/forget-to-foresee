@@ -77,6 +77,7 @@ export function createShoalArena(o) {
   look.lamp = new THREE.Group();
   { const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 4.2, 8), new THREE.MeshStandardMaterial({ color: 0x2a2a30, metalness: 0.7, roughness: 0.4 })); post.position.y = 2.1;
     const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 8), new THREE.MeshBasicMaterial({ color: 0xffd9a0 })); bulb.position.y = 4.3;
+    post.name = 'lamp_post_placeholder'; bulb.name = 'lamp_bulb_placeholder'; // render/shoal-props.js swaps in the torch model
     look.lamp.add(post, bulb); if (!mobile) { const l = new THREE.PointLight(0xffc98a, 6, 18, 2); l.position.y = 4.3; look.lamp.add(l); }
     look.lamp.position.set(R.ARENA.lamp[0], 0, R.ARENA.lamp[1]); root.add(look.lamp); }
   look.sun = new THREE.DirectionalLight(0xffd2a0, 1.6); look.sun.position.set(-60, 30, -80); look.sun.target = look.floor; root.add(look.sun);
@@ -118,6 +119,7 @@ export function createShoalArena(o) {
   // pickups, adds, projectiles, the chest
   const orbMat = { hp: new THREE.MeshBasicMaterial({ color: 0x6aff9a }), stamina: new THREE.MeshBasicMaterial({ color: 0xffe066 }) };
   const orbs = new Map(R.ARENA.pickups.map((p) => { const m = new THREE.Mesh(new THREE.SphereGeometry(0.45, 14, 10), orbMat[p.kind]); m.position.set(p.at[0], 1, p.at[1]); root.add(m); return [p.id, m]; }));
+  look.pickups = [...orbs].map(([id, m]) => ({ id, kind: (R.ARENA.pickups.find((p) => p.id === id) || {}).kind, m })); // render/shoal-props.js dresses them
   const addsView = createAddsView(root); // the Hollow Tide's spawn: the model `shoal_tideling`, one clone per add (scenes/shoal-adds-view.js)
   const shots = [];
   const chest = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.9, 0.9), new THREE.MeshStandardMaterial({ color: 0xd8b25a, metalness: 0.8, roughness: 0.3, emissive: 0x6a4a10, emissiveIntensity: 0.5 }));
