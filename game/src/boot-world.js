@@ -508,7 +508,7 @@ if (townMode.town) {
   { const T = town; import('./scenes/town-decor-view.js').then((m) => m.placeTownDecor({ THREE, scene, origin: TOWN_ORIGIN_W, groundAt: (x, z, y) => T.groundAt(x, z, y), world: T.world })).catch((e) => console.warn('[decor]', e)); }
   // the mirror and the notice board: the two spots the town files do not model get an object (owner 12.11)
   if (!hatchLoading) { hatchLoading = true; import('./scenes/hatchkeeper.js').then((m) => { hatchkeeper = m.createHatchkeeper({ pet: hatchPet(), scene, t: (k, a) => ctx.i18n.t(k, a), groundAt: (x, z) => town.groundAt(x, z), mobile: mobileDevice, reduced: () => lookdev.reducedMotion }); spots.push(hatchkeeper.spot); }).catch((e) => console.warn('[hatchkeeper]', e)); }
-  if (!spotProps) spotProps = createSpotProps({ scene, town, near: (id) => { const s = spots.find((x) => x.id === id); return !!(s && inTown && s.near(player.pos)); } });
+  if (!spotProps) spotProps = createSpotProps({ scene, town, fetchGltf: prefetchGltf, hasModelFile, mobile: mobileDevice, near: (id) => { const s = spots.find((x) => x.id === id); return !!(s && inTown && s.near(player.pos)); } });
   refreshCompanions();
   // The Glass Shoal (flag glassShoal, docs/plans/boss/glass-shoal-boss.md): the level-5 main quest, the dragon ride and
   // the boss arena; scenes/glass-shoal.js loads only with the flag, the arena only when the ride starts.
