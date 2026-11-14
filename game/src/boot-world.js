@@ -1463,8 +1463,11 @@ function frame() {
     } else if (demoShown) demoPlayer.hide();
     demoShown = mpOn;
   }
-  if (mp && mpOn !== mpShown) { mpShown = mpOn; mp.setVisible(mpOn); }
-  if (mp && mpOn) mp.update(dt, { pos: player.pos, heading: player.heading, speed: Math.hypot(player.vel[0], player.vel[1]), grounded: player.grounded !== false, reducedMotion: lookdev.reducedMotion });
+  if (mp && mpOn !== mpShown && !(play && !inTown && entered && !judge)) { mpShown = mpOn; mp.setVisible(mpOn); }
+  // the isles too (presence v2): in a season the others in the archipelago share a room of their own
+  const mpIsles = !!(mp && play && !inTown && entered && !judge);
+  if (mp && mpIsles && !mpShown) { mpShown = true; mp.setVisible(true); }
+  if (mp && (mpOn || mpIsles)) mp.update(dt, { pos: player.pos, heading: player.heading, speed: Math.hypot(player.vel[0], player.vel[1]), grounded: player.grounded !== false, reducedMotion: lookdev.reducedMotion, area: mpOn ? 'town' : 'isles' });
   // the shared town-hill spiders (presence v2, play/mobs.js MobBrain.share): the server's spiders once both are loaded
   if (mp && mp.mobLink && townMobs && townMobs.brain && townMobs.brain.link !== mp.mobLink) townMobs.brain.share(mp.mobLink);
   else if (!mpTried && mpOn && !judge && params.get('mp') !== '0') {

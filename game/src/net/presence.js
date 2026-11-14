@@ -231,6 +231,9 @@ export function createPresence({ url = presenceUrl(), name = '', skin = 'iris', 
     unmute(nameOf) { muted.delete(nameOf); saveMuted(); emit(); },
     isMuted: (nameOf) => muted.has(nameOf),
     report(pid) { send({ t: 'report', id: pid }); },
+    /** The area we are in ('town' | 'isles'): a change rejoins in a room of that area (presence v2; an older server keeps one room). */
+    get area() { return area; },
+    setArea(a) { if (a === area || !['town', 'isles'].includes(a)) return; area = a; players.clear(); mobs.clear(); if (ws) { status = 'connecting'; retries = 0; try { ws.close(); } catch { /* closed */ } emit(); } },
     stop() { stopped = true; idleKicked = false; actQ.length = 0; status = 'offline'; clearTimeout(timer); if (ws) try { ws.close(); } catch { /* closed */ } ws = null; players.clear(); emit(); },
   };
 }
@@ -250,6 +253,6 @@ export function createDemoPresence({ count = 3, now = () => performance.now(), o
     update() {},
     positions() { const t = (now() - t0) / 1000; return [...players.values()].map((pl, k) => { const s = botAt(k, t); const s2 = botAt(k, t - 0.1); return { id: pl.id, name: pl.name, skin: pl.skin, ai: true, p: s.p, h: s.h, a: s.a, speed: Math.hypot(s.p[0] - s2.p[0], s.p[2] - s2.p[2]) / 0.1 }; }); },
     say() {}, act: () => false, mute() {}, unmute() {}, isMuted: () => false, report() {}, stop() {},
-    has: () => false, mobs: () => [], on: () => () => {}, fx() {}, hit: () => false,
+    has: () => false, mobs: () => [], on: () => () => {}, fx() {}, hit: () => false, area: 'town', setArea() {},
   };
 }

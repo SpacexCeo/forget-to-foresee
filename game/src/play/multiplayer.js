@@ -8,6 +8,8 @@
 import { createPresence, createDemoPresence, presenceUrl, animFor, COMBAT, COMBAT_HOLD } from '../net/presence.js';
 import { IMPACT } from '../render/hit-fx-core.js';
 import { createHitFx } from '../render/hit-fx.js';
+
+const ZERO = Object.freeze([0, 0, 0]);
 import { createRemotePlayers } from './remote-players.js';
 import { createChatPanel } from '../ui/chat-panel.js';
 import { createChatBubbles, chatFeed, SELF } from './chat-bubbles.js';
@@ -42,7 +44,7 @@ export function createMultiplayer({ scene, camera = null, THREE = null, t, stora
   // the others' strikes and casts, drawn where the server has them (the pooled hit effects; no camera shake for theirs)
   const offFx = presence.on('fx', (f) => {
     if (!hitFx) return;
-    const x = f.p[0] + TOWN_ORIGIN[0], y = f.p[1] + TOWN_ORIGIN[1], z = f.p[2] + TOWN_ORIGIN[2];
+    const O = presence.area === 'isles' ? ZERO : TOWN_ORIGIN, x = f.p[0] + O[0], y = f.p[1] + O[1], z = f.p[2] + O[2];
     if (Math.hypot(x - from[0], z - from[2]) > 60) return;
     const fx = Math.sin(f.h), fz = Math.cos(f.h), I = IMPACT[f.k] || IMPACT.strike;
     if (f.k === 'strike' || f.k === 'strike3' || f.k === 'super') hitFx.slash([x, y + 1.1, z], f.h, f.k === 'super' ? 2.6 : 1.7, I.color, 1, f.k === 'strike3' ? -0.5 : 0.15, 0.22);
@@ -67,12 +69,17 @@ export function createMultiplayer({ scene, camera = null, THREE = null, t, stora
     /** Other heroines' positions (town-local metres): the townsfolk walk round them (play/townsfolk-plan.js bodiesAround). */
     bodies: () => presence.positions().filter((r) => r.p).map((r) => r.p),
     /** Per frame while the town is shown. pos is world metres; speed is the ground speed in m/s. */
-    update(dt, { pos, heading, speed = 0, grounded = true, reducedMotion = false }) {
-      local[0] = pos[0] - TOWN_ORIGIN[0]; local[1] = pos[1] - TOWN_ORIGIN[1]; local[2] = pos[2] - TOWN_ORIGIN[2];
+    update(dt, { pos, heading, speed = 0, grounded = true, reducedMotion = false, area = 'town' }) {
+      // the town travels in town-local metres; the isles (a season) in world metres (presence v2 rooms per area)
+      // an older server knows no areas: it would put the isles into the town room, so there we stay quiet and draw no one
+      if (area === 'isles' && !(presence.has && presence.has('area')) && presence.area !== 'isles') { remote.update(0, [], pos); return; }
+      if (area !== presence.area && presence.setArea) presence.setArea(area);
+      const O = area === 'town' ? TOWN_ORIGIN : ZERO;
+      local[0] = pos[0] - O[0]; local[1] = pos[1] - O[1]; local[2] = pos[2] - O[2];
       clock += dt; if (hitFx) hitFx.update(reducedMotion ? 0 : dt);
       const fighting = combat && clock - combat.at < COMBAT_HOLD;
       presence.update({ p: local, h: heading, a: fighting ? COMBAT[combat.clip].a : animFor(speed, grounded) });
-      const list = presence.positions().map((r) => (r.p ? { ...r, p: [r.p[0] + TOWN_ORIGIN[0], r.p[1] + TOWN_ORIGIN[1], r.p[2] + TOWN_ORIGIN[2]] } : r));
+      const list = presence.positions().map((r) => (r.p ? { ...r, p: [r.p[0] + O[0], r.p[1] + O[1], r.p[2] + O[2]] } : r));
       from[0] = pos[0]; from[1] = pos[1]; from[2] = pos[2];
       remote.update(dt, list, from, reducedMotion);
       if (bubbles) {

@@ -31,7 +31,7 @@ export const LIMITS = Object.freeze({
 });
 export const SKINS = Object.freeze(['iris', 'elise', 'sheriffchenko']);
 export const ANIMS = Object.freeze(['idle', 'walk', 'run', 'jump', 'fall', 'emote', 'cast', 'sit', 'strike1', 'strike2', 'strike3', 'super', 'dash', 'hurt', 'dead']);
-export const AREAS = Object.freeze({ town: { x: [-160, 160], y: [-40, 140], z: [-160, 160] }, isles: { x: [-400, 400], y: [-80, 240], z: [-400, 400] } });
+export const AREAS = Object.freeze({ town: { x: [-160, 160], y: [-40, 140], z: [-160, 160] }, isles: { x: [-1000, 1000], y: [-300, 600], z: [-1000, 1000] } });
 export const FX_KINDS = Object.freeze(['strike', 'strike3', 'super', 'lance', 'snare', 'dash']);
 export const CAPS = Object.freeze(['area', 'fx', 'mobs']);
 

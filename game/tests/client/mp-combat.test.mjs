@@ -105,3 +105,13 @@ test('joined and left lines: five locales, the name slot kept', () => {
     for (const lang of ['en', 'ru', 'uk', 'it', 'zh']) assert.match(PLAY_MESSAGES[lang][key], /\{name\}/, `${lang}:${key}`);
   }
 });
+
+test('presence v2: moving to the isles rejoins in a room of that area; the town again on return', async () => {
+  const p = createPresence({ url: 'wss://x', name: 'ann', WebSocketImpl: FakeWS, now: () => 0 });
+  await tick();
+  const first = FakeWS.last; first.onmessage({ data: JSON.stringify({ t: 'welcome', id: 1, name: 'ann', room: 1, max: 15, players: [], caps: ['area', 'fx', 'mobs'] }) });
+  let closed = false; first.close = () => { closed = true; first.onclose(); };
+  p.setArea('isles'); assert.equal(p.area, 'isles'); assert.equal(closed, true); assert.equal(p.status, 'connecting');
+  p.setArea('moon'); assert.equal(p.area, 'isles', 'only known areas');
+  p.stop();
+});
