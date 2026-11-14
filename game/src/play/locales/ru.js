@@ -1,8 +1,10 @@
 // Russian: the second UI language of the 3D play layer. Keys mirror en.js exactly.
 import quests from './ru-quests.js';
 import hud from './ru-hud.js';
+import npe from './ru-npe.js';
 export default {
   ...hud, // first: the RPG HUD (en-hud.js keys); this file's own copies below win
+  ...npe, // the new-player dialogue, barks, card, glossary, Cup, tips and judge panel (en-npe.js, en-tips.js, en-judge.js keys)
   // ---- badge, help ----
   'play.badge': 'Локальное демо · правила работают в браузере через ту же комнату, что и API для агентов',
   'play.help.title': 'Управление',
@@ -1257,6 +1259,7 @@ export default {
   'shard.nft.kind.promise': "обещание",
   'shard.nft.kind.insight': "озарение",
   'shard.nft.kind.lie': "ложь",
+  'shard.nft.card': "Осколок памяти · {kind}",
 
   // ---- agent card NFT (src/ui/world-hud/agent-card.js) ----
   'agentcard.title': "{agent} · карточка агента",
