@@ -28,10 +28,6 @@ test('the town errand finds a townsperson where they stand now, not only at thei
   assert.match(src('boot-world.js'), /npcAt: \(key\) => folkAt\(key\) \|\| \(PROGRAMS\[key\]/);
 });
 
-test('no "I inspect … up close" hint, and I never starts an inspection in town (owner 14.11)', () => {
-  const s = src('boot-world.js');
-  assert.doesNotMatch(s, /inspect <b>\$\{near\.label\}<\/b> up close/);
-  assert.match(s, /playOn && !inTown && \(input\.hit\('KeyI'\)/);
 // ---- owner P0 14.11: "Starter guide 6/8: Walk over a chest… Press I to open your bag" never completed
 test('the hints tour is a tip, not an overlay: the bag opens (and the guide hears it) while it runs', async () => {
   const q = await import('../../src/ui/onboarding-queue.js');
@@ -60,4 +56,10 @@ test('a tip with buttons moves on by itself, so the tour never stalls; a picked-
   const loot = GUIDE_STEPS.findIndex((s) => s.id === 'loot');
   const g = { done: GUIDE_STEPS.slice(0, loot).map((s) => s.id), rewarded: false };
   assert.equal(guideEvent(g, 'bag').completed, 'loot');
+});
+
+test('no "I inspect … up close" hint, and I never starts an inspection in town (owner 14.11)', () => {
+  const s = src('boot-world.js');
+  assert.doesNotMatch(s, /inspect <b>\$\{near\.label\}<\/b> up close/);
+  assert.match(s, /playOn && !inTown && \(input\.hit\('KeyI'\)/);
 });
