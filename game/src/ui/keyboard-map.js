@@ -39,7 +39,7 @@ export const KBD_CSS = `
 .ftf-kbd-k { flex: var(--w) 1 0; min-width: 0; height: 40px; border-radius: 6px; border: 1px solid #2a3536; background: #172122; box-shadow: 0 2px 0 #070b0b;
   display: flex; flex-direction: column; align-items: center; justify-content: center; color: #6f7b78; font: 600 11px/1.1 system-ui, sans-serif; overflow: hidden; }
 .ftf-kbd-k b { font-size: 12px; }
-.ftf-kbd-k small { font-size: 9px; font-weight: 500; max-width: 100%; padding: 0 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ftf-kbd-k small { font-size: 9px; font-weight: 500; max-width: 100%; padding: 0 2px; line-height: 1.05; text-align: center; overflow: hidden; }
 .ftf-kbd-k[data-on="1"] { background: linear-gradient(#3a2d14, #2a210f); border-color: #e9b44c; color: #f3ead6; box-shadow: 0 2px 0 #4e3a12, 0 0 8px rgba(233,180,76,.25); }
 .ftf-kbd-k[data-on="1"] small { color: #f1c76a; }
 .ftf-kbd-k[data-clash="1"] { border-color: #e0714f; }
@@ -112,5 +112,9 @@ export function controlsDiagram({ doc = globalThis.document, b, t, touch = false
   ul.append(item(t('set.kbd.m.left'), t('set.kbd.walkTalk')), item(t('set.kbd.m.right'), t('set.kbd.look')), item(t('set.kbd.m.wheel'), t('set.kbd.zoom')));
   mouse.append(ul);
   wrap.append(keys, mouse); box.append(wrap);
+  // long labels (ru "Действие", it "Bersaglio") shrink until they fit the key, else wrap to two lines; the title has the full text
+  const fit = () => { for (const s of keys.querySelectorAll('small')) { let f = 9; s.style.fontSize = ''; while (f > 6.5 && s.clientWidth && (s.scrollWidth > s.clientWidth || s.scrollHeight > 2 * f * 1.05 + 1)) { f -= 0.5; s.style.fontSize = f + 'px'; } } };
+  const RO = (doc.defaultView || globalThis).ResizeObserver;
+  if (RO) new RO(fit).observe(keys);
   return box;
 }
