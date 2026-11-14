@@ -89,6 +89,7 @@ const CSS = `
 .hub-gloss td:focus-visible { outline: 2px solid var(--wh-gold-bright, #fbe6a6); outline-offset: 1px; }
 .hub-gloss .hub-gloss-detail { min-height: 2.6em; margin-top: 4px; font-size: 12px; }
 .hub-gloss .hub-gloss-legend { margin-top: 4px; font-size: 11px; color: var(--wh-text-muted, #c9c6b8); }
+.hub-gloss .hub-gloss-key summary { min-height: 28px; font-weight: 500; font-size: 11.5px; color: var(--wh-text-muted, #c9c6b8); }
 .hub-target { margin-top: 12px; padding: 8px 12px; border-radius: 8px; background: var(--wh-anchor-bg, rgba(38,34,22,.7)); font: 400 15px/1.3 var(--wh-font, Georgia, serif); }
 .hub-card { left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(460px, calc(100vw - 32px)); max-height: calc(var(--vvh, 100vh) - 24px); overflow: auto; padding: 20px 24px 24px; border-radius: 16px; border-color: var(--wh-gold, #e4c272); background: rgba(12, 20, 21, .96) !important; }
 .hub-card .hub-row { margin-top: 16px; }
@@ -254,7 +255,9 @@ export function createHubUi({ root, ctx, hub, onFly, onRejected = () => {} }) {
   function glossaryEl(obs, p) {
     const rows = glossary(obs);
     const here = signCells(p);
-    const open = glossOpen != null ? glossOpen : !narrow();
+    // progressive disclosure: a blank grid (nothing learned yet) starts folded; it opens itself once a word has evidence
+    const any = rows.some((r) => r.some((c) => c.kind !== 'unknown'));
+    const open = glossOpen != null ? glossOpen : (!narrow() && any);
     const detail = el(doc, 'p', { class: 'hub-gloss-detail', 'aria-live': 'polite', text: t('hub.gloss.pick') });
     const cells = [];
     const show = (idx) => { const c = rows[idx >> 2][idx & 3]; detail.textContent = cellText(c); };
@@ -291,7 +294,8 @@ export function createHubUi({ root, ctx, hub, onFly, onRejected = () => {} }) {
     return el(doc, 'details', { class: 'hub-gloss', open: open || null, ontoggle: (e) => { glossOpen = e.currentTarget.open; } },
       el(doc, 'summary', { text: t('hub.gloss.summary', { count: knownCount(obs) }) }),
       table, detail,
-      el(doc, 'p', { class: 'hub-gloss-legend', text: t('hub.gloss.legend') }));
+      el(doc, 'details', { class: 'hub-gloss-key' }, el(doc, 'summary', { text: t('hub.gloss.legendTitle') }),
+        el(doc, 'p', { class: 'hub-gloss-legend', text: t('hub.gloss.legend') })));
   }
 
   /** From a quiet Shell straight into the Shell Iris reads the waiting sign for; the trial does not end. */
@@ -343,7 +347,8 @@ export function createHubUi({ root, ctx, hub, onFly, onRejected = () => {} }) {
         const sub = edited ? t('hub.read.yours') : s ? t('hub.read.iris', { confidence: Math.round(s.confidence * 100) }) : '';
         // no line for a slot the first-stake pre-fill changed (hub.prefillFirstDelay): it is policy, not Iris's evidence
         const why = edited ? slotReason(obs, p, k, d.slots[k]) : s && s.meaning !== d.slots[k] ? null : slotReason(obs, p, k);
-        const whyText = why ? t(why.key, why.args) : '';
+        // "no evidence yet" says nothing the "% sure" line does not: shown only when the player changed the slot
+        const whyText = why && !(why.key === 'hub.why.none' && !edited) ? t(why.key, why.args) : '';
         return el(doc, 'li', {},
           el(doc, 'span', { text: i18n.t('slot.' + k) }),
           btn({ 'aria-label': t('hub.read.prev', { slot: i18n.t('slot.' + k) }), onclick: () => hub.cycleSlot(k, -1) }, '‹'),
