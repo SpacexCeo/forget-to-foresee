@@ -90,19 +90,19 @@ export function createHitFx({ THREE, parent, doc = globalThis.document, rand = M
 
   // ---- slashes: a swoosh. aU runs along the arc (0 = where the cut starts), aR across it (0 inner, 1 outer); the shader
   // reveals it up to the head and dissolves the tail behind it (no hard ring edges, nothing flat about it)
-  const slashGeo = new THREE.RingGeometry(0.4, 1.08, 56, 6, -SLASH_ARC / 2, SLASH_ARC);
+  const slashGeo = new THREE.RingGeometry(0.74, 1.06, 64, 4, -SLASH_ARC / 2, SLASH_ARC); // a thin band at the edge: a light trail, not a sheet
   { const pa = slashGeo.attributes.position, au = new Float32Array(pa.count), ar = new Float32Array(pa.count);
-    for (let i = 0; i < pa.count; i++) { const a = Math.atan2(pa.getY(i), pa.getX(i)), r = Math.hypot(pa.getX(i), pa.getY(i)); au[i] = (a + SLASH_ARC / 2) / SLASH_ARC; ar[i] = (r - 0.4) / 0.68; }
+    for (let i = 0; i < pa.count; i++) { const a = Math.atan2(pa.getY(i), pa.getX(i)), r = Math.hypot(pa.getX(i), pa.getY(i)); au[i] = (a + SLASH_ARC / 2) / SLASH_ARC; ar[i] = (r - 0.74) / 0.32; }
     slashGeo.setAttribute('aU', new THREE.BufferAttribute(au, 1)); slashGeo.setAttribute('aR', new THREE.BufferAttribute(ar, 1)); slashGeo.rotateX(-Math.PI / 2); }
   const SLASH_VERT = 'attribute float aU; attribute float aR; varying float vU; varying float vR; void main(){ vU = aU; vR = aR; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }';
   const SLASH_FRAG = 'uniform vec3 uColor; uniform float uHead, uFade, uSeed; varying float vU; varying float vR;' +
     'void main(){ float behind = uHead - vU; if (behind < 0.0) discard;' +
     ' float tail = exp(-behind * 3.2);' +                                                             // the swoosh thins out behind its head
-    ' float across = pow(clamp(1.0 - abs(vR * 2.0 - 1.0), 0.0, 1.0), 1.6);' +                       // soft edges, no ring outline
+    ' float across = pow(clamp(1.0 - abs(vR - 0.62) / 0.62, 0.0, 1.0), 2.2);' +                       // soft edges, no ring outline
     ' float rim = smoothstep(0.45, 0.95, vR) * (1.0 - smoothstep(0.95, 1.0, vR));' +                  // the blade tip moves fastest: the outer rim is hottest
     ' float streak = 0.55 + 0.45 * sin(vR * 46.0 + uSeed) * sin(vR * 19.0 - behind * 26.0 + uSeed * 0.7);' + // motion streaks along the cut
     ' float head = exp(-behind * 28.0);' +
-    ' float a = uFade * tail * (across * (0.45 + 0.55 * streak) + rim * 0.9) + uFade * head * across * 0.8;' +
+    ' float a = 0.85 * uFade * tail * across * (0.5 + 0.5 * streak + rim * 0.6) + uFade * head * across * 0.7;' +
     ' gl_FragColor = vec4(mix(uColor, vec3(1.0), clamp(head * 0.8 + rim * tail * 0.5, 0.0, 1.0)), clamp(a, 0.0, 1.0)); }';
   const slashes = [];
   for (let i = 0; i < SLASHES; i++) {
