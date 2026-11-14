@@ -18,7 +18,7 @@ Mistakes afterwards go through https://nearhackathon.com/request-changes.
 | `nearAddress` | `TODO(owner)` | **mainnet** account for the payout (`something.near` or 64 hex). Created by the owner in any NEAR wallet; never invented |
 | `projectUrl` | `https://github.com/SpacexCeo/forget-to-foresee` | public |
 | `demoUrl` | `TODO(owner)` | the X post URL once published (`docs/submission/x-post.md`) |
-| `idea` | text below | 20–2000 characters; the draft is 1,719 characters, re-count after edits |
+| `idea` | text below | 20–2000 characters; the draft is 1,893 characters, re-count after edits |
 | `consent` | `true` | only after the owner has read: "I agree that the organizers may use these details to review our submission and contact us about this hackathon." |
 | `requestId` | generate once | `node -e 'console.log(crypto.randomUUID())'`; keep it for retries after 503 |
 
@@ -28,7 +28,9 @@ Do **not** send a `website` field (spam trap: any value rejects the submission) 
 
 > Forget to Foresee is a 3D browser game set in a hill town whose economy runs live on NEAR testnet.
 >
-> Live economy: 20 trader accounts, each with its own key (trader-01 to trader-20.ftf-town.testnet), trade silk on the town contract ftf-town.testnet all day, over 18,000 trades a day; nobody presses a button. Prices follow stock and recent demand by rules in one file, and every trade carries a readable reason ("why this price"). Live stats: https://159-195-130-113.sslip.io/api/market/stats. The traders are scripted: about once an hour a model on NEAR AI Cloud sets each clan's bounded strategy, with an attestation id, and the rules engine makes every trade. Town items are NEP-245 multi-tokens (items.ftf-town.testnet). In the game, the Town Ledger window shows today's count, the latest trades with their reasons and explorer links, every trader's account and the clans' strategy calls; the Economy Lab plays a week of the market in a minute.
+> Live economy: 20 trader accounts, each with its own key (trader-01 to trader-20.ftf-town.testnet), trade silk on the town contract ftf-town.testnet all day, over 21,000 trades on 13 Nov; nobody presses a button. Prices follow stock and recent demand by rules in one file, and every trade carries a readable reason ("why this price"). Live stats: https://159-195-130-113.sslip.io/api/market/stats. The traders are scripted: about once an hour a model on NEAR AI Cloud sets each clan's bounded strategy, with an attestation id, and the rules engine makes every trade. Town items are NEP-245 multi-tokens (items.ftf-town.testnet). In the game, the Town Ledger window shows today's count, the latest trades with their reasons and explorer links, every trader's account and the clans' strategy calls; the Economy Lab plays a week of the market in a minute.
+>
+> Players on chain so far: 56 guest accounts, each owning its heroine NFT; chests opened from a deck committed on chain; dragon NFTs owned by a heroine NFT's own account.
 >
 > Sign-in: play as a guest at once, with no wallet popups (the browser makes a free testnet guest account), or sign in with a NEAR, EVM or Solana wallet or a passkey.
 >
@@ -38,13 +40,13 @@ Do **not** send a `website` field (spam trap: any value rejects the submission) 
 >
 > Play: https://spacexceo.github.io/forget-to-foresee/
 
-Character count of the quoted text (without the `> ` prefixes, newlines included): 1,719. Rewritten 13.11 (jury review):
+Character count of the quoted text (without the `> ` prefixes, newlines included): 1,893. Rewritten 13.11 (jury review):
 leads with the live economy (20 trader accounts with their own keys on `ftf-town.testnet`, the readable price reasons,
 the Town Ledger window, the Economy Lab week), then sign-in, then the sealed seasons and memory shards. Every claim
 matches the README "Live on NEAR testnet right now" block and `docs/ai-use.md` (scripted traders; the clans' strategy
-layer asks NEAR AI Cloud about once an hour; the rules engine makes every trade). "Over 18,000 trades a day": the
-relayer reported 18,568 trades on 13 Nov by about 19:10 UTC; check `today` in `/api/market/stats` on the day of
-sending. NEP-245: the item contract is deployed; do not claim mints until `items.ftf-town.testnet` shows supply.
+layer asks NEAR AI Cloud about once an hour; the rules engine makes every trade). "Over 21,000 trades on 13 Nov": the
+relayer sent 21,218 by 23:57 UTC; the recount from the public indexer is `docs/proof/tx-2026-11-13.md`. "56 guest
+accounts": `stats` on `guests.ftf-coordinator.testnet` at 00:00 UTC 14 Nov. NEP-245: the item contract is deployed; do not claim mints until `items.ftf-town.testnet` shows supply.
 Re-count before sending:
 `node -e 'console.log(require("fs").readFileSync(0,"utf8").trim().length)' < idea.txt`.
 
@@ -56,8 +58,10 @@ Re-count before sending:
 - **`nfts`** (NFTs That Do Something) — **claimed** (owner, 09.11). The design is "an NFT whose biography is the currency",
   and the NEP-171 contract `contracts/memory-shard` runs on testnet as `ftf-shards.testnet` (21 tests, 3 shards of
   the recorded season minted by the coordinator script). In the game, Profile → NFTs → Holder access reads them from
-  the chain. Claimed for the memory
-  shards only: Iris is not an NFT, live seasons mint nothing, and a player-owned agent NFT is future work.
+  the chain. Also claimed: an NFT that owns an NFT.
+  Every Day 1 guest gets an Elise heroine NFT whose token has its own sub-account (56 by the end of 13 Nov); dragon NFTs
+  are minted to that sub-account (`companions.ftf-coordinator.testnet`, 6), so the dragon follows the heroine.
+  Not claimed: Iris is not an NFT, live seasons mint nothing, and a player-owned agent NFT is future work.
 - Not claimed: `social` (we have no shared budget / DAO), `agents` (our agents do not pay for anything in NEAR),
   `open` (only as a fallback instead of `nfts`).
 
