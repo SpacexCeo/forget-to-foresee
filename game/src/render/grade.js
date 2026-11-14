@@ -11,8 +11,8 @@
 import * as THREE from 'three';
 
 export const GRADE = Object.freeze({
-  saturation: 1.24, contrast: 0.4,
-  shadowTint: Object.freeze([0.965, 0.985, 1.03]), highlightTint: Object.freeze([1.04, 1.0, 0.95]),
+  saturation: 1.22, contrast: 0.48,
+  shadowTint: Object.freeze([0.955, 0.985, 1.045]), highlightTint: Object.freeze([1.05, 1.0, 0.935]),
 });
 
 const f = (v) => Number(v).toFixed(4);
