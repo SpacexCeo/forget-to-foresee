@@ -80,6 +80,8 @@ export const CLIP_FALLBACK = Object.freeze({
   // the musician's lute hangs on her back: no playing pose (the shared `play` clip bows a violin)
   play: ['play_instrument', 'idle_look', 'idle_shift', 'idle'], counter: ['counter', 'counter_loop', 'think', 'idle'],
   sit: ['sit', 'sit_loop', 'idle'], think: ['idle_look', 'think', 'idle'],
+  // the Wayfarers' own one-shots (art/townsfolk/tf_anim.py EXTRA)
+  take_photo: ['take_photo', 'think', 'idle'], haggle: ['haggle', 'talk', 'idle'],
 });
 
 /** The first clip of the chain that the list of available names has (or null). */
@@ -188,6 +190,34 @@ function programs() {
 const clearOfProps = (progs) => { for (const prog of Object.values(progs)) for (const st of prog.steps || []) if (st.walk) st.walk = detour(st.walk); return progs; };
 export const PROGRAMS = Object.freeze(clearOfProps(programs()));
 
+/**
+ * The Wayfarers from Kallima (flag `wayfarers`): three tall tourists from another world, all one model
+ * (townsfolk_wayfarer, art/townsfolk/cast.py). They are visitors, not townsfolk: they tour the town along lines the
+ * townsfolk already walk (the square round, the lamplighter's round and the sweeper's round, the other way), stop,
+ * look around, take a picture with the crystal camera, haggle with the air. They never trade at the Exchange.
+ */
+export const WAYFARERS = Object.freeze(['a', 'b', 'c'].map((k) => Object.freeze({ key: 'wayfarer_' + k, asset: 'townsfolk_wayfarer', height: 1.9, walk: 1.35, visitor: true })));
+function wayfarerPrograms() {
+  const tour = (pts, acts) => { // walk the closed line leg by leg; at every stop: the act, then a look around
+    const steps = [];
+    for (let i = 0; i < pts.length; i++) {
+      steps.push({ walk: [pts[i], pts[(i + 1) % pts.length]] });
+      const act = acts[i % acts.length];
+      if (act) steps.push(stay(act === 'haggle' ? 3.5 : 3, act));
+      steps.push(stay(4 + (i % 3) * 2, 'idle'));
+    }
+    return { home: pts[0], heading: null, steps };
+  };
+  const turn = (pts, by) => pts.slice(by).concat(pts.slice(0, by));
+  const lamp = lampRoute().slice().reverse(), sweep = R.npc_route_sweeper.points.slice().reverse();
+  return {
+    wayfarer_a: tour(turn(SQUARE_ROUND.slice().reverse(), 1), ['take_photo', 'haggle', 'take_photo', null]),
+    wayfarer_b: tour(turn(lamp, Math.floor(lamp.length / 2)), ['take_photo', null, 'haggle']),
+    wayfarer_c: tour(turn(sweep, Math.floor(sweep.length / 2)), [null, 'take_photo']),
+  };
+}
+export const WAYFARER_PROGRAMS = Object.freeze(clearOfProps(wayfarerPrograms()));
+
 /** Trade slots at the Exchange door: along the front away from the trading board (scenes/town-footprints.js). */
 const EX_SLOT = (slot) => -0.3 - (slot % 5) * 0.8;
 /** The fixed town lines: the jury route Iris walks and the exported NPC routes (loops closed). The lower stroll and the
@@ -236,7 +266,7 @@ export const TRADE_MAX = 3;
  * May `key` walk to the Exchange to trade now (pure)? Never a quest giver: it holds its post, so its marker and its talk stay
  * where the player looks for them (a hired giver keeps its badge). Others only while fewer than TRADE_MAX are there.
  */
-export const mayTrade = (key, tradingNow) => !QUEST_GIVERS.has(key) && tradingNow < TRADE_MAX;
+export const mayTrade = (key, tradingNow) => !QUEST_GIVERS.has(key) && !key.startsWith('wayfarer_') && tradingNow < TRADE_MAX;
 
 /** The temporary program of a hired agent: walk to the Exchange, trade at the door; `back` walks home and resumes. */
 export function tradeProgram(plan, slot = 0) {

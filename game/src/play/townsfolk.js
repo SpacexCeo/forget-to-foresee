@@ -18,21 +18,22 @@ import { FADE, findLookBones, applyLookTo } from './gait.js';
 import { townsfolkClips, mergeClips, faceLayerClip } from './anim-library.js';
 const MAX_STEP = 0.45; // the largest ground step a walker takes (play/town-paths.js MAX_STEP; no import: chunk order)
 import { MIN_GAP } from './townsfolk-plan.js';
-import { TOWNSFOLK, PROGRAMS, PersonPlan, tradeProgram, homeProgram, mayTrade, pickClip, animStride, LOOK_RADIUS } from './townsfolk-plan.js';
+import { features } from '../features.js';
+import { TOWNSFOLK, PROGRAMS, WAYFARERS, WAYFARER_PROGRAMS, PersonPlan, tradeProgram, homeProgram, mayTrade, pickClip, animStride, LOOK_RADIUS } from './townsfolk-plan.js';
 
 const SIT_PELVIS_ABOVE = 0.10; // hip joint above the seat top when seated (m, scaled with the body)
 const SIT_PELVIS_Z = -0.07;    // hip joint along the 0.46 m deep seat (bench local, the sitter faces +Z; back rail at -0.26)
 const _pelvis = new THREE.Vector3();
 
 const _sphere = new THREE.Sphere(), _frustum = new THREE.Frustum(), _m = new THREE.Matrix4(), _target = [0, 0, 0], _local = [0, 0, 0];
-const ONE_SHOT = new Set(['wave', 'salute', 'nod', 'gesture_offer', 'understand']);
+const ONE_SHOT = new Set(['wave', 'salute', 'nod', 'gesture_offer', 'understand', 'take_photo', 'haggle']);
 /** Body type of the shared mocap set (anim-library.js townsfolkClips): posture and stride per kind of person. */
 const BODY = { child_a: 'child', child_b: 'child', guard: 'guard' }; // the elder is a grown man, not an old one (owner 13.11): the default body
 
 class Person {
   constructor(def, scene) {
     this.def = def;
-    this.plan = new PersonPlan(def, PROGRAMS[def.key]);
+    this.plan = new PersonPlan(def, PROGRAMS[def.key] || WAYFARER_PROGRAMS[def.key]);
     this.root = new THREE.Group();
     this.root.name = def.asset + '#townsfolk';
     this.root.visible = false;
@@ -122,7 +123,9 @@ class Person {
  * @param {{scene: THREE.Scene, library: {fileFor: Function}, groundAt?: (x:number, z:number, fromY?:number) => (number|null)}} o
  */
 export function createTownsfolk({ scene, library, groundAt = null }) {
-  const people = TOWNSFOLK.map((def) => new Person(def, scene));
+  // the visitors from Kallima join the town only with their flag on and their model shipped
+  const cast = features.on('wayfarers') && MODEL_FILES[WAYFARERS[0].asset] ? [...TOWNSFOLK, ...WAYFARERS] : TOWNSFOLK;
+  const people = cast.map((def) => new Person(def, scene));
   const byKey = new Map(people.map((p) => [p.key = p.def.key, p]));
   const plans = new Map(people.map((p) => [p.def.key, p.plan]));
   let extraBodies = () => [];
