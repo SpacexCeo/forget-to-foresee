@@ -78,6 +78,8 @@ const CSS = `
 .mk2-modal { padding: 16px; border-radius: 12px; border: 1px solid rgba(197, 164, 105, .45); background: var(--ftf-panel-solid, #101f1a); display: grid; gap: 10px; max-width: 480px; }
 @media (max-width: 760px) { .mk2-wrap { padding: 0; } .mk2 { width: 100%; height: 100dvh; max-height: none; border-radius: 0; border: 0; } .mk2-head { padding-inline: 16px; } .mk2-silk { max-width: 38vw; overflow: hidden; text-overflow: ellipsis; } .mk2-tabs { gap: 0; justify-content: space-between; padding-inline: 16px; overflow-x: auto; } .mk2-tabs button { min-width: max-content; padding-inline: 10px; } .mk2-chip { margin-inline: 16px; } .mk2-body { padding: 14px 16px 24px; } .mk2-sell-layout { grid-template-columns: 1fr; } .mk2-receipt { min-height: 180px; } .mk2 th:nth-child(6), .mk2 td:nth-child(6) { display: none; } }
 @media (max-width: 460px) { .mk2-head h3 { font-size: 19px; } .mk2-silk { padding-inline: 9px; font-size: 12px; } .mk2-field-grid { grid-template-columns: 1fr; } .mk2-items { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } .mk2-items button { width: 100%; } }
+/* the one column never grows past the screen (mobile audit 14.11: at 360 px the old panel pushed its × and the Games tab off) */
+@media (max-width: 760px) { .mk2-wrap { grid-template-columns: minmax(0, 1fr); } .mk2 { min-width: 0; } }
 @media (prefers-reduced-motion: reduce) { .mk2 * { transition: none !important; } }
 `;
 

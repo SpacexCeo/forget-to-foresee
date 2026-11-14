@@ -20,7 +20,9 @@ import { CameraRig } from './render/camera-rig.js';
 import { cueShot, cueState, stepCue } from './render/dialogue-camera.js';
 import { on as onBus } from './sprint/bus.js';
 import { setIntroHud } from './ui/intro-hud.js';
+import { createStrikeTrail } from './render/strike-trail.js';
 import { fixedSteps, rayCast, moveCapsule, MASK_PLAYER } from './physics/collision.js';
+import { createNav, setTownNav } from './physics/nav-grid.js';
 import { PHYSICS_DT, steerTo, clickStuck } from './physics/character.js';
 import { damp } from './physics/motion.js';
 import { Input } from './ui/input.js';
@@ -53,6 +55,7 @@ import { createTownLedger } from './game/town-economy.js';
 import { features as featureFlags } from './features.js';
 import { mountSprint } from './sprint/index.js';
 import { createDay1Mint, loadDay1 } from './play/day1-mint.js';
+import { tourneyGate } from './game/tourney-gate.js';
 import { findHandBone } from './play/hand-bones.js';
 import { nextSkin, wearPlan } from './play/skins.js';
 import { TALK_RADIUS } from './scenes/town-quest.js';
@@ -191,6 +194,8 @@ const openSettings = (tab) => {
   import('./ui/settings-popup.js').then((m) => {
     settingsPopup ||= m.createSettingsPopup({ t: (k, a) => ctx.i18n.t(k, a), i18n: ctx.i18n, prefs: ctx.prefs, storage: ctx.storage, hooks: {
       onSettings: applyGameSettings,
+      // Settings → Account (owner 14.11): the linked sign-in methods, email, and the wallet sign-in panel
+      accountEmail: () => makeAccountEmail(), openAccount: () => openAccount(),
       audio: () => (play && play.hooks && play.hooks.audio) || (townAudio && townAudio.audio) || null,
       volumes: () => loadVolumes(ctx.storage), saveVolume: (bus, v) => saveVolumes(ctx.storage, { ...loadVolumes(ctx.storage), [bus]: v }),
       touch: () => ({ available: !!(input.touchControls && touchSticks), mode: touchSticks ? touchSticks.mode : 'tap', setMode: (md) => touchSticks && touchSticks.setMode(md) }),
@@ -393,6 +398,14 @@ function townHome(spot = TOWN_SPAWN) {
   // never below the spot's own data height: a piece not streamed in yet (the altar steps) would answer with the terrain under it
   return { position: [p[0], Math.max(d ? d[1] : -Infinity, p[1] + SPAWN_DROP), p[2]], heading: spot.heading };
 }
+// the heroine's strike trails and contact flashes (render/strike-trail.js), driven by her clips' own moments
+const strikeTrail = createStrikeTrail({ THREE, parent: scene });
+window.addEventListener('ftf:iris-action', (e) => {
+  const d = e.detail || {}, m = irisAvatar && irisAvatar.irisModel;
+  if (!m || !m.model || d.clip === 'dash' || d.clip === 'strike_charge') return; // the dash has its own trail; a held wind-up is no swing
+  if (d.phase === 'start') strikeTrail.start(m.model, d.clip, d.impact, heldBlade ? heldBlade.sword : null);
+  else if (d.phase === 'impact') strikeTrail.impact();
+});
 let heldBlade = null, heldBladeLoading = false; // the Loomblade in her fist once she has taken it (play/held-blade.js)
 let shoalArt = null, shoalArtLoading = false; // the Shoal's look for the fight (render/shoal-arena-look.js), loaded when the arena first opens
 let town = null, townFlow = null, townCasting = null, townMobs = null, inTown = false, townGrounded = false, irisAvatar = null, killXp = null, endgamePass = null, stallMounted = false, worksMounted = false, tournMounted = false;
@@ -487,6 +500,8 @@ if (townMode.town) {
     spots.push(...townTales.spots);
   }).catch((e) => console.warn('[tales]', e));
   townProps = createTownProps({ scene, town, ledger: townLedger, i18n: ctx.i18n, mobile: mobileDevice });
+  // the archipelago's banners and torches dressing the square and the lower street (scenes/town-decor.js; light files on phones)
+  { const T = town; import('./scenes/town-decor-view.js').then((m) => m.placeTownDecor({ THREE, scene, origin: TOWN_ORIGIN_W, groundAt: (x, z, y) => T.groundAt(x, z, y), world: T.world })).catch((e) => console.warn('[decor]', e)); }
   // the mirror and the notice board: the two spots the town files do not model get an object (owner 12.11)
   if (!hatchLoading) { hatchLoading = true; import('./scenes/hatchkeeper.js').then((m) => { hatchkeeper = m.createHatchkeeper({ pet: hatchPet(), scene, t: (k, a) => ctx.i18n.t(k, a), groundAt: (x, z) => town.groundAt(x, z), mobile: mobileDevice, reduced: () => lookdev.reducedMotion }); spots.push(hatchkeeper.spot); }).catch((e) => console.warn('[hatchkeeper]', e)); }
   if (!spotProps) spotProps = createSpotProps({ scene, town, near: (id) => { const s = spots.find((x) => x.id === id); return !!(s && inTown && s.near(player.pos)); } });
@@ -591,12 +606,13 @@ if (townMode.town) {
     islandReady, // the cover stays until the archipelago's first view is loaded and warmed
     onRegister: () => { if (irisAvatar) irisAvatar.react('register', clock.elapsedTime); }, // she reaches for the ring
     // the Tournament warning (owner 12.11); never on the judge link, whose flow stays as it was
+    tourney: () => tourneyGate(townLedger.stats, { judge: judge || params.get('judge') === '1' }), onTourneyLocked: (g) => toast(ctx.i18n.t('town.altar.lockedToast', { n: g.n, need: g.need })),
     confirmRegister: judge ? null : () => import('./ui/tourney-warn.js').then((m) => m.confirmTournament({ t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage })),
   });
   mountCasting();
   // The player HUD (ui/player-hud.js): portrait frame, level, health, the silk wallet and the toast stack, town only.
   if (!window.__ftfJudgePath && /[?&]judge=1(&|$)/.test(location.search)) window.__ftfJudgePath = import('./ui/judge-path.js').then((m) => import('./sprint/first-seen.js').then((f) => m.mountJudgePath({ t: (k, a) => ctx.i18n.t(k, a), touch: f.isTouch(document) }))).catch(() => null); // ?judge=1: the 90-second guided route (docs: README Judge path)
-  if (!window.__ftfSprint) window.__ftfSprint = mountSprint({ lockControls: (on) => { npeLocked = !!on; setIntroHud(document, npeLocked); if (on) { moveTarget = null; marker.visible = false; } }, THREE, scene, camera, renderer, player, ledger: townLedger, town, chests: chestBag, t: (k, a) => ctx.i18n.t(k, a), toast: (s) => toast(s), reduced: () => lookdev.reducedMotion, storage: ctx.storage, keys: input, flags: featureFlags, i18n: ctx.i18n, active: () => inTown, mobs: () => townMobs, base: import.meta.env.BASE_URL, floatNumber: numbersHook, stamina, openSettings: (tab) => openSettings(tab), skin: () => (irisAvatar ? irisAvatar.hero.id : startHero.id) }); // sprint seam (src/sprint, docs/sprint/CTX.md)
+  if (!window.__ftfSprint) window.__ftfSprint = mountSprint({ lockControls: (on) => { npeLocked = !!on; setIntroHud(document, npeLocked); if (on) { moveTarget = null; marker.visible = false; } }, THREE, scene, camera, renderer, player, ledger: townLedger, town, chests: chestBag, t: (k, a) => ctx.i18n.t(k, a), toast: (s) => toast(s), reduced: () => lookdev.reducedMotion, storage: ctx.storage, keys: input, flags: featureFlags, i18n: ctx.i18n, active: () => inTown, mobs: () => townMobs, base: import.meta.env.BASE_URL, floatNumber: numbersHook, stamina, openSettings: (tab) => openSettings(tab), openMenu: () => openMenu(), skin: () => (irisAvatar ? irisAvatar.hero.id : startHero.id) }); // sprint seam (src/sprint, docs/sprint/CTX.md)
   if (!playerHud) playerHud = createPlayerHud({ t: (k, a) => ctx.i18n.t(k, a), ledger: townLedger, chests: chestBag, base: import.meta.env.BASE_URL,
     nickname: () => loadDay1(ctx.storage).nickname || null, skin: () => (irisAvatar ? irisAvatar.hero.id : startHero.id),
     onSkin: () => toggleSkin(), canSwap: () => { const o = skinsOwned(); return !!(o.elise || o.sheriffchenko); },
@@ -624,6 +640,7 @@ if (townMode.town) {
   // (flag agentTournament: the Season Cup card first, with the Agent badge, Add an agent and the exhibition; play/season-cup.js)
   if (!tournMounted) { tournMounted = true; let panel = null, cupCard = null; const openEntry = () => import('./ui/town-works-panel.js').then((u) => { if (!panel) panel = u.createTournamentEntry({ t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage, flush: () => (expeditionSync ? expeditionSync.flush() : null) }); panel.open(); }).catch((err) => console.warn('[tournament]', err));
     window.addEventListener('ftf:tournament-open', () => {
+      { const g = tourneyGate(townLedger.stats, { judge: judge || params.get('judge') === '1' }); if (!g.open) { toast(ctx.i18n.t('town.altar.lockedToast', { n: g.n, need: g.need })); return; } } // owner 14.11: ten stone spiders first
       if (!featureFlags.on('agentTournament')) { openEntry(); return; }
       import('./play/season-cup.js').then((u) => { if (!cupCard) cupCard = u.createSeasonCup({ t: (k, a) => ctx.i18n.t(k, a), onEnterChain: openEntry }); cupCard.open(); }).catch((err) => { console.warn('[cup]', err); openEntry(); });
     }); }
@@ -884,11 +901,18 @@ function startSeason() {
 
 // ---- Day 1 (docs/day1-free-mint-plan.md): arrival, name, the free Elise mint, hints, story trailers, the skin ----
 const day1Mint = createDay1Mint({ storage: ctx.storage });
+// email sign-in and the linked methods (net/account-email.js; owner 14.11): the account panel and Settings → Account
+function makeAccountEmail() {
+  return Promise.all([import('./net/account-email.js'), import('./net/account-login.js'), import('./net/near-tx.js'), import('./net/day1-deployment.js'), import('./net/near-deployment.js')])
+    .then(([e, a, n, d, nd]) => e.createAccountEmail({ relayer: d.DAY1_DEPLOYMENT.relayer, guests: d.DAY1_DEPLOYMENT.guests, mint: day1Mint, client: n.createTxClient({ rpcUrls: nd.NEAR_DEPLOYMENT.rpcUrls }), signerFor: a.edSigner, newKey: n.generateKeyPair }));
+}
 // Sign in / create account (flag accountLogin, docs/account-login.md): panel, flow and wallets load on the first tap.
 const openAccount = (nickname = null) => import('./play/account-panel.js').then((m) => m.openAccountPanel({
   t: (k, a) => ctx.i18n.t(k, a), nickname,
   makeLogin: () => Promise.all([import('./net/account-login.js'), import('./net/near-tx.js'), import('./net/day1-deployment.js'), import('./net/near-deployment.js')])
     .then(([a, n, d, nd]) => a.createAccountLogin({ relayer: d.DAY1_DEPLOYMENT.relayer, guests: d.DAY1_DEPLOYMENT.guests, mint: day1Mint, client: n.createTxClient({ rpcUrls: nd.NEAR_DEPLOYMENT.rpcUrls }), storage: ctx.storage })),
+  // email sign-in and the linked methods (net/account-email.js; owner 14.11 "link an email, sign in by email on the phone")
+  makeEmail: () => makeAccountEmail(),
 }).done).catch((e) => { console.warn('[account]', e); return { status: 'guest' }; });
 const day1On = () => {
   const q = params.get('day1');
@@ -967,7 +991,10 @@ function updateAltarTimer() {
   // kept below the top-right chips (Controls, Profile) and inside the screen: on a phone the altar projects right under them
   const minTop = innerWidth < 700 || innerHeight < 500 ? (document.body.classList.contains('ph-on') ? 236 : 150) : 118, half = Math.min(altarTimer.offsetWidth / 2 || 110, innerWidth / 2 - 8);
   altarTimer.style.left = Math.max(half + 8, Math.min(innerWidth - half - 8, (_altarP.x + 1) / 2 * innerWidth)).toFixed(0) + 'px';
-  altarTimer.style.top = Math.max(minTop, (1 - _altarP.y) / 2 * innerHeight).toFixed(0) + 'px';
+  // and never under the quest tracker (tablet audit 14.11: the label sat in the tracker's lines and could not be tapped)
+  const x = Math.max(half + 8, Math.min(innerWidth - half - 8, (_altarP.x + 1) / 2 * innerWidth)), ft = document.querySelector('.ft:not([hidden])'), fr = ft && ft.getBoundingClientRect();
+  const under = fr && fr.height > 0 && x + half > fr.left && x - half < fr.right ? fr.bottom + (altarTimer.offsetHeight || 26) + 6 : 0;
+  altarTimer.style.top = Math.max(minTop, under, (1 - _altarP.y) / 2 * innerHeight).toFixed(0) + 'px';
 }
 
 /**
@@ -981,7 +1008,8 @@ const day1Open = () => !!document.querySelector('.d1-panel, .d1-card');
 let introOn = false; // the intro flight is on screen (the barks wait)
 function introFly(ms = 6500) {
   let seen = false; try { seen = !!(ctx.storage && ctx.storage.getItem(INTRO_KEY)); } catch { /* none */ }
-  if (seen || judge || lookdev.reducedMotion || params.get('skip') === 'intro' || params.get('intro') === 'off') return Promise.resolve(false);
+  // never on the Glass Shoal (?shoal=…): its end put the town camera back over the fight's (GPU bench 14.11)
+  if (seen || judge || lookdev.reducedMotion || params.get('skip') === 'intro' || params.get('intro') === 'off' || params.get('shoal')) return Promise.resolve(false);
   // the town is entered under the loading screen: fly only once the screen is gone (main.js sets __ftfBootMarks.done)
   const revealed = () => new Promise((res) => { const t0 = performance.now(); const tick = () => ((window.__ftfBootMarks && window.__ftfBootMarks.done) || performance.now() - t0 > 180000 ? res() : setTimeout(tick, 150)); tick(); });
   return revealed().then(() => new Promise((resolve) => {
@@ -1002,6 +1030,7 @@ function introFly(ms = 6500) {
     rig.rotate(-turn);
     const step = () => {
       if (done) return;
+      if (glassShoal && glassShoal.owns && glassShoal.owns()) { done = true; introOn = false; rig.pitchOverride = null; skip.remove(); window.removeEventListener('keydown', end); window.removeEventListener('pointerdown', end); resolve(true); return; } // the Shoal took the camera
       if (!t0) t0 = performance.now();
       const p = Math.min(1, (performance.now() - t0) / ms), e = p * p * (3 - 2 * p);
       rig.dist = 70 + (TOWN_CAMERA.dist - 70) * e;
@@ -1050,7 +1079,7 @@ async function enterWorld() {
     if (boot.closeLobby) boot.closeLobby();
     document.body.classList.add('in-world');
     entered = true;
-    if (inTown) { townFlow.begin(); introFly().then(startDay1); return; } // the first visit flies in, then Day 1
+    if (inTown) { townFlow.begin(); introFly().then(startDay1); setTimeout(warmNav, 4000); return; } // the first visit flies in, then Day 1; the walk grid fills behind
     await startSeason();
   })();
   return entering;
@@ -1171,6 +1200,14 @@ const mouseAim = createMouseAim({ target: renderer.domElement, input,
   onAction: mouseKey,
   // the browser took Esc to free the pointer: the page gets the Esc it never saw (the cast is put away, a panel closes, else the menu)
   onEscape: () => { for (const type of ['keydown', 'keyup']) document.body.dispatchEvent(new KeyboardEvent(type, { code: 'Escape', key: 'Escape', bubbles: true })); } });
+/**
+ * The game cursor over the scene (ui/game-cursor.js; owner 14.11): grab while the camera turns, attack on a locked target,
+ * else the plain pointer (a click on the ground walks there). The talk / interact cursors belong to the prompt button.
+ */
+function cursorScene() {
+  if (input.dragPointer != null) return 'grab';
+  return townMobs && townMobs.locked ? 'attack' : null;
+}
 function strikeNow() { if (townMobs && townMobs.strike(strikeAimInput())) interruptMove(STRIKE_ROOT); }
 let inspecting = null;
 let accumulator = 0;
@@ -1205,8 +1242,44 @@ function nearestInteractable() {
   return best;
 }
 
+/*
+ * Click-to-move in the town (owner 14.11: a click walked a straight line into walls and props): the click plans a route
+ * over the town's colliders (physics/nav-grid.js; cached, the grid fills in the background after the town is shown) and
+ * Iris follows it with the town's route steering; an unreachable click walks to the nearest reachable point (the marker
+ * shows where she goes). No progress for 1.2 s plans again from where she stands (twice), then she stops.
+ */
+let navTown = null, clickNav = null;
+function townNav() {
+  if (!navTown && town && town.world) {
+    const w = town.world;
+    navTown = createNav({ ray: (o, d, m) => rayCast(w, o, d, m, MASK_PLAYER), version: () => w.count + ':' + w.liveCount });
+    setTownNav(navTown);
+  }
+  return navTown;
+}
+function warmNav() { const n = inTown && townNav(); if (n && !n.warm(player.pos, { sliceMs: 5 })) setTimeout(warmNav, 40); }
+function clickWalk(target, run) {
+  const n = townFlow && townNav(); if (!n) return false;
+  const r = n.plan(player.pos, target);
+  if (!r || !r.path.length) return false;
+  moveTarget = null; if (play) play.cancelRoute();
+  if (!townFlow.walkTo(r.path)) return false;
+  const end = r.path[r.path.length - 1];
+  clickNav = { target: end, run, best: Infinity, bestAt: performance.now(), replans: 0, ms: r.ms, reached: r.reached, path: r.path };
+  marker.position.set(end[0], end[1] + 0.06, end[2]); marker.visible = true;
+  return true;
+}
+function followClickWalk() {
+  if (!townFlow.routeActive) { clickNav = null; if (!moveTarget) marker.visible = false; return; } // arrived, or a key took over
+  const now = performance.now(), d = Math.hypot(clickNav.target[0] - player.pos[0], clickNav.target[2] - player.pos[2]);
+  if (d < clickNav.best - 0.2) { clickNav.best = d; clickNav.bestAt = now; return; }
+  if (now - clickNav.bestAt < 1200) return;
+  const r = clickNav.replans++ < 2 && townNav().plan(player.pos, clickNav.target);
+  if (r && r.path.length) { townFlow.walkTo(r.path); clickNav.best = Infinity; clickNav.bestAt = now; }
+  else { townFlow.cancelRoute(); clickNav = null; marker.visible = false; }
+}
 function stopSteering() {
-  moveTarget = null;
+  moveTarget = null; clickNav = null;
   marker.visible = false;
   if (play) play.cancelRoute();
   if (townFlow) townFlow.cancelRoute();
@@ -1318,6 +1391,7 @@ function handleInput(dt) {
         const doubleTap = now - lastTap.t < 350 && Math.hypot(c.x - lastTap.x, c.y - lastTap.y) < 40;
         lastTap = { t: now, x: c.x, y: c.y };
         moveRun = doubleTap || (coarse && Math.hypot(hit.point[0] - player.pos[0], hit.point[2] - player.pos[2]) > 8);
+        if (inTown && clickWalk(hit.point, moveRun)) continue; // the town: a route round walls and props (physics/nav-grid.js)
         moveTarget = hit.point; stuck.stuckTime = 0; stuck.lastDist = Infinity; if (play) play.cancelRoute(); if (townFlow) townFlow.cancelRoute();
         marker.position.set(hit.point[0], hit.point[1] + 0.06, hit.point[2]);
         marker.visible = true;
@@ -1420,7 +1494,7 @@ function frame() {
   accumulator = f.accumulator;
   physics.steps = f.steps; physics.substeps = 0;
   let moving = false;
-  player.run = input.down('ShiftLeft', 'ShiftRight') || (moveTarget ? moveRun : coarse && !!(play && play.routeActive)) || !!(inTown && townFlow && townFlow.routeActive); // A1 auto-walk runs
+  player.run = input.down('ShiftLeft', 'ShiftRight') || (moveTarget ? moveRun : coarse && !!(play && play.routeActive)) || !!(inTown && townFlow && townFlow.routeActive && (!clickNav || clickNav.run)); // A1 auto-walk runs
   // outside the walls, a winded Iris walks until 20 % stamina is back (game/stamina.js)
   const fieldOn = !!(inTown && townMobs && townMobs.iris && townMobs.iris.outside);
   if (fieldOn && !stamina.canRun()) player.run = false;
@@ -1431,8 +1505,9 @@ function frame() {
     if (wish[0] || wish[1]) moving = true;
     player.step(wish, PHYSICS_DT);
     physics.substeps += player.lastSubsteps;
+    if (clickNav) followClickWalk();
     if (moveTarget) {
-      // Give up on a click target we cannot reach (no pathfinding yet): pressed against a wall with no
+      // Give up on a click target we cannot reach (outside the town: no pathfinding there): pressed against a wall with no
       // progress. Braking and pivoting toward a target behind us also makes no progress, so a wall
       // contact is required (otherwise a reversal would cancel its own order).
       const d = Math.hypot(moveTarget[0] - player.pos[0], moveTarget[2] - player.pos[2]);
@@ -1497,11 +1572,16 @@ function frame() {
     } else if (demoShown) demoPlayer.hide();
     demoShown = mpOn;
   }
-  if (mp && mpOn !== mpShown) { mpShown = mpOn; mp.setVisible(mpOn); }
-  if (mp && mpOn) mp.update(dt, { pos: player.pos, heading: player.heading, speed: Math.hypot(player.vel[0], player.vel[1]), grounded: player.grounded !== false, reducedMotion: lookdev.reducedMotion });
+  if (mp && mpOn !== mpShown && !(play && !inTown && entered && !judge)) { mpShown = mpOn; mp.setVisible(mpOn); }
+  // the isles too (presence v2): in a season the others in the archipelago share a room of their own
+  const mpIsles = !!(mp && play && !inTown && entered && !judge);
+  if (mp && mpIsles && !mpShown) { mpShown = true; mp.setVisible(true); }
+  if (mp && (mpOn || mpIsles)) mp.update(dt, { pos: player.pos, heading: player.heading, speed: Math.hypot(player.vel[0], player.vel[1]), grounded: player.grounded !== false, reducedMotion: lookdev.reducedMotion, area: mpOn ? 'town' : 'isles' });
+  // the shared town-hill spiders (presence v2, play/mobs.js MobBrain.share): the server's spiders once both are loaded
+  if (mp && mp.mobLink && townMobs && townMobs.brain && townMobs.brain.link !== mp.mobLink) townMobs.brain.share(mp.mobLink);
   else if (!mpTried && mpOn && !judge && params.get('mp') !== '0') {
     mpTried = true;
-    import('./play/multiplayer.js').then((m) => { const d1 = loadDay1(ctx.storage); mp = m.createMultiplayer({ scene, camera, THREE, t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage, me: (d1.guest || {}).account_id || null, ledger: townLedger, chests: chestBag, name: d1.nickname || '', account: (d1.guest && d1.minted && d1.guest.account_id) || null, lv: townLedger && townLedger.level ? Math.min(99, townLedger.level.level) : null, skin: irisAvatar && irisAvatar.hero ? irisAvatar.hero.id : 'iris', phone: mobileDevice, bots: Math.max(0, Math.min(14, Number(params.get('bots')) || 0)) }); mpShown = true; if (window.__ftf) window.__ftf.mp = mp; })
+    import('./play/multiplayer.js').then((m) => { const d1 = loadDay1(ctx.storage); mp = m.createMultiplayer({ onChatClose: () => mouseAim.resume(), scene, camera, THREE, t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage, me: (d1.guest || {}).account_id || null, ledger: townLedger, chests: chestBag, name: d1.nickname || '', account: (d1.guest && d1.minted && d1.guest.account_id) || null, lv: townLedger && townLedger.level ? Math.min(99, townLedger.level.level) : null, skin: irisAvatar && irisAvatar.hero ? irisAvatar.hero.id : 'iris', phone: mobileDevice, bots: Math.max(0, Math.min(14, Number(params.get('bots')) || 0)) }); mpShown = true; if (window.__ftf) window.__ftf.mp = mp; })
       .catch((e) => console.warn('[mp]', e));
   }
   if (town && town.active) {
@@ -1593,6 +1673,8 @@ function frame() {
   else if (irisAvatar) irisAvatar.update(dt, movingState, avatar, clock.elapsedTime, speed, player.run && movingState, lookdev.reducedMotion, null); // the town: her gait before the season
   // the sword in her hand: after the mixer, so the closed fist sits on top of every clip
   if (heldBlade) heldBlade.update(dt, lookdev.reducedMotion);
+  strikeTrail.update(dt, lookdev.reducedMotion); // after the mixer and the grip: the trail follows the pose drawn this frame
+  if (heldBlade) { /* loaded */ }
   else if (!heldBladeLoading && glassShoal && glassShoal.hasBlade && glassShoal.hasBlade()) {
     heldBladeLoading = true;
     import('./play/held-blade.js').then((m) => { heldBlade = m.createHeldBlade({ THREE, fetchGltf: prefetchGltf, hasModelFile, mobile: mobileDevice,
@@ -1654,10 +1736,11 @@ window.__ftf = {
     get photo() { return photo; }, // photo mode (QA: toggle, setFilter, requestCapture)
     get monsters() { return townMonsters; }, chests: chestBag, // monsters outside the walls and the chest bag (QA)
     companions, // dragon companions in flight (QA)
+    get nav() { return navTown; }, get clickWalk() { return clickNav; }, // click-to-move: the walk grid and the route in progress (QA)
   } : null,
 };
 requestAnimationFrame(frame);
-return { enterWorld, signIn: () => openAccount(), world3d, player, rig, lookdev, renderer, streamer, get play() { return play; }, town, townMode, 
+return { enterWorld, signIn: () => openAccount(), cursorScene, world3d, player, rig, lookdev, renderer, streamer, get play() { return play; }, town, townMode, 
   /** The first town view is complete: ground under Iris, every street piece real and warmed, her own model in (main.js gates the loading screen on it). */
   get townReady() { return !town || !inTown || (town.shown && townGrounded && (!irisLoad.hasModel || irisLoad.loaded || (irisLoad.failed && import.meta.env.DEV))); } };
 }

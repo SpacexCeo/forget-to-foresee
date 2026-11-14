@@ -26,6 +26,7 @@ export function bladeModelFile(mobile, has = hasModelFile) {
 export const SPOTS = Object.freeze({ blade: Object.freeze([-26, 60]), stone: Object.freeze([24, 106]), radius: 2.6, giver: 3.2 });
 
 const CSS = `
+.ftf-in-shoal .ftf-loom,.ftf-in-shoal .ftf-mk-chip,.ftf-in-shoal .ftf-tip,.ftf-in-shoal .ftf-premise{display:none!important}
 .gs-track{position:fixed;left:calc(env(safe-area-inset-left,0px) + 16px);top:calc(env(safe-area-inset-top,0px) + 96px);max-width:min(340px,calc(100vw - 32px));z-index:12;
  box-sizing:border-box;padding:8px 12px;border-radius:10px;border:1px solid rgba(246,200,96,.6);background:rgba(20,16,8,.72);color:#f6e2a8;font:600 14px/1.35 "Atkinson Hyperlegible",system-ui,sans-serif;
  background-image:linear-gradient(100deg,transparent 30%,rgba(255,226,150,.28) 50%,transparent 70%);background-size:250% 100%;animation:gs-shimmer 3.2s linear infinite,gs-breathe 2.4s ease-in-out infinite;pointer-events:none}
@@ -63,6 +64,8 @@ html[data-motion=reduce] .gs-track{animation:none}
  * @param {() => number[]} o.axes the movement axes [x, y] (keys or the stick)
  * @param {() => {kind: string, pos: object, flourish?: Function}[]} [o.allies] her companion dragons (world positions) that join the fight
  */
+/** The fight's camera distance (metres) and the closest the player may zoom in there. */
+export const ARENA_CAM = Object.freeze({ dist: 17, minDist: 12, rate: 1.6, hold: 2.5 }); // rate: the lock's ease (1/s); hold: seconds it waits after the player turns the camera
 export function createGlassShoal(o) {
   const { THREE, scene, rig, player, toWorld, groundAt, folkAt, ledger, chests = null, storage = null, toast = () => {}, reduced = () => false, mobile = false, hero = () => 'iris', clip = () => {}, axes = () => [0, 0] } = o;
   const say = (k, a) => shoalText(o.locale ? o.locale() : 'en', k, a);
@@ -145,7 +148,9 @@ export function createGlassShoal(o) {
   function loadArena() {
     if (!arenaLoading) arenaLoading = import('./shoal-arena.js').then((m) => { arena = m.createShoalArena({ THREE, scene, camera: o.camera, center: arenaCenter(), say, toast, reduced, mobile, hero, clip, axes, rig,
       onWin: () => { try { globalThis.dispatchEvent(new CustomEvent('ftf:feat', { detail: { k: 'boss', v: 'shoal' } })); } catch { /* the room's action feed is optional */ } if (event('boss_down') && ledger) { ledger.grant({ xp: R.REWARD.xp }); if (chests) try { chests.add({ tier: R.REWARD.chest, source: 'boss' }); } catch { /* the bag is optional */ } } },
-      onDeath: () => event('death'), onHome: () => flyHome(), allies: o.allies }); return arena; });
+      onDeath: () => event('death'), onHome: () => flyHome(), allies: o.allies });
+      // the fight starts with the serpent's own model in (capped: a slow network still gets the fight, with the stand-in)
+      return Promise.race([arena.ready || null, new Promise((r) => setTimeout(r, 12000))]).catch(() => {}).then(() => arena); });
     return arenaLoading;
   }
 
@@ -197,8 +202,36 @@ export function createGlassShoal(o) {
     prompt.textContent = ''; if (!o.touch || !o.touch()) prompt.append(el('kbd', null, 'E')); prompt.append(doc.createTextNode(say(textKey))); prompt.hidden = false;
   }
   let tAcc = 0, seatT = 0, seatedFor = 0, ownedClass = false;
+  let shoalBody = false, camSaved = null, camYaw = 0, camHold = 0;
+  const angDiff = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
+  /** The fight's camera (GPU bench 14.11): behind her and facing the serpent when she lands, far enough out that a
+   *  20 m boss fits the frame at melee range (it filled the screen), and back to the town's camera when she leaves. */
+  function arenaCamera(dt = 0) {
+    const on = mode === 'arena' && !!arena;
+    if (on && !camSaved) {
+      camSaved = { dist: rig.dist, minDist: rig.minDist, pitchOffset: rig.pitchOffset, distTarget: rig.distTarget };
+      rig.minDist = Math.max(rig.minDist || 0, ARENA_CAM.minDist); rig.distTarget = null; rig.dist = ARENA_CAM.dist; rig.pitchOffset = 0;
+      if (rig.rotate) { rig.yaw = rig.baseYaw || 0; rig.rotate(pose.heading + Math.PI - (rig.baseYaw || 0)); } // the camera sits behind her heading
+      camYaw = rig.yaw; camHold = 0;
+    } else if (on && camSaved && rig.rotate && arena.focusYaw) {
+      // a soft lock on the serpent: the camera drifts back behind her, facing it, unless the player turned it lately
+      if (Math.abs(angDiff(rig.yaw, camYaw)) > 1e-4) camHold = ARENA_CAM.hold; // the player (or the mouse aim) turned it
+      if ((camHold -= dt) <= 0) {
+        const want = arena.focusYaw() + (pose.heading - arena.heading()) + Math.PI; // arena frame -> world, behind her
+        const d = angDiff(want, rig.yaw), k = Math.min(1, dt * ARENA_CAM.rate);
+        if (Math.abs(d) > 0.02) rig.rotate(d * k);
+      }
+      camYaw = rig.yaw;
+    } else if (!on && camSaved && mode !== 'arena-wait') {
+      rig.minDist = camSaved.minDist; rig.dist = camSaved.dist; rig.pitchOffset = camSaved.pitchOffset; rig.distTarget = camSaved.distTarget; camSaved = null;
+    }
+  }
   function update(dt, t) {
     tAcc += dt;
+    // on the Shoal (the fight and its load) the town's overlays stay away: the Loom chip, the market chips over the
+    // townsfolk, first-seen tips and the premise card (GPU bench 14.11: they sat over the boss and the win)
+    const onShoal = mode === 'arena' || mode === 'arena-wait';
+    if (onShoal !== shoalBody && doc && doc.body) { shoalBody = onShoal; doc.body.classList.toggle('ftf-in-shoal', onShoal); }
     if (seatedFor < 3 && (seatT += dt) > 0.5) { seatT = 0; placeAll(); if (seated >= 2) seatedFor += 0.5; } // re-seat until the ground answers
     const lv = level();
     const offered = R.questOffered(save, lv), active = R.questActive(save);
@@ -251,6 +284,7 @@ export function createGlassShoal(o) {
       if (ride.done) endRide();
     }
     if (mode === 'arena' && arena) { arena.update(dt, t); arena.pose(pose); }
+    arenaCamera(dt);
     const own = mode === 'ride' || mode === 'arena' || mode === 'arena-wait';
     if (own !== ownedClass) { ownedClass = own; doc.body.classList.toggle('gs-owned', own); }
     void t;
@@ -297,7 +331,7 @@ export function createGlassShoal(o) {
         loadArena().then((a) => { mode = 'arena'; a.enter(save); toast(say('shoal.landed')); }).catch((e) => { console.warn('[shoal] arena', e); mode = 'town'; });
       }
     },
-    dispose() { group.removeFromParent(); dragon.root.removeFromParent(); track.remove(); prompt.remove(); closeCard(); if (arena) arena.dispose(); },
+    dispose() { if (doc && doc.body) doc.body.classList.remove('ftf-in-shoal'); group.removeFromParent(); dragon.root.removeFromParent(); track.remove(); prompt.remove(); closeCard(); if (arena) arena.dispose(); },
   };
 }
 

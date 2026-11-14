@@ -180,3 +180,24 @@ test('the Gate act: never sent to a server that did not name it (an older one ki
   assert.equal(actKey({ k: 'gate' }), 'mp.act.gate');
   for (const loc of ['en', 'ru', 'uk', 'it', 'zh']) { const i18n = createPlayI18n(loc, { onMissing: () => assert.fail(loc) }); assert.match(i18n.t('mp.act.gate', { name: 'ann' }), /ann/); }
 });
+
+test('the panel closes with its ×, with Esc (from the line or as a window) and with a click outside (owner 14.11)', async () => {
+  const { doc } = installDom();
+  const docL = {}; doc.getElementById = () => null;
+  doc.addEventListener = (t, fn) => { (docL[t] ||= []).push(fn); }; doc.removeEventListener = (t, fn) => { docL[t] = (docL[t] || []).filter((f) => f !== fn); };
+  const { createChatPanel } = await import('../../src/ui/chat-panel.js');
+  const { closeTopWindow, isWindowOpen } = await import('../../src/ui/window-toggle.js');
+  const { mp } = await online();
+  const i18n = createPlayI18n('en');
+  const panel = createChatPanel({ doc, t: (k, a) => i18n.t(k, a), presence: mp });
+  const q = (s) => panel.el.querySelector(s), ev = (type, o = {}) => ({ type, stopPropagation() {}, preventDefault() {}, ...o });
+  q('input').blur = () => {};
+  const box = q('.ftf-chat-box'), openIt = () => { q('.ftf-chat-chip').dispatchEvent(ev('click')); assert.equal(box.hidden, false, 'open'); };
+  openIt(); q('.ftf-chat-x').dispatchEvent(ev('click')); assert.equal(box.hidden, true, 'the × closes it');
+  assert.equal(q('.ftf-chat-x').getAttribute('aria-label'), 'Close');
+  openIt(); q('input').dispatchEvent(ev('keydown', { key: 'Escape' })); assert.equal(box.hidden, true, 'Esc in the line closes it');
+  openIt(); assert.equal(isWindowOpen('chat'), true); assert.equal(closeTopWindow(), 'chat'); assert.equal(box.hidden, true, 'Esc anywhere: the game closes the top window, the chat');
+  openIt(); for (const f of docL.pointerdown) f(ev('pointerdown', { target: q('.ftf-chat-log') })); assert.equal(box.hidden, false, 'a click inside keeps it');
+  for (const f of docL.pointerdown) f(ev('pointerdown', { target: doc.body })); assert.equal(box.hidden, true, 'a click outside closes it');
+  panel.destroy(); assert.equal((docL.pointerdown || []).length, 0); assert.equal(isWindowOpen('chat'), false);
+});

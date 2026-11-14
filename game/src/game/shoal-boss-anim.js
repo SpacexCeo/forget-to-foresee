@@ -19,7 +19,7 @@ export const CLIP_STANDIN = Object.freeze({ breath: 'lunge', claw: 'sweep', take
 export const clipOn = (clip, has) => (has(clip) ? clip : has(CLIP_STANDIN[clip]) ? CLIP_STANDIN[clip] : 'idle');
 /** Clip lengths in seconds (report/b02.json of the art pipeline; tests read them from the file too). */
 export const BOSS_ANIM = Object.freeze({
-  wind: 1.0, fade: 0.2,
+  wind: 1.0, fade: 0.2, staggerGap: 12, // staggerGap: seconds between two reels (the crest still opens every time)
   len: Object.freeze({ idle: 4.0, rise: 2.4, slam: 2.55, lunge: 2.4, sweep: 2.55, hit: 1.0, roar: 2.2, death: 3.4,
     breath: 2.4, claw: 2.55, takeoff: 2.4, dive: 2.55, fly: 4.0, stagger: 1.0 }), // the dragon's: as their stand-ins until its clips are measured
 });
@@ -37,6 +37,9 @@ export const freshBossAnim = (down = false) => ({ clip: down ? 'death' : 'rise',
 export function bossAnimStep(a, b, dt, telegraph, won = false, A = BOSS_ANIM) {
   const out = animStep(a, b, dt, telegraph, won, A);
   out.exp = b.exposed > 0 ? 1 : 0; // the crest was open this frame (a stagger plays once per opening)
+  // seconds since it last reeled: a good player opens the crest on nearly every blow, and a reel each time read as
+  // spam on the bench (owner 14.11), so it reels at most once per `staggerGap`
+  out.since = out.clip === 'stagger' && a.clip !== 'stagger' ? 0 : (a.since ?? 99) + dt;
   return out;
 }
 function animStep(a, b, dt, telegraph, won, A) {
@@ -47,7 +50,7 @@ function animStep(a, b, dt, telegraph, won, A) {
   if (kind && b.state === 'active') return { clip: kind, time: Math.min(L[kind], Math.max(A.wind, a.clip === kind ? a.time : A.wind) + dt), phase: b.phase };
   if (b.phase > a.phase) return { clip: 'hit', time: 0, phase: b.phase };          // a phase breaks: it recoils
   // she dodged through a blow and its crest opened: it reels (stagger), once per opening
-  if (b.exposed > 0 && !(a.exp > 0) && b.state !== 'telegraph') return { clip: 'stagger', time: 0, phase: b.phase };
+  if (b.exposed > 0 && !(a.exp > 0) && b.state !== 'telegraph' && !((a.since ?? 99) < (A.staggerGap ?? 0))) return { clip: 'stagger', time: 0, phase: b.phase };
   const rest = b.airborne ? 'fly' : 'idle';                                          // in the air it hovers
   if (a.clip === 'idle' || a.clip === 'fly') return { clip: rest, time: (a.time + dt) % L[rest], phase: b.phase };
   const time = a.time + dt;                                                          // finish the one-shot (recover, rise, hit)

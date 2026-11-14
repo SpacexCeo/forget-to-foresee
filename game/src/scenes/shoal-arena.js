@@ -14,7 +14,7 @@ import { hasModelFile, fetchGltf, getModelVariant } from '../render/assets.js';
 import { bossAnimStep, freshBossAnim, fadeWeights, BOSS_ANIM, clipOn } from '../game/shoal-boss-anim.js';
 import { createAddsView } from './shoal-adds-view.js';
 import { createHitFx } from '../render/hit-fx.js';
-import { createSerpentFx, telegraphMaterial, setTele } from '../render/serpent-fx.js';
+import { createSerpentFx, crackMaterial, setTele } from '../render/serpent-fx.js';
 import { impactOf, IMPACT } from '../render/hit-fx-core.js';
 import { cue, cueAt } from '../audio/town-audio.js';
 import { ALLY, ALLY_COLOR, freshAllies, alliesStep, allyTarget } from '../game/shoal-allies.js';
@@ -33,6 +33,9 @@ const CSS = `
 .sa-skill kbd{position:absolute;left:4px;top:3px;font:600 10px system-ui;opacity:.75}.sa-skill s{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);text-decoration:none}
 .sa-skill u{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(0deg,rgba(255,138,58,.55),rgba(200,240,255,.25));text-decoration:none}
 .sa-skill.sa-ultb{grid-column:span 2;font-size:13px}
+.sa-skill.sa-ic{background-size:cover;background-position:center;background-repeat:no-repeat;padding:0}.sa-skill.sa-ultb.sa-ic{background-size:contain;background-color:rgba(18,14,8,.85)}
+.sa-skill.sa-ic span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.sa-skill.sa-ic kbd{left:auto;right:3px;top:3px;padding:1px 4px;border-radius:4px;background:rgba(0,0,0,.65);color:#fff;opacity:1}
 .sa-skill.sa-ultb.sa-ready{border-color:#ffd27a;color:#fff;box-shadow:0 0 14px rgba(255,170,80,.85);animation:sa-pulse 1.2s ease-in-out infinite}
 .sa-skill.sa-on{border-color:#c8f0ff;color:#fff;background:rgba(40,70,90,.85)}
 .sa-skill.sa-down{transform:scale(.94)}
@@ -56,6 +59,7 @@ html[data-motion=reduce] .sa-skill.sa-ultb.sa-ready{animation:none}
  * @param {boolean} o.mobile @param {() => string} o.hero @param {(name: string) => void} o.clip @param {() => number[]} o.axes
  * @param {object} o.rig the camera rig (ground axes) @param {() => void} o.onWin @param {() => void} o.onDeath @param {() => void} o.onHome
  */
+const ICON_BASE = (() => { try { return (import.meta.env && import.meta.env.BASE_URL) || '/'; } catch { return '/'; } })();
 export function createShoalArena(o) {
   const { THREE, scene, center, camera = null, say, reduced, mobile, hero, clip, axes, rig, onWin, onDeath, onHome } = o;
   // the heroine's own companion dragons (their world positions, kinds and a flourish), when the chain says she has any
@@ -77,6 +81,7 @@ export function createShoalArena(o) {
   look.lamp = new THREE.Group();
   { const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 4.2, 8), new THREE.MeshStandardMaterial({ color: 0x2a2a30, metalness: 0.7, roughness: 0.4 })); post.position.y = 2.1;
     const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 8), new THREE.MeshBasicMaterial({ color: 0xffd9a0 })); bulb.position.y = 4.3;
+    post.name = 'lamp_post_placeholder'; bulb.name = 'lamp_bulb_placeholder'; // render/shoal-props.js swaps in the torch model
     look.lamp.add(post, bulb); if (!mobile) { const l = new THREE.PointLight(0xffc98a, 6, 18, 2); l.position.y = 4.3; look.lamp.add(l); }
     look.lamp.position.set(R.ARENA.lamp[0], 0, R.ARENA.lamp[1]); root.add(look.lamp); }
   look.sun = new THREE.DirectionalLight(0xffd2a0, 1.6); look.sun.position.set(-60, 30, -80); look.sun.target = look.floor; root.add(look.sun);
@@ -95,9 +100,13 @@ export function createShoalArena(o) {
   // the model `hollow_tide` (art/shoal/boss): its clips follow the fight through game/shoal-boss-anim.js
   let bossModel = null, bossMixer = null, bossActions = null, bossAnim = freshBossAnim(), bossGlow = [];
   const bossW = {};
+  // the grey stack of spheres only stands in when there is no model file at all (GPU bench 14.11: it showed while the
+  // model streamed in); the Shoal waits on `ready` before the fight starts, and a failed load brings the stand-in back
+  let modelReady = Promise.resolve();
   if (hasModelFile('hollow_tide')) {
+    for (const s of segs) s.visible = false; crest.visible = false;
     const lite = 'hollow_tide' + getModelVariant();
-    fetchGltf(hasModelFile(lite) ? lite : 'hollow_tide').then(({ gltf }) => {
+    modelReady = fetchGltf(hasModelFile(lite) ? lite : 'hollow_tide').then(({ gltf }) => {
       for (const s of segs) s.visible = false; crest.visible = false;
       bossModel = gltf.scene; boss.add(bossModel);
       bossModel.traverse((o) => { if (o.isMesh) { o.frustumCulled = false; o.castShadow = true; if (o.material && o.material.emissiveMap) bossGlow.push({ m: o.material, base: o.material.emissiveIntensity }); } });
@@ -105,19 +114,21 @@ export function createShoalArena(o) {
         bossMixer = new THREE.AnimationMixer(bossModel); bossActions = {};
         for (const c of gltf.animations) { const a = bossMixer.clipAction(c); a.setEffectiveWeight(0); a.play(); a.paused = true; bossActions[c.name] = a; }
       }
-    }).catch(() => {});
+    }).catch(() => { for (const s of segs) s.visible = true; crest.visible = true; });
   }
-  // telegraphs: the ground ring (slam), the band (sweep), the charge line (lunge); each fills from the body out as the
-  // blow comes, with a bright rim (render/serpent-fx.js telegraphMaterial)
-  const ring = new THREE.Mesh(new THREE.RingGeometry(0.1, 1, 48), telegraphMaterial(THREE, { axis: 0, inner: 0, outer: 1 })); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.05; ring.visible = false; root.add(ring);
-  const band = new THREE.Mesh(new THREE.RingGeometry(R.BOSS.attacks.sweep.inner, R.BOSS.attacks.sweep.radius, 64), telegraphMaterial(THREE, { axis: 0, inner: R.BOSS.attacks.sweep.inner, outer: R.BOSS.attacks.sweep.radius })); band.rotation.x = -Math.PI / 2; band.position.set(R.ARENA.boss[0], 0.05, R.ARENA.boss[1]); band.visible = false; root.add(band);
-  const line = new THREE.Mesh(new THREE.PlaneGeometry(R.BOSS.attacks.lunge.width, R.BOSS.attacks.lunge.length), telegraphMaterial(THREE, { axis: 2, inner: 0, outer: R.BOSS.attacks.lunge.length })); line.geometry.rotateX(-Math.PI / 2); line.geometry.translate(0, 0, R.BOSS.attacks.lunge.length / 2); line.position.y = 0.05; line.visible = false; root.add(line);
+  // telegraphs as frost cracks (owner 14.11: no flat geometric warnings): where the slam, the sweep, the lunge and the
+  // breath will land, a web of cracks runs out over the mirror as the blow gathers (render/serpent-fx.js crackMaterial),
+  // ice shards and mist rise on its front (sfx.tellFrame) and the serpent's seams burn brighter
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.1, 1, 48), crackMaterial(THREE, { axis: 0, inner: 0, outer: 1 })); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.05; ring.visible = false; root.add(ring);
+  const band = new THREE.Mesh(new THREE.RingGeometry(R.BOSS.attacks.sweep.inner, R.BOSS.attacks.sweep.radius, 64), crackMaterial(THREE, { axis: 0, inner: R.BOSS.attacks.sweep.inner, outer: R.BOSS.attacks.sweep.radius })); band.rotation.x = -Math.PI / 2; band.position.set(R.ARENA.boss[0], 0.05, R.ARENA.boss[1]); band.visible = false; root.add(band);
+  const line = new THREE.Mesh(new THREE.PlaneGeometry(R.BOSS.attacks.lunge.width, R.BOSS.attacks.lunge.length), crackMaterial(THREE, { axis: 2, inner: 0, outer: R.BOSS.attacks.lunge.length })); line.geometry.rotateX(-Math.PI / 2); line.geometry.translate(0, 0, R.BOSS.attacks.lunge.length / 2); line.position.y = 0.05; line.visible = false; root.add(line);
   // the ice dragon's: a cone of breath and the arc of its claws, flat fans opening along +z (rotated to her at the telegraph)
-  const fan = (radius, half, color) => { const g = new THREE.CircleGeometry(radius, 40, Math.PI / 2 - half, half * 2); g.rotateX(-Math.PI / 2); g.scale(1, 1, -1); const m = new THREE.Mesh(g, telegraphMaterial(THREE, { axis: 1, inner: 0, outer: radius, color })); m.position.y = 0.06; m.visible = false; root.add(m); return m; };
+  const fan = (radius, half, color) => { const g = new THREE.CircleGeometry(radius, 40, Math.PI / 2 - half, half * 2); g.rotateX(-Math.PI / 2); g.scale(1, 1, -1); const m = new THREE.Mesh(g, crackMaterial(THREE, { axis: 1, inner: 0, outer: radius })); m.position.y = 0.06; m.visible = false; root.add(m); return m; };
   const breathFan = fan(R.BOSS.attacks.breath.length, R.BOSS.attacks.breath.half, 0x9fe8ff), clawFan = fan(R.BOSS.attacks.claw.radius, R.BOSS.attacks.claw.half, 0xff7a3a);
   // pickups, adds, projectiles, the chest
   const orbMat = { hp: new THREE.MeshBasicMaterial({ color: 0x6aff9a }), stamina: new THREE.MeshBasicMaterial({ color: 0xffe066 }) };
   const orbs = new Map(R.ARENA.pickups.map((p) => { const m = new THREE.Mesh(new THREE.SphereGeometry(0.45, 14, 10), orbMat[p.kind]); m.position.set(p.at[0], 1, p.at[1]); root.add(m); return [p.id, m]; }));
+  look.pickups = [...orbs].map(([id, m]) => ({ id, kind: (R.ARENA.pickups.find((p) => p.id === id) || {}).kind, m })); // render/shoal-props.js dresses them
   const addsView = createAddsView(root); // the Hollow Tide's spawn: the model `shoal_tideling`, one clone per add (scenes/shoal-adds-view.js)
   const shots = [];
   const chest = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.9, 0.9), new THREE.MeshStandardMaterial({ color: 0xd8b25a, metalness: 0.8, roughness: 0.3, emissive: 0x6a4a10, emissiveIntensity: 0.5 }));
@@ -131,7 +142,7 @@ export function createShoalArena(o) {
   const burst = new THREE.Mesh(new THREE.RingGeometry(0.85, 1, 64), new THREE.MeshBasicMaterial({ color: 0xffb060, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide }));
   burst.rotation.x = -Math.PI / 2; burst.position.y = 0.08; root.add(burst);
   // the aim: a small ring on the mirror where her casts will fly (cursor or the nearest foe)
-  const aimMark = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.65, 32), new THREE.MeshBasicMaterial({ color: 0xffe6a6, transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide }));
+  const aimMark = new THREE.Mesh(new THREE.CircleGeometry(0.9, 32), new THREE.ShaderMaterial({ uniforms: { uColor: { value: new THREE.Color(0xffe6a6) } }, vertexShader: 'varying vec2 vQ; void main(){ vQ = position.xy; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }', fragmentShader: 'uniform vec3 uColor; varying vec2 vQ; void main(){ float r = length(vQ) / 0.9; gl_FragColor = vec4(uColor, 0.5 * exp(-r * r * 4.0)); }', transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }));
   aimMark.rotation.x = -Math.PI / 2; aimMark.position.y = 0.06; aimMark.visible = false; root.add(aimMark);
   // impact effects (night 14.11, render/hit-fx.js, pooled): ember blooms, gale shards, the Loomblade's arcs, the boss's
   // slams on the mirror, and the camera kick of the blows (added in shakeCamera). Sounds through audio/town-audio.js.
@@ -198,10 +209,13 @@ export function createShoalArena(o) {
   function buildSkills() {
     skillsEl.textContent = ''; skillBtns = []; liftBtn = ultBtn = null;
     const keyCap = (k) => (k === 'Space' ? '␣' : k);
+    // owner 14.11: painted icons like the town hotbar, the key in the corner, the name as the tooltip (and for screen readers)
+    const iconize = (b, s) => { if (!s.art) return; b.classList.add('sa-ic'); b.style.backgroundImage = `url("${ICON_BASE}assets/ui/icons/${s.art}.webp")`; const n = say('shoal.skill.' + s.id); b.title = `${n} (${keyCap(s.key)})`; b.setAttribute('aria-label', n); };
     // Elise: Lift and the Tempest on the top row (the Tempest twice as wide), her three casts under them
     for (const s of shoalExtrasFor(hero())) {
       const b = el('button', 'sa-skill' + (s.kind === 'ultimate' ? ' sa-ultb' : ' sa-liftb')); b.type = 'button'; b.dataset.skill = s.id;
       b.setAttribute('aria-label', say('shoal.skill.' + s.id));
+      iconize(b, s);
       if (s.kind === 'ultimate') { b.append(el('u'), el('kbd', null, keyCap(s.key)), el('span', null, say('shoal.skill.' + s.id))); ultBtn = b; b.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); ult(); }); }
       else {
         b.append(el('kbd', null, keyCap(s.key)), el('span', null, say('shoal.skill.' + s.id))); liftBtn = b;
@@ -218,7 +232,7 @@ export function createShoalArena(o) {
     }
     for (const s of shoalSkillsFor(hero())) {
       const b = el('button', 'sa-skill'); b.type = 'button'; b.dataset.skill = s.id;
-      b.append(el('kbd', null, keyCap(s.key)), el('span', null, say('shoal.skill.' + s.id)), el('s'));
+      b.append(el('kbd', null, keyCap(s.key)), el('span', null, say('shoal.skill.' + s.id)), el('s')); iconize(b, s);
       b.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); if (e.pointerType !== 'mouse') touchAim = true; use(s); });
       skillsEl.append(b); skillBtns.push({ b, s });
     }
@@ -230,7 +244,7 @@ export function createShoalArena(o) {
   let H = R.freshHero(), B = R.freshBoss(), timers = {}, active = false, won = false, chestOpen = false;
   let FL = R.freshFlight();
   const me3 = { x: R.ARENA.landing[0], z: R.ARENA.landing[1], heading: Math.PI, speed: 0, lift: 0, dodgeDir: [0, -1] };
-  let combo = 0, comboT = 0, heavyT = 0, deadT = 0;
+  let combo = 0, comboT = 0, heavyT = 0, deadT = 0, sideRoll = 1;
   let kbVert = 0, liftHeld = false, touchFlight = false, landing = false, lastJump = -9, touchAim = false;
   let ultT = 0, ultEl = 0, ultGrounded = false, stopT = 0, shakeT = 0, shakeAmp = 0, burstT = 0, wasReady = false;
   let hover = null; // the mouse over the canvas (client px), from input()
@@ -288,7 +302,8 @@ export function createShoalArena(o) {
       const h2 = R.startDodge(H); if (h2 === H) return; H = h2;
       const ax = axes(); const { fwd, right } = rig.groundAxes();
       let dx = fwd.x * (ax[1] || 0) + right.x * (ax[0] || 0), dz = fwd.y * (ax[1] || 0) + right.y * (ax[0] || 0);
-      if (!dx && !dz) { dx = -Math.sin(me3.heading); dz = -Math.cos(me3.heading); }
+      // no stick: a sidestep, alternating sides (a backward roll carried her out of melee every time; GPU bench 14.11)
+      if (!dx && !dz) { sideRoll = -sideRoll; dx = Math.cos(me3.heading) * sideRoll; dz = -Math.sin(me3.heading) * sideRoll; }
       const d = Math.hypot(dx, dz) || 1; me3.dodgeDir = [dx / d, dz / d];
       clip('dash'); cue('dash_whoosh'); return;
     }
@@ -310,9 +325,9 @@ export function createShoalArena(o) {
   function melee(range, dmg, heavy = false, step = 0) {
     const fx0 = Math.sin(me3.heading), fz0 = Math.cos(me3.heading);
     const hx = me3.x + fx0 * range * 0.6, hz = me3.z + fz0 * range * 0.6;
-    // the blade's arc: the combo cuts right, left, then a rising finisher; the heavy slash a wide, slower crescent
     const src = heavy ? 'blade_heavy' : 'blade', onBoss = bossDist() <= R.BOSS.contact + range;
-    fx.slash([me3.x, 1.15 + me3.lift, me3.z], me3.heading, range * (heavy ? 1.1 : 0.9), IMPACT[src].color, heavy ? 1 : step % 2 ? -1 : 1, heavy ? 0 : step === 2 ? -0.5 : 0.15, heavy ? 0.28 : 0.2);
+    // no fixed arc in front of her (owner 14.11: the strikes must follow the hand): the trail rides the limb or blade that swings
+    // (render/strike-trail.js, driven by her clip's own start and impact moments)
     cue(heavy ? 'strike_heavy' : 'strike_swing');
     if (onBoss) { damageBoss(dmg); landFx(src, bossHitAt(1.6)); cue(heavy ? 'strike_heavy' : 'strike_impact'); }
     const near = B.adds.filter((a) => Math.hypot(a.x - hx, a.z - hz) <= range + 0.8);
@@ -368,12 +383,8 @@ export function createShoalArena(o) {
   function strikeLands(atk, damage) {
     // the boss's blow lands: a shock on the mirror where it does, and the slam's sound
     const A = R.BOSS.attacks[atk.kind];
-    if (A && atk.kind === 'slam' && atk.at) fx.shock([atk.at[0], 0, atk.at[1]], 0xff9a5a, A.radius);
-    else if (A && atk.kind === 'sweep') fx.shock([R.ARENA.boss[0], 0, R.ARENA.boss[1]], 0xff9a5a, A.radius);
-    else if (A && atk.kind === 'lunge' && atk.at && atk.dir) fx.shock([atk.at[0] + atk.dir[0] * A.length * 0.5, 0, atk.at[1] + atk.dir[1] * A.length * 0.5], 0xff9a5a, A.width * 1.2);
-    else if (A && atk.kind === 'dive' && atk.at) { fx.shock([atk.at[0], 0, atk.at[1]], 0x9fe8ff, A.radius); shakeT = 0.22; shakeAmp = reduced() ? 0 : 0.25; }
-    else if (A && atk.kind === 'breath' && atk.dir) fx.shock([atk.at[0] + atk.dir[0] * A.length * 0.6, 0, atk.at[1] + atk.dir[1] * A.length * 0.6], 0x9fe8ff, A.length * 0.4);
-    else if (A && atk.kind === 'claw' && atk.dir) fx.shock([atk.at[0] + atk.dir[0] * A.radius * 0.6, 0, atk.at[1] + atk.dir[1] * A.radius * 0.6], 0xff9a5a, A.radius * 0.5);
+    // no flat shock rings (owner 14.11): the landing is the serpent's own effect below (geyser, frost ripple, shards)
+    if (A && atk.kind === 'dive' && atk.at) { shakeT = 0.22; shakeAmp = reduced() ? 0 : 0.25; } // the dive still shakes; its look is sfx.strike
     cue(atk.kind === 'breath' ? 'cast_release_frost' : atk.kind === 'claw' ? 'strike_heavy' : 'mob_hulker_slam');
     sfx.strike(atk.kind, { at: atk.at || R.ARENA.boss, dir: atk.dir, A, boss: [boss.position.x, boss.position.z] });
     if (!R.inDanger(atk, me3.x, me3.z, R.BOSS, me3.lift)) return;
@@ -411,9 +422,9 @@ export function createShoalArena(o) {
         if (Math.hypot(wx, wz) > 0.4 && ultT <= 0) me3.heading = Math.atan2(wx, wz);
       } else if (wl > 0) { const sp = R.HERO.speed * (heavyT > 0 ? 0.2 : 1); wx *= sp; wz *= sp; me3.heading = Math.atan2(wx, wz); }
       let nx = me3.x + wx * sdt, nz = me3.z + wz * sdt;
-      // the body blocks her
+      // the body blocks her at its radius (at 1.5 m inside it she vanished into the serpent's spines; GPU bench 14.11)
       const bd = Math.hypot(nx - R.ARENA.boss[0], nz - R.ARENA.boss[1]);
-      if (!won && bd < R.BOSS.contact - 1.5) { const k = (R.BOSS.contact - 1.5) / (bd || 1); nx = R.ARENA.boss[0] + (nx - R.ARENA.boss[0]) * k; nz = R.ARENA.boss[1] + (nz - R.ARENA.boss[1]) * k; }
+      if (!won && bd < R.BOSS.contact) { const k = R.BOSS.contact / (bd || 1); nx = R.ARENA.boss[0] + (nx - R.ARENA.boss[0]) * k; nz = R.ARENA.boss[1] + (nz - R.ARENA.boss[1]) * k; }
       [me3.x, me3.z] = R.clampToArena(nx, nz);
       me3.speed = Math.hypot(wx, wz);
       if (R.airborne(FL)) me3.lift = FL.y;
@@ -490,7 +501,7 @@ export function createShoalArena(o) {
         for (const name in bossActions) { const a = bossActions[name]; a.setEffectiveWeight(bossW[name] || 0); if (name === shown) a.time = Math.min(bossAnim.time, a.getClip().duration - 1e-3); }
         bossMixer.update(0);
       }
-      for (const g of bossGlow) g.m.emissiveIntensity = g.base * (B.exposed > 0 ? 1.8 + 0.6 * Math.sin(tt * 12) : won ? Math.max(0, 1 - bossAnim.time / 2) : 1);
+      for (const g of bossGlow) g.m.emissiveIntensity = g.base * (B.exposed > 0 ? 1.8 + 0.6 * Math.sin(tt * 12) : won ? Math.max(0, 1 - bossAnim.time / 2) : 1 + (B.state === 'telegraph' ? 2.4 * Math.max(0, 1 - Math.max(0, B.t) / (R.BOSS.phases[B.phase].telegraph || 1)) : 0)); // the wind-up glow
     }
     const coil = B.state === 'telegraph' ? 0.8 : B.state === 'active' ? -0.6 : 0;
     segs.forEach((s, i) => { const k = i / (segs.length - 1); s.position.set(Math.sin(k * 3 + tt * 0.6) * sway * 2, rise * (Math.sin(k * Math.PI) * 9 + k * 6 - coil * k * 3), (k - 0.5) * 6 - coil * k * 2); });
@@ -504,12 +515,12 @@ export function createShoalArena(o) {
     ring.visible = band.visible = line.visible = breathFan.visible = clawFan.visible = false;
     if (B.attack && (B.state === 'telegraph' || B.state === 'active')) {
       const a = B.attack, k = B.state === 'active' ? 1 : 1 - Math.max(0, B.t) / (R.BOSS.phases[B.phase].telegraph || 1);
-      const op = B.state === 'active' ? 0.85 : 0.25 + 0.45 * k;
-      if (a.kind === 'slam') { ring.visible = true; ring.position.set(a.at[0], 0.05, a.at[1]); const r = R.BOSS.attacks.slam.radius; ring.scale.set(r, r, r); setTele(ring.material, k, op, tt); }
-      if (a.kind === 'sweep') { band.visible = true; setTele(band.material, k, op, tt); }
-      if (a.kind === 'dive') { ring.visible = true; ring.position.set(a.at[0], 0.05, a.at[1]); const r = R.BOSS.attacks.dive.radius; ring.scale.set(r, r, r); setTele(ring.material, k, op, tt); }
-      if (a.kind === 'breath' || a.kind === 'claw') { const m = a.kind === 'breath' ? breathFan : clawFan; m.visible = true; m.position.set(a.at[0], 0.06, a.at[1]); m.rotation.y = Math.atan2(a.dir[0], a.dir[1]); setTele(m.material, k, op, tt); if (a.kind === 'breath' && B.state === 'active') { _apex[0] = a.at[0]; _apex[2] = a.at[1]; sfx.breathFrame(mouth(a.dir), a.dir, R.BOSS.attacks.breath.half, R.BOSS.attacks.breath.length, sdt, _apex); } }
-      if (a.kind === 'lunge') { line.visible = true; line.position.set(a.at[0], 0.05, a.at[1]); line.rotation.y = Math.atan2(a.dir[0], a.dir[1]); setTele(line.material, k, op, tt); }
+      const op = B.state === 'active' ? 1 : 0.55 + 0.45 * k, tell = B.state === 'telegraph' && !red; // the cracks carry the tell; shards and mist rise on their front
+      if (a.kind === 'slam') { ring.visible = true; ring.position.set(a.at[0], 0.05, a.at[1]); const r = R.BOSS.attacks.slam.radius; ring.scale.set(r, r, r); setTele(ring.material, k, op, tt); if (tell) sfx.tellFrame('ring', { at: [a.at[0], 0, a.at[1]], r }, k, sdt); }
+      if (a.kind === 'sweep') { band.visible = true; setTele(band.material, k, op, tt); if (tell) sfx.tellFrame('band', { at: [band.position.x, 0, band.position.z], r0: R.BOSS.attacks.sweep.inner, r1: R.BOSS.attacks.sweep.radius }, k, sdt); }
+      if (a.kind === 'dive') { ring.visible = true; ring.position.set(a.at[0], 0.05, a.at[1]); const r = R.BOSS.attacks.dive.radius; ring.scale.set(r, r, r); setTele(ring.material, k, op, tt); if (tell) sfx.tellFrame('ring', { at: [a.at[0], 0, a.at[1]], r }, k, sdt); }
+      if (a.kind === 'breath' || a.kind === 'claw') { const m = a.kind === 'breath' ? breathFan : clawFan; m.visible = true; m.position.set(a.at[0], 0.06, a.at[1]); m.rotation.y = Math.atan2(a.dir[0], a.dir[1]); setTele(m.material, k, op, tt); if (tell) { const A2 = R.BOSS.attacks[a.kind]; sfx.tellFrame('cone', { at: [a.at[0], 0, a.at[1]], dir: a.dir, half: A2.half, len: A2.length || A2.radius }, k, sdt); } if (a.kind === 'breath' && B.state === 'active') { _apex[0] = a.at[0]; _apex[2] = a.at[1]; sfx.breathFrame(mouth(a.dir), a.dir, R.BOSS.attacks.breath.half, R.BOSS.attacks.breath.length, sdt, _apex); } }
+      if (a.kind === 'lunge') { line.visible = true; line.position.set(a.at[0], 0.05, a.at[1]); line.rotation.y = Math.atan2(a.dir[0], a.dir[1]); setTele(line.material, k, op, tt); if (tell) sfx.tellFrame('strip', { at: [a.at[0], 0, a.at[1]], dir: a.dir, len: R.BOSS.attacks.lunge.length, width: R.BOSS.attacks.lunge.width }, k, sdt); }
     }
     sfx.update(sdt, red);
     // adds
@@ -551,6 +562,11 @@ export function createShoalArena(o) {
   return {
     root, look, spawns,
     enter, leave, update, interact,
+    /** Settles once the boss model is in (or failed and the stand-in shows). */
+    ready: modelReady,
+    /** The arena-frame direction from her to the serpent (radians, atan2(dx, dz)), and her own heading (the camera lock). */
+    focusYaw: () => Math.atan2(R.ARENA.boss[0] - me3.x, R.ARENA.boss[1] - me3.z),
+    heading: () => me3.heading,
     get state() { return { hero: { ...H }, boss: { ...B, adds: B.adds.length }, won, chestOpen, flight: { ...FL }, lift: me3.lift, pos: [me3.x, me3.z], heading: me3.heading, ultT, shots: shots.length }; },
     /**
      * Keys while the fight owns her: F / 1 / a click = skill 1, Q / 2 = skill 2, Space / 4 = dodge, E = the chest / fly

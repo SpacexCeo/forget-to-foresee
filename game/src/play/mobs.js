@@ -149,6 +149,47 @@ export class MobBrain {
       t: 0, goal: null, cooldown: 0, root: 0, speed: 0, struckAt: 0, freeze: 0, target: null, provoked: false, lost: 0, reset: false, answer: false, far: 0 };
   }
 
+  /**
+   * Shared spiders (presence v2, docs/multiplayer.md): with a link to a presence server that runs them, the spiders it
+   * names are the server's: their place, health, state, bites and deaths come from it, our blows go to it, and only a
+   * death we have the loot right for is reported as our kill. Without the link (offline, an older server) every
+   * monster is ours, as before. link: {live(): boolean, rows(): Map(id -> {x, z, h, hp, state}) town-local,
+   * hit(id, src, amount), lootOf(id): boolean, takeBites(): mob ids}.
+   */
+  share(link) { this.link = link || null; }
+
+  /** One step of the shared spiders from the server rows (see share). */
+  syncShared(dt, ground, ev) {
+    const live = !!(this.link && this.link.live());
+    const rows = live ? this.link.rows() : null;
+    for (const m of this.mobs) m.shared = !!rows && rows.has(m.id);
+    if (!rows) return;
+    for (const id of this.link.takeBites()) { const m = this.mobs.find((x) => x.id === id && x.shared); if (m) ev.push({ kind: 'impact', mob: m, hit: true }); }
+    for (const m of this.mobs) {
+      if (!m.shared) continue;
+      const r = rows.get(m.id);
+      m.t += dt; m.freeze = Math.max(0, m.freeze - dt); m.predT = Math.max(0, (m.predT || 0) - dt);
+      if (r.state === 'dead') {
+        if (m.state !== 'dead' && m.state !== 'gone') { m.hp = 0; m.state = 'dead'; m.t = 0; m.noLoot = !this.link.lootOf(m.id); m.freeze = Math.max(m.freeze, KILL.stop); ev.push({ kind: 'death', mob: m }); }
+        continue;
+      }
+      const nx = r.x + this.origin[0], nz = r.z + this.origin[2];
+      if (m.state === 'dead' || m.state === 'gone') {                              // the server brought it back
+        Object.assign(m, this.spawn(m.pack, 0, 1), { id: m.id, shared: true, noLoot: false });
+        m.pos[0] = nx; m.pos[2] = nz; m.pos[1] = ground(nx, nz, m.pack.home[1]); m.heading = r.h; ev.push({ kind: 'respawn', mob: m });
+        continue;
+      }
+      const d = Math.hypot(nx - m.pos[0], nz - m.pos[2]);
+      m.speed = dt > 0 ? Math.min(4, d / dt) : 0;
+      m.pos[0] = nx; m.pos[2] = nz; m.pos[1] = ground(nx, nz, m.pos[1]); m.heading = r.h;
+      if (m.predT <= 0 || r.hp < m.hp) m.hp = r.hp;                               // our own blow shows at once; the server's number wins after
+      const st = r.state === 'windup' ? 'windup' : r.state === 'chase' ? 'chase' : 'idle';
+      if (st === 'windup' && m.state !== 'windup') { m.t = 0; ev.push({ kind: 'attack', mob: m }); }
+      else if (st !== 'windup' && m.state === 'windup') ev.push({ kind: 'impact', mob: m, hit: false });
+      m.state = st;
+    }
+  }
+
   /** Town-local check: a world point lies on the field beyond the walls. */
   outside(p) { return onField(p[0] - this.origin[0], p[2] - this.origin[2]); }
 
@@ -160,6 +201,12 @@ export class MobBrain {
   damage(m, amount, events, { root = 0, src = 'strike' } = {}) {
     if (m.state === 'dead' || m.state === 'gone') return;
     const I = IMPACT[src] || IMPACT.strike;
+    if (m.shared && this.link) {                                                   // a shared spider: the blow goes to the server, which keeps its health
+      this.link.hit(m.id, src, amount);
+      m.hp = Math.max(1, m.hp - amount); m.predT = 0.6; m.freeze = Math.max(HIT_STOP_SECONDS, I.stop);
+      events.push({ kind: 'hit', mob: m, amount, crit: I.crit, src, kill: false });
+      return;
+    }
     m.hp -= amount; m.freeze = Math.max(HIT_STOP_SECONDS, I.stop); m.root = Math.max(m.root, root);
     const kill = m.hp <= 0;
     events.push({ kind: 'hit', mob: m, amount, crit: I.crit, src, kill });
@@ -247,9 +294,11 @@ export class MobBrain {
     for (const p of this.pending) p.at -= dt;
     for (const p of this.pending.filter((q) => q.at <= 0)) this.damage(p.mob, p.amount, ev, { root: p.root, src: p.src });
     this.pending = this.pending.filter((q) => q.at > 0);
-    for (const m of this.mobs) this.think(m, dt, iris, ground, ev);
+    this.syncShared(dt, ground, ev);
+    for (const m of this.mobs) if (!m.shared) this.think(m, dt, iris, ground, ev);
     for (const pack of this.packs) {                                             // a pack comes back after its last one fell
       const mine = this.mobs.filter((m) => m.pack === pack);
+      if (mine.some((m) => m.shared)) continue;                                   // the server brings shared spiders back
       if (mine.every((m) => m.state === 'gone')) {
         if (pack.timer < 0) pack.timer = pack.respawn;
         pack.timer -= dt;
@@ -536,6 +585,7 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
 
   function handle(ev) {
     for (const e of ev) {
+      if (e.kind === 'killed' && e.mob.noLoot) { const v0 = views.get(e.mob); if (v0) v0.fx.die(); continue; } // a shared spider another player won: it dissolves, the kill is theirs
       if (e.kind === 'hit' || e.kind === 'killed') busEmit(e.kind === 'hit' ? 'mob.hit' : 'mob.killed', { type: e.mob.type, id: e.mob.id, dmg: e.amount, crit: !!e.crit }); // sprint bus (A5 seam)
       const v = views.get(e.mob);
       if (e.kind === 'attack' && v) { if (v.actions.attack) { play(v, 'attack', 0.1); v.oneShot = v.actions.attack; } v.ring.visible = !(e.ranged || e.mob.T.ranged); if (onFeedback) onFeedback('attack', e.mob); }

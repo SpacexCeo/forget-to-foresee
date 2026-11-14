@@ -21,7 +21,7 @@ const CSS = `
 .ph-frame:focus-visible { outline: 2px solid var(--ph-gold); outline-offset: 2px; }
 .ph-portrait { position: relative; width: 60px; height: 60px; border-radius: 50%; }
 .ph-ring { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(var(--ph-gold) calc(var(--p, 0) * 1turn), rgba(216, 180, 106, .18) 0); }
-.ph-portrait img { position: absolute; inset: 4px; width: 52px; height: 52px; border-radius: 50%; object-fit: cover; object-position: 50% 12%; background: #18241f; border: 2px solid #0c1411; }
+.ph-portrait img { position: absolute; inset: 4px; width: 52px; height: 52px; border-radius: 50%; object-fit: cover; object-position: 50% 30%; background: #18241f; border: 2px solid #0c1411; }
 .ph-swap { background-image: var(--ph-i-swap) !important; background-position: center !important; background-size: 70% !important; background-repeat: no-repeat !important; font-size: 0 !important; position: absolute; left: calc(6px + env(safe-area-inset-left, 0px)); top: calc(4px + env(safe-area-inset-top, 0px)); z-index: 1; width: 28px; height: 28px; border-radius: 50%; padding: 0; display: grid; place-items: center; background: #0c1411; border: 2px solid #d8b46a; color: #f3d7a0; font: 700 14px/1 system-ui, sans-serif; cursor: pointer; pointer-events: auto; }
 .ph-swap[hidden] { display: none; }
 @media (pointer: coarse) { .ph-swap { width: 40px; height: 40px; left: calc(2px + env(safe-area-inset-left, 0px)); top: calc(2px + env(safe-area-inset-top, 0px)); font-size: 18px; } }
@@ -208,7 +208,7 @@ export function createPlayerHud({ doc = document, t, ledger, chests = null, base
     lastLevel = lv.level; lvl.textContent = String(lv.level);
     title.textContent = t('profile.title.' + lv.title); xp.textContent = lv.xp;
     const n = nickname() || t('menu.traveller'); if (n !== lastName) { name.textContent = n; lastName = n; }
-    const s = skin(); if (s !== lastSkin) { img.src = base + 'assets/cards/' + s + '.webp'; lastSkin = s; }
+    const s = skin(); if (s !== lastSkin) { img.src = base + 'assets/ui/portraits/' + s + '_128.webp'; /* her bust (owner 14.11) */ lastSkin = s; }
     swap.hidden = !canSwap(); swap.setAttribute('aria-label', t('hud.skin')); swap.title = t('hud.skin');
     frame.setAttribute('aria-label', `${n} · ${t('profile.button', { level: lv.level })}`);
     const sealed = chests && chests.sealed ? chests.sealed().length : 0;

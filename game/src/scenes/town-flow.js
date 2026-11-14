@@ -58,6 +58,10 @@ html[data-motion="reduce"] .ftf-town-cover .boot-sub, .ftf-town-cover.is-plain .
 .ftf-quest-talk > h3 { padding-right: 44px; }
   box-sizing: border-box; padding: 14px 16px; border-radius: 12px; background: rgba(14, 18, 20, .92); border: 1px solid rgba(233, 180, 76, .45); color: #f3ead6; font: 16px/1.45 system-ui, sans-serif; pointer-events: auto; }
 .ftf-quest-talk[hidden], .ftf-quest-meta[hidden] { display: none; }
+/* never taller than the screen, and on phones above the bottom tray (mobile audit 14.11: in landscape its top and the Collapse button were off the screen; in portrait it covered Bag and Map) */
+.ftf-quest-talk { max-height: calc(100dvh - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); overflow-y: auto; overscroll-behavior: contain; }
+@media (max-width: 599px), (max-width: 899px) and (orientation: portrait) { .ftf-quest-talk { bottom: calc(60px + env(safe-area-inset-bottom, 0px)); max-height: calc(100dvh - 76px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); } }
+@media (max-height: 500px) { .ftf-quest-talk { bottom: calc(8px + env(safe-area-inset-bottom, 0px)); max-height: calc(100dvh - 16px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); padding: 10px 14px; font-size: 14px; } }
 .ftf-quest-talk h3 { margin: 0 0 4px; font: 600 13px/1.3 system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase; color: #e9b44c; }
 .ftf-quest-talk p { margin: 0 0 10px; }
 .ftf-quest-talk .ftf-quest-sign { width: 132px; height: 132px; margin: 0 auto 8px; display: block; }
@@ -96,7 +100,7 @@ const sleep = (s) => new Promise((r) => setTimeout(r, s * 1000));
  * @param {() => void} [o.onRegister] the registration begins: Iris reaches for the altar ring (her `register` clip)
  * @param {() => Promise<boolean>} [o.confirmRegister] asked before the registration; false keeps Iris in town
  */
-export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = globalThis.document, leave, islandReady = () => true, islandProgress = () => 0, islandLog = () => [], coarse = false, onRegister = null, quest = null, npcAt = () => null, signSvg = null, ledger = null, folkNear = () => null, folkAt = () => null, onHireChange = null, onProfile = null, spots = [], onExchange = null, onMirror = null, folkList = [], onDoor = null, onWheel = null, confirmRegister = null, folkAround = () => [] }) {
+export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = globalThis.document, leave, islandReady = () => true, islandProgress = () => 0, islandLog = () => [], coarse = false, onRegister = null, quest = null, npcAt = () => null, signSvg = null, ledger = null, folkNear = () => null, folkAt = () => null, onHireChange = null, onProfile = null, spots = [], onExchange = null, onMirror = null, folkList = [], onDoor = null, onWheel = null, confirmRegister = null, tourney = null, onTourneyLocked = null, folkAround = () => [] }) {
   const i18n = ctx.i18n;
   if (!doc.getElementById('ftf-town-style')) { const st = doc.createElement('style'); st.id = 'ftf-town-style'; st.textContent = CSS; doc.head.append(st); }
   const root = doc.createElement('div'); root.className = 'ftf-town'; root.hidden = true;
@@ -173,7 +177,8 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
 
   function renderText() {
     objective.textContent = i18n.t(state.ready ? (state.resume ? 'town.objective.resume' : quest ? quest.objective : 'town.objective') : 'town.loading');
-    promptText.textContent = spotNear && !talkNpc ? spotNear.prompt ? spotNear.prompt() : i18n.t(onDoor && DOORS.has(spotNear.id) ? 'town.shop.enter.' + spotNear.id : 'spot.' + spotNear.id) : talkNpc ? i18n.t('quest.talk', { name: i18n.t((talkKind === 'quest' ? 'quest.name.' : 'folk.name.') + talkNpc) }) : i18n.t(state.resume ? 'town.altar.resume' : 'town.altar.prompt');
+    prompt.dataset.cursor = talkNpc ? 'talk' : 'interact'; // the game cursor over the prompt (ui/game-cursor.js)
+    promptText.textContent = spotNear && !talkNpc ? spotNear.prompt ? spotNear.prompt() : i18n.t(onDoor && DOORS.has(spotNear.id) ? 'town.shop.enter.' + spotNear.id : 'spot.' + spotNear.id) : talkNpc ? i18n.t('quest.talk', { name: i18n.t((talkKind === 'quest' ? 'quest.name.' : 'folk.name.') + talkNpc) }) : state.resume ? i18n.t('town.altar.resume') : (() => { const g = tourney && tourney(); return g && !g.open ? i18n.t('town.altar.locked', { n: g.n, need: g.need }) : i18n.t('town.altar.prompt'); })(); // owner 14.11: ten stone spiders first
     if (onProfile && ledger) { const lv = ledger.level; profileBtn.textContent = i18n.t('profile.button', { level: lv.level }); }
     if (quest) {
       meta.hidden = !(state.ready && (quest.active || quest.purse > 0));
@@ -545,6 +550,7 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
   function register() {
     if (state.registering) return state.registering;
     if (state.phase !== 'town' || !town.ready || !inAltarRange(player.pos)) return Promise.resolve(false);
+    { const g = !state.resume && tourney && tourney(); if (g && !g.open) { if (onTourneyLocked) onTourneyLocked(g); return Promise.resolve(false); } } // the Tournament opens after ten stone spiders
     // confirmRegister (the Tournament warning, ui/tourney-warn.js): "Stay in town" leaves everything as it was
     state.registering = confirmRegister
       ? Promise.resolve().then(confirmRegister).catch(() => true).then((yes) => (yes ? run() : (state.registering = null, false)))

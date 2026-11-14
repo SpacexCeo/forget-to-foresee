@@ -6,6 +6,7 @@
 import { TOWN_SHOPS, besideDoor, BOARD_SPOT, WHEEL_SPOT, TOWN_SPOTS, townToLocal } from './town-layout.js';
 import { HATCHKEEPER, DRAGON_LOOPS } from './hatchkeeper-rules.js';
 import { OBSTACLES } from './town-obstacles.js';
+import { TOWN_DECOR } from './town-decor.js';
 
 export const MARGIN = 0.5;
 /** scenes/town-portal.js PORTAL_TOWN and scenes/town-board.js BOARD_TOWN (a test keeps them equal; not imported: they load three.js). */
@@ -26,6 +27,7 @@ export function propFootprints() {
   add('notice_board_spot', TOWN_SPOTS.board, 0.75);
   add('mirror', TOWN_SPOTS.mirror, 0.45);
   add('hatchkeeper', HATCHKEEPER.pos, 0.35);
+  for (const d of TOWN_DECOR) add(d.id, d.at, d.half); // the clan banners and the street torches (scenes/town-decor.js)
   add('hatchkeeper_dragons', HATCHKEEPER.pos, Math.max(...DRAGON_LOOPS.map((l) => l.radius))); // the loop the dragons fly
   OBSTACLES.forEach((p, i) => out.push(Object.freeze({ id: 'collider_' + i, at: p, r: BODY + 0.12, solid: true }))); // recorded solid points: a body clears them
   return out;

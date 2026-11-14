@@ -1,0 +1,21 @@
+{
+  "version": 2,
+  "canvas": [32, 32],
+  "pressAnimation": {
+    "durationMs": 1000,
+    "fps": 12,
+    "scalePercentByFrame": [100, 100, 97, 91, 84, 84, 100, 100, 100, 100, 100, 100],
+    "anchor": "hotspot"
+  },
+  "states": {
+    "default":   { "png": "cursor_default.png",   "gif": "cursor_default_press.gif",   "frames": "cursor_default_frames.png",   "hotspot": [2, 2] },
+    "link":      { "png": "cursor_link.png",      "gif": "cursor_link_press.gif",      "frames": "cursor_link_frames.png",      "hotspot": [2, 2] },
+    "interact":  { "png": "cursor_interact.png",  "gif": "cursor_interact_press.gif",  "frames": "cursor_interact_frames.png",  "hotspot": [15, 2] },
+    "talk":      { "png": "cursor_talk.png",      "gif": "cursor_talk_press.gif",      "frames": "cursor_talk_frames.png",      "hotspot": [15, 2] },
+    "pickup":    { "png": "cursor_pickup.png",    "gif": "cursor_pickup_press.gif",    "frames": "cursor_pickup_frames.png",    "hotspot": [16, 13] },
+    "grab":      { "png": "cursor_grab.png",      "gif": "cursor_grab_press.gif",      "frames": "cursor_grab_frames.png",      "hotspot": [16, 15] },
+    "attack":    { "png": "cursor_attack.png",    "gif": "cursor_attack_press.gif",    "frames": "cursor_attack_frames.png",    "hotspot": [23, 4] },
+    "forbidden": { "png": "cursor_forbidden.png", "gif": "cursor_forbidden_press.gif", "frames": "cursor_forbidden_frames.png", "hotspot": [16, 16] },
+    "loading":   { "png": "cursor_loading.png",   "gif": "cursor_loading_press.gif",   "frames": "cursor_loading_frames.png",   "hotspot": [16, 16] }
+  }
+}

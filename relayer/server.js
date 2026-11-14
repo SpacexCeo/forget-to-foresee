@@ -40,7 +40,7 @@ import { passService } from './lib/pass-service.js';
 const routes = { '/api/create-guest': createGuest, '/api/health': health, '/api/agent/say': agentSay, '/api/agent/decide': agentDecide, '/api/chest/open': chestOpen, '/api/expedition/log': expeditionLog, '/api/wheel/claim': wheelClaim, '/api/market/stats': marketStats,
   '/api/market/resource': marketResource, '/api/town/gate': townGate, '/api/town/act': townAct, '/api/companion/claim': companionClaim,
   '/api/market/p2p/book': marketP2P, '/api/market/p2p/mine': marketP2P, '/api/market/p2p/stats': marketP2P, '/api/market/p2p/list': marketP2P, '/api/market/p2p/buy': marketP2P, '/api/market/p2p/cancel': marketP2P,
-  '/api/auth/nonce': auth, '/api/auth/link': auth,
+  '/api/auth/nonce': auth, '/api/auth/link': auth, '/api/auth/email/start': auth, '/api/auth/email/link': auth, '/api/auth/email/login': auth, '/api/auth/methods': auth, '/api/auth/unlink': auth,
   '/api/pass/claim': passClaim, '/api/pass/status': passStatus, '/api/pass/eligibility': passEligibility };
 if (!process.env.TRUST_PROXY) process.env.TRUST_PROXY = '0'; // direct exposure: do not trust X-Forwarded-For
 

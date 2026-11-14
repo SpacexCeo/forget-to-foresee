@@ -297,7 +297,7 @@ html.rpg-on { --rpg-k: max(calc(min(100vw, 100vh * 1.7778) / 1920), 0.72px); }  
   html.rpg-on .ftf-photo-open { top: calc(112px + env(safe-area-inset-top, 0px)) !important; right: calc(60px + env(safe-area-inset-right, 0px)) !important; }
 }
 @media (max-width: 599px), (max-width: 899px) and (orientation: portrait), (max-width: 899px) and (max-height: 500px) {
-  html.rpg-on .ft { top: calc(80px + env(safe-area-inset-top, 0px)) !important; left: calc(14px + env(safe-area-inset-left, 0px)); right: auto; width: calc(100vw - 112px); max-height: max(96px, calc(100vh - 340px)); }
+  html.rpg-on .ft { top: calc(80px + env(safe-area-inset-top, 0px)) !important; left: calc(14px + env(safe-area-inset-left, 0px)); right: auto; width: calc(100vw - 130px - env(safe-area-inset-right, 0px)); /* ends left of the photo button (right 76 + 36): mobile audit 14.11 */ max-height: max(96px, calc(100vh - 340px)); }
   html.rpg-on .ftf-scene-tools { display: none !important; }   /* the menu button under the radar opens the game menu with Settings */
   html.rpg-on .ftf-photo-open { top: calc(94px + env(safe-area-inset-top, 0px)) !important; right: calc(76px + env(safe-area-inset-right, 0px)) !important; width: 36px !important; height: 36px !important; transform: none !important; border-color: rgba(255,255,255,.35) !important; background: rgba(10,14,16,.55) !important; }
   html.rpg-on .ftf-chat { left: calc(14px + env(safe-area-inset-left, 0px)) !important; bottom: calc(50px + env(safe-area-inset-bottom, 0px)) !important; }

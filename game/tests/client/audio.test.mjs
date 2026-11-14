@@ -224,3 +224,18 @@ test('tension level, hum positions and agent step gain', () => {
   assert.equal(vfxTierFor({ tier: 'ultra', profile: 'desktop' }), 'ultra');
   assert.equal(vfxTierFor({ tier: 'low' }), 'low');
 });
+
+test('recorded sounds (CC0, art/audio/samples.py) replace the weak synthesized ones under the same names', async () => {
+  const { withSamples, withMusic } = await import('../../src/audio/audio.js');
+  const { AUDIO_MANIFEST } = await import('../../src/audio/manifest.js');
+  const { SAMPLE_OVERRIDES } = await import('../../src/audio/sample-manifest.js');
+  const m = withSamples(withMusic(AUDIO_MANIFEST));
+  assert.ok(Object.keys(SAMPLE_OVERRIDES).length >= 10);
+  for (const [name, o] of Object.entries(SAMPLE_OVERRIDES)) {
+    assert.ok(AUDIO_MANIFEST.sounds[name], name + ' replaces a sound the game plays');
+    assert.equal(m.sounds[name].file, o.file); assert.equal(m.sounds[name].kind, AUDIO_MANIFEST.sounds[name].kind);
+    assert.match(o.source, /CC0/);
+    assert.ok(existsSync(new URL('../../public/assets/audio/' + o.file, import.meta.url)), o.file);
+  }
+  assert.equal(m.sounds.amb_wind.file, AUDIO_MANIFEST.sounds.amb_wind.file);   // the rest stays synthesized
+});

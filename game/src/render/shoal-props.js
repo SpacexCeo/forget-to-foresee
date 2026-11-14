@@ -3,10 +3,13 @@
 // Each model is loaded once and every placement is a clone that shares its geometry and material (a 1 m tall model,
 // origin at its base, scaled to the placeholder's height). The placeholders are only hidden: the rules never see the
 // art, and a failed download leaves the old shapes. Phones get the `_m` files (render/assets.js picks the variant).
+import { dressInPlace } from './shoal-dress.js';
 import { fetchGltf, hasModelFile, getModelVariant } from './assets.js';
 
 export const SHOAL_PROPS = Object.freeze({
   monolith: 'shoal_crystal_monolith',
+  lamp: 'prop_bridge_torch',                                     // the arena's lamp post and bulb (owner 14.11: no template shapes)
+  pickups: Object.freeze({ hp: 'prop_memory_vial', stamina: 'shard' }), // the bobbing health and stamina pickups
   spires: Object.freeze(['shoal_crystal_spire_a', 'shoal_crystal_spike', 'shoal_crystal_spire_b']), // round the horizon in turn
 });
 
@@ -37,5 +40,7 @@ export async function dressShoalProps(arena, load = (name) => fetchGltf(name + (
     o.traverse((x) => { if (x.isMesh) { x.castShadow = true; x.receiveShadow = kind === 'monolith'; } });
     ph.parent.add(o); ph.visible = false; n++;
   }));
+  n += await dressInPlace(A, get, SHOAL_PROPS);
   return n;
 }
+

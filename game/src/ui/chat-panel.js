@@ -1,10 +1,13 @@
 // The town chat (docs/multiplayer.md): a "N players here · Room k" chip bottom-left that opens a small collapsible
-// chat. Enter opens it and focuses the line; Enter sends; Escape leaves the line. A name opens Mute / Report. Plain
+// chat. Enter opens it and focuses the line; Enter sends. It closes with its × button, with Escape (from the line or
+// anywhere: it is a window of ui/window-toggle.js, so Esc closes it before any menu) and with a click outside it
+// (owner 14.11). A name opens Mute / Report. Plain
 // DOM, no play imports: the caller passes `t` and the presence client.
 // The log holds what the room remembered before we came (presence "hist") and the live lines, each with its time, and
 // between them the players' notable actions as grey system lines ("ann opened a chest"); a friend's lines are marked
 // (the caller's `isFriend`, the play/friends.js list).
 import { isAction } from './keybinds.js';
+import { registerWindow } from './window-toggle.js';
 
 const CSS = `.ftf-chat { position: fixed; left: calc(12px + env(safe-area-inset-left, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); z-index: 12;
   width: min(340px, calc(100vw - 24px)); font: 14px/1.4 system-ui, sans-serif; color: #f3ead6; pointer-events: none; }
@@ -13,9 +16,11 @@ const CSS = `.ftf-chat { position: fixed; left: calc(12px + env(safe-area-inset-
   background: rgba(16,22,24,.78); color: #f3ead6; font: 600 13px system-ui, sans-serif; cursor: pointer; }
 .ftf-chat-chip i { width: 8px; height: 8px; border-radius: 50%; background: #7d8a86; display: inline-block; }
 .ftf-chat-chip[data-on="1"] i { background: #9fd49a; }
-.ftf-chat-box { margin-bottom: 6px; border-radius: 12px; border: 1px solid rgba(233,180,76,.45); background: rgba(16,22,24,.84); padding: 8px; }
+.ftf-chat-box { position: relative; margin-bottom: 6px; border-radius: 12px; border: 1px solid rgba(233,180,76,.45); background: rgba(16,22,24,.84); padding: 8px; }
+.ftf-chat-x { position: absolute; top: 4px; right: 4px; width: 28px; height: 28px; padding: 0; border-radius: 50%; border: 0; background: rgba(233,230,220,.1); color: #f3ead6; font: 500 18px/1 system-ui, sans-serif; cursor: pointer; }
+.ftf-chat-x:hover, .ftf-chat-x:focus-visible { background: rgba(233,230,220,.22); outline: none; }
 .ftf-chat-box[hidden] { display: none; }
-.ftf-chat-log { max-height: 180px; overflow-y: auto; margin: 0 0 6px; padding: 0; list-style: none; }
+.ftf-chat-log { max-height: 180px; overflow-y: auto; margin: 0 0 6px; padding: 0 30px 0 0; list-style: none; }
 .ftf-chat-log li { margin: 0 0 3px; overflow-wrap: anywhere; }
 .ftf-chat-log button { all: unset; cursor: pointer; color: #e9b44c; font-weight: 600; }
 .ftf-chat-log li.sys { color: #b9b2a2; font-size: 12px; }
@@ -37,6 +42,8 @@ export function actKey(m) {
     case 'quest': return 'mp.act.quest';
     case 'trade': return 'mp.act.trade';
     case 'gate': return 'mp.act.gate';
+    case 'joined': return 'mp.act.joined'; // told by our own presence on join / leave, never stored on the server
+    case 'left': return 'mp.act.left';
     case 'chest': return m.v === 'rare' || m.v === 'legendary' ? 'mp.act.chest.' + m.v : 'mp.act.chest';
     case 'boss': return m.v === 'shoal' ? 'mp.act.boss.shoal' : m.v === 'crownrift' ? 'mp.act.boss.crownrift' : null;
     default: return null;
@@ -55,7 +62,7 @@ const NAME_SLOT = '\u0001';
  * @param {{doc?: Document, t: (k: string, a?: object) => string, presence: object, phone?: boolean, isFriend?: (m: {name: string, account?: string|null}) => boolean}} o
  * @returns {{render(): void, destroy(): void, el: HTMLElement}}
  */
-export function createChatPanel({ doc = globalThis.document, t, presence, phone = false, isFriend = () => false }) {
+export function createChatPanel({ doc = globalThis.document, t, presence, phone = false, isFriend = () => false, onClose = () => {} }) {
   if (!doc.getElementById('ftf-chat-css')) { const s = doc.createElement('style'); s.id = 'ftf-chat-css'; s.textContent = CSS; doc.head.append(s); }
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const root = el('div', 'ftf-chat'); root.setAttribute('role', 'region'); root.setAttribute('aria-label', t('mp.chat'));
@@ -66,7 +73,8 @@ export function createChatPanel({ doc = globalThis.document, t, presence, phone 
   const input = el('input'); input.type = 'text'; input.maxLength = 140; input.placeholder = t('mp.placeholder'); input.setAttribute('aria-label', t('mp.placeholder')); input.autocomplete = 'off';
   const send = el('button', null, t('mp.send')); send.type = 'submit';
   form.append(input, send);
-  box.append(log, menu, form);
+  const shut = el('button', 'ftf-chat-x', '×'); shut.type = 'button'; shut.setAttribute('aria-label', t('mp.close')); shut.title = t('mp.close');
+  box.append(shut, log, menu, form);
   const chip = el('button', 'ftf-chat-chip'); chip.type = 'button'; chip.append(el('i'), el('span'));
   root.append(box, chip);
   doc.body.append(root);
@@ -75,8 +83,16 @@ export function createChatPanel({ doc = globalThis.document, t, presence, phone 
   let open = false, menuFor = null;
   const setOpen = (on) => { open = on; box.hidden = !on; chip.setAttribute('aria-expanded', String(on)); if (on) render(); };
   chip.addEventListener('click', () => { setOpen(!open); if (open && !phone) input.focus(); });
-  form.addEventListener('submit', (e) => { e.preventDefault(); presence.say(input.value); input.value = ''; });
-  input.addEventListener('keydown', (e) => { if (e.key === 'Escape') { input.blur(); if (phone) setOpen(false); } });
+  /** Closes the chat and hands the game its keys and, in mouse-aim mode, the mouse back (onClose). */
+  function close() { if (!open) return; input.blur(); setOpen(false); try { onClose(); } catch { /* the chat closes anyway */ } }
+  shut.addEventListener('click', close);
+  // a click or tap anywhere outside the chat closes it (the chat's own clicks stop at its root)
+  const onOutside = (e) => { if (open && !root.contains(e.target)) close(); };
+  doc.addEventListener('pointerdown', onOutside, true);
+  const offWindow = registerWindow('chat', { isOpen: () => open, close });
+  // Enter on an empty line closes it (Enter opens it, so Enter twice is the round trip); Escape closes it too
+  form.addEventListener('submit', (e) => { e.preventDefault(); if (!input.value.trim()) { close(); return; } presence.say(input.value); input.value = ''; });
+  input.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); close(); } });
   const onKey = (e) => {
     if (!isAction(e.code, 'chat') || e.altKey || e.ctrlKey || e.metaKey) return;
     const a = doc.activeElement; if (a && a !== doc.body && a.tagName !== 'CANVAS') return; // another field or button has the key
@@ -136,5 +152,5 @@ export function createChatPanel({ doc = globalThis.document, t, presence, phone 
     if (atBottom) log.scrollTop = log.scrollHeight;
   }
   render();
-  return { render, el: root, destroy() { doc.removeEventListener('keydown', onKey); root.remove(); } };
+  return { render, el: root, close, get open() { return open; }, destroy() { doc.removeEventListener('keydown', onKey); doc.removeEventListener('pointerdown', onOutside, true); offWindow(); root.remove(); } };
 }
