@@ -13,54 +13,20 @@ the post: the weekly tournament (a UI simulation), any "player-owned" or "live-m
 commitment makes the game impossible to modify (the rules run in the browser; the commitment fixes the Guests'
 events, not silk or outcomes).
 
-## Post 1 (attach the jury video: `docs/submission/video-shot-list.md`)
+## Post 1 (attach `video/ftf-submission-1.mp4` from the submission folder; shot list: `docs/submission/video-shot-list.md`)
 
-> A hill town on NEAR testnet: 20 traders, each with its own account and key, trade on chain all day. Over 21,000 trades on 13 Nov, every price with a readable reason.
->
-> Play as a guest, no wallet popups.
+> A hill town on NEAR testnet: 20 traders with their own keys trade on chain all day, 23,000+ trades today, every price with a reason. Fight, loot, ride a dragon, beat the ice serpent. Play as a guest, no wallet popups: https://ftf-game.xyz
 >
 > Built at NEAR HACKATHON by @Lambada_eth
 > @NEARProtocol #NEARHackathon
 
-(271 characters as X counts them. Lead with the live economy. "Over 21,000 trades on 13 Nov": the public-indexer recount for the whole UTC day is
-21,233 market trades (`docs/proof/tx-2026-11-13.md`). Credit @Lambada_eth.)
+(311 characters as X counts them; each URL counts as 23. Over the 280 limit of a non-Premium account: post from a Premium account or trim before posting. Final text of 15 Nov, matches the owner's submission folder.)
 
 ## Post 2 (reply)
 
-> Watch it live: https://159-195-130-113.sslip.io/api/market/stats
->
-> The Town Ledger in the game shows every trader's account, each trade, its reason and its tx. A model on NEAR AI Cloud sets the clans' strategy once an hour; rules make every trade. Items are NEP-245 tokens.
+> Everything on screen is real: the Town Ledger links every trade to the explorer, a model on NEAR AI Cloud sets the clans' strategy, heroine NFTs own their dragon NFTs, loot chests draw from a deck committed on chain. Code (MIT): https://github.com/SpacexCeo/forget-to-foresee
 
-(246 characters as X counts them. The stats link is the relayer's public JSON (`today`, `recent[].hash`, `strategy`). The strategy wording follows
-`docs/ai-use.md`: the model sets bounded strategy numbers, the rules engine makes every trade. NEP-245: the item
-contract is deployed; do not say items were minted until `items.ftf-town.testnet` shows supply.)
-
-## Post 3 (reply)
-
-> Iris, a doctor-linguist from another planet (2048), pays for prophecy with her memories. Every season is sealed before play (the judge season on NEAR); forgotten memories become NEP-171 shards.
->
-> A market week in a minute: https://ftf-game.xyz/economy-lab.html
-> Play: https://ftf-game.xyz/
-
-(275 characters as X counts them. Iris canon (README top, loading tip): a doctor-linguist from another planet, year 2048, who came through the glass.
-The seal holds for every season (local commitment); the judge season is also committed on `ftf-seasons.testnet`.)
-
-## Post 4 (reply)
-
-> Honest scope: NEAR testnet, free to play, no money value; the traders are scripted NPCs, not players. Sign in as a guest, with a wallet or a passkey.
->
-> Code and tests: https://github.com/SpacexCeo/forget-to-foresee
->
-> What would you forget to see the future?
-> @NearLegion @NearBuilders
-
-(258 characters as X counts them. Honesty line: testnet, free, no money value, scripted traders. Never "invest", "APY", "profit" or "returns".)
-
-## Optional post 5 (reply, what is new on 14 Nov)
-
-> New today: a painted town map, every blow shows its element, a loot card when you come back from a season, lit shop interiors with a hidden grotto, and two town tales, "The Ink That Remembers" and "The Lost Tourist".
-
-(216 characters. Everything named is on the live page. The level-5 boss fight is on too, but its dragon and boss are placeholder shapes: leave it out until the models land.)
+(252 characters as X counts them.)
 
 Character counts: X counts each URL as 23 characters; recount after any edit.
 
