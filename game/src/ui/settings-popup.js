@@ -54,8 +54,8 @@ const CSS = `
 @media (max-width: 700px), (pointer: coarse) and (max-height: 520px) {
   .ftf-set { width: 100vw; max-width: 100vw; height: 100dvh; max-height: 100dvh; border-radius: 0; border: 0; margin: 0; }
   .ftf-set-wrap { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr auto; height: 100dvh; }
-  .ftf-set-tabs { flex-direction: row; overflow-x: auto; border-right: 0; border-bottom: 1px solid rgba(233,180,76,.18); padding: 6px; }
-  .ftf-set-tabs button { white-space: nowrap; min-height: 44px; }
+  .ftf-set-tabs { flex-direction: row; flex-wrap: wrap; overflow-x: visible; border-right: 0; border-bottom: 1px solid rgba(233,180,76,.18); padding: 6px; }
+  .ftf-set-tabs button { white-space: nowrap; min-height: 44px; padding: 8px 10px; } /* all tabs visible on a phone, two rows when needed (UI fit 14.11) */
   .ftf-set-tabs button[aria-selected="true"] { box-shadow: inset 0 -3px 0 #e9b44c; }
   .ftf-set-row { grid-template-columns: 1fr; gap: 4px; padding: 6px 0; }
   .ftf-set button.ftf-set-btn, .ftf-set .ftf-set-key, .ftf-set select { min-height: 46px; }
