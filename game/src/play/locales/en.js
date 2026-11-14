@@ -677,6 +677,11 @@ const EN = {
   'set.ctl.mode.classic.1': "LMB: move to a point",
   'set.ctl.mode.classic.2': "Hold RMB and drag: rotate the camera",
   'set.ctl.mode.foot': "CTRL — cursor • ESC — menu",
+  // ---- the installable game (ui/pwa.js) ----
+  'pwa.install.line': "Play it as an app",
+  'pwa.install': "Install",
+  'pwa.ios': "Play it as an app: Share, then Add to Home Screen",
+  'pwa.close': "Hide",
   'intro.skip': "Skip",
   'spot.wheel': "Spin the wheel",
   'item.prop_wheel_of_fortune': "Wheel of fortune",

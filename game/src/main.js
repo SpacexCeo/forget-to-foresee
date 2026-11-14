@@ -142,6 +142,14 @@ async function entryGate(ctx, w) {
 }
 
 /** "Press F11 for fullscreen" (ui/fullscreen-hint.js; owner 14.11): desktop only, quiet while a first-time film or card runs. */
+/** The installable game (ui/pwa.js): the app-shell worker in production builds, and the phone's "Install" pill. */
+function installable(ctx) {
+  Promise.all([import('./ui/pwa.js'), import('./ui/onboarding-queue.js')]).then(([m, q]) => {
+    m.registerShell({ base: import.meta.env.BASE_URL, prod: import.meta.env.PROD, params });
+    m.mountInstallHint({ t: (k) => ctx.i18n.t(k), storage: ctx.storage, busy: () => { const a = q.onboardingActive(); return a === 'name' || a === 'intro'; } });
+  }).catch((e) => console.warn('[pwa]', e));
+}
+
 function fullscreenHint(ctx) {
   Promise.all([import('./ui/fullscreen-hint.js'), import('./ui/onboarding-queue.js')]).then(([m, q]) => m.mountFullscreenHint({
     t: (k) => ctx.i18n.t(k), params,
@@ -197,7 +205,7 @@ ctxP.then(async (ctx) => {
     marks.gate = Math.round(performance.now() - t0);
     if (town) await entryGate(ctx, w);
     await loading.finish();
-    if (town) { premise(ctx, w); fullscreenHint(ctx); }
+    if (town) { premise(ctx, w); fullscreenHint(ctx); installable(ctx); }
   }
   clearInterval(slowTimer);
   marks.done = Math.round(performance.now() - t0);

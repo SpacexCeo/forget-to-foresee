@@ -6,6 +6,7 @@
 // Phone: opens on tap only, closes on a tap outside or Esc; nothing pops up by itself.
 import { formatSilkC } from '../net/silk-core.js';
 import { createFriends } from './friends.js';
+import { registerWindow, claimWindow } from '../ui/window-toggle.js';
 import { NET } from '../net/network.js';
 
 export const PRACTICE_KEY = 'ftf.practice.trades.v1';
@@ -59,11 +60,14 @@ export function createPlayerCard({ t, storage, me = null, doc = globalThis.docum
   const btn = (label, fn, cls = '') => { const b = el('button', cls, label); b.type = 'button'; b.addEventListener('click', fn); return b; };
   const friends = createFriends({ storage, me, now });
   let root = null;
+  // one window at a time (ui/window-toggle.js): the market or a menu opening closes the card, Esc closes it first (live E2E 14.11: it stayed over the market)
+  const offWindow = registerWindow('player-card', { isOpen: () => !!root, close: () => close() });
   const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); } };
 
   function open(rec) {
     close();
     if (!rec || !rec.name) return;
+    claimWindow('player-card');
     root = el('div', 'pc-wrap');
     root.addEventListener('pointerdown', (e) => { e.stopPropagation(); if (e.target === root) close(); }); // a tap outside closes it
     root.addEventListener('keydown', onKey);
@@ -136,5 +140,5 @@ export function createPlayerCard({ t, storage, me = null, doc = globalThis.docum
     }
   }
   function close() { if (!root) return; root.remove(); root = null; }
-  return { open, close, get isOpen() { return !!root; }, friends };
+  return { open, close, get isOpen() { return !!root; }, friends, dispose() { close(); offWindow(); } };
 }
