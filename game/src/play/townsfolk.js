@@ -29,6 +29,7 @@ const _pelvis = new THREE.Vector3();
 const _sphere = new THREE.Sphere(), _frustum = new THREE.Frustum(), _m = new THREE.Matrix4(), _target = [0, 0, 0], _local = [0, 0, 0];
 const ONE_SHOT = new Set(['wave', 'salute', 'nod', 'gesture_offer', 'understand', 'take_photo', 'haggle']);
 /** Body type of the shared mocap set (anim-library.js townsfolkClips): posture and stride per kind of person. */
+const HOLDS_TOOL = new Set(['sweeper']); // the right hand carries a tool skinned to it (setModel: the arm's walk hold)
 const BODY = { child_a: 'child', child_b: 'child', guard: 'guard' }; // the elder is a grown man, not an old one (owner 13.11): the default body
 
 class Person {
@@ -81,6 +82,17 @@ class Person {
       // is moved so the pelvis lands on the seat (owner 11.11: the elder sat on the back rail, legs through the seat)
       this.pelvis = model.getObjectByName('pelvis') || null; this.sitFix = null; this.sitScale = (sit && sit.userData && sit.userData.scale) || 1;
       this.gltf = gltf; this.packFile = null; // a new body: the pack is retargeted onto it again
+      // A body that carries a tool in its right hand (the Sweeper's broom, skinned to hand_R): while she walks, the right
+      // arm keeps its idle hold instead of swinging, so the broom does not fly out sideways (owner 14.11, P0).
+      this.hold = null;
+      const idle = HOLDS_TOOL.has(this.def.key) && this.clips.get('idle');
+      if (idle) {
+        this.hold = [];
+        for (const n of ['upperarm_R', 'forearm_R', 'hand_R']) {
+          const b = model.getObjectByName(n), t = idle.tracks.find((x) => x.name === n + '.quaternion');
+          if (b && t) this.hold.push({ bone: b, q: new THREE.Quaternion().fromArray(t.values, 0) });
+        }
+      }
       this.state = 'loaded';
     });
   }
@@ -261,6 +273,7 @@ export function createTownsfolk({ scene, library, groundAt = null, visitors = ()
       const cur = p.current && p.actions.get(p.current);
       if (cur) cur.paused = reducedMotion; // steady under reduced motion: the pose holds, cross-fades still finish
       p.mixer.update(step);
+      if (p.hold && p.moveW > 0.01) for (const h of p.hold) h.bone.quaternion.slerp(h.q, p.moveW * 0.9); // the tool hand holds still on the move
       if (plan.sit && canSit && !p.sitFix && p.pelvis && p.current === pickClip(p.names, 'sit')) {
         const act = p.actions.get(p.current);
         if (act && act.getEffectiveWeight() > 0.999) {
