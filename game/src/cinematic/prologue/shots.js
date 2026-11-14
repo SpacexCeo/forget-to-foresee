@@ -29,16 +29,24 @@ export const SHOTS = Object.freeze([
  */
 export const CUES = Object.freeze([
   { id: 'title', t: 0.0, text: 'FORGET TO FORESEE', durMs: 2800, card: true },
-  { id: 'year', t: 3.0, text: "2048. Dr. Iris's laboratory.", durMs: 3800 },
+  // story captions (owner, 14.11: "say what is happening"): `key` is the line in play/locales/<lang>-npe.js, `text` the English
+  { id: 'year', t: 3.0, key: 'npe.cap.year', text: "2048. Dr. Iris's laboratory.", durMs: 3800 },
+  { id: 'cap_test', t: 7.0, key: 'npe.cap.test', text: 'Tonight the Glass Resonator faces its first test.', durMs: 2700 },
   { id: 'hmm', t: 9.9, speaker: 'Iris', text: 'Hmm...', durMs: 500, voice: 'iris_hmm' },
   { id: 'check', t: 10.4, speaker: 'Iris', text: 'One more check on the signal...', durMs: 2800 },
   { id: 'key_press', t: 14.0 },
+  { id: 'cap_armed', t: 14.3, key: 'npe.cap.armed', text: 'The key turns. The Resonator is armed.', durMs: 2500 },
   { id: 'device_on', t: 15.8 },
+  { id: 'cap_hum', t: 17.1, key: 'npe.cap.hum', text: 'It hums louder than it should.', durMs: 2300 },
+  { id: 'cap_opens', t: 20.6, key: 'npe.cap.opens', text: 'The glass opens onto somewhere that is not this room.', durMs: 3300 },
   { id: 'oh_no', t: 24.3, speaker: 'Iris', text: 'Oh no...', durMs: 1400, voice: 'iris_oh_no' },
   { id: 'vortex_start', t: 26.5 },
   { id: 'gasp', t: 26.7, speaker: 'Iris', text: 'Ah!', durMs: 900, voice: 'iris_gasp' },
+  { id: 'cap_pull', t: 28.0, key: 'npe.cap.pull', text: 'The vortex takes hold of her.', durMs: 2600 },
   { id: 'tunnel', t: 31.0 },
+  { id: 'cap_fall', t: 31.6, key: 'npe.cap.fall', text: 'She falls back through the years...', durMs: 2800 },
   { id: 'whiteout', t: 34.6 },
+  { id: 'cap_town', t: 34.8, key: 'npe.cap.town', text: '...toward a town that has never heard of her.', durMs: 2800 },
 ]);
 export const WAKE_CUES = Object.freeze([{ id: 'eyes_open', t: 0.0 }, { id: 'crowd', t: 3.0 }, { id: 'sit_up', t: 6.0 }]);
 
