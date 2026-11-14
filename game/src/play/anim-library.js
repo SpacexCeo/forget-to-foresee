@@ -25,6 +25,34 @@ let loader = null;
 const cache = new Map();
 const baseUrl = () => (import.meta.env && import.meta.env.BASE_URL) || '/';
 
+/**
+ * Playback speed per clip file (owner 14.11: "speed up the animation of the new models by 30%"): the owner's Tripo pack
+ * clips (the new Iris and Elise, the shared townsfolk pack, the Wayfarer) play this much faster. Applied once at load:
+ * key times shrink, and so do the timing extras the game reads (impact_s, release_s, step_s, full_s), so a strike still
+ * lands on its impact event; `speed` (ground speed the feet match) grows by the same factor, so a walk or run cycles
+ * faster only while the body moves faster (no sliding feet). The old hand-keyed and motion-capture files are left as
+ * they are (iris_agent: Sheriffchenko, townsfolk: the shared town walk). `?animspeed=1` turns it off (QA, before/after).
+ */
+export const CLIP_TIME_SCALE = Object.freeze({ iris: 1.3, elise: 1.3, townsfolk_pack: 1.3, townsfolk_wayfarer: 1.3 });
+const TIMING = ['impact_s', 'release_s', 'step_s', 'full_s'];
+export function timeScaleFor(name, search = typeof location !== 'undefined' ? location.search : '') {
+  const o = Number(new URLSearchParams(search).get('animspeed'));
+  return o > 0 ? (CLIP_TIME_SCALE[name] ? o : 1) : (CLIP_TIME_SCALE[name] || 1);
+}
+/** Plays `clips` k times faster (in place): key times, duration and the timing extras shrink, ground speed grows. */
+export function speedUpClips(clips, k) {
+  if (!(k > 0) || k === 1) return clips;
+  for (const c of clips) {
+    for (const t of c.tracks) { const times = new Float32Array(t.times.length); for (let i = 0; i < times.length; i++) times[i] = t.times[i] / k; t.times = times; }
+    c.duration /= k;
+    const u = c.userData || (c.userData = {});
+    for (const n of TIMING) if (typeof u[n] === 'number') u[n] /= k;
+    if (typeof u.speed === 'number') u.speed *= k;
+    u.time_scale = k;
+  }
+  return clips;
+}
+
 function loadFile(name, base) {
   const key = base + name;
   if (!cache.has(key)) {
@@ -32,6 +60,7 @@ function loadFile(name, base) {
     cache.set(key, loader.loadAsync(`${base}assets/anim/${name}.glb`).then((g) => {
       const extras = (g.parser.json.animations || []).map((a) => a.extras || {});
       g.animations.forEach((c, i) => { c.userData = { ...extras[i] }; });
+      speedUpClips(g.animations, timeScaleFor(name));
       return g;
     }));
   }
