@@ -159,3 +159,22 @@ test('the governor keeps a minimum-spec desktop on high (the look-dev stack neve
   for (let i = 0; i < 3000; i++) { const c = free.step(40, tier); if (c?.tier) tier = c.tier; }
   assert.equal(tier, 'low', 'without a floor the old behaviour holds');
 });
+
+test('desktop governor: supersampling never buys resolution with stutter: spikes stop the climb and take a step back (town on an RTX 5090, 14.11)', async () => {
+  const { SPIKES, spikeCount } = await import('../../src/render/quality.js');
+  const g = GOVERNORS.desktop;
+  assert.equal(spikeCount([10, 20, 30, 16], g.budgetMs), 2);
+  // 4 ms frames with a 30 ms frame every 50 (2 %): the 75th percentile is fine, the screen is not
+  const spiky = (gov, n) => { const changes = []; for (let i = 0; i < n; i++) { const c = gov.step(i % 50 === 49 ? 30 : 4, 'ultra'); if (c) changes.push(c); } return changes; };
+  const a = new TierGovernor(g);
+  assert.deepEqual(spiky(a, 6000), [], 'it never climbs while 2 % of the frames drop');
+  // a GPU that is smooth at 1x climbs, then the 2x step starts dropping frames: one step back, locked
+  const b = new TierGovernor(g);
+  const steady = []; for (let i = 0; i < 9000; i++) { const c = b.step(4, 'ultra'); if (c) steady.push(c); }
+  assert.equal(b.pixelScale, 2);
+  const back = spiky(b, 3000);
+  assert.deepEqual(back[0], { pixelScale: 1.75 }, 'a step back once the spikes reach SPIKES.down in SPIKES.window frames');
+  for (let i = 1; i < back.length; i++) assert.ok(back[i].pixelScale < back[i - 1].pixelScale, 'while the spikes go on it keeps stepping down, never up');
+  assert.equal(b.upLocked, true);
+  assert.ok(SPIKES.down / SPIKES.window <= 0.02 + 1e-9);
+});
