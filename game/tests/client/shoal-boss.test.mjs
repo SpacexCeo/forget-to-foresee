@@ -108,6 +108,16 @@ test('the ice serpent: breath in every phase, the cone, a stagger at an opening 
   a = bossAnimStep(a, { ...rest, exposed: 0 }, 1 / 60, 1.4); a = bossAnimStep(a, { ...rest, exposed: 2 }, 1 / 60, 1.4); assert.equal(a.clip, 'idle', 'not again within the gap (a reel on every dodge read as spam)');
   for (let i = 0; i < 60 * 12; i++) a = bossAnimStep(a, { ...rest, exposed: 0 }, 1 / 60, 1.4);
   a = bossAnimStep(a, { ...rest, exposed: 2 }, 1 / 60, 1.4); assert.equal(a.clip, 'stagger', 'and again at an opening after the gap');
+  // the crest opens as the blow lands, inside the attack's active window: it reels at once and plays the reel out
+  let c = { clip: 'slam', time: 1.1, phase: 0 }; const act = { ...R.freshBoss(0), state: 'active', t: 0.2, attack: { kind: 'slam', at: [0, 0] } };
+  c = bossAnimStep(c, { ...act, exposed: 0 }, 1 / 60, 1.4); assert.equal(c.clip, 'slam');
+  c = bossAnimStep(c, { ...act, exposed: 2 }, 1 / 60, 1.4); assert.equal(c.clip, 'stagger', 'the blow landed and the crest opened: it reels');
+  for (let i = 0; i < 30; i++) c = bossAnimStep(c, { ...act, exposed: 2 }, 1 / 60, 1.4);
+  assert.equal(c.clip, 'stagger', 'the reel is not cut by the rest of the active window');
+  for (let i = 0; i < 90; i++) c = bossAnimStep(c, { ...rest, exposed: 1 }, 1 / 60, 1.4);
+  assert.equal(c.clip, 'idle', 'and it settles once the reel is over');
+  c = bossAnimStep({ clip: 'stagger', time: 0.3, phase: 0 }, { ...rest, phase: 1 }, 1 / 60, 1.4); assert.equal(c.clip, 'hit', 'a broken phase cuts the reel');
+  c = bossAnimStep({ clip: 'stagger', time: 0.3, phase: 0 }, { ...R.freshBoss(0), state: 'telegraph', t: 1, attack: { kind: 'sweep' } }, 1 / 60, 1.4); assert.equal(c.clip, 'sweep', 'the next wind-up cuts the reel');
   const tide = (n) => BOSS_CLIPS.includes(n);
   for (const [c, s2] of Object.entries(CLIP_STANDIN)) { assert.equal(clipOn(c, tide), s2); assert.equal(clipOn(c, () => true), c); }
 });

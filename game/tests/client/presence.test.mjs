@@ -85,3 +85,12 @@ test('demo walkers: on the jury route, walking and pausing; ?bots never touches 
   t = 2000; const ps = d.positions(); assert.equal(ps.length, 3); assert.ok(ps[0].speed > 1 && ps[0].speed < 2.5);
   assert.equal(new Set(ps.map((p) => p.name)).size, 3); assert.ok(ps.every((p) => p.ai === true), 'every demo walker is marked AI');
 });
+
+test('remote name tags near the camera keep their screen size and hide inside 1.5 m (two-client check 14.11)', async () => {
+  const { tagScaleFor, TAG_CAMERA } = await import('../../src/net/presence.js');
+  assert.equal(tagScaleFor(30), 1); assert.equal(tagScaleFor(TAG_CAMERA.near), 1);
+  assert.equal(tagScaleFor(TAG_CAMERA.near / 2), 0.5, 'half as far: half the world size, the same pixels');
+  assert.equal(tagScaleFor(1), 0, 'right at the camera: hidden');
+  const { readFileSync } = await import('node:fs');
+  assert.match(readFileSync(new URL('../../src/play/multiplayer.js', import.meta.url), 'utf8'), /createRemotePlayers\(\{[^}]*camera \}\)/, 'the shared town passes its camera');
+});

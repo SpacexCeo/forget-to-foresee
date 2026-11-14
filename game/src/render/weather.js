@@ -21,6 +21,7 @@
 import * as THREE from 'three';
 import { LAYER_OVERLAY } from './layers.js';
 import { setWindHook } from './materials.js';
+import { WIND_SHAPE, windWeights } from './wind-weights.js';
 
 /** World wind direction on the ground plane (x, z), unit length. The grass has always leaned this way. */
 export const WIND_DIR = Object.freeze([0.83, -0.56]);
@@ -152,94 +153,52 @@ export function withWind(material, { kind = 'cloth', amplitude, weight = 'attrib
   return material;
 }
 
-/** How computed sway weights are shaped (windWeights). Lengths in metres (model units). */
-export const WIND_SHAPE = Object.freeze({
-  touch: 0.03,        // parts whose boxes come this close are one object (a banner and its tail, an awning and its stripes)
-  hangHeight: 1.2,    // a cloth at least this tall and taller than it is wide hangs free (a banner)
-  hangFree: 0.45,     // only its lower part swings: the upper part carries an emblem made of another material
-  awning: 0.3,        // a stretched sheet (awning, stall roof) only breathes a little at its lower edge
-  crown: 1.5,         // foliage at least this tall is a tree crown or a big bush: it leans as one body
-  smallFoliage: 0.22, // window boxes, planters: the tips barely stir (the push goes with the square of the weight)
-  smallPart: 0.75,    // a foliage part lower than this is a small plant: it never joins a crown, whatever it touches
-});
+export { WIND_SHAPE, windWeights };
 
-/**
- * Sway weights for a mesh whose file has no `_WIND` attribute (the town kit). Unknown geometry stays still: a part
- * moves only when its shape says what it is.
- *   1. The geometry is split into connected parts, and parts whose bounding boxes touch are joined into objects, so
- *      everything that belongs to one banner or one awning gets one answer and cannot slide apart.
- *   2. Cloth: a tall hanging sheet (a banner) is pinned along its upper part and free at the hem; a wide stretched
- *      sheet (an awning) breathes slightly at its lower edge; anything else made of cloth (rugs, candles, books) is 0.
- *   3. Foliage is rooted at the bottom of its object: a crown leans, small plants only stir at the tips and are
- *      never joined to a crown they touch.
- * Pure maths on the position attribute; runs once per geometry.
- * @param {{count:number, getX:(i:number)=>number, getY:(i:number)=>number, getZ:(i:number)=>number}} position
- * @param {{count:number, getX:(i:number)=>number}|null} index @param {'cloth'|'foliage'} kind
- * @returns {Float32Array} one weight per vertex, 0 = still
- */
-export function windWeights(position, index, kind = 'cloth') {
-  const n = position.count, parent = new Int32Array(n), S = WIND_SHAPE;
-  const find = (i) => { while (parent[i] !== i) { parent[i] = parent[parent[i]]; i = parent[i]; } return i; };
-  // Vertices at the same place are one point of the surface (seams split them for normals and UVs).
-  const seen = new Map();
-  for (let i = 0; i < n; i++) {
-    const key = Math.round(position.getX(i) * 2000) + '_' + Math.round(position.getY(i) * 2000) + '_' + Math.round(position.getZ(i) * 2000);
-    const j = seen.get(key);
-    if (j === undefined) { seen.set(key, i); parent[i] = i; } else parent[i] = j;
-  }
-  const tris = index ? index.count : n;
-  for (let t = 0; t + 2 < tris; t += 3) {
-    const a = find(index ? index.getX(t) : t), b = find(index ? index.getX(t + 1) : t + 1), c = find(index ? index.getX(t + 2) : t + 2);
-    if (b !== a) parent[b] = a;
-    const c2 = find(c); if (c2 !== a) parent[c2] = a;
-  }
-  // Bounding box per part, then parts that touch become one object.
-  const boxes = new Map();
-  for (let i = 0; i < n; i++) {
-    const r = find(i), x = position.getX(i), y = position.getY(i), z = position.getZ(i);
-    let B = boxes.get(r);
-    if (!B) boxes.set(r, B = [x, y, z, x, y, z, r]);
-    else { if (x < B[0]) B[0] = x; if (y < B[1]) B[1] = y; if (z < B[2]) B[2] = z; if (x > B[3]) B[3] = x; if (y > B[4]) B[4] = y; if (z > B[5]) B[5] = z; }
-  }
-  // Small plants (window boxes, planters) keep to themselves: a flower touching a tree crown or a bush must not
-  // become part of it, or it would lean with the crown and leave its box.
-  const small = new Uint8Array(n);
-  if (kind === 'foliage') for (const B of boxes.values()) if (B[4] - B[1] < S.smallPart) small[B[6]] = 1;
-  const list = [...boxes.values()].sort((p, q) => p[0] - q[0]);
-  for (let merged = true, pass = 0; merged && pass < 8; pass++) {
-    merged = false;
-    for (let i = 0; i < list.length; i++) {
-      const A = list[i];
-      for (let j = i + 1; j < list.length && list[j][0] <= A[3] + S.touch; j++) {
-        const B = list[j], ra = find(A[6]), rb = find(B[6]);
-        if (ra === rb || small[A[6]] !== small[B[6]] || B[1] > A[4] + S.touch || A[1] > B[4] + S.touch || B[2] > A[5] + S.touch || A[2] > B[5] + S.touch) continue;
-        parent[rb] = ra; merged = true;
-      }
+// Computed weights off the main thread: one module worker for the page (render/wind-worker.js), a promise per mesh.
+// Without workers (tests, very old browsers) the weights are computed at once, as before.
+let windWorker = null, windSeq = 0;
+const windWaiting = new Map();
+function windWorkerOf() {
+  if (windWorker !== null) return windWorker;
+  windWorker = false;
+  try {
+    if (typeof Worker === 'function' && typeof URL === 'function') {
+      const w = new Worker(new URL('./wind-worker.js', import.meta.url), { type: 'module' });
+      w.onmessage = (e) => { const d = e.data || {}, cb = windWaiting.get(d.id); if (cb) { windWaiting.delete(d.id); cb(d.out || null); } };
+      w.onerror = () => { windWorker = false; for (const cb of windWaiting.values()) cb(null); windWaiting.clear(); };
+      windWorker = w;
     }
-  }
-  const obj = new Map();
-  for (const B of list) {
-    const r = find(B[6]); const O = obj.get(r);
-    if (!O) obj.set(r, B.slice(0, 6));
-    else { for (let k = 0; k < 3; k++) { if (B[k] < O[k]) O[k] = B[k]; if (B[k + 3] > O[k + 3]) O[k + 3] = B[k + 3]; } }
-  }
-  const out = new Float32Array(n);
-  for (let i = 0; i < n; i++) {
-    const O = obj.get(find(i)), h = O[4] - O[1], wide = Math.max(O[3] - O[0], O[5] - O[2]);
-    if (h < 1e-4) continue;
-    const k = (position.getY(i) - O[1]) / h; // 0 at the bottom of the object, 1 at its top
-    if (kind === 'foliage') out[i] = k * (h >= S.crown && !small[find(i)] ? 1 : S.smallFoliage);
-    else if (h >= S.hangHeight && h >= wide * 1.2) out[i] = Math.max(0, 1 - k / S.hangFree);
-    else if (wide >= 1.5 && h >= 0.2 && h < wide * 0.6) out[i] = S.awning * (1 - k);
-  }
-  return out;
+  } catch { windWorker = false; }
+  return windWorker;
+}
+/** windWeights for a position attribute (and index), resolved with a Float32Array; computed in the worker when there is one. */
+export function windWeightsAsync(position, index, kind = 'cloth') {
+  const w = windWorkerOf();
+  if (!w) return Promise.resolve(windWeights(position, index, kind));
+  const n = position.count, plain = position.array instanceof Float32Array && position.itemSize === 3 && !position.normalized && !position.isInterleavedBufferAttribute;
+  let pos;
+  if (plain) pos = position.array.slice(0, n * 3); // a copy to hand over (the mesh keeps its own)
+  else { pos = new Float32Array(n * 3); for (let i = 0; i < n; i++) { pos[i * 3] = position.getX(i); pos[i * 3 + 1] = position.getY(i); pos[i * 3 + 2] = position.getZ(i); } }
+  const idx = index ? Uint32Array.from(index.array && index.array.length >= index.count ? index.array.subarray(0, index.count) : Array.from({ length: index.count }, (_, k) => index.getX(k))) : null;
+  const id = ++windSeq;
+  return new Promise((resolve) => {
+    windWaiting.set(id, (out) => resolve(out || windWeights(position, index, kind)));
+    try { w.postMessage({ id, pos, idx, kind }, idx ? [pos.buffer, idx.buffer] : [pos.buffer]); } catch { windWaiting.delete(id); resolve(windWeights(position, index, kind)); }
+  });
 }
 
 /** The look-material hook: a cloth or foliage mesh without authored weights gets computed ones, then the material sways. */
 setWindHook((material, o = {}) => {
   const g = o.geometry;
+  // the material switches to the attribute at once (one program, no recompile later); the weights start at 0 (still)
+  // and arrive from the worker a moment after, into the same attribute
   if (g && g.getAttribute && !g.getAttribute('_wind') && g.getAttribute('position')) {
-    try { g.setAttribute('_wind', new THREE.BufferAttribute(windWeights(g.getAttribute('position'), g.index, o.kind), 1)); } catch { /* keeps the constant shiver */ }
+    try {
+      const pos = g.getAttribute('position'), attr = new THREE.BufferAttribute(new Float32Array(pos.count), 1);
+      g.setAttribute('_wind', attr);
+      windWeightsAsync(pos, g.index, o.kind).then((w) => { if (w && g.getAttribute('_wind') === attr && w.length === attr.array.length) { attr.array.set(w); attr.needsUpdate = true; } }).catch(() => {});
+    } catch { /* keeps the constant shiver */ }
   }
   if (!material) return material;
   return withWind(material, { kind: o.kind, weight: g && g.getAttribute && g.getAttribute('_wind') ? 'attribute' : o.weight });

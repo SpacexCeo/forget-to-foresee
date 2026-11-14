@@ -295,3 +295,16 @@ test('rain has no falling streaks on any tier (owner 12.11): only splashes, wet 
   assert.match(ld, /new Splashes\(\)/, 'the ground splashes stay');
   for (const w of ['rain', 'storm']) assert.ok(WEATHER[w].wet === 1 && WEATHER[w].overcast === 1, `${w} still wets the ground under a dark lid`);
 });
+
+test('wind weights off the main thread: windWeightsAsync gives the same weights (computed at once without a worker)', async () => {
+  const { windWeightsAsync } = await import('../../src/render/weather.js');
+  const g = new THREE.BoxGeometry(0.4, 2, 0.05, 1, 6, 1); g.translate(0, 1, 0);
+  const pos = g.getAttribute('position');
+  const a = windWeights(pos, g.index, 'cloth'), b = await windWeightsAsync(pos, g.index, 'cloth');
+  assert.equal(b.length, a.length);
+  for (let i = 0; i < a.length; i++) assert.equal(b[i], a[i]);
+  const { readFileSync } = await import('node:fs');
+  const w = readFileSync(new URL('../../src/render/wind-worker.js', import.meta.url), 'utf8');
+  assert.match(w, /import \{ windWeights \} from '\.\/wind-weights\.js'/, 'the worker runs the same pure function');
+  assert.doesNotMatch(readFileSync(new URL('../../src/render/wind-weights.js', import.meta.url), 'utf8'), /from 'three'/, 'no three.js in the worker');
+});

@@ -35,3 +35,37 @@ test('anim speed: the heroines\' walk and run keep their own rate (the gait matc
   assert.equal(run.duration, 0.7); assert.equal(run.userData.speed, 4.5, 'the run as authored');
   assert.equal(hit.duration, 0.3); assert.equal(hit.userData.impact_s, 0.075, 'the strike twice as fast');
 });
+
+test('retargeting spread over frames gives the same clips as at once (GPU bench 14.11: a whole set in one frame hitched)', async () => {
+  const THREE = await import('three');
+  const { retargetClips } = await import('../../src/play/anim-library.js');
+  const rig = () => {
+    const root = new THREE.Group(), pelvis = new THREE.Bone(); pelvis.name = 'pelvis'; pelvis.position.y = 1; root.add(pelvis);
+    const bones = [pelvis];
+    for (const s of ['L', 'R']) {
+      const thigh = new THREE.Bone(), shin = new THREE.Bone(), foot = new THREE.Bone();
+      thigh.name = `thigh_${s}`; shin.name = `shin_${s}`; foot.name = `foot_${s}`;
+      thigh.position.set(s === 'L' ? 0.1 : -0.1, -0.05, 0); shin.position.y = -0.45; foot.position.y = -0.45;
+      pelvis.add(thigh); thigh.add(shin); shin.add(foot); bones.push(thigh, shin, foot);
+    }
+    return { root, bones };
+  };
+  const ref = rig(), tgt = rig();
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 0, 1, 0, 1, 0, 0], 3));
+  geo.setAttribute('skinIndex', new THREE.Uint16BufferAttribute([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 4)); geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute([1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0], 4));
+  const mesh = new THREE.SkinnedMesh(geo, new THREE.MeshBasicMaterial()); tgt.root.add(mesh); mesh.bind(new THREE.Skeleton(tgt.bones));
+  const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), 0.6).toArray();
+  const clips = ['a', 'b', 'c', 'd'].map((n, i) => new THREE.AnimationClip(n, 1, [new THREE.QuaternionKeyframeTrack('thigh_L.quaternion', [0, 1], [0, 0, 0, 1, ...q]), new THREE.QuaternionKeyframeTrack('shin_R.quaternion', [0, 1], [...q, 0, 0, 0, 1]), new THREE.VectorKeyframeTrack('pelvis.position', [0, 1], [0, 1, 0, 0, 1 + i * 0.01, 0.2])]));
+  const gltf = { scene: ref.root, animations: clips };
+  const now = retargetClips(gltf, tgt.root, {});
+  assert.equal(now.length, 4, 'the rig retargets');
+  const later = retargetClips(gltf, tgt.root, { sliced: true });
+  assert.ok(later && typeof later.then === 'function', 'sliced: a promise');
+  const got = await later;
+  assert.equal(got.length, now.length);
+  for (let i = 0; i < now.length; i++) {
+    assert.equal(got[i].name, now[i].name);
+    assert.equal(got[i].tracks.length, now[i].tracks.length);
+    for (let k = 0; k < now[i].tracks.length; k++) assert.deepEqual(Array.from(got[i].tracks[k].values), Array.from(now[i].tracks[k].values));
+  }
+});

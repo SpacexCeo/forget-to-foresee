@@ -26,7 +26,7 @@ export function bladeModelFile(mobile, has = hasModelFile) {
 export const SPOTS = Object.freeze({ blade: Object.freeze([-26, 60]), stone: Object.freeze([24, 106]), radius: 2.6, giver: 3.2 });
 
 const CSS = `
-.ftf-in-shoal .ftf-loom,.ftf-in-shoal .ftf-mk-chip,.ftf-in-shoal .ftf-tip,.ftf-in-shoal .ftf-premise{display:none!important}
+.ftf-in-shoal .ftf-loom,.ftf-in-shoal .ftf-mk-chip,.ftf-in-shoal .ftf-tip,.ftf-in-shoal .ftf-premise,.ftf-in-shoal .ftf-spiders,.ftf-in-shoal .ftf-tourney-open{display:none!important}
 .gs-track{position:fixed;left:calc(env(safe-area-inset-left,0px) + 16px);top:calc(env(safe-area-inset-top,0px) + 96px);max-width:min(340px,calc(100vw - 32px));z-index:12;
  box-sizing:border-box;padding:8px 12px;border-radius:10px;border:1px solid rgba(246,200,96,.6);background:rgba(20,16,8,.72);color:#f6e2a8;font:600 14px/1.35 "Atkinson Hyperlegible",system-ui,sans-serif;
  background-image:linear-gradient(100deg,transparent 30%,rgba(255,226,150,.28) 50%,transparent 70%);background-size:250% 100%;animation:gs-shimmer 3.2s linear infinite,gs-breathe 2.4s ease-in-out infinite;pointer-events:none}
@@ -65,7 +65,9 @@ html[data-motion=reduce] .gs-track{animation:none}
  * @param {() => {kind: string, pos: object, flourish?: Function}[]} [o.allies] her companion dragons (world positions) that join the fight
  */
 /** The fight's camera distance (metres) and the closest the player may zoom in there. */
-export const ARENA_CAM = Object.freeze({ dist: 17, minDist: 12, rate: 1.6, hold: 2.5 }); // rate: the lock's ease (1/s); hold: seconds it waits after the player turns the camera
+// dist/minDist: metres; tilt: degrees added to the zoom-tied pitch (lower = more of the rearing serpent in frame);
+// look: the look-at height over her (m); rate: the lock's ease (1/s); hold: seconds it waits after the player turns the camera
+export const ARENA_CAM = Object.freeze({ dist: 20, minDist: 14, tilt: -10, look: 3.0, rate: 1.6, hold: 2.5 });
 export function createGlassShoal(o) {
   const { THREE, scene, rig, player, toWorld, groundAt, folkAt, ledger, chests = null, storage = null, toast = () => {}, reduced = () => false, mobile = false, hero = () => 'iris', clip = () => {}, axes = () => [0, 0] } = o;
   const say = (k, a) => shoalText(o.locale ? o.locale() : 'en', k, a);
@@ -209,8 +211,9 @@ export function createGlassShoal(o) {
   function arenaCamera(dt = 0) {
     const on = mode === 'arena' && !!arena;
     if (on && !camSaved) {
-      camSaved = { dist: rig.dist, minDist: rig.minDist, pitchOffset: rig.pitchOffset, distTarget: rig.distTarget };
-      rig.minDist = Math.max(rig.minDist || 0, ARENA_CAM.minDist); rig.distTarget = null; rig.dist = ARENA_CAM.dist; rig.pitchOffset = 0;
+      camSaved = { dist: rig.dist, minDist: rig.minDist, pitchOffset: rig.pitchOffset, distTarget: rig.distTarget, look: rig.focusHeightOverride ?? null };
+      rig.minDist = Math.max(rig.minDist || 0, ARENA_CAM.minDist); rig.distTarget = null; rig.dist = ARENA_CAM.dist;
+      rig.pitchOffset = ARENA_CAM.tilt * Math.PI / 180; rig.focusHeightOverride = ARENA_CAM.look; // a lower, over-the-shoulder view: the serpent towers
       if (rig.rotate) { rig.yaw = rig.baseYaw || 0; rig.rotate(pose.heading + Math.PI - (rig.baseYaw || 0)); } // the camera sits behind her heading
       camYaw = rig.yaw; camHold = 0;
     } else if (on && camSaved && rig.rotate && arena.focusYaw) {
@@ -223,7 +226,7 @@ export function createGlassShoal(o) {
       }
       camYaw = rig.yaw;
     } else if (!on && camSaved && mode !== 'arena-wait') {
-      rig.minDist = camSaved.minDist; rig.dist = camSaved.dist; rig.pitchOffset = camSaved.pitchOffset; rig.distTarget = camSaved.distTarget; camSaved = null;
+      rig.minDist = camSaved.minDist; rig.dist = camSaved.dist; rig.pitchOffset = camSaved.pitchOffset; rig.distTarget = camSaved.distTarget; rig.focusHeightOverride = camSaved.look; camSaved = null;
     }
   }
   function update(dt, t) {

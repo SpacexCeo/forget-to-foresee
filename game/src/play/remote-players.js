@@ -10,7 +10,7 @@ import { heroById } from '../render/asset-catalog.js';
 import { toonify } from './iris-avatar.js';
 import { townsfolkClips, sidecarClips, mergeClips, sidecarEnabled } from './anim-library.js';
 import { resolveClip } from './behaviour.js';
-import { REMOTE, pickDrawn, CLIP_OF } from '../net/presence.js';
+import { REMOTE, pickDrawn, CLIP_OF, tagScaleFor } from '../net/presence.js';
 
 /** The one-shot moves others play over their gait (presence v2): the clip names of CLIP_OF. */
 const ONE_SHOTS = [...new Set(Object.values(CLIP_OF))];
@@ -65,7 +65,7 @@ function nameTag(text, badge = '') {
  * @param {{scene: THREE.Scene, phone?: boolean, aiLabel?: string}} o  aiLabel: the localized badge for AI walkers
  * @returns {{update(dt: number, list: object[], from: number[], reducedMotion?: boolean): void, clear(): void, count(): number}}
  */
-export function createRemotePlayers({ scene, phone = false, aiLabel = 'AI' }) {
+export function createRemotePlayers({ scene, phone = false, aiLabel = 'AI', camera = null }) {
   const sources = new Map(); // skin -> Promise<{gltf, toon}> | value
   const avatars = new Map(); // id -> {group, model, mixer, acts, tag, skin, name}
   const max = phone ? REMOTE.maxDrawnPhone : REMOTE.maxDrawnDesktop;
@@ -83,7 +83,7 @@ export function createRemotePlayers({ scene, phone = false, aiLabel = 'AI' }) {
     const src = source(r.skin);
     const group = new THREE.Group(); group.name = 'remote_' + r.id;
     const a = { group, model: null, mixer: null, acts: null, tag: nameTag(r.name, r.ai ? aiLabel : ''), skin: r.skin, name: r.name, w: { idle: 1, walk: 0, run: 0 } };
-    group.add(a.tag);
+    group.add(a.tag); a.tagBase = [a.tag.scale.x, a.tag.scale.y];
     scene.add(group);
     if (src) attach(a, src);
     return a;
@@ -129,6 +129,12 @@ export function createRemotePlayers({ scene, phone = false, aiLabel = 'AI' }) {
       a.group.rotation.y = r.h;
       const d = Math.hypot(r.p[0] - from[0], r.p[2] - from[2]);
       a.tag.visible = d < REMOTE.tagFarM;
+      // a player between the camera and the heroine (or right by the camera) had a tag half the screen tall over the
+      // hotbar (two-client check 14.11): near the camera the tag keeps its size on screen, inside 1.5 m it hides
+      if (camera && a.tag.visible) {
+        const c = camera.position, dc = Math.hypot(r.p[0] - c.x, r.p[1] + a.tag.position.y - c.y, r.p[2] - c.z), k = tagScaleFor(dc);
+        if (k <= 0) a.tag.visible = false; else a.tag.scale.set(a.tagBase[0] * k, a.tagBase[1] * k, 1);
+      }
       if (a.mixer && a.acts) {
         // a strike or a cast the room relayed: once, over the gait (a new move cuts the old one)
         if (r.a !== a.lastA) { a.lastA = r.a; const clip = CLIP_OF[r.a] && a.shots && a.shots[CLIP_OF[r.a]]; if (clip && !reducedMotion) { if (a.shot) a.shot.act.stop(); const act = a.mixer.clipAction(clip); act.reset(); act.setLoop(THREE.LoopOnce, 1); act.clampWhenFinished = true; act.play(); a.shot = { act, t: 0, dur: clip.duration }; } }

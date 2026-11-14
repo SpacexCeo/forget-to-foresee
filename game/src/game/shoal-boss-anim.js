@@ -47,10 +47,13 @@ function animStep(a, b, dt, telegraph, won, A) {
   if (won || b.dead) return a.clip === 'death' ? { ...a, time: Math.min(L.death, a.time + dt) } : { clip: 'death', time: 0, phase: b.phase };
   const kind = b.attack && ATTACKS.has(b.attack.kind) ? b.attack.kind : null;
   if (kind && b.state === 'telegraph') return { clip: kind, time: A.wind * clamp01(1 - Math.max(0, b.t) / (telegraph || 1)), phase: b.phase };
-  if (kind && b.state === 'active') return { clip: kind, time: Math.min(L[kind], Math.max(A.wind, a.clip === kind ? a.time : A.wind) + dt), phase: b.phase };
   if (b.phase > a.phase) return { clip: 'hit', time: 0, phase: b.phase };          // a phase breaks: it recoils
-  // she dodged through a blow and its crest opened: it reels (stagger), once per opening
-  if (b.exposed > 0 && !(a.exp > 0) && b.state !== 'telegraph' && !((a.since ?? 99) < (A.staggerGap ?? 0))) return { clip: 'stagger', time: 0, phase: b.phase };
+  // a reel plays out; only the next wind-up (above) or a broken phase cuts it
+  if (a.clip === 'stagger' && a.time + dt < L.stagger) return { clip: 'stagger', time: a.time + dt, phase: b.phase };
+  // she dodged through a blow and its crest opened: it reels at once, cutting the blow's follow-through (the crest
+  // opens as the blow lands, inside the attack's active window: checked after it, the reel never played; GPU bench 14.11)
+  if (b.exposed > 0 && !(a.exp > 0) && !((a.since ?? 99) < (A.staggerGap ?? 0))) return { clip: 'stagger', time: 0, phase: b.phase };
+  if (kind && b.state === 'active') return { clip: kind, time: Math.min(L[kind], Math.max(A.wind, a.clip === kind ? a.time : A.wind) + dt), phase: b.phase };
   const rest = b.airborne ? 'fly' : 'idle';                                          // in the air it hovers
   if (a.clip === 'idle' || a.clip === 'fly') return { clip: rest, time: (a.time + dt) % L[rest], phase: b.phase };
   const time = a.time + dt;                                                          // finish the one-shot (recover, rise, hit)

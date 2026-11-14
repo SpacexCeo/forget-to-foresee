@@ -37,6 +37,23 @@ export function createArenaLook({ renderer, scene, camera, lookdev, arena, tier 
     lookdev.splashes && lookdev.splashes.mesh, A.floor, A.sun, A.fill].filter(Boolean);
   // (the cascade lights are hidden while the look is off, so the visible filter in enter() leaves them alone)
   const townLights = () => scene.children.filter((o) => o.isLight && o !== lookdev.heroLight && !look.root.children.includes(o));
+  // The town and the archipelago stay in the scene 700 m and more away, and every one of their meshes was still drawn
+  // (and drawn again into the mirror's reflection): about 1400 draw calls a frame for things the fog hides (GPU bench
+  // 14.11). While the fight runs, every top-level object whose nearest mesh is farther than FAR_M from the arena is
+  // hidden and left out of the matrix updates; the heroine, the arena, the lights and the pooled effects that start
+  // at the origin (her strike trail, the spell streaks) stay.
+  const FAR_M = 220, KEEP = /^(player_|glass-shoal$|shoal_look$|strike_|spell-|levelup_burst$|blob_shadows$|move_marker$|ftf-autowalk-trail$)/;
+  const _p = new THREE.Vector3();
+  function farObjects() {
+    const out = [], c = arena.root.getWorldPosition(new THREE.Vector3());
+    for (const o of scene.children) {
+      if (!o.visible || o.isLight || o === look.root || o === arena.root || KEEP.test(o.name || '') || townBits().includes(o)) continue;
+      let near = Infinity, drawn = 0;
+      o.traverse((d) => { if (d.isMesh || d.isPoints || d.isLine || d.isSprite) { drawn++; d.getWorldPosition(_p); near = Math.min(near, _p.distanceTo(c)); } });
+      if (drawn && near > FAR_M) out.push(o);
+    }
+    return out;
+  }
 
   function enter() {
     if (active) return;
@@ -45,10 +62,12 @@ export function createArenaLook({ renderer, scene, camera, lookdev, arena, tier 
       fog: scene.fog, background: scene.background, environment: scene.environment,
       toneMapping: renderer.toneMapping, exposure: renderer.toneMappingExposure, fov: camera.fov,
       hidden: [...townBits(), ...townLights()].filter((o) => o.visible),
+      far: farObjects(),
       lobe: Float32Array.from(FOG_UNIFORMS.ftfFogSunTint.value),
       spires: A.spires && A.spires[0] ? { m: A.spires[0].material, k: A.spires[0].material.emissiveIntensity, op: A.spires[0].material.opacity } : null,
     };
     for (const o of saved.hidden) o.visible = false;
+    for (const o of saved.far) { o.visible = false; o.matrixWorldAutoUpdate = false; }
     scene.fog = look.fog; scene.background = null;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     look.setVisible(true); look.set({});   // re-applies exposure, the FOV, the light
@@ -61,6 +80,7 @@ export function createArenaLook({ renderer, scene, camera, lookdev, arena, tier 
     active = false;
     look.setVisible(false);
     for (const o of saved.hidden) o.visible = true;
+    for (const o of saved.far) { o.visible = true; o.matrixWorldAutoUpdate = true; }
     scene.fog = saved.fog; scene.background = saved.background; scene.environment = saved.environment;
     renderer.toneMapping = saved.toneMapping; renderer.toneMappingExposure = saved.exposure;
     FOG_UNIFORMS.ftfFogSunTint.value.set(saved.lobe);
