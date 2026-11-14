@@ -10,7 +10,7 @@ import * as R from '../game/shoal-rules.js';
 import { shoalSkillsFor, shoalExtrasFor, comboStep } from '../rpg/shoal-skills.js';
 /** The sword clips of the Loomblade combo, per step (null: the old strike stays until its cut is approved). */
 export const COMBO_CLIPS = Object.freeze(['slash1', null, null]);
-import { hasModelFile, fetchGltf, getModelVariant } from '../render/assets.js';
+import { hasModelFile, fetchGltf, fetchGltfUrl, getModelVariant } from '../render/assets.js';
 import { bossAnimStep, freshBossAnim, fadeWeights, BOSS_ANIM, clipOn } from '../game/shoal-boss-anim.js';
 import { createAddsView } from './shoal-adds-view.js';
 import { createHitFx } from '../render/hit-fx.js';
@@ -134,6 +134,15 @@ export function createShoalArena(o) {
   const shots = [];
   const chest = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.9, 0.9), new THREE.MeshStandardMaterial({ color: 0xd8b25a, metalness: 0.8, roughness: 0.3, emissive: 0x6a4a10, emissiveIntensity: 0.5 }));
   chest.position.set(R.ARENA.chest[0], 0.45, R.ARENA.chest[1]); chest.visible = false; root.add(chest);
+  // the reward is the town's legendary loot chest (assets/models/loot, its own `open` clip), not the gold box above
+  // (GPU bench 14.11: a plain box read as a placeholder); the box stays only if the model cannot load
+  let chestMixer = null, chestOpenAct = null;
+  fetchGltfUrl(ICON_BASE + 'assets/models/loot/chest_legendary.glb').then((g) => {
+    const m = g.scene; m.scale.setScalar(2.2); m.rotation.y = Math.PI; m.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+    chest.geometry.dispose(); chest.material.visible = false; chest.position.y = 0; chest.add(m);
+    const clip = g.animations.find((c) => c.name === 'open');
+    if (clip) { chestMixer = new THREE.AnimationMixer(m); chestOpenAct = chestMixer.clipAction(clip); chestOpenAct.setLoop(THREE.LoopOnce, 1); chestOpenAct.clampWhenFinished = true; }
+  }).catch(() => {});
   // projectiles and the Tempest's spiral share these
   const SPIRAL = 16;
   const spiral = new THREE.Group(); spiral.visible = false; root.add(spiral);
@@ -349,12 +358,13 @@ export function createShoalArena(o) {
     mesh.position.set(x, y, z); root.add(mesh);
     shots.push({ s, mesh, x, y, z, dx, dz, vy, left: s.range, hitBoss: false, hit: new Set() });
   }
-  function openChest() { chestOpen = true; chest.rotation.x = -0.001; flash(say('shoal.reward', { xp: R.REWARD.xp, title: say('shoal.title.' + R.REWARD.title) }), 4); }
+  function openChest() { chestOpen = true; chest.rotation.x = -0.001; if (chestOpenAct) { chestOpenAct.reset(); chestOpenAct.play(); } cue('chest_open'); flash(say('shoal.reward', { xp: R.REWARD.xp, title: say('shoal.title.' + R.REWARD.title) }), 4); }
   function interact() {
     if (!won) return false;
-    if (!chestOpen && Math.hypot(me3.x - R.ARENA.chest[0], me3.z - R.ARENA.chest[1]) < 3) { openChest(); return true; }
-    if (chestOpen || Math.hypot(me3.x - R.ARENA.landing[0], me3.z - R.ARENA.landing[1]) < 4) { onHome(); return true; }
-    return false;
+    // E does what the on-screen button says, wherever she stands (bench 14.11: E only worked within 3 m of the chest,
+    // the button from anywhere): first the chest, then the flight home
+    if (!chestOpen) { openChest(); return true; }
+    onHome(); return true;
   }
 
   // ---- Elise: flight and the Tempest
@@ -532,7 +542,7 @@ export function createShoalArena(o) {
     // adds
     addsView.sync(B.adds, sdt, [me3.x, me3.z], red, tt);
     for (const [id, m] of orbs) { m.visible = !(id in timers); if (!red) m.position.y = 1 + Math.sin(tt * 2 + m.position.x) * 0.15; }
-    if (chestOpen) chest.rotation.x = Math.max(-0.9, chest.rotation.x - dt * 2);
+    if (chestMixer) chestMixer.update(dt); else if (chestOpen) chest.rotation.x = Math.max(-0.9, chest.rotation.x - dt * 2); // the model's lid, or the box tips
     // the Tempest: orbs and blades spiral out from her, a ring bursts on the mirror at each blow
     if (spiral.visible) {
       spiral.position.set(me3.x, me3.lift, me3.z);
