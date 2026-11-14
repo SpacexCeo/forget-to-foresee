@@ -65,7 +65,7 @@ export function installGameCursor({ base = '/', sceneState = () => null, canvas 
   host.append(doc.createElement('i')); doc.body.append(host);
   // the system pointer is hidden only while our element is actually drawn (ftf-gc-live)
   const show = (on) => { host.hidden = !on; doc.documentElement.classList.toggle('ftf-gc-live', !!on); };
-  doc.documentElement.classList.add('ftf-gc-on');
+  if (!doc.getElementById('boot')) doc.documentElement.classList.add('ftf-gc-on');
   let state = '', over = null, pressT = 0, x = -64, y = -64;
   const set = (next) => {
     if (!CURSORS[next]) next = 'default';
@@ -85,8 +85,11 @@ export function installGameCursor({ base = '/', sceneState = () => null, canvas 
     // a modal <dialog> (the menu, Settings) sits in the browser's top layer, above any z-index: our element would hide
     // under it, so over an open modal the system pointer comes back (owner 14.11: "the cursor does not work in the menu")
     const modal = topModal();
-    doc.documentElement.classList.toggle('ftf-gc-on', !modal);
-    show(!locked() && !modal);
+    // before the world is entered (#boot: loading, Enter the world, language, account) the plain system pointer shows
+    // (owner 15.11: no cursor on the Enter-the-world button)
+    const pre = !!doc.getElementById('boot');
+    doc.documentElement.classList.toggle('ftf-gc-on', !modal && !pre);
+    show(!locked() && !modal && !pre);
     host.style.setProperty('--gc-x', x + 'px'); host.style.setProperty('--gc-y', y + 'px');
     refresh();
   };
