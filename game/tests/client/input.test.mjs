@@ -291,6 +291,7 @@ test('Esc closes the top-most open window first; the menu only when none is open
   sheet.on = true; // a window that opened without a claim still closes, after the claimed ones
   assert.equal(W.closeTopWindow(), 'map'); assert.equal(W.closeTopWindow(), 'character'); assert.equal(W.closeTopWindow(), null);
   W.resetWindows();
+  const { readFileSync } = await import('node:fs');
   const boot = readFileSync(new URL('../../src/boot-world.js', import.meta.url), 'utf8');
   assert.ok(boot.indexOf('if (closeTopWindow()) return false;') > 0 && boot.indexOf('if (closeTopWindow()) return false;') < boot.indexOf("else if (!blocksWindows()) openMenu();"), 'before the menu');
 });
