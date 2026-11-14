@@ -31,7 +31,7 @@ function canvasTex(THREE, doc, draw) {
 export function createHitFx({ THREE, parent, doc = globalThis.document, rand = Math.random, scale = 1 }) {
   const group = new THREE.Group(); group.name = 'hit-fx'; parent.add(group);
   const soft = canvasTex(THREE, doc, (g) => {
-    const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.3, 'rgba(255,255,255,0.6)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+    const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.08, 'rgba(255,255,255,0.85)'); gr.addColorStop(0.25, 'rgba(255,255,255,0.22)'); gr.addColorStop(0.6, 'rgba(255,255,255,0.04)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
     g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
   });
   const shard = canvasTex(THREE, doc, (g) => {
@@ -119,7 +119,7 @@ export function createHitFx({ THREE, parent, doc = globalThis.document, rand = M
 
   function flash(at, color, size, dur = 0.16) {
     const f = flashes[flashNext]; flashNext = (flashNext + 1) % FLASHES;
-    f.sp.position.set(at[0], at[1], at[2]); f.sp.material.color.set(color); f.s = size; f.t = 0; f.dur = dur; f.sp.visible = true;
+    f.sp.position.set(at[0], at[1], at[2]); f.sp.material.color.set(color); f.s = size * 0.6; // a tight hot core (owner 14.11: no big glare balls) f.t = 0; f.dur = dur; f.sp.visible = true;
   }
   function ring(at, color, radius, dur = 0.42) {
     if (!(radius > 0)) return;
