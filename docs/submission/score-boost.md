@@ -14,7 +14,7 @@ originality, sustainability; first layer: AI screening of reproducibility and cl
 | 6 | GitHub About, website and topics (suggested text in `score-gaps.md`): screening agents and judges start from the repo card | impact | 2 min | **owner** |
 | 7 | Regenerate `docs/STATS.md` on Linux (`node scripts/stats.mjs --write`) so the counts in `AGENTS.md` match the suites a screener runs | technical (reproducibility) | 10 min | **lead** |
 | 8 | Keep the relayer and the traders funded and running through 18.11 (judging): the live market numbers are the strongest Games-track proof (22,696 trades on 14 Nov by 23:00 UTC, 20 trader accounts) | technical, impact | check daily | **owner** |
-| 9 | A 10-second clip of the town's opening drone shot and the serpent fight at the top of the README (both recorded on a real GPU, 60 fps, in `docs/media/`) so a reader sees the game before the tables | design, impact | 30 min | open |
+| 9 | The README's first screen shows the game at its best: the boss still is now the serpent rearing over the frost-crack tells (RTX 5090 capture of the `wip/p0-opus` camera, so merge both); a 10-second clip of the opening drone shot and the fight at the top is the next step | design, impact | 5 min + 30 min | still done; clip open |
 | 10 | A mainnet deployment of one contract with its full-access keys deleted (the whitelist-pass runbook) | sustainability | 1–2 h | **owner** (agents never sign mainnet) |
 
 ## Checked in this pass, nothing to fix
