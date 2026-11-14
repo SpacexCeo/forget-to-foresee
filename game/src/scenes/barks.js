@@ -3,7 +3,7 @@
 // player as a hired agent; a few people have a line of their own. One bubble at a time, a cooldown per person and a
 // gap between any two barks keep the street calm. Visual and local only: no engine, no chain, no sound.
 import * as THREE from 'three';
-import { TOWNSFOLK } from '../play/townsfolk-plan.js';
+import { TOWNSFOLK, WAYFARERS } from '../play/townsfolk-plan.js';
 
 export const BARK = Object.freeze({
   radius: 6, // metres: Iris passing this close starts a bark
@@ -17,6 +17,8 @@ export const BARK = Object.freeze({
 /** People with a line of their own (the rest share the general lines). child_a / child_b share 'child'. */
 export const ROLE_LINES = Object.freeze(['guard', 'baker', 'lamplighter', 'musician', 'elder', 'child', 'scribe', 'sweeper']);
 const GENERAL = ['bark.day.1', 'bark.day.2', 'bark.day.3', 'bark.day.4'];
+/** The Wayfarers from Kallima (owner 14.11 night): a tourist's eight lines in rotation, whatever the hour. */
+export const WAYFARER_BARKS = Object.freeze(Array.from({ length: 8 }, (_, i) => 'bark.wayfarer.' + (i + 1)));
 
 /** The hour class of a look name: dawn, night (twilight and night) or day. */
 export function hourClass(name) {
@@ -32,6 +34,7 @@ export function hourClass(name) {
  */
 export function barkCandidates({ key, hour = 'day', rain = 0, hired = false, extra = [] }) {
   if (hired) return ['bark.hired.1', 'bark.hired.2'];
+  if (key === 'wayfarer') return WAYFARER_BARKS.slice();
   const out = [];
   if (rain > 0.35) out.push('bark.rain.1', 'bark.rain.2');
   const h = hourClass(hour);
@@ -52,7 +55,7 @@ export function chooseBark(o, n = 0) {
 // Built on first use: TOWNSFOLK lives in the play chunk, which imports this (client-core) chunk, so reading it at
 // module level would be a TDZ error at boot.
 let HEIGHT = null;
-const heightOf = (key) => (HEIGHT || (HEIGHT = new Map(TOWNSFOLK.map((p) => [p.key, p.height])))).get(key);
+const heightOf = (key) => (HEIGHT || (HEIGHT = new Map([...TOWNSFOLK, ...WAYFARERS].map((p) => [p.key, p.height])))).get(key);
 
 /**
  * @param {object} o
@@ -88,10 +91,17 @@ export function createBarks({ camera, i18n, people, hour = () => 'day', rain = (
     el.hidden = false;
   }
   function stop() { current = null; el.style.opacity = '0'; el.hidden = true; }
+  /** A scripted line for one person now (a story beat: the Wayfarer's talk on the way to the Gate-Loom). */
+  function say(key, line) {
+    const t = now(); last.set(key, t); lastAny = t;
+    who.textContent = i18n.t('folk.name.' + key); text.textContent = i18n.t(line);
+    current = { key, line, t0: t }; el.hidden = false;
+  }
 
   return {
     el,
     get current() { return current; },
+    say,
     /**
      * Per frame. `enabled` false (a talk or a panel open, indoors, the registration) hides the bubble and starts none.
      * @param {number[]} playerPos @param {boolean} [enabled]

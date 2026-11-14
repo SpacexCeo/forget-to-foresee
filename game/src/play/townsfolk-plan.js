@@ -391,3 +391,21 @@ export function animStride(distance, { phone = false, visible = true } = {}) {
   if (distance < 80 * k) return 4;
   return 0;
 }
+
+/**
+ * The Wayfarers from Kallima (owner 14.11 night): visitors from another world who came "through the glass" like Iris.
+ * Kept apart from TOWNSFOLK (the town's own thirteen, no hire talk, no temperament) and shown only with the flag
+ * `wayfarers`. Until their own model lands (3D A) the body is a placeholder townsfolk file scaled to their 1.9 m.
+ * One stands on the main street between the stairs and looks around; scenes/wayfarer-tale.js walks them to the Gate-Loom.
+ */
+export const WAYFARER_HOME = Object.freeze([1.2, 2.5, 6.6]);
+/** The way down the main street to the Gate-Loom (town-local; the jury route's points, then in front of the portal). */
+export const WAYFARER_TO_GATE = Object.freeze([[0.6, 2.5, 12], [0.4, 0, 18], [0.6, 0, 23.2], [2.7, 0, 24.3]]);
+export const WAYFARERS = Object.freeze([
+  Object.freeze({ key: 'wayfarer', height: 1.9, walk: 1.15, asset: 'townsfolk_courier', scale: 1.9 / 1.68, visitor: true, placeholder: true,
+    program: Object.freeze({ home: WAYFARER_HOME, heading: Math.PI, steps: [stay(16, 'idle_shift', { greet: 'wave' }), stay(9, 'think'), stay(12, 'idle', { heading: Math.PI * 0.6 }), stay(8, 'idle_shift')] }) }),
+]);
+/** A walk from where a visitor stands along `path`, then waiting there (the escort to the Gate-Loom). Pure. */
+export function walkProgram(from, path) {
+  return { home: from.slice(), heading: null, steps: [{ walk: detour([from.slice(), ...path.map((p) => p.slice())]) }, stay(600, 'idle')] }; // clear of the placed props, like every walk
+}

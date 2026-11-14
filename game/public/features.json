@@ -26,6 +26,7 @@
     "accountLogin": true,
     "glassShoal": false,
     "townLedger": true,
-    "tales": true
+    "tales": true,
+    "wayfarers": true
   }
 }
