@@ -1389,7 +1389,7 @@ function handleInput(dt) {
     return false;
   }
   if (townShops && townShops.busy) return false; // the shop door's fade holds Iris
-  if (!playOn && townFlow) { if ((input.hit('KeyE') || pad.hit(PAD.interact)) && !day1Open() && !blocksWindows()) { // E never reaches the town under a Day-1 card (she still walks) if (glassShoal && townOn && glassShoal.interact()) { /* the Shoal's prompt took it */ } else if (!(townShops && townShops.inside && townShops.interact())) townFlow.interact(); } } // E at the Tournament altar, a shop door or counter
+  if (!playOn && townFlow) { if ((input.hit('KeyE') || pad.hit(PAD.interact)) && !day1Open() && !blocksWindows()) { if (glassShoal && townOn && glassShoal.interact()) { /* the Shoal's prompt took it */ } else if (!(townShops && townShops.inside && townShops.interact())) townFlow.interact(); } } // E at the Tournament altar, a shop door or counter; never under a Day-1 card (she still walks)
   if (townOn && townFlow && input.hit('KeyO')) townFlow.expandPill(); // O: the newest minimised panel
   if (townOn && townCasting) { // beyond the walls: Q/1 and V/2 arm the casts (scenes/town-casting.js)
     for (const k in CAST_KEYS) if (input.hit(k)) townCasting.handleKey(k);
