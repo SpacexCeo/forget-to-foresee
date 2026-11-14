@@ -15,7 +15,8 @@
 import * as THREE from 'three';
 import { CollisionWorld, rayCast, MASK_PLAYER, MASK_CAMERA } from '../physics/collision.js';
 import { isShellMesh, isShellMaterial } from '../render/camera-boom.js';
-import { PropInstance, meshesToTriangles } from '../render/assets.js';
+import { PropInstance, meshesToTriangles, fetchGltf, hasModelFile } from '../render/assets.js';
+import { createTownMarket } from './town-market.js';
 import { createTownsfolk } from '../play/townsfolk.js';
 import { createTownLife } from './town-life.js';
 import { createSwingSet } from '../render/swing.js';
@@ -90,6 +91,7 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
   scene.add(group);
   const life = createTownLife({ parent: group, origin: TOWN_ORIGIN, center: TOWN_ALTAR.stand, detail });
   const swing = createSwingSet(); // signs, lanterns and chandeliers rock with the wind (render/swing.js)
+  const market = createTownMarket({ scene: group, fetchGltf, hasModelFile }); // the market stalls and the long banners (scenes/town-market.js)
 
   const library = streamer.library;
   const state = {
@@ -171,6 +173,7 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
   function onPiece(def, inst) {
     const real = inst.real;
     if (!def.visualOnly) cameraShell(inst);
+    if (real && !def.visualOnly) market.onPiece(real);   // the old box stalls and short banners give way
     if (def.visualOnly && real) {
       // The archipelago in the sky: no shadows, and no fog on top of its own painted haze (it is about 330 m away).
       real.traverse((o) => {
@@ -309,6 +312,7 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
     if (!state.active) return;
     life.update(reducedMotion ? 0 : dt, light, playerPos);
     swing.update(t, reducedMotion);
+    market.update(dt, reducedMotion);
     if (townsfolk) { folkFrame.playerPos = playerPos; folkFrame.reducedMotion = reducedMotion; folkFrame.camera = camera; folkFrame.shown = shown(); townsfolk.update(dt, folkFrame); }
     state.time = t;
     checkReady();
