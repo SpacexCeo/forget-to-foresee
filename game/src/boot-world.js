@@ -386,7 +386,7 @@ if (townMode.town) {
   const folkNear = (pos) => {
     const tf = town.townsfolk; if (!tf) return null;
     let best = null, bd = TALK_RADIUS;
-    for (const p of tf.people) { if (p.state !== 'loaded' || !p.root.visible) continue; const q = folkPos(p); if (Math.abs(q[1] - pos[1]) > 2.5) continue; const d = Math.hypot(q[0] - pos[0], q[2] - pos[2]); if (d < bd) { bd = d; best = p.def.key; } }
+    for (const p of tf.people) { if (p.state !== 'loaded' || !p.root.visible || p.def.visitor) continue; const q = folkPos(p); if (Math.abs(q[1] - pos[1]) > 2.5) continue; const d = Math.hypot(q[0] - pos[0], q[2] - pos[2]); if (d < bd) { bd = d; best = p.def.key; } }
     return best;
   };
   const folkAt = (key) => { const p = town.townsfolk && town.townsfolk.byKey.get(key); return p ? folkPos(p) : null; };
@@ -394,7 +394,7 @@ if (townMode.town) {
   const folkAround = (pos) => {
     const tf = town.townsfolk; if (!tf) return [];
     const out = [];
-    for (const p of tf.people) { if (p.state !== 'loaded' || !p.root.visible) continue; const q = folkPos(p); if (Math.abs(q[1] - pos[1]) > 2.5) continue; const d = Math.hypot(q[0] - pos[0], q[2] - pos[2]); if (d < TALK_RADIUS) out.push({ key: p.def.key, d }); }
+    for (const p of tf.people) { if (p.state !== 'loaded' || !p.root.visible || p.def.visitor) continue; const q = folkPos(p); if (Math.abs(q[1] - pos[1]) > 2.5) continue; const d = Math.hypot(q[0] - pos[0], q[2] - pos[2]); if (d < TALK_RADIUS) out.push({ key: p.def.key, d }); }
     return out.sort((a, b) => a.d - b.d);
   };
   const badge = (key, on) => { if (town.townsfolk) { town.townsfolk.setBadge(key, on); town.townsfolk.sendToTrade(key, on); } };
@@ -440,9 +440,13 @@ if (townMode.town) {
     }).catch((e) => console.warn('[story]', e));
   }
   // Town tales (owner 14.11 night, flag tales): the Scribe's lost words, told by townsfolk who give no other quests
-  if (featureFlags.on('tales') && !townTales) import('./scenes/town-tales.js').then((m) => {
+  // and the Lost Tourist (flag wayfarers): a Wayfarer from Kallima walked to the Gate-Loom, a postcard from their world
+  if ((featureFlags.on('tales') || featureFlags.on('wayfarers')) && !townTales) import('./scenes/town-tales.js').then((m) => {
     if (townTales || !inTown) return;
-    townTales = m.createTownTales({ t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage, ledger: townLedger, chests: chestBag, folkAt, dark: afterDark, toast: (s) => toast(s), sound: (n) => cue(n) });
+    townTales = m.createTownTales({ t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage, ledger: townLedger, chests: chestBag, folkAt, dark: afterDark, toast: (s) => toast(s), sound: (n) => cue(n),
+      inkOn: () => featureFlags.on('tales'), lostOn: () => featureFlags.on('wayfarers'), folk: town.townsfolk, toWorld: townToWorld,
+      say: (key, line) => { if (townBarks && townBarks.say) townBarks.say(key, line); },
+      postcard: (card) => { let link = 'https://spacexceo.github.io/forget-to-foresee/'; try { link = location.origin + location.pathname; } catch { /* default */ } import('./ui/postcard.js').then((pm) => pm.openPostcard({ doc: document, t: (k, a) => ctx.i18n.t(k, a), ...card, link })).catch((e) => console.warn('[tales] postcard', e)); } });
     spots.push(...townTales.spots);
   }).catch((e) => console.warn('[tales]', e));
   townProps = createTownProps({ scene, town, ledger: townLedger, i18n: ctx.i18n, mobile: mobileDevice });

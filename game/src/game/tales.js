@@ -13,7 +13,7 @@ export const INK_STAGES = Object.freeze(['none', 'bells', 'heard', 'sweeper', 'j
 /** The day-cycle keys (render/daycycle.js) that count as after dark. */
 export const DARK_KEYS = Object.freeze(['dusk', 'twilight', 'night']);
 
-export const freshTales = () => ({ v: 1, ink: { stage: 'none', bells: 0, choice: null } });
+export const freshTales = () => ({ v: 1, ink: { stage: 'none', bells: 0, choice: null }, lost: { stage: 'none' } });
 
 /** A stored state, cleaned (unknown stages and bad counts reset). */
 export function cleanTales(s) {
@@ -23,6 +23,7 @@ export function cleanTales(s) {
   if (k && Number.isInteger(k.bells) && k.bells >= 0) out.ink.bells = Math.min(INK.bells, k.bells);
   if (k && (k.choice === 'return' || k.choice === 'keep')) out.ink.choice = k.choice;
   if (out.ink.stage === 'done' && !out.ink.choice) out.ink.choice = 'keep';
+  out.lost = cleanLost(s);
   return out;
 }
 
@@ -92,4 +93,52 @@ export const INK_KEYS = Object.freeze([
   'tale.ink.sweeper.go', 'tale.ink.jar.1', 'tale.ink.jar.2', 'tale.ink.return', 'tale.ink.keep',
   'tale.ink.after.return', 'tale.ink.after.keep', 'tale.ink.sweeper.return', 'tale.ink.sweeper.keep',
   'tale.ink.toast.accepted', 'tale.ink.toast.bell', 'tale.ink.toast.quiet', 'tale.ink.toast.dark', 'tale.ink.toast.reward',
+]);
+
+// "The Lost Tourist" (flag `wayfarers`): a Wayfarer from Kallima lost their tour group, which went through the
+// Gate-Loom without them. Iris walks them down the main street to it; on the way they tell a little about their world;
+// at the gate they give her a postcard from Kallima. Stored in the same state (`lost`).
+export const LOST = Object.freeze({ npc: 'wayfarer', reward: { xp: 60 }, wayLines: 4, gateRadius: 7 });
+export const LOST_STAGES = Object.freeze(['none', 'escort', 'arrived', 'done']);
+
+/** The tales state with the Lost Tourist's part (older saves have none). */
+export function cleanLost(s) {
+  const st = s && s.lost && LOST_STAGES.includes(s.lost.stage) ? s.lost.stage : 'none';
+  return { stage: st === 'escort' ? 'none' : st }; // a walk cut short by a reload starts again from the street
+}
+
+/** One action on the Lost Tourist: ACCEPT, ARRIVE (walk done and Iris by the gate), POSTCARD. {lost, events}. */
+export function lostDo(lost, a) {
+  const k = { ...cleanLostRaw(lost) }, ev = [];
+  if (a.type === 'ACCEPT' && k.stage === 'none') { k.stage = 'escort'; ev.push({ e: 'escort' }); }
+  else if (a.type === 'ARRIVE' && k.stage === 'escort') { k.stage = 'arrived'; ev.push({ e: 'arrived' }); }
+  else if (a.type === 'POSTCARD' && k.stage === 'arrived') { k.stage = 'done'; ev.push({ e: 'postcard' }); }
+  return { lost: k, events: ev };
+}
+const cleanLostRaw = (l) => ({ stage: l && LOST_STAGES.includes(l.stage) ? l.stage : 'none' });
+
+/** What the Wayfarer says (pure): {lines, choices} — always something (a tourist chats). acts: close, accept, postcard. */
+export function lostTalk(lost, n = 0) {
+  const k = cleanLostRaw(lost), bye = { key: 'tale.bye', act: 'close' };
+  if (k.stage === 'none') return { lines: ['tale.lost.offer.1', 'tale.lost.offer.2'], choices: [{ key: 'tale.lost.accept', act: 'accept' }, { key: 'tale.notNow', act: 'close' }] };
+  if (k.stage === 'escort') return { lines: ['tale.lost.walking'], choices: [bye] };
+  if (k.stage === 'arrived') return { lines: ['tale.lost.gate.1', 'tale.lost.gate.2'], choices: [{ key: 'tale.lost.take', act: 'postcard' }] };
+  return { lines: ['tale.lost.after.' + (1 + (((n % 2) + 2) % 2))], choices: [bye] };
+}
+
+/** The mark over the Wayfarer: '!' while lost, '?' at the gate. */
+export function lostMarkers(lost) {
+  const k = cleanLostRaw(lost);
+  return k.stage === 'none' ? [{ giver: LOST.npc, sym: '!' }] : k.stage === 'arrived' ? [{ giver: LOST.npc, sym: '?' }] : [];
+}
+
+/** The line on the way: one every few seconds of the walk, in order, then quiet. Pure. */
+export const wayLine = (seconds, every = 6) => { const i = Math.floor(seconds / every); return i >= 0 && i < LOST.wayLines ? 'tale.lost.way.' + (i + 1) : null; };
+
+export const LOST_KEYS = Object.freeze([
+  'folk.name.wayfarer', 'tale.lost.title', 'tale.lost.offer.1', 'tale.lost.offer.2', 'tale.lost.accept', 'tale.lost.walking',
+  'tale.lost.way.1', 'tale.lost.way.2', 'tale.lost.way.3', 'tale.lost.way.4', 'tale.lost.gate.1', 'tale.lost.gate.2', 'tale.lost.take',
+  'tale.lost.after.1', 'tale.lost.after.2', 'tale.lost.toast.accepted', 'tale.lost.toast.reward',
+  'tale.lost.card.kicker', 'tale.lost.card.title', 'tale.lost.card.line',
+  ...Array.from({ length: 8 }, (_, i) => 'bark.wayfarer.' + (i + 1)),
 ]);
