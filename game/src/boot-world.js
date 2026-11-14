@@ -479,7 +479,7 @@ if (townMode.town) {
       // the Shell monument (K2): the latest board snapshot and her own row from the local log
       const relayer = (() => { try { return tee.relayerUrl(); } catch { return null; } })();
       townBoard = bm.createTownBoard({ scene, position: townToWorld(bm.BOARD_TOWN), facing: Math.PI / 2, i18n: ctx.i18n, log: () => townQuests.ledger.log,
-        load: () => bm.loadSnapshot({ base: import.meta.env.BASE_URL, relayer }) });
+        load: (report) => bm.loadSnapshot({ base: import.meta.env.BASE_URL, relayer, report }) });
       spots.push(...townQuests.spots, townPortal.spot, townBoard.spot);
       questMarkers = mm.createQuestMarkers({ scene, markers: () => [...townQuests.markers(), ...errandMarkers(), ...(townTales ? townTales.markers() : [])], folkAt, reducedMotion: lookdev.reducedMotion }); // gold ! and ? over the givers
       // the log goes up to the relayer for the endgame pass (Q4): signed by the Day 1 guest key; quiet without a guest or relayer

@@ -19,7 +19,8 @@ export function validSnapshot(s) {
 }
 
 /** Loads the latest snapshot: the published file first, then the relayer; null when neither answers. */
-export async function loadSnapshot({ base = '/', relayer = null, fetch = globalThis.fetch, timeoutMs = 6000 } = {}) {
+export async function loadSnapshot({ base = '/', relayer = null, fetch = globalThis.fetch, timeoutMs = 6000, report = null } = {}) {
+  let answered = false; // some source answered (even 404): not offline
   const urls = [base.replace(/\/?$/, '/') + 'board/latest.json'];
   if (relayer) urls.push(relayer.replace(/\/$/, '') + '/api/board/latest');
   for (const url of urls) {
@@ -28,11 +29,13 @@ export async function loadSnapshot({ base = '/', relayer = null, fetch = globalT
       const timer = ctl ? setTimeout(() => ctl.abort(), timeoutMs) : null;
       const r = await fetch(url, ctl ? { signal: ctl.signal } : undefined);
       if (timer) clearTimeout(timer);
+      if (r) answered = true;
       if (!r || !r.ok) continue;
       const s = await r.json();
       if (validSnapshot(s)) return s;
     } catch { /* offline or none published: try the next source */ }
   }
+  if (report) report.offline = !answered;
   return null;
 }
 
@@ -93,20 +96,20 @@ export function createTownBoard({ scene, position, facing = 0, i18n, log = () =>
   root.add(plinth, drum, band, shell, pool);
   scene.add(root);
 
-  let panel = null, view = null, snapshot = null, loaded = false, tab = 'human';
+  let panel = null, view = null, snapshot = null, loaded = false, tab = 'human', status = null; // status: 'loading' | 'offline' | null
   const local = () => { try { return scoreAccount(log() || []); } catch { return null; } };
   function close() { if (panel) { panel.remove(); panel = null; view = null; } if (keyHandler) { win.removeEventListener('keydown', keyHandler); keyHandler = null; } }
   let keyHandler = null;
   function draw() {
     const prevTab = view ? view.tab : tab;
     if (panel) panel.remove();
-    view = renderBoardPanel({ doc, i18n, snapshot, local: local(), account, tab: prevTab, onClose: close, copy: (s) => win.navigator && win.navigator.clipboard && win.navigator.clipboard.writeText(s) });
+    view = renderBoardPanel({ doc, i18n, snapshot, local: local(), account, tab: prevTab, status, onClose: close, copy: (s) => win.navigator && win.navigator.clipboard && win.navigator.clipboard.writeText(s) });
     panel = view.panel; doc.body.append(panel);
     const first = panel.querySelector('button'); if (first && first.focus) first.focus();
   }
   async function open() {
     draw();
-    if (!loaded) { loaded = true; try { snapshot = await load(); } catch { snapshot = null; } if (panel) draw(); }
+    if (!loaded) { loaded = true; status = 'loading'; if (panel) draw(); const rep = {}; try { snapshot = await load(rep); } catch { snapshot = null; rep.offline = true; } status = !snapshot && (rep.offline || (win.navigator && win.navigator.onLine === false)) ? 'offline' : null; if (!snapshot && status === 'offline') loaded = false; /* retry on the next open */ if (panel) draw(); }
     if (!keyHandler) { keyHandler = (e) => { if (e.key === 'Escape') close(); }; win.addEventListener('keydown', keyHandler); }
   }
 
