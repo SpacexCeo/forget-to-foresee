@@ -35,8 +35,8 @@ void main(){
   float rim = smoothstep(0.9, 1.0, t) + (uAxis == 2 ? 0.0 : smoothstep(0.08, 0.0, t) * 0.3);
   float front = exp(-abs(t - uK) * 38.0) * step(uK, 0.995);
   float stripe = step(0.55, fract(t * 9.0 - uTime * 1.6)) * 0.07;
-  float a = uOp * (0.22 * fill + 0.85 * rim + 0.9 * front + stripe * fill);
-  gl_FragColor = vec4(uColor * (1.0 + front * 0.8), a);
+  float a = clamp(uOp * (0.3 * fill + 0.9 * rim + 0.9 * front + stripe * fill), 0.0, 0.95);
+  gl_FragColor = vec4(mix(uColor, vec3(1.0), front * 0.6), a);
 }`;
 
 /**
@@ -46,7 +46,7 @@ void main(){
 export function telegraphMaterial(THREE, { color = 0xff7a3a, axis = 0, inner = 0, outer = 1 } = {}) {
   return new THREE.ShaderMaterial({
     uniforms: { uColor: { value: new THREE.Color(color) }, uK: { value: 0 }, uOp: { value: 0 }, uTime: { value: 0 }, uInner: { value: inner }, uOuter: { value: outer }, uAxis: { value: axis } },
-    vertexShader: TELE_VERT, fragmentShader: TELE_FRAG, transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
+    vertexShader: TELE_VERT, fragmentShader: TELE_FRAG, transparent: true, depthWrite: false, side: THREE.DoubleSide, // normal blending: an additive tell vanished on the bright mirror
   });
 }
 
@@ -72,11 +72,11 @@ export function createSerpentFx({ THREE, parent, mobile = false, rand = Math.ran
   geo.setAttribute('aSize', new THREE.BufferAttribute(size, 1).setUsage(THREE.DynamicDrawUsage));
   geo.setAttribute('aAlpha', new THREE.BufferAttribute(alpha, 1).setUsage(THREE.DynamicDrawUsage));
   geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e5);
-  const pts = new THREE.Points(geo, new THREE.ShaderMaterial({ uniforms: { uScale: { value: 260 } }, vertexShader: PTS_VERT, fragmentShader: PTS_FRAG, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+  const pts = new THREE.Points(geo, new THREE.ShaderMaterial({ uniforms: { uScale: { value: 1000 } }, vertexShader: PTS_VERT, fragmentShader: PTS_FRAG, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
   pts.frustumCulled = false; group.add(pts);
   let head = 0, live = 0, reducedNow = false;
   const tmpC = new THREE.Color();
-  /** One particle (no allocation): position, velocity, colour, size (px at 1 m), life (s), drag (1/s), gravity (m/s²). */
+  /** One particle (no allocation): position, velocity, colour, size (metres across; uScale ~ pixels per metre at 1 m), life (s), drag (1/s), gravity (m/s²). */
   function emit(x, y, z, vx, vy, vz, color, sz, lf, dr = 1.5, gr = 0) {
     if (reducedNow && rand() > 0.34) return;
     const i = head; head = (head + 1) % cap;
@@ -133,7 +133,7 @@ export function createSerpentFx({ THREE, parent, mobile = false, rand = Math.ran
         const s = (rand() * 2 - 1) * half, a = Math.atan2(dir[0], dir[1]) + s, sp = 16 + rand() * 10;
         emit(mouth[0] + (rand() - 0.5) * 0.4, mouth[1] + (rand() - 0.5) * 0.4, mouth[2] + (rand() - 0.5) * 0.4,
           Math.sin(a) * sp, -mouth[1] / (length / sp) * (0.8 + rand() * 0.4), Math.cos(a) * sp,
-          rand() < 0.25 ? 0xffffff : rand() < 0.5 ? F.ice : 0x6cc8ff, 26 + rand() * 30, length / sp * (0.9 + rand() * 0.3), 0.6, 0);
+          rand() < 0.25 ? 0xffffff : rand() < 0.5 ? F.ice : 0x6cc8ff, 0.32 + rand() * 0.4, length / sp * (0.9 + rand() * 0.3), 0.6, 0);
       }
       const c = crustFor(half, length); c.position.set(mouth[0], 0.04, mouth[2]); c.rotation.y = Math.atan2(dir[0], dir[1]); crustT = 0;
     },
@@ -144,14 +144,14 @@ export function createSerpentFx({ THREE, parent, mobile = false, rand = Math.ran
         const r = A.radius || 6;
         wave([at[0], 0, at[1]], F.ice, r * 1.25, { lf: 0.6 }); wave([at[0], 0, at[1]], 0xffffff, r * 1.7, { lf: 0.85, delay: 0.12, r0: r * 0.5 });
         geyser.position.set(at[0], 0, at[1]); geyT = 0; geyR = Math.max(1.5, r * 0.32);
-        for (let i = 0; i < 70; i++) { const a = rand() * Math.PI * 2, s = 3 + rand() * 9; emit(at[0] + Math.sin(a) * r * 0.3, 0.2, at[1] + Math.cos(a) * r * 0.3, Math.sin(a) * s, 8 + rand() * 12, Math.cos(a) * s, rand() < 0.4 ? 0xffffff : F.ice, 30 + rand() * 40, 0.9 + rand() * 0.6, 0.8, 18); }
+        for (let i = 0; i < 70; i++) { const a = rand() * Math.PI * 2, s = 3 + rand() * 9; emit(at[0] + Math.sin(a) * r * 0.3, 0.2, at[1] + Math.cos(a) * r * 0.3, Math.sin(a) * s, 8 + rand() * 12, Math.cos(a) * s, rand() < 0.4 ? 0xffffff : F.ice, 0.3 + rand() * 0.45, 0.9 + rand() * 0.6, 0.8, 18); }
       } else if (kind === 'sweep') {
         const b = info.boss, r = A.radius || 16;
         arc.position.set(b[0], 0.1, b[1]); arc.scale.setScalar(r); arcT = 0; arcR = r; arcDir = rand() < 0.5 ? 1 : -1;
         wave([b[0], 0, b[1]], F.ice, r * 1.05, { r0: (A.inner || 6), lf: 0.55 });
       } else if (kind === 'lunge' && dir) {
         const L = A.length || 30;
-        for (let i = 0; i < 90; i++) { const u = rand(), side = (rand() - 0.5) * (A.width || 4); emit(at[0] + dir[0] * L * u + dir[1] * side, 0.3, at[1] + dir[1] * L * u - dir[0] * side, dir[1] * side * 1.5, 2 + rand() * 4, -dir[0] * side * 1.5, F.ice, 26 + rand() * 26, 0.6 + rand() * 0.5, 2.2, 9); }
+        for (let i = 0; i < 90; i++) { const u = rand(), side = (rand() - 0.5) * (A.width || 4); emit(at[0] + dir[0] * L * u + dir[1] * side, 0.3, at[1] + dir[1] * L * u - dir[0] * side, dir[1] * side * 1.5, 2 + rand() * 4, -dir[0] * side * 1.5, F.ice, 0.28 + rand() * 0.3, 0.6 + rand() * 0.5, 2.2, 9); }
         wave([at[0] + dir[0] * L, 0, at[1] + dir[1] * L], F.ice, (A.width || 4) * 1.4, { lf: 0.5 });
       } else if (kind === 'breath' && dir) {
         const L = A.length || 24; wave([at[0] + dir[0] * L * 0.8, 0, at[1] + dir[1] * L * 0.8], 0xcff4ff, L * 0.35, { lf: 0.7 });
@@ -162,11 +162,11 @@ export function createSerpentFx({ THREE, parent, mobile = false, rand = Math.ran
     /** The roar at a phase change: three rings racing out from the body, frost thrown off it. */
     roar(at) {
       for (let i = 0; i < 3; i++) wave([at[0], 0, at[1]], i === 1 ? 0xffffff : F.ice, 22 + i * 6, { r0: 2, lf: 0.9 + i * 0.15, delay: i * 0.16 });
-      for (let i = 0; i < 80; i++) { const a = rand() * Math.PI * 2, s = 6 + rand() * 8; emit(at[0], 3 + rand() * 6, at[1], Math.sin(a) * s, rand() * 6, Math.cos(a) * s, F.ice, 30 + rand() * 30, 1 + rand() * 0.6, 1.2, 4); }
+      for (let i = 0; i < 80; i++) { const a = rand() * Math.PI * 2, s = 6 + rand() * 8; emit(at[0], 3 + rand() * 6, at[1], Math.sin(a) * s, rand() * 6, Math.cos(a) * s, F.ice, 0.35 + rand() * 0.35, 1 + rand() * 0.6, 1.2, 4); }
     },
     /** Frost bursting off her when a blow lands on her: shards and a small ring at her feet. */
     frostOn(at) {
-      for (let i = 0; i < 40; i++) { const a = rand() * Math.PI * 2, s = 2 + rand() * 4; emit(at[0], at[1] + 0.6 + rand() * 1.1, at[2], Math.sin(a) * s, 1 + rand() * 4, Math.cos(a) * s, rand() < 0.5 ? 0xffffff : F.ice, 18 + rand() * 22, 0.5 + rand() * 0.4, 2.5, 9); }
+      for (let i = 0; i < 40; i++) { const a = rand() * Math.PI * 2, s = 2 + rand() * 4; emit(at[0], at[1] + 0.6 + rand() * 1.1, at[2], Math.sin(a) * s, 1 + rand() * 4, Math.cos(a) * s, rand() < 0.5 ? 0xffffff : F.ice, 0.08 + rand() * 0.1, 0.5 + rand() * 0.4, 2.5, 9); }
       wave([at[0], at[1], at[2]], F.ice, 1.8, { lf: 0.4 });
     },
     /** A plain ring (her landings, a shockwave). */
@@ -177,7 +177,7 @@ export function createSerpentFx({ THREE, parent, mobile = false, rand = Math.ran
       if (inhaleT > 0) { // motes from a shell around the jaws, drawn in
         inhaleT -= dt;
         const n = Math.max(1, Math.round((mobile ? 30 : 70) * dt));
-        for (let i = 0; i < n; i++) { const a = rand() * Math.PI * 2, b = (rand() - 0.3) * 1.2, r = 5 + rand() * 3, x = Math.cos(b) * Math.sin(a) * r, y = Math.sin(b) * r, z = Math.cos(b) * Math.cos(a) * r, k = 1.6; emit(inhaleAt[0] + x, inhaleAt[1] + y, inhaleAt[2] + z, -x * k, -y * k, -z * k, F.ice, 16 + rand() * 18, 0.55, 0, 0); }
+        for (let i = 0; i < n; i++) { const a = rand() * Math.PI * 2, b = (rand() - 0.3) * 1.2, r = 5 + rand() * 3, x = Math.cos(b) * Math.sin(a) * r, y = Math.sin(b) * r, z = Math.cos(b) * Math.cos(a) * r, k = 1.6; emit(inhaleAt[0] + x, inhaleAt[1] + y, inhaleAt[2] + z, -x * k, -y * k, -z * k, F.ice, 0.14 + rand() * 0.16, 0.55, 0, 0); }
       }
       live = 0;
       for (let i = 0; i < cap; i++) {
@@ -202,7 +202,7 @@ export function createSerpentFx({ THREE, parent, mobile = false, rand = Math.ran
       if (arcT < F.arcLife) {
         arcT += dt; const k = arcT / F.arcLife;
         arc.visible = true; arc.rotation.z = arcDir * (reduced ? 0 : k * Math.PI * 1.6); arc.material.opacity = (1 - k) * 0.8;
-        if (!reduced) for (let i = 0; i < 3; i++) { const a = arc.rotation.z + rand() * Math.PI * 0.7; emit(arc.position.x + Math.cos(a) * arcR, 0.3, arc.position.z - Math.sin(a) * arcR, 0, 2 + rand() * 3, 0, F.ice, 24, 0.5, 1, 6); }
+        if (!reduced) for (let i = 0; i < 3; i++) { const a = arc.rotation.z + rand() * Math.PI * 0.7; emit(arc.position.x + Math.cos(a) * arcR, 0.3, arc.position.z - Math.sin(a) * arcR, 0, 2 + rand() * 3, 0, F.ice, 0.3, 0.5, 1, 6); }
       } else arc.visible = false;
       if (crust) { if (crustT < F.crustLife) { crustT += dt; crust.visible = true; crustMat.opacity = 0.32 * (1 - crustT / F.crustLife); } else crust.visible = false; }
     },
