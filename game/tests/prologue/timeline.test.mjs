@@ -9,7 +9,7 @@ test('the shots tile 0..38 s without gaps; the cues are in order and inside the 
   assert.equal(SHOTS[0].t0, 0); assert.equal(SHOTS[SHOTS.length - 1].t1, PROLOGUE_S);
   for (let i = 1; i < SHOTS.length; i++) assert.equal(SHOTS[i].t0, SHOTS[i - 1].t1);
   for (let i = 1; i < CUES.length; i++) assert.ok(CUES[i].t > CUES[i - 1].t);
-  assert.deepEqual(CUES.map((c) => c.id), ['title', 'year', 'hmm', 'check', 'key_press', 'device_on', 'oh_no', 'vortex_start', 'gasp', 'tunnel', 'whiteout']);
+  assert.deepEqual(CUES.filter((c) => !c.id.startsWith('cap_')).map((c) => c.id), ['title', 'year', 'hmm', 'check', 'key_press', 'device_on', 'oh_no', 'vortex_start', 'gasp', 'tunnel', 'whiteout']);
   assert.equal(CUES.find((c) => c.id === 'oh_no').t, 24.3);
   assert.equal(shotAt(24.3).id, 'P8'); assert.equal(shotAt(99).id, 'P11');
 });
@@ -79,5 +79,19 @@ test('the startle shot (P8) shows her whole: the camera stands back and her rais
     const her = [ir.x, 1.4, ir.z]; assert.ok(len(v(cam.pos, her)) > 1.6, `far enough at ${t.toFixed(1)}`);
     const fwd = v(cam.pos, cam.look), half = (cam.fov / 2) * Math.PI / 180;
     for (const y of [2.15, 1.0]) { const d = v(cam.pos, [ir.x, y, ir.z]); const ang = Math.acos(dot(d, fwd) / len(d) / len(fwd)); assert.ok(ang < half, `y ${y} in frame at ${t.toFixed(1)}`); }
+  }
+});
+
+test('story captions (owner, 14.11): every line in five languages, never over one of Iris’s spoken lines', async () => {
+  const caps = CUES.filter((c) => c.key);
+  assert.ok(caps.length >= 7);
+  const spoken = CUES.filter((c) => c.speaker);
+  for (const c of caps) {
+    assert.ok(c.text && c.durMs > 1500, c.id);
+    for (const s of spoken) assert.ok(c.t + c.durMs / 1000 <= s.t || s.t + s.durMs / 1000 <= c.t, `${c.id} overlaps ${s.id}`);
+  }
+  for (const lang of ['en', 'ru', 'uk', 'it', 'zh']) {
+    const L = (await import(`../../src/play/locales/${lang}-npe.js`)).default;
+    for (const c of caps) assert.ok(typeof L[c.key] === 'string' && L[c.key].length > 3, `${lang}: ${c.key}`);
   }
 });

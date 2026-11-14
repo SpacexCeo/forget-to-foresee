@@ -19,7 +19,7 @@ export function createLabAudio({ reduced = false, musicUrl = null, makeAudio = n
   const startBed = () => {
     if (bed || howlBed || !musicUrl) return;
     const vol = reduced ? LAB_MUSIC_VOLUME * 0.6 : LAB_MUSIC_VOLUME;
-    if (H && !makeAudio) { try { howlBed = new H.Howl({ src: [musicUrl], html5: true, loop: true, volume: 0 }); howlBed.play(); howlBed.fade(0, vol, LAB_MUSIC_FADE_S * 1000); return; } catch { howlBed = null; } }
+    if (H && !makeAudio) { try { howlBed = new H.Howl({ src: [musicUrl], html5: true, loop: true, volume: 0 }); howlBed.on('play', () => { const hw = H.Howler; for (const snd of howlBed._sounds || []) { const el = snd._node; if (!el || el._ftfWired || !hw.ctx || !hw.ctx.createMediaElementSource) continue; try { el._ftfWired = hw.ctx.createMediaElementSource(el); el._ftfWired.connect(hw.masterGain); } catch { /* plays outside the graph */ } } }); howlBed.play(); /* the streamed bed joins howler's graph: master volume and capture hear it */ howlBed.fade(0, vol, LAB_MUSIC_FADE_S * 1000); return; } catch { howlBed = null; } }
     try { bed = newAudio(musicUrl); bed.loop = true; bed.volume = 0; const p = bed.play(); if (p && p.catch) p.catch(() => { bed = null; }); bedTo(reduced ? LAB_MUSIC_VOLUME * 0.6 : LAB_MUSIC_VOLUME, LAB_MUSIC_FADE_S); } catch { bed = null; }
   };
   const ctx = () => {
@@ -35,7 +35,7 @@ export function createLabAudio({ reduced = false, musicUrl = null, makeAudio = n
     cue(id) {
       if (id === 'title') { tone(60, 2.6, 'sine', 0.35); startBed(); }
       else if (id === 'key_press') { tone(1800, 0.05, 'square', 0.3); tone(80, 1.6, 'sine', 0.4, 160); }
-      else if (id === 'device_on') { const a = ctx(); if (a && !hum) { hum = a.createOscillator(); humGain = a.createGain(); hum.type = 'triangle';   // soft: the old sawtooth's upper partials whined as the power rose hum.frequency.value = 70; humGain.gain.value = 0.0; hum.connect(humGain).connect(master); hum.start(); } }
+      else if (id === 'device_on') { const a = ctx(); if (a && !hum) { hum = a.createOscillator(); humGain = a.createGain(); hum.type = 'triangle'; /* soft: the old sawtooth's upper partials whined as the power rose */ hum.frequency.value = 70; humGain.gain.value = 0.0; hum.connect(humGain).connect(master); hum.start(); } }
       // the pull (owner, 14.11: no shrill squeal): one quick whoosh falling from air to body, and a deep swell under it
       else if (id === 'vortex_start') { noise(1.1, 0.55, 2200, 260, 0.18); tone(55, 3.6, 'sine', 0.5, 30); }
       else if (id === 'whiteout') { bedTo(0, LAB_MUSIC_FADE_S); if (howlBed) { const hb = howlBed; howlBed = null; hb.fade(hb.volume(), 0, LAB_MUSIC_FADE_S * 1000); setTimeout(() => { try { hb.unload(); } catch { /* gone */ } }, LAB_MUSIC_FADE_S * 1000 + 200); } if (hum) { try { hum.stop(); } catch { /* already stopped */ } hum = null; } }

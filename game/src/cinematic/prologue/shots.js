@@ -45,8 +45,8 @@ export const CUES = Object.freeze([
   { id: 'cap_pull', t: 28.0, key: 'npe.cap.pull', text: 'The vortex takes hold of her.', durMs: 2600 },
   { id: 'tunnel', t: 31.0 },
   { id: 'cap_fall', t: 31.6, key: 'npe.cap.fall', text: 'She falls back through the years...', durMs: 2800 },
-  { id: 'cap_town', t: 34.6, key: 'npe.cap.town', text: '...toward a town that has never heard of her.', durMs: 2900 },
   { id: 'whiteout', t: 34.6 },
+  { id: 'cap_town', t: 34.8, key: 'npe.cap.town', text: '...toward a town that has never heard of her.', durMs: 2800 },
 ]);
 export const WAKE_CUES = Object.freeze([{ id: 'eyes_open', t: 0.0 }, { id: 'crowd', t: 3.0 }, { id: 'sit_up', t: 6.0 }]);
 
