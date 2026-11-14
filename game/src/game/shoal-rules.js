@@ -62,6 +62,12 @@ export function debugJump(save, param) {
   return { save, jump: null };
 }
 
+/** Pure: does the cliff stone call the dragon for this save? Before the fight, and again after leaving it unbeaten
+ *  (a reload or "Leave the Shoal" mid-fight left the quest at 'defeat' with no way back: live review 14.11). */
+export const stoneOpen = (save) => save.step === 'reach_stone' || save.step === 'ride' || save.step === 'defeat';
+/** Pure: the boss is down but the flight home never ran (the page closed on the Shoal): finish the quest in town. */
+export const homeDue = (save) => save.step === 'return';
+
 /** Pure: the tracker line's text key for a save (null when nothing to show). */
 export function trackerKey(save, level) {
   if (questOffered(save, level)) return 'shoal.track.offer';

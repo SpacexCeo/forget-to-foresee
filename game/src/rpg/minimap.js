@@ -19,8 +19,15 @@ export function clampToRim(x, y, size, inset) {
   return [c + (x - c) * r / d, c + (y - c) * r / d, true];
 }
 
-export function createMinimap({ canvas, markers = null, mobs, player, origin, players = () => [], reveal = () => false }) {
+/** The map's badges on the radar too (owner 14.11: "the radar with the same symbols"): marker kind -> badge file. */
+export const RADAR_BADGES = Object.freeze({ 'quest-available': 'quest_offer', 'quest-ready': 'quest_turnin', portal: 'portal', market: 'shop' });
+
+export function createMinimap({ canvas, markers = null, mobs, player, origin, players = () => [], reveal = () => false, base = null }) {
   const g = canvas.getContext && canvas.getContext('2d');
+  // the badges load once; until one has loaded (or with no base: tests) its marker stays a dot
+  const badges = {};
+  if (base != null && typeof Image === 'function') for (const [kind, name] of Object.entries(RADAR_BADGES)) { const im = new Image(); im.decoding = 'async'; im.src = `${base}assets/ui/map/mark_${name}.webp`; badges[kind] = im; }
+  const badge = (kind) => { const im = badges[kind]; return im && im.complete && im.naturalWidth ? im : null; };
   let zi = 1, acc = 1;
   const O = () => origin() || [0, 0, 0];
   const dot = (x, y, r, fill, k) => { g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fillStyle = fill; g.fill(); g.lineWidth = 1.5 * k; g.strokeStyle = OUTLINE; g.stroke(); };
@@ -49,6 +56,8 @@ export function createMinimap({ canvas, markers = null, mobs, player, origin, pl
         const col = m.color || KIND_COLOR[m.kind] || '#eef0f6';
         if (m.kind === 'quest-area') { if (m.radius && !off) { g.fillStyle = col; g.beginPath(); g.arc(x, y, m.radius * C / R, 0, Math.PI * 2); g.fill(); } continue; }
         const quest = m.kind === 'quest-available' || m.kind === 'quest-ready';   // quest givers: larger gold (ready: green) dots
+        const im = badge(m.kind);
+        if (im) { const hgt = (quest ? (off ? 14 : 18) : (off ? 11 : 14)) * k, w = hgt * im.naturalWidth / im.naturalHeight; g.drawImage(im, x - w / 2, y - hgt / 2, w, hgt); continue; } // the map's badge
         dot(x, y, (quest ? (off ? 4 : 5) : (off ? 2.5 : 3.5)) * k, col, k);
       }
       // other players

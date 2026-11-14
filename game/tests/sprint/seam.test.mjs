@@ -105,8 +105,9 @@ test('window router: journal and market go to their real windows, help to settin
   const off = installWindowRouter({ win, openSettings: (tab) => seen.push('settings:' + tab) });
   for (const id of ['journal', 'market', 'help']) win.dispatchEvent(new CustomEvent('ftf:open-window', { detail: { id } }));
   assert.deepEqual(seen, ['journal', 'market', 'settings:controls']);
-  assert.equal(routeWindow('map', { win }), false);
-  assert.ok(globalThis.__ftfTelemetry.some((e) => e.name === 'window.missing' && e.payload.id === 'map'));
+  win.addEventListener('ftf:town-map', () => seen.push('map')); assert.equal(routeWindow('map', { win }), true); seen.pop(); // the painted town map (owner 14.11)
+  assert.equal(routeWindow('wallet', { win }), false);
+  assert.ok(globalThis.__ftfTelemetry.some((e) => e.name === 'window.missing' && e.payload.id === 'wallet'));
   off(); win.dispatchEvent(new CustomEvent('ftf:open-window', { detail: { id: 'journal' } })); assert.equal(seen.length, 3, 'detached');
 });
 

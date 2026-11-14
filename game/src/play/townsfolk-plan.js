@@ -191,12 +191,12 @@ const clearOfProps = (progs) => { for (const prog of Object.values(progs)) for (
 export const PROGRAMS = Object.freeze(clearOfProps(programs()));
 
 /**
- * The Wayfarers from Kallima (flag `wayfarers`): three tall tourists from another world, all one model
- * (townsfolk_wayfarer, art/townsfolk/cast.py). They are visitors, not townsfolk: they tour the town along lines the
+ * The touring Wayfarers (flag `wayfarers`; the list itself is WAYFARERS below): three tall tourists from another world on
+ * the model townsfolk_wayfarer (art/townsfolk/cast.py). They are visitors, not townsfolk: they tour the town along lines the
  * townsfolk already walk (the square round, the lamplighter's round and the sweeper's round, the other way), stop,
  * look around, take a picture with the crystal camera, haggle with the air. They never trade at the Exchange.
  */
-export const WAYFARERS = Object.freeze(['a', 'b', 'c'].map((k) => Object.freeze({ key: 'wayfarer_' + k, asset: 'townsfolk_wayfarer', height: 1.9, walk: 1.35, visitor: true })));
+const TOURISTS = ['a', 'b', 'c'].map((k) => 'wayfarer_' + k);
 function wayfarerPrograms() {
   const tour = (pts, acts) => { // walk the closed line leg by leg; at every stop: the act, then a look around
     const steps = [];
@@ -420,4 +420,26 @@ export function animStride(distance, { phone = false, visible = true } = {}) {
   if (distance < 45 * k) return 2;
   if (distance < 80 * k) return 4;
   return 0;
+}
+
+/**
+ * The Wayfarers from Kallima (owner 14.11 night): visitors from another world who came "through the glass" like Iris.
+ * Kept apart from TOWNSFOLK (the town's own thirteen, no hire talk, no temperament) and shown only with the flag
+ * `wayfarers`. All of them wear the model townsfolk_wayfarer (art/townsfolk/cast.py) with its own clips: a springy walk,
+ * an idle that looks around, `take_photo`, `haggle`.
+ * `wayfarer` stands on the main street between the stairs (the Lost Tourist: scenes/wayfarer-tale.js walks them to the
+ * Gate-Loom); `wayfarer_a..c` tour the town (WAYFARER_PROGRAMS above).
+ */
+export const WAYFARER_HOME = Object.freeze([1.2, 2.5, 6.6]);
+/** The way down the main street to the Gate-Loom (town-local; the jury route's points, then in front of the portal). */
+export const WAYFARER_TO_GATE = Object.freeze([[0.6, 2.5, 12], [0.4, 0, 18], [0.6, 0, 23.2], [2.7, 0, 24.3]]);
+export const WAYFARERS = Object.freeze([
+  Object.freeze({ key: 'wayfarer', height: 1.9, walk: 1.35, asset: 'townsfolk_wayfarer', visitor: true,
+    program: Object.freeze({ home: WAYFARER_HOME, heading: Math.PI, steps: [stay(14, 'idle', { greet: 'wave' }), stay(3, 'take_photo'), stay(9, 'think'),
+      stay(12, 'idle', { heading: Math.PI * 0.6 }), stay(3.5, 'haggle'), stay(8, 'idle_shift')] }) }),
+  ...TOURISTS.map((key) => Object.freeze({ key, height: 1.9, walk: 1.35, asset: 'townsfolk_wayfarer', visitor: true, program: WAYFARER_PROGRAMS[key] })),
+]);
+/** A walk from where a visitor stands along `path`, then waiting there (the escort to the Gate-Loom). Pure. */
+export function walkProgram(from, path) {
+  return { home: from.slice(), heading: null, steps: [{ walk: detour([from.slice(), ...path.map((p) => p.slice())]) }, stay(600, 'idle')] }; // clear of the placed props, like every walk
 }

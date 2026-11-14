@@ -68,6 +68,7 @@ export async function readLootNfts({ owner = null, deployment = null, rpcUrls = 
     const near = createNearClient({ contractId: dep.chests, rpcUrls: rpcUrls || NEAR_DEPLOYMENT.rpcUrls, fetch, timeoutMs: 10000 });
     const r = await near.view('nft_tokens_for_owner', { account_id: owner, from_index: '0', limit: 20 });
     const list = Array.isArray(r.value) ? r.value : [];
-    return { state: 'loaded', items: list.map((tk) => { let item = null; try { item = JSON.parse((tk.metadata && tk.metadata.extra) || '{}').item || null; } catch { /* plain */ } return { tokenId: tk.token_id, title: (tk.metadata && tk.metadata.title) || tk.token_id, item, href: `${explorer}/nft-token/${dep.chests}/${tk.token_id}` }; }) };
+    // the contract's extra is {season, index, position, tier}: the deck position names the item (play/chest-history.js nftItemAt)
+    return { state: 'loaded', items: list.map((tk) => { let x = {}; try { x = JSON.parse((tk.metadata && tk.metadata.extra) || '{}') || {}; } catch { /* plain */ } return { tokenId: tk.token_id, title: (tk.metadata && tk.metadata.title) || tk.token_id, item: x.item || null, tier: x.tier || null, position: Number.isInteger(x.position) ? x.position : null, href: `${explorer}/nft-token/${dep.chests}/${tk.token_id}` }; }) };
   } catch { return { state: 'offline' }; }
 }

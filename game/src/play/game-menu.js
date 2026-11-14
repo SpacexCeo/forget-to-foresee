@@ -17,8 +17,11 @@ import { renderProfileView } from './profile-view.js';
 import { createChestBag } from '../game/chests.js';
 import { createFriends } from './friends.js';
 import { createChestClient } from '../net/chest-client.js';
+import { groupChests, loadArchive, archiveOpened, outcomeOf, verifyHref, nftImage, rewardArt, chestArt } from './chest-history.js';
 import { cue } from '../audio/town-audio.js';
 import { formatSilkC } from '../net/silk-core.js';
+import { wardrobe, TRY_ON_SECONDS } from './skins.js';
+import { collectionView } from './nft-collection.js';
 
 /** UI-004 tab icons (line art, currentColor). */
 const TAB_ICON = Object.freeze({
@@ -99,8 +102,43 @@ const CSS = `
 .gm-medal[data-done="true"] { background: linear-gradient(160deg, #2a2716, #1a211b); border-color: rgba(197, 164, 105, .4); }
 .gm-nft { position: relative; border-radius: 16px; overflow: hidden; background: var(--ftf-panel-solid, #101f1a); border: 1px solid rgba(214, 226, 214, .12); box-shadow: 0 6px 18px rgba(0, 0, 0, .3); padding: 10px; }
 .gm-nft img { width: 100%; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 10px; }
+.gm-loot { border-color: color-mix(in srgb, var(--rc) 55%, transparent); }
+.gm-loot .gm-loot-art { display: grid; place-items: center; aspect-ratio: 1; margin-bottom: 8px; border-radius: 12px; background: radial-gradient(circle, color-mix(in srgb, var(--rc) 35%, transparent) 0%, transparent 70%), #0b100f; box-shadow: inset 0 0 0 2px var(--rc); }
+.gm-loot .gm-loot-art img { width: 72%; height: 72%; aspect-ratio: auto; object-fit: contain; border-radius: 0; filter: drop-shadow(0 6px 10px rgba(0,0,0,.5)); }
+.gm-loot .gm-loot-art span { font: 600 46px/1 "Cormorant Garamond", Georgia, serif; color: var(--rc); }
+.gm-loot b { display: block; } .gm-loot-rar { display: block; font: 700 11px/1.6 system-ui; letter-spacing: .12em; text-transform: uppercase; color: var(--rc); }
+.gm-loot small.gm-note { display: block; margin: 2px 0 4px; font-size: 11px; }
+.gm-chests h4 { margin: 0; font: 600 14px/1.2 system-ui; color: rgba(233, 230, 220, .8); }
+.gm-hist-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 16px 0 6px; }
+.gm-hist { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.gm-hist li { display: grid; grid-template-columns: 32px 1fr auto; gap: 10px; align-items: center; padding: 4px 10px 4px 4px; border-radius: 10px; background: rgba(233, 230, 220, .03); }
+.gm-hist-ico { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rc) 60%, transparent); font: 600 18px/1 "Cormorant Garamond", Georgia, serif; color: var(--rc); }
+.gm-hist-ico img { width: 30px; height: 30px; object-fit: contain; }
+.gm-hist-txt { min-width: 0; } .gm-hist-txt b { font: 600 13px/1.3 system-ui; margin-right: 6px; } .gm-hist-txt small { display: block; color: rgba(233, 230, 220, .5); font-size: 11px; }
+.gm-hist-rar { font: 700 10px/1 system-ui; letter-spacing: .08em; text-transform: uppercase; color: var(--rc); }
+.gm-dust { display: inline-block; padding: 1px 6px; border-radius: 6px; font: 600 10px/1.4 system-ui; color: rgba(233, 230, 220, .55); border: 1px dashed rgba(233, 230, 220, .3); }
+.gm-hist-ver { font-size: 11px; color: rgba(233, 230, 220, .5); white-space: nowrap; } a.gm-hist-ver { color: #2fc4b2; text-decoration: none; }
+.gm-archive { margin-top: 12px; } .gm-archive summary { cursor: pointer; min-height: 32px; display: flex; align-items: center; color: rgba(233, 230, 220, .62); font-size: 13px; }
+.gm-archive .gm-hist { opacity: .75; }
 .gm-chip { display: inline-block; margin: 4px 4px 0 0; padding: 3px 9px; border-radius: 10px; font: 700 11px/1.5 system-ui; background: #0b100f; color: var(--ftf-text, #eef0ea); border: 1px solid rgba(214, 226, 214, .16); text-decoration: none; }
 .gm-chip.gm-near { background: transparent; border-color: rgba(47, 196, 178, .5); color: #2fc4b2; }
+.gm-ward { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 8px; }
+.gm-ward-card { display: grid; justify-items: center; gap: 4px; padding: 8px 6px 10px; border-radius: 14px; text-align: center; background: var(--ftf-panel-solid, #101f1a); border: 1px solid rgba(214, 226, 214, .12); }
+.gm-ward-card img { height: 96px; width: 100%; object-fit: contain; object-position: center bottom; }
+.gm-ward-card b { font: 600 13px/1.2 system-ui; } .gm-ward-card small { color: rgba(233, 230, 220, .55); font-size: 11px; }
+.gm-ward-card.gm-worn { border-color: rgba(197, 164, 105, .8); background: linear-gradient(160deg, #2a2716, #1a211b); }
+.gm-ward-card.gm-locked img { filter: saturate(.55) brightness(.8); }
+.gm-coll { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 12px; margin: 4px 0 14px; }
+.gm-coll-card { all: unset; box-sizing: border-box; display: grid; gap: 6px; cursor: zoom-in; text-align: center; }
+.gm-coll-card img { width: 100%; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 12px; box-shadow: 0 8px 22px rgba(0,0,0,.45); transition: transform .18s ease; }
+.gm-coll-card:hover img, .gm-coll-card:focus-visible img { transform: translateY(-3px); }
+.gm-coll-card:focus-visible { outline: 2px solid var(--ftf-gold, #c5a469); outline-offset: 4px; border-radius: 12px; }
+.gm-coll-card.gm-locked img { filter: saturate(.6) brightness(.72); }
+.gm-coll-card b { font: 600 13px/1.2 system-ui; } .gm-coll-card small { color: rgba(233, 230, 220, .6); font-size: 11px; line-height: 1.35; }
+.gm-coll-card .gm-on { color: var(--ftf-gold, #c5a469); font-weight: 700; }
+.gm-coll-big { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 16px; background: rgba(6, 10, 9, .82); cursor: zoom-out; }
+.gm-coll-big img { max-width: min(92vw, 520px); max-height: 88vh; aspect-ratio: 2 / 3; object-fit: contain; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
+@media (prefers-reduced-motion: reduce) { .gm-coll-card img { transition: none; } }
 .gm-agent { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 12px 14px; border-radius: 16px; background: var(--ftf-panel-solid, #101f1a); border: 1px solid rgba(214, 226, 214, .1); margin-bottom: 10px; }
 .gm-agent b { font-size: 15px; }
 .gm-wheelwrap { display: grid; grid-template-columns: minmax(240px, 340px) 1fr; gap: 18px; align-items: start; }
@@ -140,7 +178,7 @@ function spark(doc, values, w = 220, h = 44, color = '#2fc4b2') {
  * @param {{doc?: Document, t: Function, ledger: object, storage?: object, tab?: string, owner?: string|null, createGuest?: (() => Promise<{account?: string, error?: string}>)|null, exportKey?: Function|null,
  *   nickname?: string|null, eliseMinted?: boolean, onChain?: Promise, base?: string, manifest?: Promise}} o
  */
-export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 'profile', owner: ownerIn = null, createGuest = null, exportKey = null, nickname = null, eliseMinted = false, onChain = null, base = (import.meta.env && import.meta.env.BASE_URL) || '/', manifest = null, chests = null, chestClient = null, heroineToken = null, companionsRead = null, now = () => Date.now(), account = null, townLedger = false }) {
+export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 'profile', owner: ownerIn = null, createGuest = null, exportKey = null, nickname = null, eliseMinted = false, onChain = null, base = (import.meta.env && import.meta.env.BASE_URL) || '/', manifest = null, chests = null, chestClient = null, heroineToken = null, companionsRead = null, now = () => Date.now(), account = null, townLedger = false, onClose = null }) {
   const tabList = townLedger ? [TABS[0], TOWN_TAB, ...TABS.slice(1)] : TABS;
   let ledgerView = null; // the open Town Ledger (it polls the relayer while it is shown)
   if (!(doc.getElementById && doc.getElementById('gm-style'))) { const st = doc.createElement('style'); st.id = 'gm-style'; st.textContent = CSS + WHEEL_CSS; doc.head.append(st); }
@@ -174,7 +212,8 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
   root.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Escape') close(); });
   doc.body.append(root);
   let current = null;
-  function close() { if (wheelView) wheelView.destroy(); if (ledgerView) ledgerView.destroy(); inv.dispose(); root.remove(); }
+  let closed = false;
+  function close() { if (closed) return; closed = true; if (wheelView) wheelView.destroy(); if (ledgerView) ledgerView.destroy(); inv.dispose(); root.remove(); if (onClose) onClose(); }
 
   const views = {
     profile() {
@@ -238,19 +277,24 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
       // loot NFTs from chests (chests.ftf-coordinator.testnet), only what the chain read confirms for this guest
       const loot = el('div');
       if (owner) {
-        import('../net/chest-client.js').then((m) => m.readLootNfts({ owner })).then((r) => {
+        Promise.all([import('../net/chest-client.js').then((m) => m.readLootNfts({ owner })), items]).then(([r, list]) => {
           if (!r || r.state !== 'loaded' || !r.items.length) return;
           const g3 = el('div', 'gm-grid'); g3.style.gridTemplateColumns = 'repeat(auto-fill, minmax(160px, 1fr))';
           for (const it of r.items) {
-            const c = el('div', 'gm-nft');
-            c.append(el('b', null, it.title), el('br'), el('span', 'gm-chip gm-near', 'NEAR testnet'));
+            // owner 13.11: a picture per NFT, the item its deck position holds, in its rarity frame (the frame alone when unknown)
+            const pic = nftImage(it, list);
+            const c = el('div', 'gm-nft gm-loot'); c.style.setProperty('--rc', RARITY_COLOR[pic.rarity] || RARITY_COLOR.common);
+            const art = el('div', 'gm-loot-art');
+            if (pic.src) { const img = el('img'); img.src = base + 'assets/items/' + pic.src; img.alt = ''; art.append(img); } else art.append(el('span', null, '✧'));
+            const r2 = el('span', 'gm-loot-rar', t('rarity.' + pic.rarity));
+            c.append(art, el('b', null, pic.nameKey && pic.exact ? t(pic.nameKey) : t('chest.out.nft')), r2, el('small', 'gm-note', it.title), el('span', 'gm-chip gm-near', 'NEAR testnet'));
             const a = el('a', 'gm-chip', t('menu.viewToken')); a.href = it.href; a.target = '_blank'; a.rel = 'noopener noreferrer'; c.append(a);
             g3.append(c);
           }
           loot.replaceChildren(el('h3', null, t('chest.lootHeading')), g3);
         }).catch(() => {});
       }
-      return [box, drag, loot, holderSection({ doc, t, storage, owner })];
+      return [box, collectionSection(), drag, loot, holderSection({ doc, t, storage, owner })];
     },
     inventory() {
       return items.then((list) => {
@@ -283,7 +327,7 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
         }
         const sum = el('div', 'gm-row');
         sum.append(el('span', 'gm-chip', t('inv.townSilk') + ': ' + formatSilkC(ledger.silk)), btn(t('menu.openWheel'), () => show('wheel')));
-        return [el('p', 'gm-note', t('inv.offchain.note')), sum, chestSection(list), chips, g, detail];
+        return [el('p', 'gm-note', t('inv.offchain.note')), sum, wardrobeSection(), chestSection(list), chips, g, detail];
       });
     },
     wheel() {
@@ -357,13 +401,18 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
     chain = readOnChain({ owner });
   }
 
-  /** Chests from monsters (game/chests.js): sealed ones open through the chest service (play/chest-open.js). */
+  /**
+   * Chests from monsters (game/chests.js), owner 13.11: sealed chests on top with Open buttons; opened ones are a
+   * compact read-only history (what came out, its icon, the verify link small) that one button moves to a collapsed
+   * archive kept in this browser (play/chest-history.js).
+   */
   function chestSection(list) {
     const all = bag.list();
+    const { sealed: sealedNow, opened, archive } = groupChests(all, loadArchive(storage));
     const box = el('section', 'gm-chests');
-    box.append(el('h3', null, t('chest.heading', { n: bag.sealed().length })));
+    box.append(el('h3', null, t('chest.heading', { n: sealedNow.length })));
     if (!all.length) { box.append(el('p', 'gm-note', t('chest.none'))); return box; }
-    const sealedNow = bag.sealed();
+    if (!sealedNow.length) box.append(el('p', 'gm-note', t('chest.noneSealed')));
     if (!owner && sealedNow.length) box.append(guestBanner()); // one line for the whole grid, not one per card (owner, 12.11)
     if (sealedNow.length >= 2 && owner && chestApi.available && chestApi.openMany) { // batch opening (owner, 12.11): one transaction for up to 10
       const row = el('div', 'gm-row'); row.style.display = 'flex'; row.style.gap = '8px'; row.style.flexWrap = 'wrap'; row.style.margin = '6px 0 10px';
@@ -373,31 +422,65 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
       }
       box.append(row);
     }
-    const g = el('div', 'gm-grid');
-    for (const c of all.slice(0, 24)) {
-      const card = el('div', 'gm-card'); card.dataset.rarity = c.tier === 'legendary' ? 'legendary' : c.tier === 'rare' ? 'rare' : 'common';
-      card.style.setProperty('--rc', RARITY_COLOR[c.tier === 'legendary' ? 'legendary' : c.tier === 'rare' ? 'uncommon' : 'common']);
-      card.append(el('b', null, t('chest.tier.' + c.tier)));
-      if (c.state === 'sealed') {
-        card.append(el('small', null, t('chest.sealed')));
+    if (sealedNow.length) {
+      const g = el('div', 'gm-grid');
+      for (const c of sealedNow.slice(0, 24)) {
+        const card = el('div', 'gm-card'); card.dataset.rarity = c.tier === 'legendary' ? 'legendary' : c.tier === 'rare' ? 'rare' : 'common';
+        card.style.setProperty('--rc', RARITY_COLOR[c.tier === 'legendary' ? 'legendary' : c.tier === 'rare' ? 'uncommon' : 'common']);
+        const box = el('img'); box.src = base + 'assets/items/' + chestArt(c.tier); box.alt = '';
+        card.append(box, el('b', null, t('chest.tier.' + c.tier)), el('small', null, t('chest.sealed')));
         const b = btn(t('chest.open'), () => openOne(c, list), 'gm-btn'); b.style.marginTop = '8px'; b.style.minHeight = '40px'; b.style.padding = '8px 14px';
         b.disabled = !chestApi.available || !owner;
         card.append(b);
         if (owner && !chestApi.available) card.append(el('small', null, t('chest.err.off')));
-      } else {
-        const o = c.opening && c.opening.outcome;
-        const ok = c.opening && c.opening.verified, tx = c.opening && c.opening.tx;
-        const mark = el('small', null);
-        if (ok && tx && /^[1-9A-HJ-NP-Za-km-z]{32,64}$/.test(String(tx))) { // the opening's own transaction on the explorer (owner, 12.11)
-          const a = el('a', null, t('chest.verified')); a.href = `https://testnet.nearblocks.io/txns/${tx}`; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.title = t('chest.viewTx');
-          mark.append(a);
-        } else mark.textContent = ok ? t('chest.verified') : t('chest.unverified');
-        card.append(el('small', null, o ? t('chest.got.' + o.kind) : t('chest.opened')), mark);
+        g.append(card);
       }
-      g.append(card);
+      box.append(g);
     }
-    box.append(g);
+    if (opened.length) {
+      const head = el('div', 'gm-hist-head');
+      head.append(el('h4', null, t('chest.history', { n: opened.length })));
+      const b = btn(t('chest.archiveAll'), () => { archiveOpened(storage, opened); show('inventory'); }, 'gm-fchip');
+      b.title = t('chest.archiveAll.tip'); head.append(b);
+      box.append(head, historyList(opened.slice(0, 30), list));
+      if (opened.length > 30) box.append(el('p', 'gm-note', t('chest.more', { n: opened.length - 30 })));
+    }
+    if (archive.length) {
+      const d = el('details', 'gm-archive');
+      d.append(el('summary', null, t('chest.archive', { n: archive.length })), historyList(archive.slice(0, 100), list));
+      box.append(d);
+    }
     return box;
+  }
+  /** Read-only rows for opened chests: icon, what came out (or "dust"), the box, and a small verify link. */
+  function historyList(chests, list) {
+    const ul = el('ul', 'gm-hist');
+    for (const c of chests) {
+      const o = outcomeOf(c);
+      const li = el('li'); li.style.setProperty('--rc', RARITY_COLOR[(o && o.rarity) || 'common'] || RARITY_COLOR.common);
+      const it = o && o.id ? list.find((x) => x.id === o.id) : null;
+      const ico = el('span', 'gm-hist-ico');
+      const art = rewardArt(o, 128) || (it ? it.icon128 || it.icon : null);
+      if (art) { const img = el('img'); img.src = base + 'assets/items/' + art; img.alt = ''; ico.append(img); }
+      else ico.textContent = !o ? '·' : o.kind === 'silk' ? '◈' : o.kind === 'xp' ? '✦' : o.kind === 'title' ? '❦' : o.kind === 'nft' ? '✧' : '?';
+      const what = !o ? t('chest.opened')
+        : o.kind === 'item' ? (it ? t(it.nameKey) : o.id || '?')
+        : o.kind === 'nft' ? (it ? t('chest.out.nftOf', { item: t(it.nameKey) }) : t('chest.out.nft'))
+        : o.kind === 'silk' ? t('chest.out.silk', { n: o.amount })
+        : o.kind === 'xp' ? t('chest.out.xp', { n: o.amount })
+        : o.kind === 'title' ? t('chest.out.title', { title: t('wheel.title.' + o.id) }) : '?';
+      const txt = el('span', 'gm-hist-txt');
+      txt.append(el('b', null, what));
+      if (o && o.dust) { const d = el('span', 'gm-dust', t('chest.dust')); d.title = t('chest.dust.tip'); txt.append(d); }
+      else if (o && o.kind !== 'title') txt.append(el('span', 'gm-hist-rar', t('rarity.' + o.rarity)));
+      txt.append(el('small', null, t('chest.from', { box: t('chest.tier.' + c.tier) })));
+      li.append(ico, txt);
+      const href = verifyHref(c);
+      if (href) { const a = el('a', 'gm-hist-ver', t('chest.verifyShort')); a.href = href; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.title = t('chest.viewTx'); li.append(a); }
+      else li.append(el('small', 'gm-hist-ver', t(c.opening && c.opening.verified ? 'chest.verified' : 'chest.unverified')));
+      ul.append(li);
+    }
+    return ul;
   }
   /** One opening's reward into this browser's ledger and inventory, and the chest marked opened. */
   function settleChest(chest, op, verified) {
@@ -407,7 +490,57 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
     if (o.kind === 'xp') ledger.grant({ xp: o.amount || 0 });
     bag.settle(chest.id, { index: op.index, outcome: o, tx: op.tx, nft: op.nft, verified: !!verified });
   }
+  /**
+   * The wardrobe (night 14.11): who she can be, from boot-world.js (window.__ftfSkins: the skin worn now and the ones the
+   * chain confirms). Owned skins are worn with one click; the Sheriffchenko skin is tried on for a while until won.
+   */
+  function wardrobeSection() {
+    const read = typeof globalThis.__ftfSkins === 'function' ? globalThis.__ftfSkins() : null;
+    if (!read) return el('div');
+    const box = el('section', 'gm-wardrobe'); box.append(el('h3', null, t('inv.wardrobe')));
+    const row = el('div', 'gm-ward');
+    const ART = { iris: 'iris.webp', elise: 'elise.webp', sheriffchenko: 'sheriffchenko_m.webp' };
+    const wear = (id) => { globalThis.dispatchEvent(new CustomEvent('ftf:skin-wear', { detail: { id } })); setTimeout(() => { if (current === 'inventory') show('inventory'); }, 60); };
+    for (const w of wardrobe(read.current, read.owned || {})) {
+      const c = el('div', 'gm-ward-card' + (w.worn ? ' gm-worn' : '') + (w.owned ? '' : ' gm-locked'));
+      const img = el('img'); img.src = base + 'assets/cards/' + ART[w.id]; img.alt = ''; c.append(img, el('b', null, t('day1.skin.' + w.id)));
+      if (w.worn) c.append(el('small', null, t('skin.worn')));
+      else if (w.owned) c.append(btn(t('skin.wear'), () => wear(w.id), 'gm-fchip'));
+      else if (w.id === 'sheriffchenko') c.append(el('small', null, t('skin.locked')), btn(t('skin.try', { n: TRY_ON_SECONDS }), () => wear(w.id), 'gm-fchip'));
+      else c.append(el('small', null, t('skin.lockedElise')));
+      row.append(c);
+    }
+    box.append(row);
+    return box;
+  }
   /** No guest yet: one line and the Day-1 free account button (the same mint the arrival runs, play/day1-mint.js). */
+  /**
+   * The cards a player can earn (owner 14.11, the painted card set; play/nft-collection.js): owned ones first, each with
+   * what it takes to earn it; a card opens large on click or Enter and closes on any click.
+   */
+  function collectionSection() {
+    const skins = typeof globalThis.__ftfSkins === 'function' ? globalThis.__ftfSkins() : null;
+    let pass = false; try { pass = !!(storage && JSON.parse(storage.getItem('ftf.pass.v1') || '{}').claimId); } catch { /* none */ }
+    const sec = el('section', 'gm-collection'); sec.append(el('h3', null, t('nft.collection')));
+    const g = el('div', 'gm-coll');
+    for (const c of collectionView({ skins, pet: globalThis.__ftfPet || null, pass })) {
+      const card = el('button', 'gm-coll-card' + (c.owned ? '' : ' gm-locked')); card.type = 'button';
+      const img = el('img'); img.src = base + 'assets/' + c.thumb; img.alt = ''; img.loading = 'lazy';
+      card.append(img, el('b', null, t(c.nameKey)), el('small', c.owned ? 'gm-on' : null, c.owned ? t('nft.owned') : t(c.howKey)));
+      card.setAttribute('aria-label', t(c.nameKey) + ': ' + (c.owned ? t('nft.owned') : t(c.howKey)));
+      card.addEventListener('click', () => {
+        const big = el('div', 'gm-coll-big'); big.setAttribute('role', 'dialog'); big.setAttribute('aria-label', t(c.nameKey));
+        const im = el('img'); im.src = base + 'assets/' + c.art; im.alt = t(c.nameKey); big.append(im);
+        const shut = () => { big.remove(); card.focus(); }; big.tabIndex = -1;
+        big.addEventListener('click', shut);
+        big.addEventListener('keydown', (e) => { if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); shut(); } }); // Escape closes the card, not the menu
+        sec.append(big); if (big.focus) big.focus();
+      });
+      g.append(card);
+    }
+    sec.append(g);
+    return sec;
+  }
   function guestBanner() {
     const wrap = el('div', 'gm-guest'); wrap.style.cssText = 'display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0 10px;padding:10px 12px;border:1px solid rgba(197, 164, 105,.45);border-radius:10px;background:rgba(197, 164, 105,.08)';
     const line = el('p', 'gm-note', t('chest.guest.line')); line.style.margin = '0'; line.style.flex = '1 1 220px';

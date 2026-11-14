@@ -28,6 +28,7 @@ import json
 import math
 import os
 import random
+import time
 import sys
 
 import bpy
@@ -253,11 +254,17 @@ def make_materials():
         mats[f"altar_glyph_{k:02d}"] = glyph
     mats["altar_eye"] = ftf.simple_material("M_Altar_Eye", (0.9, 0.55, 0.18), 0.35, emit=(1.0, 0.55, 0.14), emit_strength=0.2)
     mats["ink"] = ftf.simple_material("M_Shop_Ink", (0.02, 0.022, 0.03), 0.5)
-    mats["fire"] = ftf.simple_material("M_Shop_Fire", (1.0, 0.5, 0.1), 0.5, emit=(1.0, 0.42, 0.06), emit_strength=5.0)
+    # flames carry their gradient in the vertex colour (white-yellow core, orange sheath, dark tip): glTF has no
+    # per-vertex emission, so the colour is the base colour under the room's ambient light plus a low even glow
+    fire = vc_material("M_Shop_Fire", (1.0, 1.0, 1.0), rough=0.6, double_sided=True)
+    fb = fire.node_tree.nodes["Principled BSDF"]
+    fb.inputs["Emission Color"].default_value = (1.0, 0.36, 0.06, 1.0)
+    fb.inputs["Emission Strength"].default_value = 0.6
+    mats["fire"] = fire
     # Interior-only materials (S-001..S-003). Interiors are lit by their baked vertex colour under a plain
     # ambient light in the client, so nothing here is a true metal (a metal has no diffuse and would go black).
     mats["window_day"] = vc_material("M_Shop_Daylight", (1.0, 1.0, 1.0), rough=0.9)          # painted daylight, never baked
-    mats["bronze"] = vc_material("M_Shop_Bronze", (0.80, 0.56, 0.26), rough=0.38, metal=0.2)
+    mats["bronze"] = vc_material("M_Shop_Bronze", (0.62, 0.40, 0.16), rough=0.38, metal=0.2)
     mats["iron"] = vc_material("M_Shop_Iron", (0.10, 0.095, 0.09), rough=0.6)
     mats["ceramic"] = vc_material("M_Shop_Ceramic", (1.0, 1.0, 1.0), rough=0.45)
     mats["paper"] = vc_material("M_Shop_Paper", (0.93, 0.87, 0.72), rough=0.9, double_sided=True)
@@ -354,16 +361,42 @@ MAT_KEY = {}   # object name -> material key
 # ------------------------------------------------------------------ interior light bake
 
 # Mean albedo per material key for the bounce light of the bake (the tiling base colours are not sampled there).
-BAKE_ALBEDO = {"timber": (0.34, 0.24, 0.16), "stone": (0.42, 0.40, 0.36), "plaster": (0.70, 0.66, 0.58), "cloth": (0.62, 0.60, 0.56),
+BAKE_ALBEDO = {"timber": (0.30, 0.20, 0.13), "stone": (0.42, 0.40, 0.36), "plaster": (0.50, 0.46, 0.40), "cloth": (0.62, 0.60, 0.56),
                "cobble": (0.30, 0.28, 0.25), "foliage": (0.20, 0.30, 0.10), "bronze": (0.55, 0.38, 0.18), "iron": (0.08, 0.08, 0.08),
                "ceramic": (0.8, 0.8, 0.8), "paper": (0.80, 0.74, 0.60), "wax": (0.85, 0.80, 0.70), "ink": (0.03, 0.03, 0.04),
-               "shard": (0.5, 0.4, 0.8), "shard_amber": (0.8, 0.5, 0.2), "altar_metal": (0.5, 0.35, 0.16)}
-BAKE_EMIT = {"lamp": ((1.0, 0.62, 0.26), 6.0), "fire": ((1.0, 0.40, 0.08), 14.0), "shard": ((0.55, 0.42, 1.0), 1.5),
-             "shard_amber": ((1.0, 0.55, 0.16), 1.5), "window_day": (None, 5.0)}
+               "shard": (0.5, 0.4, 0.8), "shard_amber": (0.8, 0.5, 0.2), "altar_metal": (0.5, 0.35, 0.16), "rock": (0.24, 0.24, 0.27)}
+BAKE_EMIT = {"lamp": ((1.0, 0.62, 0.26), 0.6), "fire": ((1.0, 0.40, 0.08), 1.5), "shard": ((0.55, 0.42, 1.0), 1.5),
+             "shard_amber": ((1.0, 0.55, 0.16), 1.5), "window_day": (None, 2.2)}
 BAKE_SKIP = ("lamp", "fire", "window_day", "case_glass", "glass_lit", "glass")   # keep their authored colour
 BAKE_EDGE = float(os.environ.get("TOWN_BAKE_EDGE", "0.34"))       # longest edge after tessellation, metres
 BAKE_SAMPLES = int(os.environ.get("TOWN_BAKE_SAMPLES", "768"))
-BAKE_MID = 0.50                                                     # where the median lit surface lands (0..1)
+BAKE_MID = float(os.environ.get("TOWN_BAKE_MID", "0.41"))         # where the median lit surface lands (0..1)
+# Lightmap (14.11): every large surface of an interior (floor, walls, beams, furniture) also carries a second UV set
+# and one shared light texture per room, shipped as the material's occlusion map on TEXCOORD_1. The client lights
+# interiors with a plain ambient light, and three.js multiplies ambient light by the occlusion map, so the map is a
+# greyscale lightmap there: soft shadows, contact darkening and lamp pools at texel density, while the vertex colour
+# keeps the tint and the light's hue. Small things (jars, books, candles) stay on per-vertex light.
+BAKE_GAMMA = float(os.environ.get("TOWN_BAKE_GAMMA", "2.1"))      # contrast of the baked light (1 = plain shoulder)
+LM_SIZE = int(os.environ.get("TOWN_LM_SIZE", "2048"))
+LM_SUPER = int(os.environ.get("TOWN_LM_SUPER", "2"))               # bake at LM_SIZE x LM_SUPER, box-filter down
+LM_SAMPLES = int(os.environ.get("TOWN_LM_SAMPLES", "384"))
+LM_MIN_DIAG = 0.6                                                   # islands smaller than this stay per-vertex, metres
+LM_EDGE = 1.0                                                       # tessellation of lightmapped meshes (hue only)
+LM_WARM = (1.0, 0.90, 0.76)
+# Draw calls and size (3D review, 14.11). Indoors nothing but the base colour reaches the screen (one ambient light:
+# no speculars, no normal mapping), so a room ships no normal or ORM textures, every untextured material and every
+# small prop shares ONE vertex-coloured material (its base colour goes into the vertex colour), and the static
+# meshes are joined per material. Only the hanging lamps stay separate nodes (they swing).
+PROPS_BASE = {"bronze": (0.62, 0.40, 0.16), "iron": (0.10, 0.095, 0.09), "ceramic": (1.0, 1.0, 1.0), "paper": (0.93, 0.87, 0.72),
+              "wax": (1.0, 0.95, 0.84), "ink": (0.02, 0.022, 0.03)}
+PROPS_SMALL = ("timber", "stone", "plaster", "cloth", "rock")   # small pieces of these lose the tiling texture, not the colour
+LM_FLOOR = 0.035                                                    # darkest light value kept (never pure black)
+
+
+def _tone(light, k):
+    """Light to display value: a soft shoulder that keeps lamp pools from clipping (x / (1 + x))."""
+    y = k * light
+    return (y / (1.0 + y)) ** BAKE_GAMMA
 
 
 def _bake_material(key):
@@ -402,6 +435,119 @@ def _bake_material(key):
     return m
 
 
+def split_small(o, min_diag):
+    """Moves the connected pieces of `o` smaller than `min_diag` into a new object (same material, same parent).
+    Returns (small object or None, True when `o` keeps large pieces)."""
+    bm = bmesh.new()
+    bm.from_mesh(o.data)
+    bm.verts.ensure_lookup_table()
+    seen = [False] * len(bm.verts)
+    small_faces = set()
+    n_big = 0
+    for v0 in bm.verts:
+        if seen[v0.index]:
+            continue
+        stack, comp = [v0], []
+        seen[v0.index] = True
+        while stack:
+            v = stack.pop()
+            comp.append(v)
+            for e in v.link_edges:
+                u = e.other_vert(v)
+                if not seen[u.index]:
+                    seen[u.index] = True
+                    stack.append(u)
+        lo = Vector((min(v.co.x for v in comp), min(v.co.y for v in comp), min(v.co.z for v in comp)))
+        hi = Vector((max(v.co.x for v in comp), max(v.co.y for v in comp), max(v.co.z for v in comp)))
+        faces = {f.index for v in comp for f in v.link_faces}
+        if (hi - lo).length < min_diag:
+            small_faces |= faces
+        else:
+            n_big += 1
+    if not small_faces or not n_big:
+        bm.free()
+        return None, bool(n_big)
+    o2 = o.copy()
+    o2.data = o.data.copy()
+    o2.name = o.name + "_s"
+    for c in o.users_collection:
+        c.objects.link(o2)
+    bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.index in small_faces], context="FACES")
+    bm.to_mesh(o.data)
+    bm.free()
+    bm2 = bmesh.new()
+    bm2.from_mesh(o2.data)
+    bmesh.ops.delete(bm2, geom=[f for f in bm2.faces if f.index not in small_faces], context="FACES")
+    bm2.to_mesh(o2.data)
+    bm2.free()
+    return o2, True
+
+
+def lightmap_uv(objs):
+    """A second UV set `LM` on every object, all islands packed into one shared 0..1 square at one texel density."""
+    for o in objs:
+        uv = o.data.uv_layers.get("LM") or o.data.uv_layers.new(name="LM")
+        o.data.uv_layers.active = uv
+    ftf.select_only(objs, objs[0])
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="SELECT")
+    bpy.ops.uv.smart_project(angle_limit=math.radians(66), island_margin=0.0, area_weight=0.0, correct_aspect=True, scale_to_bounds=False)
+    bpy.ops.uv.select_all(action="SELECT")
+    try:
+        bpy.ops.uv.average_islands_scale()
+    except Exception as exc:   # no UV editor in background on some builds: smart project already keeps world scale
+        log("lightmap: average_islands_scale skipped:", exc)
+    bpy.ops.uv.pack_islands(rotate=True, margin_method="FRACTION", margin=0.0016, shape_method="AABB")
+    bpy.ops.object.mode_set(mode="OBJECT")
+
+
+def props_material():
+    """The one vertex-coloured material of a room's props (double sided: paper sheets, cloth edges)."""
+    return bpy.data.materials.get("M_Shop_Props") or vc_material("M_Shop_Props", (1.0, 1.0, 1.0), rough=0.8, double_sided=True)
+
+
+def strip_pbr(m, keep_occlusion):
+    """Leaves only what an interior shows: base colour (x vertex colour), emission, and the lightmap as occlusion."""
+    nt = m.node_tree
+    b = nt.nodes.get("Principled BSDF")
+    if b is None:
+        return m
+    for name in ("Normal", "Roughness", "Metallic"):
+        for lk in list(b.inputs[name].links):
+            nt.links.remove(lk)
+    b.inputs["Roughness"].default_value = 0.9
+    b.inputs["Metallic"].default_value = 0.0
+    if not keep_occlusion:
+        for n in nt.nodes:
+            if n.type == "GROUP" and n.node_tree and n.node_tree.name == "glTF Material Output":
+                for lk in list(n.inputs["Occlusion"].links):
+                    nt.links.remove(lk)
+    return m
+
+
+def lightmap_material(src, img, tag):
+    """The shipped material of a lightmapped mesh: `src` with the room's light texture on the LM UV set as occlusion."""
+    m = src.copy()
+    m.name = f"{src.name}_LM{tag}"
+    nt = m.node_tree
+    uvn = nt.nodes.new("ShaderNodeUVMap")
+    uvn.uv_map = "LM"
+    tex = nt.nodes.new("ShaderNodeTexImage")
+    tex.name = "LM_TEX"
+    tex.image = img
+    sep = nt.nodes.new("ShaderNodeSeparateColor")
+    grp = next((n for n in nt.nodes if n.type == "GROUP" and n.node_tree and n.node_tree.name == "glTF Material Output"), None)
+    if grp is None:
+        grp = nt.nodes.new("ShaderNodeGroup")
+        grp.node_tree = ftf.gltf_output_group()
+    for lk in list(grp.inputs["Occlusion"].links):
+        nt.links.remove(lk)
+    nt.links.new(uvn.outputs["UV"], tex.inputs["Vector"])
+    nt.links.new(tex.outputs["Color"], sep.inputs["Color"])
+    nt.links.new(sep.outputs["Red"], grp.inputs["Occlusion"])
+    return m
+
+
 def tessellate(o, max_edge):
     """Splits long edges so the per-vertex light bake has something to hold the falloff."""
     bm = bmesh.new()
@@ -421,6 +567,19 @@ def bake_interior(sc, piece, grp, tb, all_objects, exposure=1.0):
     into the vertex colour of every mesh of an interior: Col = tint x light. The client shows interiors
     under a plain ambient light, so this is the whole lighting of the room on every quality tier."""
     import numpy as np
+    # large pieces get the lightmap, small ones stay per-vertex: split every mesh by island size first
+    lm_objs = []
+    for o in list(grp["meshes"]):
+        if MAT_KEY[o.name] in BAKE_SKIP or MAT_KEY[o.name] == "case_glass" or not LM_SIZE:
+            continue
+        if o.parent is not None:   # a swinging lamp stays per-vertex: one props mesh and its flames, two draw calls
+            continue
+        small, has_big = split_small(o, LM_MIN_DIAG)
+        if small is not None:
+            MAT_KEY[small.name] = MAT_KEY[o.name]
+            grp["meshes"].append(small)
+        if has_big:
+            lm_objs.append(o)
     meshes = [o for o in grp["meshes"]]
     # everything else that renders (other pieces, every *_col collision mesh) is hidden during the bake: the
     # collision floor and furniture boxes would otherwise occlude the room
@@ -440,14 +599,17 @@ def bake_interior(sc, piece, grp, tb, all_objects, exposure=1.0):
     world = bpy.data.worlds.new("BakeWorld")
     world.use_nodes = True
     world.node_tree.nodes["Background"].inputs["Color"].default_value = (0.9, 0.75, 0.6, 1.0)
-    world.node_tree.nodes["Background"].inputs["Strength"].default_value = 0.012
+    world.node_tree.nodes["Background"].inputs["Strength"].default_value = 0.004
     sc.world = world
     sc.render.engine = "CYCLES"
     sc.cycles.samples = BAKE_SAMPLES
     sc.cycles.use_adaptive_sampling = False
     sc.cycles.max_bounces = 6
-    sc.cycles.diffuse_bounces = 4
-    sc.cycles.sample_clamp_indirect = 8.0
+    sc.cycles.diffuse_bounces = 2
+    sc.cycles.sample_clamp_indirect = 3.0
+    sc.cycles.sample_clamp_direct = 12.0
+    sc.cycles.caustics_reflective = False
+    sc.cycles.caustics_refractive = False
     sc.render.bake.target = "VERTEX_COLORS"
     sc.render.bake.use_pass_direct = True
     sc.render.bake.use_pass_indirect = True
@@ -456,7 +618,7 @@ def bake_interior(sc, piece, grp, tb, all_objects, exposure=1.0):
     for o in meshes:
         key = MAT_KEY[o.name]
         if key not in BAKE_SKIP:
-            tessellate(o, BAKE_EDGE)
+            tessellate(o, LM_EDGE if o in lm_objs else BAKE_EDGE)
         keep[o.name] = o.data.materials[0]
         if key == "case_glass":
             o.hide_render = True
@@ -472,6 +634,37 @@ def bake_interior(sc, piece, grp, tb, all_objects, exposure=1.0):
         r = bpy.ops.object.bake(type="DIFFUSE", pass_filter={"DIRECT", "INDIRECT"}, target="VERTEX_COLORS")
         if r != {"FINISHED"}:
             log("bake", o.name, "returned", r)
+    # the lightmap: one float image for the room, direct + indirect diffuse light, supersampled
+    lm_light = None
+    if lm_objs:
+        size = LM_SIZE * LM_SUPER
+        lightmap_uv(lm_objs)
+        img = bpy.data.images.new(f"lmbake_{piece}", size, size, alpha=False, float_buffer=True)
+        img.colorspace_settings.name = "Non-Color"
+        for m in {o.data.materials[0] for o in lm_objs}:
+            node = m.node_tree.nodes.get("BakeTarget") or m.node_tree.nodes.new("ShaderNodeTexImage")
+            node.name = "BakeTarget"
+            node.image = img
+            m.node_tree.nodes.active = node
+        sc.render.bake.target = "IMAGE_TEXTURES"
+        sc.cycles.samples = LM_SAMPLES
+        ftf.select_only(lm_objs, lm_objs[0])
+        t0 = time.time()
+        r = bpy.ops.object.bake(type="DIFFUSE", pass_filter={"DIRECT", "INDIRECT"}, target="IMAGE_TEXTURES", margin=4 * LM_SUPER, margin_type="EXTEND", use_clear=True)
+        log("lightmap", piece, r, "objects", len(lm_objs), f"{size}px {LM_SAMPLES} spp {time.time() - t0:.1f}s")
+        a = np.empty(size * size * 4, dtype=np.float32)
+        img.pixels.foreach_get(a)
+        a = a.reshape(size, size, 4)[..., :3]
+        lm_light = a.reshape(LM_SIZE, LM_SUPER, LM_SIZE, LM_SUPER, 3).mean(axis=(1, 3))
+        # fireflies: a texel far above the median of its 3 x 3 neighbourhood takes that median
+        pad = np.pad(lm_light, ((1, 1), (1, 1), (0, 0)), mode="edge")
+        nb = np.stack([pad[i:i + LM_SIZE, j:j + LM_SIZE] for i in range(3) for j in range(3)], 0)
+        med3 = np.median(nb, axis=0)
+        hot = lm_light.max(axis=2) > med3.max(axis=2) * 1.6 + 0.02
+        lm_light[hot] = med3[hot]
+        bpy.data.images.remove(img)
+        sc.render.bake.target = "VERTEX_COLORS"
+        sc.cycles.samples = BAKE_SAMPLES
     # exposure from the median lit wall / floor / furniture corner, then a soft shoulder per channel
     data = {}
     lum_all = []
@@ -486,13 +679,31 @@ def bake_interior(sc, piece, grp, tb, all_objects, exposure=1.0):
         if MAT_KEY[o.name] in ("plaster", "timber", "stone"):
             lum_all.append(a @ np.array([0.2126, 0.7152, 0.0722], dtype=np.float32))
     med = float(np.median(np.concatenate(lum_all)))
-    k = -math.log(1.0 - BAKE_MID) / max(med, 1e-6) * exposure
+    mid = BAKE_MID ** (1.0 / BAKE_GAMMA)
+    k = mid / (1.0 - mid) / max(med, 1e-6) * exposure
+    k_lm = k
+    if lm_light is not None:
+        # the texture sets the exposure of the whole room: per-vertex samples of the big concave shell sit in
+        # corners and read several times darker, so the small per-vertex props use the texture's scale too
+        # (the median is taken over lit texels only: the closing shell and a cave's dark shell are in the atlas too)
+        peak = lm_light.max(axis=2)
+        cov = peak > 0
+        lit_t = peak > 0.02 * float(np.percentile(peak[cov], 95))
+        med_lm = float(np.median(peak[lit_t]))
+        k = k_lm = mid / (1.0 - mid) / max(med_lm, 1e-6) * exposure
     for o in lit:
         n = len(o.data.loops)
         c = np.zeros(n * 4, dtype=np.float32)
         o.data.color_attributes["Col"].data.foreach_get("color", c)
         c = c.reshape(n, 4)
-        light = np.maximum(1.0 - np.exp(-k * data[o.name]), 0.03)
+        light = np.maximum(_tone(data[o.name], k), LM_FLOOR)
+        if o in lm_objs:   # the texture carries the brightness: the vertices keep only the hue of the light
+            peak = light.max(axis=1, keepdims=True)
+            hue = light / peak
+            wgt = np.clip((peak - LM_FLOOR) / 0.08, 0.0, 1.0)
+            light = hue * wgt + np.array([1.0, 0.9, 0.8], dtype=np.float32) * (1.0 - wgt)
+            light = light * np.array(LM_WARM, dtype=np.float32)   # the rooms lean warm even where the mist light reaches
+            light = light / light.max(axis=1, keepdims=True)
         c[:, :3] = np.clip(c[:, :3] * light, 0.0, 1.0)
         o.data.color_attributes["Col"].data.foreach_set("color", c.ravel())
         o.data.color_attributes.remove(o.data.color_attributes["Light"])
@@ -504,6 +715,66 @@ def bake_interior(sc, piece, grp, tb, all_objects, exposure=1.0):
     for o in meshes:
         o.data.materials[0] = keep[o.name]
         o.hide_render = False
+    # the props material: untextured things and small pieces carry their base colour in the vertex colour
+    pm = props_material()
+    for o in lit:
+        key = MAT_KEY[o.name]
+        base = PROPS_BASE.get(key) or (FLAT[key] if key in PROPS_SMALL and o not in lm_objs else None)
+        if base is None:
+            continue
+        n = len(o.data.loops)
+        c = np.zeros(n * 4, dtype=np.float32)
+        o.data.color_attributes["Col"].data.foreach_get("color", c)
+        c = c.reshape(n, 4)
+        c[:, :3] *= np.array(base, dtype=np.float32)
+        o.data.color_attributes["Col"].data.foreach_set("color", c.ravel())
+        o.data.materials[0] = pm
+    if lm_light is not None:
+        tone = np.clip(_tone(lm_light, k_lm), LM_FLOOR, 1.0).max(axis=2)
+        log("lightmap stats", piece, "coverage", round(float(cov.mean()), 3), "light p10/p50/p90", [round(float(v), 4) for v in np.percentile(lm_light.max(axis=2)[cov], [10, 50, 90])],
+            "tone p10/p50/p90", [round(float(v), 3) for v in np.percentile(tone[cov], [10, 50, 90])], "vertex median", round(med, 4))
+        rng = np.random.default_rng(11)
+        u8 = np.clip(tone * 255.0 + (rng.random(tone.shape) - 0.5), 0, 255).astype(np.uint8)
+        from PIL import Image
+        os.makedirs(OUT_DIR, exist_ok=True)
+        path = os.path.join(OUT_DIR, f"lm_{piece}.png")
+        Image.fromarray(np.ascontiguousarray(np.stack([u8, u8, u8], -1)[::-1]), "RGB").save(path, optimize=True)
+        lm_img = bpy.data.images.load(path)
+        lm_img.name = f"lm_{piece}"
+        lm_img.colorspace_settings.name = "Non-Color"
+        tag = "_" + piece.replace("town_shop_", "")
+        lm_mats = {}
+        for o in lm_objs:
+            src = o.data.materials[0]
+            if src.name not in lm_mats:
+                lm_mats[src.name] = lightmap_material(src, lm_img, tag)
+            o.data.materials[0] = lm_mats[src.name]
+            o.data.uv_layers.active = o.data.uv_layers[0]
+    # no normal / ORM textures indoors; then one mesh per material (the swinging lamps keep their own nodes)
+    tag = "_" + piece.replace("town_shop_", "")
+    plain = {}
+    for o in meshes:
+        m = o.data.materials[0]
+        if "_LM_" in m.name:
+            strip_pbr(m, True)
+        elif m.name.startswith("M_Town_") and any(n.type == "TEX_IMAGE" for n in m.node_tree.nodes):
+            if m.name not in plain:
+                cp = m.copy()
+                cp.name = f"{m.name}_S{tag}"
+                plain[m.name] = strip_pbr(cp, False)
+            o.data.materials[0] = plain[m.name]
+    by_mat = {}
+    for o in grp["meshes"]:
+        if o.parent is None:
+            by_mat.setdefault(o.data.materials[0].name, []).append(o)
+    gone = {o for objs in by_mat.values() for o in objs[1:]}
+    grp["meshes"] = [o for o in grp["meshes"] if o not in gone]
+    for mname, objs in by_mat.items():
+        key = MAT_KEY[objs[0].name]
+        for o in objs:
+            o.data.uv_layers.active = o.data.uv_layers[0]
+        j = ftf.join(objs, f"{piece}_{mname.replace('M_Town_', '').replace('M_Shop_', '').lower()}")
+        MAT_KEY[j.name] = key
     for lo in lights:
         bpy.data.objects.remove(lo, do_unlink=True)
     for o in others:
@@ -587,7 +858,19 @@ def _preview_material(src):
     outn = next(n for n in nt.nodes if n.type == "OUTPUT_MATERIAL")
     em = nt.nodes.new("ShaderNodeEmission")
     base = b.inputs["Base Color"]
-    if base.is_linked:
+    lm = nt.nodes.get("LM_TEX")
+    if lm is not None:   # the lightmap, as the client's ambient light sees it (occlusion multiplies the base colour)
+        mul = nt.nodes.new("ShaderNodeMix")
+        mul.data_type = "RGBA"
+        mul.blend_type = "MULTIPLY"
+        mul.inputs["Factor"].default_value = 1.0
+        if base.is_linked:
+            nt.links.new(base.links[0].from_socket, mul.inputs[6])
+        else:
+            mul.inputs[6].default_value = base.default_value
+        nt.links.new(lm.outputs["Color"], mul.inputs[7])
+        nt.links.new(mul.outputs[2], em.inputs["Color"])
+    elif base.is_linked:
         nt.links.new(base.links[0].from_socket, em.inputs["Color"])
     else:
         em.inputs["Color"].default_value = base.default_value
@@ -644,7 +927,13 @@ def preview_interiors(pieces, only=None):
         views = [("door", (0.0, 1.62, d / 2 - 0.35), (0.0, 1.35, -d / 2), 15, None),
                  ("counter", (sp["stand"][0] - 0.5, 1.75, sp["stand"][1] - 0.35), (0.0, 1.0, d / 2), 15, None),
                  ("play", (0.9, 2.6, d / 2 - 2.2), (sp["stand"][0] * 0.6, 1.0, -d / 2 + 2.0), 20, None),
+                 ("game", (0.55, 1.85, d / 2 - 0.9), (sp["stand"][0] * 0.5, 1.15, -d / 2 + 2.2), 21, None),   # about where the game camera sits at the door
                  ("top", (0.0, h - 0.45, 0.0), (0.0, 0.0, -0.001), None, max(w, d) * 1.08)]
+        if sp["id"] == "exchange":   # the hidden grotto behind the rear wall: from the room, from the passage, from the back
+            gx, gz = -1.625, -d / 2 - 1.8 - 3.1
+            views += [("arch", (-0.6, 1.6, -d / 2 + 3.4), (-1.7, 1.15, -d / 2), 20, None),
+                      ("grotto", (-1.625, 1.6, -d / 2 - 1.5), (gx, 0.8, gz - 1.2), 16, None),
+                      ("grotto_back", (gx + 1.4, 1.7, gz - 1.9), (gx - 0.6, 0.7, gz + 1.5), 16, None)]
         for name, loc, tgt, lens, ortho in views:
             if os.environ.get("TOWN_PREVIEW_VIEWS") and name not in os.environ["TOWN_PREVIEW_VIEWS"].split(","):
                 continue

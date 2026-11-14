@@ -12,6 +12,7 @@ import { state as busState } from '../sprint/bus.js';
 import * as firstSeen from '../sprint/first-seen.js';
 import { registerTips } from './tips.js';
 import { runOnboarding } from '../ui/onboarding-queue.js';
+import { createVoice, voicePlan, voiceSettings } from './voice.js';
 
 const fmt = (s, a) => String(s).replace(/\{(\w+)\}/g, (m, k) => (a && a[k] != null ? String(a[k]) : m));
 /** The game's t() with the English sprint strings as the fallback (the locale import lines are the integrator's). */
@@ -57,6 +58,14 @@ export function runIntro(ctx) {
   };
   const setActive = (on) => { try { busState.set('npe.active', on); } catch { /* */ } };
   const lock = (on) => { try { if (ctx.lockControls) ctx.lockControls(on); } catch { /* */ } };
+  // Iris's recorded lines with their subtitles (npe/voice.js): only with the sound on; the browser's speech stands in for a
+  // missing file only when narration is on. Never blocks the film.
+  let voice = ctx.voice || null;
+  const speak = (c) => {
+    const plan = voicePlan(c, voiceSettings(ctx.storage || null)); if (!plan) return;
+    voice ||= createVoice({ base: ctx.base || '/', storage: ctx.storage || null });
+    try { Promise.resolve(voice.play(plan.id, { speech: plan.speech })).then((how) => emit('npe.voice', { id: plan.id, how }), () => {}); } catch { /* silent */ }
+  };
 
   const state = runOnboarding('intro', async () => {                             // after the Day-1 name, never on top of it
     emit('npe.started', { step: 'prologue', ms: 0 }); lock(true); setActive(true); // no coach mark during the intro (first-seen reads npe.active)
@@ -66,7 +75,8 @@ export function runIntro(ctx) {
     let how = 'done';
     try {
       if (pro && pro.playLabPrologue) {
-        const off = ctx.bus && ctx.bus.on ? ctx.bus.on('prologue.cue', (c) => { if (c && c.text) subs.show(c.text, c.speaker || null, c.durMs || 0); }) : null;
+        // a cue with a voice line plays it with its subtitle (QA pass 2 #7); never waits on it
+        const off = ctx.bus && ctx.bus.on ? ctx.bus.on('prologue.cue', (c) => { if (c && c.text) subs.show(c.text, c.speaker || null, c.durMs || 0); speak(c); }) : null;
         current = { skip: () => { if (pro.skip) pro.skip(); } };
         // Esc (or the Skip button) skips the 3D prologue, and never reaches the game's menu meanwhile (R10)
         const onEsc = (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); if (e.stopImmediatePropagation) e.stopImmediatePropagation(); current.skip(); } };
@@ -93,7 +103,7 @@ export function runIntro(ctx) {
     const lines = WAKEUP.map((l) => ({ ...l, text: t(l.key, vars) }));
     const d = playDialogue({ doc, lines, reduced, name: (sp) => t('npe.speaker.' + sp), hint: t('npe.hint'), count: (n, of) => t('npe.count', { n, of }), skipLabel: t('npe.skip'),
       portrait: ctx.portrait || ((sp) => introPortrait(sp, ctx.base || '/')),
-      onLine: (i, l) => { if (l.camera && ctx.cameraCue) { try { ctx.cameraCue(l.camera); } catch { /* */ } } emit('npe.camera', { target: l.camera || null, line: l.id }); },
+      onLine: (i, l) => { if (l.camera && ctx.cameraCue) { try { ctx.cameraCue(l.camera); } catch { /* */ } } emit('npe.camera', { target: l.camera || null, line: l.id, speaker: l.speaker || null }); },
       onDone: (i) => step({ type: 'line_done', last: i === lines.length - 1 }) });
     current = d;
     const end = await d.done;

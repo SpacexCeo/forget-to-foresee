@@ -6,6 +6,7 @@
 // value against the on-chain seed (net/chest.js). Reduced motion: no reel, the card
 // fades in. No service, no outcome: the chest stays sealed and the panel says why.
 import { cue } from '../audio/town-audio.js';
+import { rewardArt } from './chest-history.js';
 // the plain message keys (net/chest-client.js CHEST_ERRORS; kept here so this panel loads without the net code)
 const ERR_KEYS = ['off', 'soon', 'rate', 'daily', 'sold_out', 'no_guest', 'no_key', 'network', 'tx_failed', 'no_opening', 'stale', 'replayed', 'deck_mismatch', 'request'];
 
@@ -64,10 +65,12 @@ export function outcomeView(outcome, { t, items = [], base = '/' }) {
     const it = items.find((x) => x.id === o.id);
     return { label: it ? t(it.nameKey) : (o.id || '?'), icon: it ? base + 'assets/items/' + (it.icon128 || it.icon) : null, glyph: it ? null : '?', rarity, frame };
   }
-  if (o.kind === 'silk') return { label: t('chest.out.silk', { n: o.amount || 0 }), icon: null, glyph: '◈', rarity, frame };
-  if (o.kind === 'xp') return { label: t('chest.out.xp', { n: o.amount || 0 }), icon: null, glyph: '✦', rarity, frame };
+  // the painted silk and XP piles and NFT art (assets/items/icons, play/chest-history.js rewardArt)
+  const art = rewardArt(o, 256);
+  if (o.kind === 'silk') return { label: t('chest.out.silk', { n: o.amount || 0 }), icon: art ? base + 'assets/items/' + art : null, glyph: art ? null : '◈', rarity, frame };
+  if (o.kind === 'xp') return { label: t('chest.out.xp', { n: o.amount || 0 }), icon: art ? base + 'assets/items/' + art : null, glyph: art ? null : '✦', rarity, frame };
   if (o.kind === 'title') return { label: t('chest.out.title', { title: t('wheel.title.' + o.id) }), icon: null, glyph: '❦', rarity, frame };
-  if (o.kind === 'nft') { const it = items.find((x) => x.id === o.id); return { label: it ? t('chest.out.nftOf', { item: t(it.nameKey) }) : t('chest.out.nft'), icon: it ? base + 'assets/items/' + (it.icon128 || it.icon) : null, glyph: it ? null : '✧', rarity, frame }; }
+  if (o.kind === 'nft') { const it = items.find((x) => x.id === o.id); const pic = art || (it ? it.icon128 || it.icon : null); return { label: it ? t('chest.out.nftOf', { item: t(it.nameKey) }) : t('chest.out.nft'), icon: pic ? base + 'assets/items/' + pic : null, glyph: pic ? null : '✧', rarity, frame }; }
   return { label: '?', icon: null, glyph: '?', rarity, frame };
 }
 

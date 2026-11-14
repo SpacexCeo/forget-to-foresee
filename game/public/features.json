@@ -1,8 +1,8 @@
 {
   "_doc": "Feature flags (docs/features.md). Only names the build defines count, only true/false. Edit and redeploy this file alone to switch a feature on or off; the game reads it at boot (3 s timeout, defaults on failure).",
   "flags": {
-    "damageNumbers": false,
-    "loadRitual": false,
+    "damageNumbers": true,
+    "loadRitual": true,
     "register": false,
     "loomMeter": false,
     "presenceChip": false,
@@ -24,8 +24,10 @@
     "agentTournament": true,
     "firstSeenTips": true,
     "accountLogin": true,
-    "glassShoal": false,
+    "glassShoal": true,
     "townLedger": true,
-    "wayfarers": true
+    "tales": true,
+    "wayfarers": true,
+    "shellAura": true
   }
 }

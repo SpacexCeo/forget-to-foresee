@@ -9,13 +9,15 @@ import { DEFAULT_FLAGS } from '../../src/features.js';
 
 const MODEL = new URL('../../public/assets/models/townsfolk_wayfarer.glb', import.meta.url);
 
-test('wayfarers: three visitors on one model, tall and springy, behind a flag that ships on', () => {
-  assert.equal(WAYFARERS.length, 3);
-  assert.equal(new Set(WAYFARERS.map((w) => w.key)).size, 3);
+test('wayfarers: the Lost Tourist and three touring visitors on one model, tall and springy, behind a flag that ships on', () => {
+  assert.equal(WAYFARERS.length, 4);
+  assert.equal(new Set(WAYFARERS.map((w) => w.key)).size, 4);
+  assert.deepEqual(Object.keys(WAYFARER_PROGRAMS), ['wayfarer_a', 'wayfarer_b', 'wayfarer_c']);
   for (const w of WAYFARERS) {
     assert.equal(w.asset, 'townsfolk_wayfarer'); assert.equal(w.height, 1.9); assert.ok(w.walk > 1.2 && w.walk < 1.7);
-    assert.ok(!(w.key in PROGRAMS) && WAYFARER_PROGRAMS[w.key], w.key + ' has its own program');
-    assert.equal(mayTrade(w.key, 0), false, 'a visitor does not walk off to trade');
+    assert.ok(!(w.key in PROGRAMS) && w.program && w.program.steps.length, w.key + ' has its own program');
+    assert.ok(w.visitor && !w.scale && !w.placeholder, w.key + ' wears the real model');
+    if (w.key !== 'wayfarer') assert.equal(mayTrade(w.key, 0), false, 'a touring visitor does not walk off to trade');
   }
   assert.equal(TOWNSFOLK.some((p) => p.key.startsWith('wayfarer')), false, 'the town cast itself is unchanged');
   assert.equal(DEFAULT_FLAGS.wayfarers, false);
@@ -42,7 +44,7 @@ test('wayfarers: every walk leg runs along the path graph; every stop plays a cl
 });
 
 test('wayfarers: four minutes of the whole town with the visitors: nobody overlaps anybody, the visitors keep touring', () => {
-  const plans = [...TOWNSFOLK.map((d) => new PersonPlan(d)), ...WAYFARERS.map((d) => new PersonPlan(d, WAYFARER_PROGRAMS[d.key]))];
+  const plans = [...TOWNSFOLK.map((d) => new PersonPlan(d)), ...WAYFARERS.map((d) => new PersonPlan(d, d.program))];
   const map = new Map(plans.map((p) => [p.key, p])); const bad = []; const far = new Map(); const start = new Map(plans.map((p) => [p.key, [p.x, p.z]]));
   for (let i = 0; i < 240 * 30; i++) {
     for (const p of plans) p.step(1 / 30, { iris: null, reduced: false, others: map });
@@ -53,7 +55,7 @@ test('wayfarers: four minutes of the whole town with the visitors: nobody overla
     for (const w of WAYFARERS) { const p = map.get(w.key), s = start.get(w.key); far.set(w.key, Math.max(far.get(w.key) || 0, Math.hypot(p.x - s[0], p.z - s[1]))); }
   }
   assert.deepEqual(bad, []);
-  for (const w of WAYFARERS) assert.ok(far.get(w.key) > 5, w.key + ' toured ' + far.get(w.key).toFixed(1) + ' m from its start');
+  for (const w of WAYFARERS) if (w.key !== 'wayfarer') assert.ok(far.get(w.key) > 5, w.key + ' toured ' + far.get(w.key).toFixed(1) + ' m from its start');
 });
 
 test('wayfarer model: both files ship with the own clips on the townsfolk rig, inside the budget', { skip: !existsSync(MODEL) && 'model not built yet' }, () => {

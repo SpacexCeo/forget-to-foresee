@@ -15,6 +15,13 @@ import { dragonMix, DRAGON_ANIM } from '../game/shoal-dragon-anim.js';
 
 /** Model files the models seat delivers (render/asset-catalog names); placeholders until hasModelFile says yes. */
 export const MODELS = Object.freeze({ dragon: 'shoal_dragon', saddle: 'dragon_saddle', blade: 'loomblade', boss: 'hollow_tide' });
+/** How the Loomblade stands at its marker: metres of blade in the soil, and the grip-to-tip length when the file has no `socket_tip`. */
+export const BLADE_STAND = Object.freeze({ buried: 0.22, tip: 0.944 });
+/** The sword file to load: the light `_m` variant on phones when it ships, the full one otherwise, null when neither does. */
+export function bladeModelFile(mobile, has = hasModelFile) {
+  if (mobile && has(MODELS.blade + '_m')) return MODELS.blade + '_m';
+  return has(MODELS.blade) ? MODELS.blade : null;
+}
 /** Town-local spots: the Loomblade's marker outside the walls, the cliff stone above the Crownrift arena. */
 export const SPOTS = Object.freeze({ blade: Object.freeze([-26, 60]), stone: Object.freeze([24, 106]), radius: 2.6, giver: 3.2 });
 
@@ -54,6 +61,7 @@ html[data-motion=reduce] .gs-track{animation:none}
  * @param {() => boolean} o.reduced @param {boolean} o.mobile @param {() => string} o.hero 'iris' | 'elise'
  * @param {(name: string) => void} [o.clip] plays a combat clip on the heroine
  * @param {() => number[]} o.axes the movement axes [x, y] (keys or the stick)
+ * @param {() => {kind: string, pos: object, flourish?: Function}[]} [o.allies] her companion dragons (world positions) that join the fight
  */
 export function createGlassShoal(o) {
   const { THREE, scene, rig, player, toWorld, groundAt, folkAt, ledger, chests = null, storage = null, toast = () => {}, reduced = () => false, mobile = false, hero = () => 'iris', clip = () => {}, axes = () => [0, 0] } = o;
@@ -81,6 +89,17 @@ export function createGlassShoal(o) {
     const guard = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.06, 0.08), new THREE.MeshStandardMaterial({ color: 0xd8b25a, metalness: 0.8, roughness: 0.3 })); guard.position.y = 1.16;
     const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.3, 8), new THREE.MeshStandardMaterial({ color: 0x3b2a1c, roughness: 0.8 })); grip.position.y = 1.34;
     blade.add(b, guard, grip); blade.rotation.z = 0.12; group.add(blade); }
+  // the real sword (art/props/shoal/loomblade): its origin is the grip centre and the blade runs along +Y, so it is
+  // turned tip down and lifted until BLADE_STAND.buried of the blade is in the soil; the placeholder leaves only then
+  const bladeFile = bladeModelFile(mobile, hasModelFile);
+  if (bladeFile) fetchGltf(bladeFile).then(({ gltf }) => {
+    const m = gltf.scene; const tip = m.getObjectByName('socket_tip');
+    const len = tip ? tip.position.y : BLADE_STAND.tip;
+    m.rotation.z = Math.PI; m.position.y = len - BLADE_STAND.buried;
+    m.traverse((n) => { if (n.isMesh) { n.castShadow = true; n.frustumCulled = false; } });
+    for (const c of [...blade.children]) { blade.remove(c); if (c.geometry) c.geometry.dispose(); if (c.material) c.material.dispose(); }
+    blade.add(m);
+  }).catch(() => { /* the placeholder stays */ });
   // the cliff stone: a standing slab with a gold rune
   const stone = new THREE.Mesh(new THREE.BoxGeometry(1.6, 2.6, 0.7), new THREE.MeshStandardMaterial({ color: 0x8a8578, roughness: 0.95, emissive: 0x6a4a10, emissiveIntensity: 0.25 }));
   stone.geometry.translate(0, 1.3, 0); group.add(stone);
@@ -126,7 +145,7 @@ export function createGlassShoal(o) {
   function loadArena() {
     if (!arenaLoading) arenaLoading = import('./shoal-arena.js').then((m) => { arena = m.createShoalArena({ THREE, scene, camera: o.camera, center: arenaCenter(), say, toast, reduced, mobile, hero, clip, axes, rig,
       onWin: () => { try { globalThis.dispatchEvent(new CustomEvent('ftf:feat', { detail: { k: 'boss', v: 'shoal' } })); } catch { /* the room's action feed is optional */ } if (event('boss_down') && ledger) { ledger.grant({ xp: R.REWARD.xp }); if (chests) try { chests.add({ tier: R.REWARD.chest, source: 'boss' }); } catch { /* the bag is optional */ } } },
-      onDeath: () => event('death'), onHome: () => flyHome() }); return arena; });
+      onDeath: () => event('death'), onHome: () => flyHome(), allies: o.allies }); return arena; });
     return arenaLoading;
   }
 
@@ -178,8 +197,10 @@ export function createGlassShoal(o) {
     const pulse = reduced() ? 0.35 : 0.22 + 0.16 * (0.5 + 0.5 * Math.sin(tAcc * 2.4));
     for (const r of [giverRay, bladeRay, stoneRay]) r.material.opacity = pulse;
     blade.visible = active && !save.blade && mode === 'town';
+    stone.visible = active; // the placeholder slab stands only once the quest is taken: the first hours of the town stay as they were
     bladeRay.visible = blade.visible;
-    stoneRay.visible = mode === 'town' && active && (save.step === 'reach_stone' || save.step === 'ride');
+    stoneRay.visible = mode === 'town' && active && R.stoneOpen(save);
+    if (mode === 'town' && R.homeDue(save) && event('home')) toast(say('shoal.home') + ' ' + say('shoal.reward', { xp: R.REWARD.xp, title: say('shoal.title.' + R.REWARD.title) }));
     if (!reduced()) blade.rotation.y += dt * 0.6;
     // the tracker line
     const tk = mode === 'town' ? R.trackerKey(save, lv) : null;

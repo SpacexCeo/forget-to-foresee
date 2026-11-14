@@ -937,4 +937,11 @@ export default {
   "led.card.price": "{price} silk (base {base}) · {n} on the shelf",
   "led.card.trades": "Latest trades",
   "led.card.none": "No trade of theirs in the last few minutes.",
+  "led.part.title": "Take part",
+  "led.part.lead": "Your moves go on chain too: trade at a stall, pledge silk to the town works, claim your reward share.",
+  "led.part.goal.first_trade": "First trade",
+  "led.part.goal.first_pledge": "First pledge",
+  "led.part.goal.streak": "Pledge on 3 days this week: {n}/{of}",
+  "led.part.open": "Open the Town works",
+  "led.part.note": "Testnet silk only: no real value. The rate is variable and can be zero.",
 };
