@@ -17,6 +17,8 @@ import { detectTier, tierForPreference } from './render/quality.js';
 import { cycleLook, cycleAt, KEYS as CYCLE_KEYS, startPhase, weatherTimeline, WEATHER_FADE } from './render/daycycle.js';
 import { lookFor, mixStats } from './render/sky.js';
 import { CameraRig } from './render/camera-rig.js';
+import { cueShot, cueState, stepCue } from './render/dialogue-camera.js';
+import { on as onBus } from './sprint/bus.js';
 import { fixedSteps, rayCast, moveCapsule, MASK_PLAYER } from './physics/collision.js';
 import { PHYSICS_DT, steerTo, clickStuck } from './physics/character.js';
 import { damp } from './physics/motion.js';
@@ -1108,6 +1110,11 @@ const focus = new THREE.Vector3();
 const ndc = new THREE.Vector2();
 const clock = new THREE.Clock();
 const physics = { steps: 0, substeps: 0, colliders: 0, grounded: false };
+// The wake-up dialogue's camera beats (render/dialogue-camera.js, QA pass 2 #2): the intro names each line's cue on
+// the bus; the frame loop leans the town camera toward it and back.
+const dialogueCue = { name: null, st: cueState(), irisFocus: [0, 0, 0] };
+onBus('npe.camera', (p) => { dialogueCue.name = (p && p.target) || null; });
+for (const n of ['npe.completed', 'npe.skipped']) onBus(n, () => { dialogueCue.name = null; });
 const hudStats = () => ({ info: renderer.info, physics, streaming: streamer.stats(), events: streamer.events, camera: rig, lookdev: lookdev.stats() });
 
 // Camera presets for screenshots / measurements (dev only).
@@ -1388,6 +1395,14 @@ function frame() {
   if (inTown && townFlow.focusK > 0) { // registering: the camera leaves Iris for the altar while its core flares
     const a = town.altar.focus, k = townFlow.focusK * townFlow.focusK * (3 - 2 * townFlow.focusK) * 0.7;
     focus.set(focus.x + (a[0] - focus.x) * k, focus.y + (a[1] - focus.y) * k, focus.z + (a[2] - focus.z) * k);
+  }
+  if (inTown && (dialogueCue.name || dialogueCue.st.active)) { // a dialogue beat: the camera leans toward what the line is about
+    const at = { iris: [focus.x, focus.y - 1.1, focus.z], portal: townPortal ? townPortal.root.position.toArray() : null, board: townBoard ? townBoard.root.position.toArray() : null, elder: null };
+    const tf = town && town.townsfolk, elder = tf && dialogueCue.name === 'elder' ? tf.people.find((q) => q.key === 'elder' && q.root.visible) : null;
+    if (elder) at.elder = [elder.plan.x + TOWN_ORIGIN_W[0], elder.plan.y + TOWN_ORIGIN_W[1], elder.plan.z + TOWN_ORIGIN_W[2]];
+    const st = dialogueCue.st, was = st.active;
+    if (stepCue(st, cueShot(dialogueCue.name, at), focus.toArray(dialogueCue.irisFocus), rig.dist, dt, lookdev.reducedMotion)) { focus.set(st.focus[0], st.focus[1], st.focus[2]); rig.dist = st.dist; }
+    else if (was) rig.dist = st.base; // back on Iris at the player's own zoom
   }
   // Shell hover is visual only; reduced motion holds the Shells at their rest pose.
   world3d.update(lookdev.reducedMotion ? 0 : clock.elapsedTime);
