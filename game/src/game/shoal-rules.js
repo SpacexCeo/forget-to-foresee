@@ -249,9 +249,9 @@ export const inTempest = (me, at, extra = 0, U = ULT) => Math.hypot(me[0] - at[0
  * ring or line glows before the hit lands (readable: never under 0.8 s). `checkpoint` = the HP a death resets it to.
  */
 export const BOSS = f({
-  // tuned on the scripted run (tests/client/shoal-sim.mjs): an average Elise wins in about 2 minutes standing still,
-  // more with the walking and aiming of a real fight (owner 14.11: 10000 dragged past 4 minutes with real keys)
-  hp: 6000,
+  // tuned on the scripted run (tests/client/shoal-sim.mjs): a good player wins in about 100 s, an average one in about
+  // 150 s (lead 14.11: 90-120 s for a decent player); a bot that dodges every blow and stays in melee took ~60 s on the bench
+  hp: 9000,
   armor: 0.2,             // damage taken while the crest is closed
   exposedMult: 1.5,       // damage taken while the weak point is open
   exposedTime: 2.0,       // seconds the crest stays open after she dodges a blow
