@@ -296,6 +296,7 @@ export function createTownQuests({ scene = null, hudToast = null, storage, townL
       const r = questDo({ type: 'TURN_IN', questId: arg, partId: part, partSource: 'inventory', have: have() });
       if (!r.rejected && inventory && inventory.take) { for (const [id, n] of Object.entries(QUESTS[arg].needs || {})) inventory.take(id, n); if (part) inventory.take(part, 1); renderObjective(); }
       if (arg === 'q_welcome' && !r.rejected) storyDo({ type: 'GUIDE_STEP', id: 'talked' }); // the elder's second talk: free play
+      if (!r.rejected) { const rw = QUESTS[arg].reward || {}; notify(say('quest.done.toast', { title: t(QUESTS[arg].title) }) + (rw.silk ? ' ' + say('quest.log.reward', { silk: rw.silk }) : '') + (rw.xp ? ' · +' + rw.xp + ' XP' : '')); } // the reward is felt at the turn-in
       closeTalk(); return;
     }
   }
@@ -445,6 +446,8 @@ export function createTownQuests({ scene = null, hudToast = null, storage, townL
     spots,
     get story() { return story; }, get quests() { return qs; }, get ledger() { return ledger; }, get fee() { return fee; },
     get talking() { return !!panel; }, get twisting() { return twisting; },
+    /** The giver the objective line names now (E prefers them when several stand close), or null. */
+    get focusGiver() { const o = objective(story, qs, now(), have()); return (o && o.giver) || null; },
     /** Live facts for the portal. */
     portalFacts: () => ({ phase: story.phase, balanceC: balanceC(), heldC: heldC(), onChainC: heldC(), totalC: balanceC(), pendingC: silkView().pendingC, feeC: feeC(), demo: false, blocker: chain.ok ? null : chain.reason, payError, paying: twisting, syncing }),
     /** E at the Gate-Loom when the verified silk would cover the fee: the relayer credits it on chain (credit only). */

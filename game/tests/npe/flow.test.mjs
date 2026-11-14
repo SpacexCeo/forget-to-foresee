@@ -82,7 +82,7 @@ test('roadmap card (design review 13.11): three rows (Quests J, Trade B, the way
   assert.equal(await c2.result, 'later');
 });
 
-test('intro end to end (DOM): fallback without A6, 19 lines in order, no silk granted, the card, control back', async () => {
+test('intro end to end (DOM): fallback without A6, the short welcome in order, no silk granted, the card, control back', async () => {
   const doc = dom();
   const { runIntro } = await import('../../src/npe/index.js');
   const storage = memoryStorage(); const grants = []; const toasts = []; const events = []; const locks = [];
@@ -92,10 +92,12 @@ test('intro end to end (DOM): fallback without A6, 19 lines in order, no silk gr
   const run = runIntro(ctx);
   await tick(3);
   const names = [];
-  for (let i = 0; i < 19; i++) { names.push(doc.querySelector('.npe-name').textContent); doc.querySelector('.npe-box').click(); await tick(); }
-  assert.deepEqual(names.slice(0, 7), ['Townsfolk', 'Child', 'Guard', 'Lamplighter', 'Weaver', 'Elder', 'Iris']);
+  const { WELCOME } = await import('../../src/npe/dialogue-script.js');
+  for (let i = 0; i < WELCOME.length; i++) { names.push(doc.querySelector('.npe-name').textContent); doc.querySelector('.npe-box').click(); await tick(); }
+  assert.deepEqual(names.slice(0, 4), ['Townsfolk', 'Elder', 'Iris', 'Iris']);
+  assert.ok(WELCOME.length <= 8, 'a stranger walks within a minute');
   await tick(2);
-  assert.equal(doc.querySelectorAll('.npe-card li').length, 3, 'the card opens after W19');
+  assert.equal(doc.querySelectorAll('.npe-card li').length, 3, 'the card opens after the last line');
   assert.deepEqual(grants, [], 'the intro grants no silk'); assert.deepEqual(toasts, []);
   doc.querySelectorAll('.npe-card button').find((b) => b.textContent === 'Start').click();
   const s = await run.state;

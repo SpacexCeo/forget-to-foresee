@@ -101,7 +101,7 @@ const sleep = (s) => new Promise((r) => setTimeout(r, s * 1000));
  * @param {() => void} [o.onRegister] the registration begins: Iris reaches for the altar ring (her `register` clip)
  * @param {() => Promise<boolean>} [o.confirmRegister] asked before the registration; false keeps Iris in town
  */
-export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = globalThis.document, leave, islandReady = () => true, islandProgress = () => 0, islandLog = () => [], coarse = false, onRegister = null, quest = null, npcAt = () => null, signSvg = null, ledger = null, folkNear = () => null, folkAt = () => null, onHireChange = null, onProfile = null, spots = [], onExchange = null, onMirror = null, folkList = [], onDoor = null, onWheel = null, confirmRegister = null, tourney = null, onTourneyLocked = null, folkAround = () => [] }) {
+export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = globalThis.document, leave, islandReady = () => true, islandProgress = () => 0, islandLog = () => [], coarse = false, onRegister = null, quest = null, npcAt = () => null, signSvg = null, ledger = null, folkNear = () => null, folkAt = () => null, onHireChange = null, onProfile = null, spots = [], onExchange = null, onMirror = null, folkList = [], onDoor = null, onWheel = null, confirmRegister = null, tourney = null, onTourneyLocked = null, folkAround = () => [], preferTalk = () => null }) {
   const i18n = ctx.i18n;
   if (!doc.getElementById('ftf-town-style')) { const st = doc.createElement('style'); st.id = 'ftf-town-style'; st.textContent = CSS; doc.head.append(st); }
   const root = doc.createElement('div'); root.className = 'ftf-town'; root.hidden = true;
@@ -515,7 +515,7 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     if (dev !== state.device || ready !== state.ready) { state.device = dev; state.ready = ready; renderText(); }
     // the quest's townsperson in reach comes first (the shrinekeeper stands beside the altar), then the altar
     const qNpc = quest && ready ? talkTarget(quest, player.pos, npcAt) : null;
-    cands = !qNpc && ready ? talkCandidates({ pos: player.pos, spots, folkAround, folkAt, folk: !!ledger }) : [];
+    cands = !qNpc && ready ? talkCandidates({ pos: player.pos, spots, folkAround, folkAt, folk: !!ledger, prefer: preferTalk() }) : [];
     const chosen = pickCandidate(cands, pickedId);
     if (!chosen || !cands.some((c) => c.id === pickedId)) pickedId = chosen ? chosen.id : null;
     const sp = chosen && chosen.kind === 'spot' ? chosen.spot : null;
