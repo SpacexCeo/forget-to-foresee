@@ -111,12 +111,12 @@ export const LOCATION_LOOKS = Object.freeze({
   town: Object.freeze({
     default: 'afternoon', altitude: 420,
     presets: Object.freeze({
-      // The sun stands in the south-south-west, almost along the main street: both sides of it are lit and the house
-      // shadows fall up the street, not across it.
+      // The sun stands in the south, a little off the main street's axis: both sides of it are lit, the house shadows
+      // fall up the street, and the slant models the stairs and walls instead of lighting them flat from the front.
       // 14.11 look pass: a warmer, stronger key against a dimmer sky fill (shade reads, the plaster no longer washes
       // out), less bounce, and more aerial haze so the altar and the hill behind sit back in depth.
-      afternoon: { elevation: 40, azimuth: 160, sunIntensity: 6.1, sunWarm: 0.88, skyMean: 0.28, mie: 1.9, exposure: -0.05, envIntensity: 0.36, cloudCover: 0.4, lamps: 0.25, windows: 0.5, bounce: 0.7,
-        fog: { density: 0.022, falloff: 0.05, near: 55, far: 820, sunPower: 7, aerial: 0.58 } },
+      afternoon: { elevation: 40, azimuth: 142, sunIntensity: 6.4, sunWarm: 1.0, skyMean: 0.26, mie: 1.9, exposure: -0.3, envIntensity: 0.3, cloudCover: 0.4, lamps: 0.25, windows: 0.5, bounce: 0.6,
+        fog: { density: 0.022, falloff: 0.05, near: 55, far: 820, sunPower: 7, aerial: 0.52 } },
       morning: { elevation: 34, azimuth: -142, sunIntensity: 5.2, skyMean: 0.34, mie: 1.5, exposure: 0.0, envIntensity: 0.42, cloudCover: 0.4, lamps: 0.2, windows: 0.45, bounce: 0.5,
         fog: { density: 0.02, falloff: 0.05, near: 70, far: 900, sunPower: 6, aerial: 0.45 } },
       noon: { elevation: 58, azimuth: -165, envIntensity: 0.46, lamps: 0.1, windows: 0.3, bounce: 0.55,
