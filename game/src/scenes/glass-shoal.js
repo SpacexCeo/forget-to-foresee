@@ -305,6 +305,8 @@ export function createGlassShoal(o) {
     owns: () => mode === 'ride' || mode === 'arena' || mode === 'arena-wait',
     /** On the dragon's back (boot-world seats her: the `ride` clip, hips on the saddle). */
     riding: () => mode === 'ride',
+    /** Flying over the Shoal (Elise's flight): boot-world plays the heroine's `fly` clip. */
+    flying: () => mode === 'arena' && !!(arena && arena.airborne),
     update, interact,
     /** Input while owned (keys from boot-world's Input). */
     input(input) {

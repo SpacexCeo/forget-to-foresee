@@ -617,6 +617,8 @@ export function createShoalArena(o) {
       cam.position.x += (Math.random() - 0.5) * k; cam.position.y += (Math.random() - 0.5) * k; cam.position.z += (Math.random() - 0.5) * k;
     },
     /** Dev and tests: deal damage straight to the boss. */
+    /** In the air (her flight): boot-world plays her `fly` clip. */
+    get airborne() { return R.airborne(FL); },
     debugHit(n) { return damageBoss(n); },
     /** Dev and tests: fill the Tempest's meter. */
     debugCharge() { H = { ...H, ult: R.ULT.max }; },

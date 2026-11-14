@@ -664,6 +664,10 @@ if (townMode.town) {
   // Iris wears her model and walks with her gait before the season exists; the same avatar goes on to the play
   // layer. Importing it also brings the play chunk in while the player crosses the town, so registering does not stall.
   // A failed attach (a dropped download) is tried again a few times; the loading screen covers the wait.
+  // The emote wheel (owner 14.11): hold the middle mouse button, release on one of 15 emotes (ui/emote-wheel.js)
+  if (!window.__ftfEmoteWheel) { window.__ftfEmoteWheel = true; import('./ui/emote-wheel.js').then((m) => { window.__ftfEmoteWheel = m.createEmoteWheel({ t: (k) => ctx.i18n.t(k),
+    canOpen: () => !!(irisAvatar && irisAvatar.irisModel) && !(glassShoal && glassShoal.owns && glassShoal.owns()) && !document.querySelector('dialog[open]'),
+    onPick: (id) => { if (irisAvatar) irisAvatar.emote(id, clock.elapsedTime); } }); }).catch((e) => console.warn('[emote wheel]', e)); }
   const attachIris = (attempt = 0) => import('./play/iris-avatar.js').then((m) => { irisAvatar = irisAvatar || new m.IrisAvatar(startHero); return irisAvatar.attach(avatar); }).then(() => {
     if (avatar.userData.irisFailed && attempt < 4) { setTimeout(() => { avatar.userData.irisFailed = false; irisLoad.failed = false; attachIris(attempt + 1); }, 3000 * (attempt + 1)); }
   }).catch((e) => console.warn('[town] Iris model unavailable', e));
@@ -736,6 +740,7 @@ const _windHand = new THREE.Vector3();
 // pack's seated loop, astride) and her hips, not her feet, go on the saddle socket. The clip's `pelvis` extra is the hip
 // joint in the model's space; a retargeted body (Sheriffchenko) has its own pelvis height and scale from the retarget.
 const RIDE_SEAT_ABOVE = 0.1, _seat = new THREE.Vector3();
+let airT = 0; // seconds she has been off the ground (the fly clip after a short hop)
 function seatRider(avatar) {
   const m = irisAvatar && irisAvatar.irisModel;
   if (!m) return;
@@ -1578,6 +1583,11 @@ function frame() {
   if (shoalArt) shoalArt.sync(shoalArena);
   const shoalSpeed = glassShoal && glassShoal.owns() ? glassShoal.applyAvatar(avatar, focus) : null; // on the dragon or on the Shoal
   if (shoalSpeed != null && glassShoal.riding && glassShoal.riding()) seatRider(avatar);
+  // In the air (owner 14.11: her idle played in flight): the Shoal flight, or a fall in town longer than a hop, plays
+  // her `fly` clip (the pack swim: horizontal strokes, art/heroes/*_game_clips.json)
+  const flyingNow = shoalSpeed != null ? !!(glassShoal.flying && glassShoal.flying()) : (inTown && player.grounded === false);
+  airT = flyingNow ? airT + dt : 0;
+  if (irisAvatar && (shoalSpeed != null ? flyingNow : airT > 0.35)) irisAvatar.react('fly', clock.elapsedTime);
   if (inTown && townFlow.focusK > 0) { // registering: the camera leaves Iris for the altar while its core flares
     const a = town.altar.focus, k = townFlow.focusK * townFlow.focusK * (3 - 2 * townFlow.focusK) * 0.7;
     focus.set(focus.x + (a[0] - focus.x) * k, focus.y + (a[1] - focus.y) * k, focus.z + (a[2] - focus.z) * k);
