@@ -51,7 +51,7 @@ async function readShards({ deployment = NEAR_DEPLOYMENT, fetch = globalThis.fet
     const client = createShardNftClient({ contractId: deployment.shardContractId, rpcUrls: deployment.rpcUrls, fetch, timeoutMs: 8000 });
     const items = [];
     const explorer = (deployment.explorer || 'https://testnet.nearblocks.io').replace(/\/$/, '');
-    for (const sid of seasons) for (const t of (await client.shardsOfSeason(sid)) || []) items.push({ kind: 'shard', tokenId: t.token_id, owner: t.owner_id || null, contractId: deployment.shardContractId, href: `${explorer}/nft-token/${deployment.shardContractId}/${t.token_id}`, label: t.data ? `${t.data.owner_clan} · ${t.data.kind}` : '' });
+    for (const sid of seasons) for (const t of (await client.shardsOfSeason(sid)) || []) items.push({ kind: 'shard', tokenId: t.token_id, owner: t.owner_id || null, contractId: deployment.shardContractId, href: `${explorer}/nft-token/${deployment.shardContractId}/${t.token_id}`, clan: t.data ? t.data.owner_clan : null, shardKind: t.data ? t.data.kind : null, label: t.data ? `${t.data.owner_clan} · ${t.data.kind}` : '' });
     return { state: 'loaded', items };
   } catch {
     return { state: 'offline', items: [] };

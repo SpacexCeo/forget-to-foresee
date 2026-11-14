@@ -1259,6 +1259,7 @@ const EN = {
   'shard.nft.kind.promise': "promise",
   'shard.nft.kind.insight': "insight",
   'shard.nft.kind.lie': "lie",
+  'shard.nft.card': "Memory shard · {kind}",
 
   // ---- the agent card NFT (src/ui/world-hud/agent-card.js; src/net/agent-nft.js) ----
   'agentcard.title': "{agent} · agent card",

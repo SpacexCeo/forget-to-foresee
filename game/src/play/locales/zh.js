@@ -2,9 +2,11 @@
 // Same vocabulary as src/locales/zh.js: 贝壳, 丝, 回合, 锚, 卷轴; clans 伊里斯, 盐, 灰, 苔, 琥珀, 霜.
 import quests from './zh-quests.js';
 import hud from './zh-hud.js';
+import npe from './zh-npe.js';
 import account from './zh-account.js';
 export default {
   ...hud, // first: the RPG HUD (en-hud.js keys); this file's own copies below win
+  ...npe, // the new-player dialogue, barks, card, glossary, Cup, tips and judge panel (en-npe.js, en-tips.js, en-judge.js keys)
   ...account, // the account panel (en-account.js keys)
   // ---- badge, help ----
   'play.badge': '本地演示 · 规则在你的浏览器中运行，与代理 API 共用同一个房间',
@@ -1254,6 +1256,7 @@ export default {
   'shard.nft.kind.promise': "承诺",
   'shard.nft.kind.insight': "洞见",
   'shard.nft.kind.lie': "谎言",
+  'shard.nft.card': "记忆碎片 · {kind}",
 
   // ---- agent card NFT (src/ui/world-hud/agent-card.js) ----
   'agentcard.title': "{agent} · 智能体卡片",
