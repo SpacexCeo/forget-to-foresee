@@ -83,3 +83,36 @@ test('account panel copy: five locales, the email and methods keys, no invest wo
   for (const lang of ['ru', 'uk', 'it', 'zh']) for (const k of keys) assert.ok(PLAY_MESSAGES[lang][k], `${lang}:${k}`);
   for (const lang of ['en', 'ru', 'uk', 'it', 'zh']) assert.match(PLAY_MESSAGES[lang]['acct.email.sent'], /\{email\}/);
 });
+
+test('after the code is sent: Change email goes back with the address kept; Resend code waits 30 s, then sends again', async () => {
+  const { installDom } = await import('../lib/mini-dom.mjs');
+  const { mountAccountMethods, RESEND_S } = await import('../../src/ui/account-methods.js');
+  for (const canLink of [false, true]) {
+    const { doc } = installDom();
+    const sent = []; let tickFn = null, cleared = 0;
+    const timers = { setInterval: (fn) => { tickFn = fn; return 1; }, clearInterval: () => { cleared++; tickFn = null; } };
+    const start = async (v) => { sent.push(v); return v.includes('@') ? { status: 'sent', email: v } : { status: 'error', error: 'bad_email' }; };
+    const mail = { canLink, methods: async () => ({ status: 'ok', methods: [], email: true }), linkStart: start, loginStart: start, linkFinish: async () => ({ status: 'error', error: 'wrong_code' }), loginFinish: async () => ({ status: 'error', error: 'wrong_code' }) };
+    const t = (k, a) => (a ? `${k}${JSON.stringify(a)}` : k);
+    const sec = mountAccountMethods({ doc, t, mail, timers }); doc.body.append(sec);
+    const wait = async () => { for (let i = 0; i < 4; i++) await new Promise((r) => setTimeout(r, 0)); };
+    const input = () => sec.querySelector('input'), btn = (text) => sec.querySelectorAll('button').find((b) => b.textContent.startsWith(text));
+    const submit = async (value) => { const i = input(); i.value = value; sec.querySelector('form').dispatchEvent({ type: 'submit', preventDefault() {} }); await wait(); };
+    await wait();
+    await submit('wrong@exmaple.com');
+    assert.equal(input().type, 'text', 'the code step'); assert.ok(btn('acct.email.back'), 'a way back'); 
+    const again = btn('acct.email.resendIn'); assert.ok(again && again.disabled, 'resend waits'); assert.ok(again.textContent.includes(String(RESEND_S)));
+    again.click(); await wait(); assert.equal(sent.length, 1, 'a tap during the wait sends nothing');
+    btn('acct.email.back').click(); await wait();
+    assert.equal(input().type, 'email'); assert.equal(input().value, 'wrong@exmaple.com', 'the address is prefilled'); assert.equal(btn('acct.email.back'), undefined);
+    await submit('right@example.com');
+    assert.deepEqual(sent, ['wrong@exmaple.com', 'right@example.com']);
+    for (let i = 0; i < RESEND_S; i++) tickFn && tickFn();
+    const ready = btn('acct.email.resend'); assert.equal(ready.textContent, 'acct.email.resend'); assert.equal(ready.disabled, false);
+    ready.click(); await wait();
+    assert.deepEqual(sent.at(-1), 'right@example.com', 'the same address gets a new code'); assert.ok(btn('acct.email.resendIn').disabled, 'and the wait starts again');
+    assert.equal(input().type, 'text', 'still on the code step');
+    await submit('000000'); assert.equal(input().type, 'text', 'a wrong code keeps the step (with its way back)'); assert.ok(btn('acct.email.back'));
+  }
+  for (const lang of ['en', 'ru', 'uk', 'it', 'zh']) { for (const k of ['acct.email.back', 'acct.email.resend']) assert.ok(PLAY_MESSAGES[lang][k], `${lang}:${k}`); assert.match(PLAY_MESSAGES[lang]['acct.email.resendIn'], /\{s\}/, lang); }
+});

@@ -14,6 +14,8 @@ const CSS = `
 .acct-list { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 6px; }
 .acct-list li { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 40px; padding: 4px 4px 4px 12px; border-radius: 10px; background: rgba(255, 255, 255, .05); font-size: 14px; }
 .acct-list button { min-height: 36px; padding: 6px 10px; font-size: 13px; background: transparent; color: inherit; border: 1px solid rgba(214, 226, 214, .3); }
+.acct-row2 { margin-top: 8px; }
+.acct-form .acct-ghost { min-height: 40px; padding: 6px 12px; background: transparent; color: inherit; border: 1px solid rgba(214, 226, 214, .3); font-weight: 600; font-size: 13px; }
 .acct-msg { min-height: 1.3em; margin: 6px 0; font-size: 13.5px; }
 .acct-hint { margin: 6px 0; color: rgba(233, 230, 220, .65); font-size: 12.5px; }
 .acct-sec [data-ic]::before { content: ''; display: inline-block; width: 1.3em; height: 1.3em; margin-right: 6px; vertical-align: -.3em; background: center / contain no-repeat; }
@@ -28,7 +30,10 @@ const CSS = `
  *   mail: net/account-email.js createAccountEmail(); say: where messages go (default: the section's own line)
  * @returns {HTMLElement} the section
  */
-export function mountAccountMethods({ doc = globalThis.document, t, mail, onSignedIn = null, say = null }) {
+/** Seconds before "Resend code" can be pressed (again). */
+export const RESEND_S = 30;
+
+export function mountAccountMethods({ doc = globalThis.document, t, mail, onSignedIn = null, say = null, timers = globalThis }) {
   if (doc.head && !doc.head.querySelector('style[data-acct-methods]')) { const s = doc.createElement('style'); s.setAttribute('data-acct-methods', ''); s.textContent = CSS; doc.head.append(s); }
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const ic = (e, name) => { e.dataset.ic = name; return e; }; // the open icon set (CSS above)
@@ -38,13 +43,46 @@ export function mountAccountMethods({ doc = globalThis.document, t, mail, onSign
   const errText = (r) => (r.error === 'email_not_configured' ? t('acct.email.off') : t('acct.error', { reason: r.error || 'error' }));
   let busy = false;
   /** One inline step: an input and its button (email or the 6-digit code). */
-  const form = (placeholder, type, label, onSubmit) => {
-    const f = el('form', 'acct-form'); const i = el('input'); i.type = type; i.placeholder = placeholder; i.required = true; i.setAttribute('aria-label', placeholder);
+  const form = (placeholder, type, label, onSubmit, value = '') => {
+    const f = el('form', 'acct-form'); const i = el('input'); i.type = type; i.placeholder = placeholder; i.required = true; i.setAttribute('aria-label', placeholder); if (value) i.value = value;
     if (type === 'email') i.autocomplete = 'email'; else { i.inputMode = 'numeric'; i.autocomplete = 'one-time-code'; i.maxLength = 6; }
     const b = el('button', null, label); b.type = 'submit';
     f.addEventListener('submit', async (e) => { if (e && e.preventDefault) e.preventDefault(); if (busy) return; busy = true; b.disabled = true; tell(t('acct.busy')); try { await onSubmit(i.value); } finally { busy = false; b.disabled = false; } });
     f.append(i, b); return f;
   };
+
+  /**
+   * The two steps of an email flow in `step`: the address, then the code. The code step has a way back (owner 14.11: a
+   * player who typed the wrong address was stuck): "Change email" returns to the address field with the address kept,
+   * and "Resend code" sends a new one after RESEND_S seconds. start(email) -> {status: 'sent', email}; finish(email, code)
+   * -> true when the flow is over (the address step comes back empty).
+   */
+  let cooldown = null;
+  const stopCooldown = () => { if (cooldown != null) { timers.clearInterval(cooldown); cooldown = null; } };
+  function emailFlow(step, { start, finish, goLabel }) {
+    const askEmail = (prefill = '') => { stopCooldown(); step.replaceChildren(form(t('acct.email.place'), 'email', t('acct.email.send'), async (v) => {
+      const r = await start(v);
+      if (r.status !== 'sent') { tell(errText(r)); return; }
+      tell(t('acct.email.sent', { email: r.email })); askCode(r.email);
+    }, prefill)); };
+    const askCode = (email) => {
+      stopCooldown();
+      const back = el('button', 'acct-ghost', t('acct.email.back')); back.type = 'button';
+      back.addEventListener('click', () => { if (busy) return; tell(''); askEmail(email); });
+      const again = el('button', 'acct-ghost'); again.type = 'button';
+      let left = RESEND_S;
+      const paint = () => { again.disabled = left > 0; again.textContent = left > 0 ? t('acct.email.resendIn', { s: left }) : t('acct.email.resend'); };
+      const arm = () => { stopCooldown(); left = RESEND_S; paint(); cooldown = timers.setInterval(() => { left -= 1; paint(); if (left <= 0) stopCooldown(); }, 1000); };
+      again.addEventListener('click', async () => {
+        if (busy || left > 0) return; busy = true; again.disabled = true; tell(t('acct.busy'));
+        try { const r = await start(email); tell(r.status === 'sent' ? t('acct.email.sent', { email: r.email }) : errText(r)); } finally { busy = false; arm(); }
+      });
+      const row = el('div', 'acct-form acct-row2'); row.append(back, again);
+      step.replaceChildren(form(t('acct.email.code'), 'text', goLabel, async (code) => { if (await finish(email, code)) askEmail(''); }), row);
+      arm();
+    };
+    askEmail('');
+  }
 
   if (mail.canLink) {
     const list = el('ul', 'acct-list');
@@ -64,28 +102,20 @@ export function mountAccountMethods({ doc = globalThis.document, t, mail, onSign
     refresh();
     const step = el('div');
     sec.append(ic(el('h3', null, t('acct.email.link')), 'email'), el('p', 'acct-hint', t('acct.email.note')), step);
-    step.append(form(t('acct.email.place'), 'email', t('acct.email.send'), async (v) => {
-      const r = await mail.linkStart(v);
-      if (r.status !== 'sent') { tell(errText(r)); return; }
-      tell(t('acct.email.sent', { email: r.email }));
-      step.replaceChildren(form(t('acct.email.code'), 'text', t('acct.email.linkGo'), async (code) => {
-        const l = await mail.linkFinish(code);
-        if (l.status === 'linked') { tell(t('acct.email.linked', { hint: l.hint })); refresh(); } else tell(errText(l));
-      }));
-    }));
+    emailFlow(step, { goLabel: t('acct.email.linkGo'), start: (v) => mail.linkStart(v), finish: async (email, code) => {
+      const l = await mail.linkFinish(code);
+      if (l.status === 'linked') { tell(t('acct.email.linked', { hint: l.hint })); refresh(); return true; }
+      tell(errText(l)); return false;
+    } });
     sec.append(ic(el('p', 'acct-hint', t('acct.wallet.link')), 'wallet'));
   } else {
     const step = el('div');
     sec.append(ic(el('h3', null, t('acct.email.title')), 'email'), el('p', 'acct-hint', t('acct.email.note')), step);
-    step.append(form(t('acct.email.place'), 'email', t('acct.email.send'), async (v) => {
-      const r = await mail.loginStart(v);
-      if (r.status !== 'sent') { tell(errText(r)); return; }
-      tell(t('acct.email.sent', { email: r.email }));
-      step.replaceChildren(form(t('acct.email.code'), 'text', t('acct.email.go'), async (code) => {
-        const s = await mail.loginFinish(r.email, code);
-        if (s.status === 'restored') { tell(t('acct.restored', { account: s.account })); if (onSignedIn) onSignedIn(s); } else tell(errText(s));
-      }));
-    }));
+    emailFlow(step, { goLabel: t('acct.email.go'), start: (v) => mail.loginStart(v), finish: async (email, code) => {
+      const r = await mail.loginFinish(email, code);
+      if (r.status === 'restored') { tell(t('acct.restored', { account: r.account })); if (onSignedIn) onSignedIn(r); return true; }
+      tell(errText(r)); return false;
+    } });
   }
   if (!say) sec.append(msg);
   return sec;
