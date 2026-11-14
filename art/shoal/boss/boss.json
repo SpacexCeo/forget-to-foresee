@@ -27,9 +27,9 @@
  ],
  "head_from": 0.9,
  "spine_bones": 12,
- "plates": 24,
- "sides": 36,
- "side_crystals": 14,
+ "plates": 30,
+ "sides": 64,
+ "side_crystals": 30,
  "head": {
   "length": 4.6,
   "width": [
@@ -56,5 +56,5 @@
  "emissive_strength": 2.5,
  "hood": 5,
  "hood_length": 4.2,
- "floor_shards": 13
+ "floor_shards": 22
 }

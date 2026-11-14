@@ -3,7 +3,9 @@
 A colossal serpent of stacked dark wet stone plates and pale glass crystal that rises out of the mirror: seams that
 glow cyan on the chest, a slot in the chest where the hollow core shows, a wide jaw with crystal teeth, a crown of
 tall crystals, fins along the spine. Numbers in boss.json (metres, Z up, facing -Y, the base at the origin).
-Weights are analytic: every vertex follows the spine bones by its place along the spine curve; the head, the jaw,
+Weights are analytic: the seam groove between two plates follows the spine bones by its place along the curve, so it
+stretches and folds where the body bends; each plate (lip, face, top edge) is rigid on the blend at its own middle, so
+the plates turn about their own centres and keep their shape and their overlap (3D review A.46); the head, the jaw,
 each fin and each crystal are rigid. With --src a replacement mesh (an ultra generation, risen pose, facing -Y) is
 fitted to the same height and skinned by the same rule; it keeps its own UVs and textures (no bake).
 Output: work/01_build.blend (hollow_tide + boss_rig), out/tex/*.png, report/b01.json, renders/b01_*.jpg."""
@@ -85,12 +87,13 @@ if 'src' in A:
     parts.append((boss, 'curve'))
 else:
     # ---- body: stacked plates. Rings per plate: the groove (seam), the lip, the middle, the top edge
-    hs = rng.uniform(0.7, 1.45, NP); edges_s = np.concatenate([[0], np.cumsum(hs)]) / hs.sum() * SH; verts = []; faces = []; fm = []
+    RINGS = ((0.0, 0.78), (0.04, 1.02), (0.09, 1.10), (0.3, 1.06), (0.55, 1.03), (0.8, 0.99), (0.94, 0.96), (1.0, 0.90)); NR = len(RINGS)
+    hs = rng.uniform(0.7, 1.45, NP); edges_s = np.concatenate([[0], np.cumsum(hs)]) / hs.sum() * SH; verts = []; faces = []; fm = []; vrule = []
     ang = np.linspace(0, 2 * np.pi, SIDES, endpoint=False)      # 0 = the front (NRM), pi = the back
     SLOT = C['slot']
     for p in range(NP):
         s0, s1 = edges_s[p], edges_s[p + 1]; ph = rng.uniform(0, 6.28); bulge = 1 + rng.uniform(-0.04, 0.07); tilt = rng.normal(0, 0.05, 2)
-        for t, rf in ((0.0, 0.78), (0.08, 1.10), (0.5, 1.03), (1.0, 0.90)):
+        for t, rf in RINGS:
             s = s0 + (s1 - s0) * t; P, T, Nn = frame(s); R = radius(s) * rf * bulge
             wide = 1 + C['chest'][2] * chest(s)
             for a in ang:
@@ -99,22 +102,23 @@ else:
                 belly = 1 - 0.06 * math.exp(-(min(a, 2 * math.pi - a) / 0.6) ** 2)      # a flatter front
                 rr = R * facet * keel * belly * (1 + rng.normal(0, 0.018)) if rf > 0.85 else R
                 verts.append(P + rr * (math.cos(a) * Nn + wide * math.sin(a) * XAX) + (T * rr * (tilt[0] * math.cos(a) + tilt[1] * math.sin(a)) if rf > 0.85 else 0))
-        base = p * 4 * SIDES
-        for ring_i in range(3):
+                vrule.append('curve' if t == 0.0 else ('rigid', (s0 + s1) / 2))
+        base = p * NR * SIDES
+        for ring_i in range(NR - 1):
             for k in range(SIDES):
                 k2 = (k + 1) % SIDES; a0 = base + ring_i * SIDES; a1 = a0 + SIDES
-                s_mid = s0 + (s1 - s0) * (0.05, 0.33, 0.78)[ring_i]; a_mid = ang[k] + math.pi / SIDES; front = min(a_mid, 2 * math.pi - a_mid)
+                s_mid = s0 + (s1 - s0) * (RINGS[ring_i][0] + RINGS[ring_i + 1][0]) / 2; a_mid = ang[k] + math.pi / SIDES; front = min(a_mid, 2 * math.pi - a_mid)
                 if ring_i > 0 and SLOT[0] < s_mid < SLOT[1] and front < SLOT[2] * (1 + 0.5 * math.sin(p * 2.1)): continue     # the slot: the hollow chest
                 faces.append((a0 + k, a0 + k2, a1 + k2, a1 + k))
                 lit = chest(s_mid) > 0.25 and front < 2.0
                 fm.append(('glow' if lit else 'seam') if ring_i == 0 else ('stone_lo' if front < 0.9 else 'stone'))
         if p < NP - 1:      # the step down from this plate's top edge to the next groove
             for k in range(SIDES):
-                k2 = (k + 1) % SIDES; a0 = base + 3 * SIDES; a1 = base + 4 * SIDES
+                k2 = (k + 1) % SIDES; a0 = base + (NR - 1) * SIDES; a1 = base + NR * SIDES
                 faces.append((a0 + k, a0 + k2, a1 + k2, a1 + k)); s_mid = s1; front = min(ang[k], 2 * math.pi - ang[k])
                 fm.append('glow' if chest(s_mid) > 0.25 and front < 2.0 else 'seam')
-    cap = len(verts); verts.append(curve(0.0)); faces += [(cap, (k + 1) % SIDES, k) for k in range(SIDES)]; fm += ['seam'] * SIDES
-    mesh_obj('body', verts, faces, fm, 'curve')
+    cap = len(verts); verts.append(curve(0.0)); vrule.append('curve'); faces += [(cap, (k + 1) % SIDES, k) for k in range(SIDES)]; fm += ['seam'] * SIDES
+    mesh_obj('body', verts, faces, fm, vrule)
     # the hollow core seen through the slot and the seams
     verts = []; faces = []; cs = np.linspace(C['slot'][0] - 0.08, C['slot'][1] + 0.08, 14)
     for s in cs:
@@ -202,7 +206,7 @@ else:
 # ---- join (keeping each part's rule), sharp edges, UVs, bake
 bpy.context.view_layer.update(); rules = []
 for o, mode in parts:
-    active(o); bpy.ops.object.transform_apply(location=True, rotation=True, scale=True); rules += [mode] * len(o.data.vertices)
+    active(o); bpy.ops.object.transform_apply(location=True, rotation=True, scale=True); rules += (list(mode) if isinstance(mode, list) else [mode] * len(o.data.vertices))
 bpy.ops.object.select_all(action='DESELECT')
 for o, _ in parts: o.select_set(True)
 bpy.context.view_layer.objects.active = parts[0][0]; bpy.ops.object.join(); boss = bpy.context.view_layer.objects.active; boss.name = 'hollow_tide'; boss.data.name = 'hollow_tide'
