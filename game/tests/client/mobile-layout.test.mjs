@@ -33,3 +33,11 @@ test('the Glass Shoal link opens on the fight with no premise card over its Leav
   assert.equal(premisePolicy(new URLSearchParams('shoal=arena')).show, false);
   assert.equal(premisePolicy(new URLSearchParams('')).show, true);
 });
+
+test('phones: the dialogue box fits the screen and sits above the bottom tray; the menu × is pinned to the corner', () => {
+  const flow = src('scenes/town-flow.js');
+  assert.match(flow, /\.ftf-quest-talk \{ max-height: calc\(100dvh - 32px/);
+  assert.match(flow, /@media \(max-height: 500px\) \{ \.ftf-quest-talk \{ bottom: calc\(8px/);
+  assert.match(flow, /\.ftf-quest-talk \{ bottom: calc\(60px/);
+  assert.match(src('play/game-menu.js'), /@media \(max-width: 480px\) \{ \.gm-head \{ padding-right: 64px; flex-wrap: wrap; \} \.gm-head \.gm-x \{ position: absolute;/);
+});

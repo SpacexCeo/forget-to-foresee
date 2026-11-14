@@ -58,6 +58,10 @@ html[data-motion="reduce"] .ftf-town-cover .boot-sub, .ftf-town-cover.is-plain .
 .ftf-quest-talk > h3 { padding-right: 44px; }
   box-sizing: border-box; padding: 14px 16px; border-radius: 12px; background: rgba(14, 18, 20, .92); border: 1px solid rgba(233, 180, 76, .45); color: #f3ead6; font: 16px/1.45 system-ui, sans-serif; pointer-events: auto; }
 .ftf-quest-talk[hidden], .ftf-quest-meta[hidden] { display: none; }
+/* never taller than the screen, and on phones above the bottom tray (mobile audit 14.11: in landscape its top and the Collapse button were off the screen; in portrait it covered Bag and Map) */
+.ftf-quest-talk { max-height: calc(100dvh - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); overflow-y: auto; overscroll-behavior: contain; }
+@media (max-width: 599px), (max-width: 899px) and (orientation: portrait) { .ftf-quest-talk { bottom: calc(60px + env(safe-area-inset-bottom, 0px)); max-height: calc(100dvh - 76px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); } }
+@media (max-height: 500px) { .ftf-quest-talk { bottom: calc(8px + env(safe-area-inset-bottom, 0px)); max-height: calc(100dvh - 16px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); padding: 10px 14px; font-size: 14px; } }
 .ftf-quest-talk h3 { margin: 0 0 4px; font: 600 13px/1.3 system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase; color: #e9b44c; }
 .ftf-quest-talk p { margin: 0 0 10px; }
 .ftf-quest-talk .ftf-quest-sign { width: 132px; height: 132px; margin: 0 auto 8px; display: block; }

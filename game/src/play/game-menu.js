@@ -67,6 +67,7 @@ const CSS = `
 /* phones (mobile audit 14.11): the panel's one column never grows past the panel (a wide tab body pushed the × and the third wardrobe card off a 360 px screen) */
 .gm-panel { grid-template-columns: minmax(0, 1fr); } .gm-head .gm-x { flex: 0 0 44px; }
 .gm-ward-card { min-width: 0; } .gm-ward-card .gm-fchip { white-space: normal; max-width: 100%; }
+@media (max-width: 480px) { .gm-head { padding-right: 64px; flex-wrap: wrap; } .gm-head .gm-x { position: absolute; top: 12px; right: 12px; } .gm-head h2 { min-width: 0; font-size: 16px; letter-spacing: .04em; overflow-wrap: anywhere; } }   /* a long tab title (Achievements) pushed the × off a 360 px screen */
 .gm { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; background: rgba(3, 7, 7, .62); font: 15px/1.4 system-ui, -apple-system, 'Segoe UI', sans-serif; color: var(--ftf-text, #eef0ea); }
 .gm-panel { position: relative; width: min(920px, calc(100vw - 24px)); height: min(640px, calc(100vh - 24px)); display: grid; grid-template-rows: auto auto 1fr; border-radius: 20px; overflow: hidden;
   background: rgba(13, 19, 18, .95); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid rgba(214, 226, 214, .12); box-shadow: 0 24px 60px rgba(0, 0, 0, .55); }
