@@ -1,0 +1,84 @@
+<!doctype html>
+<!-- The right half of the presentation video's split screen: real public data read by data.py (data.json), one panel
+     per ?p=trades|ai|nft|fair. Rows appear one after another so the recording reads as a live feed. -->
+<html lang="en"><head><meta charset="utf-8"><title>Forget to Foresee: live data panels</title>
+<style>
+  html, body { margin: 0; width: 770px; height: 1080px; overflow: hidden; background: #0a1210; color: #f3ead6; font-family: "DejaVu Sans", Arial, sans-serif; }
+  .wrap { position: absolute; inset: 0; padding: 44px 40px 30px 44px; box-sizing: border-box; display: flex; flex-direction: column; border-left: 3px solid #e9b44c; background: radial-gradient(ellipse at 70% 0%, #14241f 0%, #0a1210 60%); }
+  .kick { font: 600 19px "DejaVu Sans Mono", monospace; letter-spacing: 2px; color: #7fe0c8; display: flex; align-items: center; gap: 10px; }
+  .dot { width: 11px; height: 11px; border-radius: 50%; background: #7fe0c8; animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .25; } }
+  h1 { font-size: 50px; line-height: 1.08; margin: 16px 0 6px; color: #f2d48a; letter-spacing: .5px; }
+  h2 { font-size: 24px; font-weight: 600; margin: 0 0 20px; color: #f3ead6; }
+  .big { font: 700 74px "DejaVu Sans", sans-serif; color: #fff; line-height: 1; }
+  .big small { font-size: 25px; font-weight: 600; color: #b9c7c0; margin-left: 12px; }
+  .meta { font-size: 20px; color: #b9c7c0; margin: 10px 0 18px; line-height: 1.45; }
+  .mono, code { font-family: "DejaVu Sans Mono", monospace; }
+  code { color: #7fe0c8; font-size: .92em; }
+  .r { opacity: 0; transform: translateY(14px); animation: in .45s ease-out forwards; }
+  @keyframes in { to { opacity: 1; transform: none; } }
+  .row { padding: 11px 14px; margin: 0 0 9px; border-radius: 10px; background: rgba(255,255,255,.045); border: 1px solid rgba(233,180,76,.22); font-size: 19.5px; line-height: 1.4; }
+  .row b { color: #fff; } .row .why { color: #b9c7c0; } .row .tx { float: right; color: #7fe0c8; font: 17px "DejaVu Sans Mono", monospace; }
+  .box { margin-top: 8px; padding: 16px 18px; border-radius: 12px; border: 2px solid #7fe0c8; background: rgba(127,224,200,.07); font-size: 19.5px; line-height: 1.6; }
+  .box .t { font: 700 18px "DejaVu Sans Mono", monospace; letter-spacing: 2px; color: #7fe0c8; margin-bottom: 6px; }
+  .kv { display: grid; grid-template-columns: 150px 1fr; column-gap: 12px; } .kv span:nth-child(odd) { color: #b9c7c0; } .kv span:nth-child(even) { font-family: "DejaVu Sans Mono", monospace; color: #fff; word-break: break-all; font-size: 18px; }
+  .ok { color: #9fe39a; font-weight: 700; }
+  .tree { font: 19px/1.55 "DejaVu Sans Mono", monospace; } .tree .l { padding-left: 0; } .tree .n { color: #f2d48a; } .tree .c { color: #b9c7c0; font-family: "DejaVu Sans", sans-serif; font-size: 17.5px; }
+  .foot { margin-top: auto; font: 15.5px/1.5 "DejaVu Sans Mono", monospace; color: #7d8a86; }
+</style></head><body><div class="wrap" id="w"></div>
+<script>
+const P = new URLSearchParams(location.search).get('p') || 'trades';
+const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+const sh = (h, a = 6, b = 4) => (h && h.length > a + b + 1 ? h.slice(0, a) + '…' + h.slice(-b) : h);
+const num = (n) => Number(n).toLocaleString('en-US');
+let delay = 0.5;
+const r = (html, step = 0.55, cls = 'row') => { const s = `<div class="r ${cls}" style="animation-delay:${delay.toFixed(2)}s">${html}</div>`; delay += step; return s; };
+const head = (kick, h1, h2) => `<div class="kick"><span class="dot"></span>${esc(kick)}</div><h1>${esc(h1)}</h1><h2>${esc(h2)}</h2>`;
+const foot = (d, src) => `<div class="foot">read ${esc(d.at)} · ${esc(src)}<br>public testnet data, no real value</div>`;
+const item = (s) => String(s).replace(/_/g, ' ');
+
+fetch('data.json').then((x) => x.json()).then((d) => {
+  const w = document.getElementById('w'); let h = '';
+  if (P === 'trades') {
+    const t = d.trades, tx = d.tx;
+    h += head('LIVE · NEAR TESTNET', 'Autonomous Trading', 'An on-chain economy that runs by itself');
+    h += `<div class="big"><span id="cnt">0</span><small>trades today</small></div>`;
+    h += `<div class="meta">${num(t.total)} recorded on chain in total · ${t.traders} traders, each its own NEAR account<br>contract <code>${esc(t.contract)}</code></div>`;
+    for (const x of t.recent.slice(0, 4)) h += r(`<span class="tx">tx ${esc(sh(x.hash))}</span><b>${esc(x.buyer)}</b> bought ${x.qty} × ${esc(item(x.item))} from <b>${esc(x.seller)}</b><br><span class="why">${x.price} silk each · why this price: ${esc(x.reason)}</span>`, 0.7);
+    delay += 0.6;
+    if (tx) h += r(`<div class="t">ONE TRADE, CHECKED ON NEAR RPC</div><div class="kv"><span>transaction</span><span>${esc(sh(tx.hash, 12, 8))}</span><span>signed by</span><span>${esc(tx.signer)}</span><span>contract</span><span>${esc(tx.receiver)} · ${esc(tx.method)}()</span><span>counterparty</span><span>${esc((tx.args || {}).counterparty || '')}</span><span>block</span><span>${num(tx.block)}</span><span>status</span><span class="ok">${esc(tx.rpc_status || 'success')} ✓</span></div>`, 0.6, 'box');
+    h += foot(d, d.relayer.replace('https://', '') + '/api/market/stats · rpc.testnet');
+    w.innerHTML = h;
+    const el = document.getElementById('cnt'), t0 = performance.now(); const tick = () => { const k = Math.min(1, (performance.now() - t0) / 1800); el.textContent = num(Math.round(t.today * (1 - Math.pow(1 - k, 3)))); if (k < 1) requestAnimationFrame(tick); }; tick();
+    return;
+  }
+  if (P === 'ai') {
+    const a = d.ai;
+    h += head('NEAR AI CLOUD · TEE', 'AI-Powered NPCs', 'Verified AI responses');
+    h += `<div class="meta">The clan agents choose their strategy with<br><code>${esc(a.tee.model)}</code> on NEAR AI Cloud.<br>Today: <b style="color:#fff">${a.llm_today} of ${a.decisions_today}</b> strategy calls answered by the model; the rules engine makes the moves.</div>`;
+    for (const c of a.clans.slice(0, 5)) h += r(`<span class="tx">${c.verified ? '<span class="ok">attested ✓</span>' : ''}</span><b>clan ${esc(c.clan)}</b> · “${esc((c.params || {}).reason || '')}”<br><span class="why mono" style="font-size:16.5px">attestation ${esc(sh(c.chat_id, 22, 6))} · prompt sha256 ${esc(sh(c.prompt_hash, 10, 6))}</span>`, 0.75);
+    h += foot(d, d.relayer.replace('https://', '') + '/api/market/stats (strategy) · /api/health (tee)');
+  }
+  if (P === 'nft') {
+    const v = d.views, n = d.nft || {};
+    h += head('NEAR TESTNET · NEP-171', 'Functional NFTs', 'Token-owned accounts: an NFT that owns an NFT');
+    h += `<div class="meta"><b style="color:#fff">${esc(v.heroine_supply)}</b> heroines minted free to players' own guest accounts (no wallet, no gas) · <b style="color:#fff">${esc(v.companions_supply)}</b> dragons · <b style="color:#fff">${esc(v.shards_supply)}</b> memory shards</div>`;
+    h += r(`<div class="t">WHO OWNS WHAT, READ FROM THE CONTRACTS</div><div class="tree"><div class="l"><span class="c">player's guest account</span><br><span class="n">${esc(n.player || '')}</span></div></div>`, 1.0, 'box');
+    h += r(`<div class="tree"><span class="c">owns the heroine NFT (her character in the game)</span><br><span class="n">${esc(n.heroine || '')}</span> <span class="c">on</span> heroine.ftf-coordinator.testnet</div>`, 1.0);
+    h += r(`<div class="tree"><span class="c">the heroine NFT has its own NEAR account</span><br><span class="n">${esc(n.heroineAccount || '')}</span></div>`, 1.0);
+    h += r(`<div class="tree"><span class="c">which owns the dragon NFT that flies beside her</span><br><span class="n">${esc(n.dragon || '')}</span> <span class="c">“${esc(n.dragonTitle || '')}”</span></div>`, 1.0);
+    h += r(`<span class="why">Trade the heroine and her dragon moves with her. Memory shards are minted when she forgets a memory for a vision.</span>`, 0.8);
+    h += foot(d, 'view calls: heroine / companions.ftf-coordinator.testnet, ftf-shards.testnet');
+  }
+  if (P === 'fair') {
+    const v = d.views, s = v.season, cs = v.chest_season, op = (v.chest_openings || [])[0], leaf = (v.leaves || [])[0];
+    h += head('NEAR TESTNET · COMMIT / REVEAL', 'Provable Fairness', 'The future is sealed before the first move');
+    h += r(`<div class="t">THE SEASON'S PROPHECIES · ftf-seasons.testnet</div><div class="kv"><span>Merkle root</span><span>${esc(sh(s.schedule_root, 18, 10))}</span><span>sealed at block</span><span>${num(s.committed_at_block)} (before play)</span><span>revealed</span><span>${s.revealed_count} of ${s.leaf_count} leaves, each proven</span><span>leaf 0</span><span>${esc(sh(leaf.leaf, 14, 8))} → trial ${leaf.event.t}</span></div>`, 1.6, 'box');
+    h += r(`<div class="t" style="color:#f2d48a">LOOT CHESTS · chests.ftf-coordinator.testnet</div><div class="kv"><span>deck root</span><span>${esc(sh(cs.root, 18, 10))}</span><span>sealed at block</span><span>${num(cs.committed_block)}</span><span>seed</span><span>fixed from a response signed in the TEE</span></div>`, 1.6);
+    if (op) h += r(`<div class="kv"><span>opening #${op.index}</span><span>position ${num(op.position)} of the sealed deck</span><span>randomness</span><span>${esc(sh(op.random, 14, 8))}</span><span>block</span><span>${num(op.block)}</span></div>`, 1.4);
+    h += r(`<span class="why">Anyone can recompute every draw: <span class="mono" style="color:#7fe0c8">node tools/verify-chest/verify.mjs</span></span>`, 0.8);
+    h += foot(d, 'view calls: get_season, get_revealed_leaves, season_info, list_openings');
+  }
+  w.innerHTML = h;
+});
+</script></body></html>
