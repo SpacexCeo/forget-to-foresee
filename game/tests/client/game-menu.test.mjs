@@ -50,3 +50,38 @@ test('menu strings exist in five locales; no "Minted" claim in the menu', () => 
   const src = readFileSync(new URL('../../src/play/game-menu.js', import.meta.url), 'utf8');
   assert.doesNotMatch(src, /['"`]Minted/);
 });
+
+test('inventory chests: sealed on top with Open, opened as a read-only history with dust and verify, one button to the archive', async () => {
+  const { doc } = installDom();
+  const { openGameMenu } = await import('../../src/play/game-menu.js');
+  const storage = memoryStorage();
+  const bag = createChestBag({ storage });
+  const tx = '7Hq1bQ4zRk9YxV3mW2nT8pL5sD6fG1hJ4kA9cE2uB3';
+  for (const o of [{ kind: 'xp', amount: 10, rarity: 'common' }, { kind: 'item', id: 'part_gear', amount: 1, rarity: 'common' }]) {
+    const c = bag.add({ tier: 'common' }); bag.settle(c.id, { outcome: o, tx, verified: true });
+  }
+  bag.add({ tier: 'rare' });
+  const ledger = createTownLedger({ storage });
+  const i18n = createPlayI18n('en'); const t = (k, a) => i18n.t(k, a);
+  const m = openGameMenu({ doc, t, ledger, storage, chests: bag, owner: 'cy-1.guests.ftf-coordinator.testnet', chestClient: { available: true }, tab: 'inventory', manifest: Promise.resolve(MANIFEST), onChain: Promise.resolve({ state: 'none', items: [] }), base: '/' });
+  const tick = () => new Promise((r) => setTimeout(r, 0));
+  await tick(); await tick();
+  const sec = m.root.querySelector('.gm-chests');
+  assert.ok(sec, 'chest section');
+  assert.equal(sec.querySelectorAll('.gm-card').length, 1, 'only the sealed chest is a card');
+  assert.ok(sec.querySelector('.gm-card button'), 'the sealed chest has Open');
+  const rows = sec.querySelectorAll('.gm-hist li');
+  assert.equal(rows.length, 2);
+  assert.ok(sec.textContent.includes(t('chest.history', { n: 2 })));
+  assert.equal(sec.querySelectorAll('.gm-dust').length, 1, 'the 10 XP is dust');
+  assert.equal(sec.querySelectorAll('a.gm-hist-ver').length, 2);
+  assert.equal(sec.querySelectorAll('.gm-hist img').length, 2, 'the gear its icon, the XP its painted pile');
+  assert.ok(sec.querySelector('.gm-card img').src.endsWith('icons/chest_rare_128.webp'), 'the sealed box is painted');
+  const move = sec.querySelectorAll('button').find((b) => b.textContent === t('chest.archiveAll'));
+  move.click(); await tick(); await tick();
+  const sec2 = m.root.querySelector('.gm-chests');
+  assert.equal(sec2.querySelector('.gm-hist-head'), null, 'no history after the move');
+  assert.ok(sec2.querySelector('.gm-archive').textContent.includes(t('chest.archive', { n: 2 })));
+  assert.equal(sec2.querySelectorAll('.gm-card').length, 1, 'the sealed chest stays on top');
+  m.close();
+});
