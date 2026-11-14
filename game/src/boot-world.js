@@ -53,11 +53,12 @@ import { createTownLedger } from './game/town-economy.js';
 import { features as featureFlags } from './features.js';
 import { mountSprint } from './sprint/index.js';
 import { createDay1Mint, loadDay1 } from './play/day1-mint.js';
+import { findHandBone } from './play/hand-bones.js';
 import { nextSkin, wearPlan } from './play/skins.js';
 import { TALK_RADIUS } from './scenes/town-quest.js';
 import { PROGRAMS, TOWNSFOLK } from './play/townsfolk-plan.js';
 import { createTownCasting, CAST_KEYS, assistPoint } from './scenes/town-casting.js';
-import { townToWorld, TOWN_SHOPS, shopDoorAt, TOWN_SPOTS, TOWN_ORIGIN as TOWN_ORIGIN_W, TOWN_SPAWN, TOWN_ALTAR, TOWN_ALTAR_SPAWN, TOWN_ALTAR_ASSET, TOWN_KILL_Y, TOWN_CAMERA, TOWN_ATMOSPHERE, TOWN_ROUTE } from './scenes/town-layout.js';
+import { townToWorld, TOWN_SHOPS, shopDoorAt, TOWN_SPOTS, TOWN_ORIGIN as TOWN_ORIGIN_W, TOWN_SPAWN, TOWN_ALTAR, TOWN_ALTAR_SPAWN, TOWN_ALTAR_ASSET, TOWN_KILL_Y, TOWN_CAMERA, TOWN_ATMOSPHERE, TOWN_ROUTE, dropSpawn, SPAWN_DROP } from './scenes/town-layout.js';
 import { createFogCards } from './render/fog-cards.js';
 import { createTownShops } from './scenes/town-shops.js';
 import { createTownProps } from './scenes/town-props.js';
@@ -385,6 +386,13 @@ function hatchPet() {
 let townTales = null; // town tales (flag tales): scenes/town-tales.js, game/tales.js
 let townQuests = null, townPortal = null, townBoard = null, expeditionSync = null, questMarkers = null; // the Expedition (?story=1): scenes/town-quests.js, town-portal.js
 let glassShoal = null, shoalLoading = false;
+/** Where "Return home" from the Glass Shoal and a return from the archipelago put her: a town spot on its ground, a short drop above it. */
+function townHome(spot = TOWN_SPAWN) {
+  const p = spot.position;
+  const d = town && dropSpawn((x, z, y) => town.groundAt(x, z, y), p);
+  // never below the spot's own data height: a piece not streamed in yet (the altar steps) would answer with the terrain under it
+  return { position: [p[0], Math.max(d ? d[1] : -Infinity, p[1] + SPAWN_DROP), p[2]], heading: spot.heading };
+}
 let heldBlade = null, heldBladeLoading = false; // the Loomblade in her fist once she has taken it (play/held-blade.js)
 let shoalArt = null, shoalArtLoading = false; // the Shoal's look for the fight (render/shoal-arena-look.js), loaded when the arena first opens
 let town = null, townFlow = null, townCasting = null, townMobs = null, inTown = false, townGrounded = false, irisAvatar = null, killXp = null, endgamePass = null, stallMounted = false, worksMounted = false, tournMounted = false;
@@ -489,7 +497,7 @@ if (townMode.town) {
     if (glassShoal || shoalLoading || !featureFlags.on('glassShoal') || !town) return;
     shoalLoading = true;
     import('./scenes/glass-shoal.js').then((m) => {
-      glassShoal = m.createGlassShoal({ THREE, scene, camera, rig, player, toWorld: townToWorld, groundAt: (x, z) => town.groundAt(x, z), folkAt, ledger: townLedger, chests: chestBag, storage: ctx.storage,
+      glassShoal = m.createGlassShoal({ THREE, scene, camera, rig, player, toWorld: townToWorld, groundAt: (x, z) => town.groundAt(x, z), folkAt, home: townHome, ledger: townLedger, chests: chestBag, storage: ctx.storage,
         locale: () => (ctx.i18n && ctx.i18n.locale) || 'en', toast: (s) => toast(s), reduced: () => lookdev.reducedMotion, mobile: mobileDevice, touch: () => !!input.touchControls,
         hero: () => (irisAvatar && irisAvatar.hero ? irisAvatar.hero.id : startHero.id), clip: (n) => !!(irisAvatar && irisAvatar.combat && irisAvatar.combat(n)), axes: () => input.moveAxes(),
         // her own companion dragons fight beside her at the Shoal (game/shoal-allies.js): only the ones flying with her now
@@ -684,10 +692,10 @@ function mountCasting() {
     // phones: a skill tap fires at once at the targeted creature, else the soft lock, else the nearest in range (owner 14.11)
     assist: (id, range) => assistPoint(player.pos, range, { target: typeof window.__ftfTarget === 'function' ? window.__ftfTarget() : null, locked: townMobs ? townMobs.locked : null, mobs: townMobs && townMobs.brain ? townMobs.brain.mobs : [] }),
     // her cast clip (art/anim/iris_actions.py): a wind-up, then the release frame on which the cast leaves her hand; the
-    // effect, the sound and the hits wait for that frame. Without the clip (?anim=v1) her hand goes up and it leaves at once.
+    // effect, the sound and the hits wait for that frame. Without the clip her hand goes up and it leaves at once.
     onCastStart: (id) => { interruptMove(0); castWindup = { id, t: 0 }; cue(id === 'snare' ? 'cast_charge_storm' : 'cast_charge_frost'); /* the build through the wind-up */ const c = irisAvatar && irisAvatar.cast('cast_' + id); if (!c && irisAvatar) irisAvatar.react('greet', clock.elapsedTime); return c ? quickRelease(c) : 0; },
     onCast: (id, shot) => { for (const c of companions) c.flourish(lookdev.reducedMotion); if (townMonsters) townMonsters.cast(id, shot); cue(id === 'snare' ? 'cast_release_storm' : 'cast_release_frost'); }, // on the release frame
-    handPos: () => { const m = irisAvatar && irisAvatar.irisModel, h = m && m.model.getObjectByName('hand_R'); if (!h) return null; const v = h.getWorldPosition(new THREE.Vector3()); return [v.x, v.y, v.z]; },
+    handPos: () => { const m = irisAvatar && irisAvatar.irisModel, h = m && findHandBone(m.model, 'R'); if (!h) return null; const v = h.getWorldPosition(new THREE.Vector3()); return [v.x, v.y, v.z]; },
     onFire: (c) => { if (townMobs) townMobs.cast(c); },
     // UI-003 strike and dash slots for the hillside fight (play/mobs.js ACTIONS: F / 3, Space / 4)
     extra: [
@@ -756,7 +764,7 @@ function mountMobs() {
     const gate = [TOWN_ORIGIN_W[0], 0, TOWN_ORIGIN_W[2] + 42]; gate[1] = ground(gate[0], gate[2], TOWN_ORIGIN_W[1]) + 0.1;
     townMobs = m.createMobs({ THREE, scene, origin: TOWN_ORIGIN_W.slice(), player, load: (n) => prefetchGltf(hasModelFile(n) ? n : n.replace(/_m$/, '')), clone: su.clone,
       MobFx: fx.MobFx, glow: fx.MOB_GLOW, ground, floor, variant: getModelVariant() && hasModelFile('mob_skitter' + getModelVariant()) ? getModelVariant() : '',
-      phone: mobileDevice || lookdev.tier === 'low', reduced: () => lookdev.reducedMotion, respawn: gate,
+      phone: mobileDevice || lookdev.tier === 'low', reduced: () => lookdev.reducedMotion, respawn: { slice: () => (dropSpawn((x, z, y) => T.groundAt(x, z, y), gate) || [gate[0], gate[1] + SPAWN_DROP, gate[2]]) }, // the gate's ground when she falls, a short drop above it (it may have streamed in since)
       immune: () => !!(glassShoal && glassShoal.owns && glassShoal.owns()), // no town-mob damage while she rides the dragon or fights at the Shoal
       camera, irisModel: () => (irisAvatar && irisAvatar.irisModel ? irisAvatar.irisModel.model : null), irisMove: (n) => { if (irisAvatar) irisAvatar.holdWhile = () => !!townMobs && townMobs.charging != null; if (!(irisAvatar && irisAvatar.combat(n))) return false; if (n === 'strike3' || n === 'strike_super') for (const d of companions) d.flourish(lookdev.reducedMotion); const c = irisAvatar.irisModel && irisAvatar.irisModel.combat; return c && c.name === n && c.impact != null ? c.impact : true; }, irisEnd: () => irisAvatar && irisAvatar.endAction(),
       moveIris: (d) => { const r = moveCapsule(T.world, player.pos, [d[0], -Math.hypot(d[0], d[1]) - 0.02, d[1]], { radius: player.radius, height: player.height, mask: MASK_PLAYER }); player.pos = r.pos; player.grounded = r.grounded; player.settled = null; },
@@ -779,7 +787,7 @@ function returnToTown() {
   town.setActive(true);
   player.world = town.world; rig.world = town.world;
   player.killY = TOWN_KILL_Y;
-  player.teleport(TOWN_ALTAR_SPAWN.position.slice(), TOWN_ALTAR_SPAWN.heading);
+  { const h = townHome(TOWN_ALTAR_SPAWN); player.teleport(h.position, h.heading); } // back from the archipelago: on the altar steps' own ground
   rig.minPitch = TOWN_CAMERA.minPitch; rig.dist = TOWN_CAMERA.dist; rig.pitchOffset = TOWN_CAMERA.tilt; rig.reset();
   lookdev.setAtmosphereFloor(TOWN_ATMOSPHERE);
   mountCasting(); // leaveTown disposed it: without this the two skills were gone after Return to town
@@ -1563,7 +1571,7 @@ function frame() {
   // the cast's wind-up (night 14.11): motes of its element gather at her hand until the release frame
   if (castWindup) {
     castWindup.t += dt;
-    const hm = townMobs && townMobs.fx && irisAvatar && irisAvatar.irisModel, hb = hm && hm.model.getObjectByName('hand_R'), h = hb ? hb.getWorldPosition(_windHand).toArray() : null;
+    const hm = townMobs && townMobs.fx && irisAvatar && irisAvatar.irisModel, hb = hm && findHandBone(hm.model, 'R'), h = hb ? hb.getWorldPosition(_windHand).toArray() : null;
     if (castWindup.t > 0.5 || !h) castWindup = null;
     else if (!lookdev.reducedMotion) { castWindup.acc = (castWindup.acc || 0) + dt; while (castWindup.acc > 0.02) { castWindup.acc -= 0.02; townMobs.fx.trail(h, castWindup.id === 'snare' ? 0xc9a8ff : 0xa8e4ff, 0.22, 0.28 * (1 - castWindup.t * 1.6)); } }
   }
