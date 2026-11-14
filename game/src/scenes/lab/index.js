@@ -5,6 +5,7 @@
 // story screens, the ceiling lights, the loose papers and the Resonator (device.js). mount(ctx) is the sprint seam
 // (src/sprint/registry.js, flag `labPrologue`): it offers the prologue to the intro flow as globalThis.__ftfPrologue.
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { buildDevice } from './device.js';
 
 const canvasTex = (w, h, draw) => { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; };
@@ -41,8 +42,8 @@ export function buildLab() {
   const wallTex = panels('#8d8882', '#6c6761', 0.5, 0.62); wallTex.wrapS = wallTex.wrapT = THREE.RepeatWrapping; wallTex.repeat.set(4, 1); trash.push(wallTex);
   const wall = mat({ map: wallTex, roughness: 0.45, metalness: 0.35 }), dark = mat({ map: wallTex, color: 0x9a948e, roughness: 0.45, metalness: 0.35 });
   box(10, 3.4, 0.1, dark, 0, 1.7, N - 0.05);                    // north
-  box(3.5, 3.4, 0.1, wall, -6.75 + 3.5 / 2 + 1.75, 1.7, 4.05);  // south, left of the door
-  box(6.45, 3.4, 0.1, wall, 1.775, 1.7, 4.05);                  // south, right of the door
+  box(1.45, 3.4, 0.1, wall, -4.275, 1.7, 4.05);                 // south, left of the doorway (x -3.55 .. -2.45)
+  box(7.45, 3.4, 0.1, wall, 1.275, 1.7, 4.05);                  // south, right of the doorway
   box(1.1, 1.2, 0.1, wall, -3, 2.8, 4.05);                      // above the door
   box(0.1, 3.4, D, wall, -5.05, 1.7, ZC);                       // west
   // east, round a wide window: z -3.4 .. 2.0, sill at 0.55 m, head at 3.0 m
@@ -119,7 +120,21 @@ export function buildLab() {
     } catch { video = null; }
   }
   // the door (slides west)
-  const door = box(1.1, 2.2, 0.06, mat({ color: 0x8d96a3, roughness: 0.4, metalness: 0.3 }), -3, 1.1, 4.02);
+  // the corridor behind the doorway: dark panels, a lit ceiling strip, the end wall at z 6.3
+  const corr = mat({ color: 0x3c3a38, roughness: 0.5, metalness: 0.3 });
+  box(1.3, 0.05, 2.3, mat({ color: 0x2c2d30, roughness: 0.35, metalness: 0.3 }), -3, -0.02, 5.2); box(1.3, 0.05, 2.3, corr, -3, 2.62, 5.2);
+  box(0.05, 2.6, 2.3, corr, -3.66, 1.3, 5.2); box(0.05, 2.6, 2.3, corr, -2.34, 1.3, 5.2); box(1.3, 2.6, 0.05, corr, -3, 1.3, 6.33);
+  strip(0.08, 2.1, -3, 2.58, 5.2);
+  const cl = new THREE.PointLight(0xffd2a0, 2.5, 4, 2); cl.position.set(-3, 2.3, 5.2); root.add(cl);
+  // the doorway's frame and the sliding door (it slides west along the wall's inner face): brushed panel, a lit slot, a pull
+  const trim = mat({ color: 0x2a2b2e, roughness: 0.3, metalness: 0.7 });
+  box(0.08, 2.3, 0.14, trim, -3.59, 1.15, 4.02); box(0.08, 2.3, 0.14, trim, -2.41, 1.15, 4.02); box(1.26, 0.08, 0.14, trim, -3, 2.3, 4.02);
+  const door = new THREE.Group(); door.position.set(-3, 0, 3.94); root.add(door);
+  box(1.12, 2.24, 0.05, mat({ color: 0x9a968f, roughness: 0.3, metalness: 0.6 }), 0, 1.12, 0, door);
+  box(0.06, 1.7, 0.012, stripMat, 0.38, 1.2, -0.03, door);
+  box(0.03, 0.5, 0.04, trim, -0.42, 1.05, -0.045, door);
+  const doorPad = new THREE.MeshBasicMaterial({ color: 0x5fd0ff, toneMapped: false }); trash.push(doorPad);
+  box(0.08, 0.12, 0.02, doorPad, -3.75, 1.25, 3.99);   // the door switch on the wall
   // the computer desk: two monitors (a pulsing waveform), a keyboard, the red glass key
   // the desk itself is in lab_furniture; here the key's base, the story screens, the key
   const metal = mat({ color: 0x3a3f47, roughness: 0.4, metalness: 0.5 });
@@ -146,7 +161,18 @@ export function buildLab() {
   const boardMat = new THREE.MeshBasicMaterial({ map: board }); trash.push(boardMat);
   const bd = new THREE.Mesh(new THREE.PlaneGeometry(2.8, 1.6), boardMat); bd.position.set(-2.4, 1.75, N + 0.01); root.add(bd); trash.push(bd.geometry);
   // the lab coat on its hook by the door (it flies toward the vortex)
-  const coat = box(0.45, 0.9, 0.08, mat({ color: 0xf2f2f2 }), -4.6, 1.5, 3.2); coat.userData.home = coat.position.clone();
+  // the lab coat on its hook by the door: a soft white body with a collar, sleeves and pockets (it flies toward the vortex)
+  const coat = new THREE.Group(); coat.position.set(-4.82, 1.5, 3.2); coat.rotation.y = Math.PI / 2; root.add(coat);
+  const cloth = mat({ color: 0xf1f0ec, roughness: 0.9 }), cg = (g) => { trash.push(g); return g; };
+  const part = (geo, m, x, y, z, rx = 0, rz = 0) => { const o = new THREE.Mesh(cg(geo), m); o.position.set(x, y, z); o.rotation.set(rx, 0, rz); o.castShadow = true; coat.add(o); return o; };
+  part(new RoundedBoxGeometry(0.46, 0.95, 0.1, 3, 0.04), cloth, 0, -0.08, 0);
+  part(new THREE.CapsuleGeometry(0.055, 0.62, 4, 10), cloth, -0.25, -0.12, 0.01, 0, 0.06);
+  part(new THREE.CapsuleGeometry(0.055, 0.62, 4, 10), cloth, 0.25, -0.12, 0.01, 0, -0.06);
+  part(new RoundedBoxGeometry(0.3, 0.1, 0.12, 2, 0.03), cloth, 0, 0.38, 0.01, -0.2);
+  part(new THREE.BoxGeometry(0.012, 0.8, 0.012), mat({ color: 0xd9d7d1, roughness: 0.8 }), 0, -0.1, 0.052);
+  for (const x of [-0.12, 0.12]) part(new THREE.BoxGeometry(0.11, 0.1, 0.008), mat({ color: 0xe6e4df, roughness: 0.9 }), x, -0.25, 0.054);
+  part(new THREE.CylinderGeometry(0.015, 0.015, 0.1, 8), trim, 0, 0.47, -0.04, Math.PI / 2);
+  coat.userData.home = coat.position.clone();
   // lights: a cool window fill, a warm desk lamp, ceiling strips that flicker
   const hemi = new THREE.HemisphereLight(0xffe6cc, 0x4a4038, 0.32); root.add(hemi);
   // the low sun through the window: it throws the window's frame across the floor and up the west wall
