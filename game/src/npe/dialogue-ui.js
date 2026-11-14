@@ -21,6 +21,8 @@ const CSS = `
 @keyframes npe-bob { 50% { transform: translateY(-4px); } }
 .npe-skip { position: fixed; z-index: calc(var(--z-dialogue, 50) + 1); top: max(12px, calc(24 * var(--uu, 1px))); right: max(12px, calc(24 * var(--uu, 1px))); min-width: 96px; min-height: 40px;
   border-radius: 10px; border: 1px solid #3a3f55; background: rgba(255, 255, 255, .06); color: #eef0f6; font: 600 15px system-ui, sans-serif; cursor: pointer; }
+/* the 3D prologue film sits at +4 (cinematic/prologue): while it plays its Skip and its subtitles go above it (final check 15.11: both were hidden under it) */
+body.npe-prologue-on .npe-skip, body.npe-prologue-on .npe-sub { z-index: calc(var(--z-dialogue, 50) + 6); }
 .npe-skip:focus-visible, .npe-box:focus-visible { outline: 2px solid #f6c860; outline-offset: 2px; }
 .npe-sub { position: fixed; z-index: calc(var(--z-dialogue, 50) - 2); left: 50%; bottom: max(70px, calc(120 * var(--u, 1px))); transform: translateX(-50%); max-width: min(calc(100vw - 24px), 1200px);
   padding: 12px 20px; border-radius: 10px; background: rgba(0, 0, 0, .72); color: #eef0f6; font: 500 max(15px, calc(20 * var(--u, 1px)))/1.35 system-ui, sans-serif; text-align: center; transition: opacity .12s; }
