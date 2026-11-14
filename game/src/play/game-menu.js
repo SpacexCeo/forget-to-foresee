@@ -545,7 +545,7 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
         const shut = () => { big.remove(); card.focus(); }; big.tabIndex = -1;
         big.addEventListener('click', shut);
         big.addEventListener('keydown', (e) => { if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); shut(); } }); // Escape closes the card, not the menu
-        sec.append(big); if (big.focus) big.focus();
+        (sec.closest && sec.closest('.gm') || sec).append(big); if (big.focus) big.focus(); // over the whole menu: the panel's backdrop-filter made it the box of a fixed child and cut the card
       });
       g.append(card);
     }
