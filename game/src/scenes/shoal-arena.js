@@ -390,6 +390,7 @@ export function createShoalArena(o) {
     if (bossModel) {
       bossAnim = bossAnimStep(bossAnim, B, red ? 0 : sdt, R.BOSS.phases[B.phase].telegraph, won);
       if (red && bossAnim.clip === 'rise') bossAnim = { ...bossAnim, clip: 'idle', time: 0 }; // reduced motion: it is simply there
+      if (red && won) bossAnim = { ...bossAnim, clip: 'death', time: BOSS_ANIM.len.death };      // reduced motion: it is simply gone
       if (won && bossAnim.time >= BOSS_ANIM.len.death) boss.visible = false;
       if (bossMixer) {
         fadeWeights(bossW, bossAnim.clip, red ? 1 : sdt);
