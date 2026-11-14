@@ -96,7 +96,7 @@ export function runIntro(ctx) {
     const lines = WAKEUP.map((l) => ({ ...l, text: t(l.key, vars) }));
     const d = playDialogue({ doc, lines, reduced, name: (sp) => t('npe.speaker.' + sp), hint: t('npe.hint'), count: (n, of) => t('npe.count', { n, of }), skipLabel: t('npe.skip'),
       portrait: ctx.portrait || ((sp) => introPortrait(sp, ctx.base || '/')),
-      onLine: (i, l) => { if (l.camera && ctx.cameraCue) { try { ctx.cameraCue(l.camera); } catch { /* */ } } emit('npe.camera', { target: l.camera || null, line: l.id }); },
+      onLine: (i, l) => { if (l.camera && ctx.cameraCue) { try { ctx.cameraCue(l.camera); } catch { /* */ } } emit('npe.camera', { target: l.camera || null, line: l.id, speaker: l.speaker || null }); },
       onDone: (i) => step({ type: 'line_done', last: i === lines.length - 1 }) });
     current = d;
     const end = await d.done;

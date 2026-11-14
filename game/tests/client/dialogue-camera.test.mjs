@@ -53,5 +53,24 @@ test('reduced motion cuts straight to the beat and straight back', () => {
 test('boot-world follows the intro\'s camera cues from the bus', () => {
   const src = readFileSync(new URL('../../src/boot-world.js', import.meta.url), 'utf8');
   assert.match(src, /onBus\('npe\.camera'/);
-  assert.match(src, /stepCue\(st, cueShot\(dialogueCue\.name, at\)/);
+  assert.match(src, /stepCue\(st, cueShot\(dialogueCue\.name \|\| \(speakerAt \? 'speaker' : null\), at\)/);
+  assert.match(src, /wakeRing\.at\(dialogueCue\.speaker\)/, 'a line with no beat finds its speaker in the wake-up ring');
+});
+
+test('every speaker of the wake-up talk stands in the ring, on the far side from the camera; their line leans the camera to them (QA 14.11 P1-3)', async () => {
+  const { RING, ringPlaces, speakerSpot } = await import('../../src/cinematic/prologue/townsfolk-ring.js');
+  const places = ringPlaces(RING.people.length);
+  for (const sp of new Set(WAKEUP.map((l) => l.speaker).filter((s) => s !== 'iris'))) {
+    const i = RING.people.findIndex((p) => p.speaker === sp); assert.ok(i >= 0, `${sp} is in the ring`);
+    assert.ok(Math.abs(Math.atan2(places[i].x, places[i].z)) < 2.0, `${sp} faces the camera across her`);
+  }
+  assert.equal(speakerSpot('iris', [0, 0, 0]), null); assert.equal(speakerSpot('nobody', [0, 0, 0]), null);
+  // the world spot follows the ring's centre and heading (three.js Y rotation)
+  const i = RING.people.findIndex((p) => p.speaker === 'elder'), p = places[i];
+  assert.deepEqual(speakerSpot('elder', [10, 2, 5], 0).map((v) => +v.toFixed(6)), [10 + p.x, 2, 5 + p.z].map((v) => +v.toFixed(6)));
+  const h = Math.PI / 2, r = speakerSpot('elder', [0, 0, 0], h);
+  assert.ok(Math.abs(r[0] - p.z) < 1e-9 && Math.abs(r[2] + p.x) < 1e-9);
+  const shot = cueShot('speaker', { ...AT, speaker: [1, 10, 2] });
+  assert.ok(shot && shot.dist >= 4.5 && shot.pull < 0.75, 'a gentle lean: Iris stays in frame');
+  assert.equal(cueShot('speaker', AT), null, 'nobody in the ring: the camera stays on Iris');
 });
