@@ -1136,9 +1136,9 @@ const clock = new THREE.Clock();
 const physics = { steps: 0, substeps: 0, colliders: 0, grounded: false };
 // The wake-up dialogue's camera beats (render/dialogue-camera.js, QA pass 2 #2): the intro names each line's cue on
 // the bus; the frame loop leans the town camera toward it and back.
-const dialogueCue = { name: null, st: cueState(), irisFocus: [0, 0, 0] };
-onBus('npe.camera', (p) => { dialogueCue.name = (p && p.target) || null; });
-for (const n of ['npe.completed', 'npe.skipped']) onBus(n, () => { dialogueCue.name = null; });
+const dialogueCue = { name: null, speaker: null, st: cueState(), irisFocus: [0, 0, 0] };
+onBus('npe.camera', (p) => { dialogueCue.name = (p && p.target) || null; dialogueCue.speaker = (p && p.speaker) || null; });
+for (const n of ['npe.completed', 'npe.skipped']) onBus(n, () => { dialogueCue.name = null; dialogueCue.speaker = null; });
 const hudStats = () => ({ info: renderer.info, physics, streaming: streamer.stats(), events: streamer.events, camera: rig, lookdev: lookdev.stats() });
 
 // Camera presets for screenshots / measurements (dev only).
@@ -1422,12 +1422,13 @@ function frame() {
     const a = town.altar.focus, k = townFlow.focusK * townFlow.focusK * (3 - 2 * townFlow.focusK) * 0.7;
     focus.set(focus.x + (a[0] - focus.x) * k, focus.y + (a[1] - focus.y) * k, focus.z + (a[2] - focus.z) * k);
   }
-  if (inTown && (dialogueCue.name || dialogueCue.st.active)) { // a dialogue beat: the camera leans toward what the line is about
-    const at = { iris: [focus.x, focus.y - 1.1, focus.z], portal: townPortal ? townPortal.root.position.toArray() : null, board: townBoard ? townBoard.root.position.toArray() : null, elder: null };
-    const tf = town && town.townsfolk, elder = tf && dialogueCue.name === 'elder' ? tf.people.find((q) => q.key === 'elder' && q.root.visible) : null;
+  const wakeRing = window.__ftfWakeRing || null, speakerAt = wakeRing && dialogueCue.speaker ? wakeRing.at(dialogueCue.speaker) : null; // the wake-up ring's speaker (QA 14.11 P1-3)
+  if (inTown && (dialogueCue.name || speakerAt || dialogueCue.st.active)) { // a dialogue beat: the camera leans toward what the line is about, else toward who speaks it
+    const at = { iris: [focus.x, focus.y - 1.1, focus.z], portal: townPortal ? townPortal.root.position.toArray() : null, board: townBoard ? townBoard.root.position.toArray() : null, elder: wakeRing ? wakeRing.at('elder') : null, speaker: speakerAt };
+    const tf = town && town.townsfolk, elder = !at.elder && tf && dialogueCue.name === 'elder' ? tf.people.find((q) => q.key === 'elder' && q.root.visible) : null;
     if (elder) at.elder = [elder.plan.x + TOWN_ORIGIN_W[0], elder.plan.y + TOWN_ORIGIN_W[1], elder.plan.z + TOWN_ORIGIN_W[2]];
     const st = dialogueCue.st, was = st.active;
-    if (stepCue(st, cueShot(dialogueCue.name, at), focus.toArray(dialogueCue.irisFocus), rig.dist, dt, lookdev.reducedMotion)) { focus.set(st.focus[0], st.focus[1], st.focus[2]); rig.dist = st.dist; }
+    if (stepCue(st, cueShot(dialogueCue.name || (speakerAt ? 'speaker' : null), at), focus.toArray(dialogueCue.irisFocus), rig.dist, dt, lookdev.reducedMotion)) { focus.set(st.focus[0], st.focus[1], st.focus[2]); rig.dist = st.dist; }
     else if (was) rig.dist = st.base; // back on Iris at the player's own zoom
   }
   // Shell hover is visual only; reduced motion holds the Shells at their rest pose.

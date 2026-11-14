@@ -179,6 +179,9 @@ export function createPrologue(ctx = {}) {
     const loop = (now) => { ring.update(Math.min(0.1, (now - last) / 1000)); last = now; raf = requestAnimationFrame(loop); };
     raf = requestAnimationFrame(loop);
     if (ctx.bus && ctx.bus.on) offs = ['npe.completed', 'npe.skipped'].map((n) => ctx.bus.on(n, stop));
+    // the one who speaks a line plays the talk clip, and the town camera finds them through window.__ftfWakeRing (QA 14.11 P1-3)
+    if (ctx.bus && ctx.bus.on) offs.push(ctx.bus.on('npe.camera', (p) => ring.talk((p && p.speaker) || null)));
+    globalThis.__ftfWakeRing = ring; offs.push(() => { if (globalThis.__ftfWakeRing === ring) delete globalThis.__ftfWakeRing; });
     import('../../ui/onboarding-queue.js').then((q) => { offs.push(q.onOnboarding((id) => { if (id !== 'intro') stop(); })); }).catch(() => { /* the bus and the timer still end it */ });
   }
 
