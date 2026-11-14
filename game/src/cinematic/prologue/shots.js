@@ -17,7 +17,7 @@ export const SHOTS = Object.freeze([
   // P7 at eye level and back (QA pass 2 #4): the old low camera 1.8 m from her path looked up at her raised arms, which filled the
   // frame and, lit from below, read as another outfit; now she crosses the room to the device in a full-figure shot
   { id: 'P7', t0: 19.5, t1: 23.5, p0: [-1.9, 1.55, 2.9], p1: [-0.6, 1.5, 2.7], l0: [1.4, 1.15, 0.5], l1: [3.0, 1.25, 0.4], f0: 38, f1: 36, ease: true },
-  { id: 'P8', t0: 23.5, t1: 26.5, p0: [3.15, 1.65, 2.1], p1: [3.1, 1.65, 1.95], l0: [2.2, 1.55, 0.5], l1: [2.2, 1.55, 0.5], f0: 42, f1: 42 }, // her startle whole, hands in frame (QA 14.11)
+  { id: 'P8', t0: 23.5, t1: 26.5, p0: [3.15, 1.65, 2.1], p1: [3.1, 1.65, 1.95], l0: [2.2, 1.55, 0.5], l1: [2.2, 1.55, 0.5], f0: 42, f1: 42 }, // her startle whole, hands in frame (QA 14.11: the QA rig's '19.6 s' frame was this shot)
   { id: 'P9', t0: 26.5, t1: 31.0, p0: [0.6, 1.55, 1.1], p1: [1.2, 1.5, 0.7], l0: [3.2, 1.5, 0.4], l1: [3.2, 1.5, 0.4], f0: 45, f1: 72, shake: 0.12, roll: 4 },
   { id: 'P10', t0: 31.0, t1: 35.5, tunnel: true, f0: 80, f1: 80, roll: 25 },
   { id: 'P11', t0: 35.5, t1: 38.0, tunnel: true, f0: 80, f1: 80 },

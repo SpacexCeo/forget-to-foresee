@@ -10,15 +10,16 @@ export const SKILL_ART = Object.freeze({ strike: 'strike', lance: 'shard_burst',
   sch_insight: 'read_sign', sch_eye: 'mark', war_brace: 'ward', war_shield: 'herbal_tea' });
 
 const SVG = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+// the tray icons: the owner's GPT line family (docs/art/requests/in/hud, docs/art/requests/gpt-icons-hud.md, 14.11)
 export const TRAY = Object.freeze([
-  { id: 'character', action: 'character', icon: SVG('<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>') },
-  { id: 'skills', action: 'skills', icon: SVG('<path d="M12 2l3 6 6 1-4.5 4.5L18 20l-6-3-6 3 1.5-6.5L3 9l6-1z"/>') },
-  { id: 'journal', action: 'journal', icon: SVG('<path d="M5 4h11a3 3 0 013 3v13H8a3 3 0 01-3-3z"/><path d="M9 8h6M9 12h6"/>') },
-  { id: 'map', action: 'map', icon: SVG('<path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/>') },
-  { id: 'bag', action: 'bag', icon: SVG('<path d="M6 8h12l-1 12H7z"/><path d="M9 8a3 3 0 016 0"/>') },
-  { id: 'market', action: 'market', icon: SVG('<path d="M4 9l2-5h12l2 5"/><path d="M5 9v11h14V9"/><path d="M4 9h16"/>') },
+  { id: 'character', action: 'character', icon: SVG('<path d="M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0"/><path d="M4 21v-2c0-4 3-6 8-6s8 2 8 6v2"/>') },
+  { id: 'skills', action: 'skills', icon: SVG('<path d="M12 3l2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5z"/>') },
+  { id: 'journal', action: 'journal', icon: SVG('<path d="M6 3h14v18H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M4 17h16"/><path d="M13 3v9l2-2 2 2V3"/>') },
+  { id: 'map', action: 'map', icon: SVG('<path d="M3 5l6-2 6 2 6-2v16l-6 2-6-2-6 2z"/><path d="M9 3v16m6-14v5m0 6v5"/><path d="M16 13a1 1 0 1 1-2 0 1 1 0 0 1 2 0"/>') },
+  { id: 'bag', action: 'bag', icon: SVG('<path d="M8 3h8l-1 4H9z"/><path d="M9 7C6 9 4 13 4 17c0 3 3 4 8 4s8-1 8-4c0-4-2-8-5-10"/><path d="M8 11h8v3c-2 2-6 2-8 0z"/>') },
+  { id: 'market', action: 'market', icon: SVG('<path d="M3 8l2-5h14l2 5"/><path d="M3 8v1a3 3 0 0 0 6 0V8v1a3 3 0 0 0 6 0V8v1a3 3 0 0 0 6 0V8z"/><path d="M5 12v9h14v-9"/><path d="M5 16h14"/>') },
   // the menu: a gear on the desktop tray (it opens the game menu with Settings), the three lines on the phone tray
-  { id: 'menu', action: null, key: 'Esc', icon: SVG('<g class="i-menu"><path d="M4 7h16M4 12h16M4 17h16"/></g><g class="i-gear"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></g>') },
+  { id: 'menu', action: null, key: 'Esc', icon: SVG('<g class="i-menu"><path d="M3 5h18M3 12h18M3 19h18"/></g><g class="i-gear"><path d="M10 3h4l.5 2 1 .5 2-1 2.5 2.5-1 2 .5 1 2 .5v4l-2 .5-.5 1 1 2-2.5 2.5-2-1-1 .5-.5 2h-4l-.5-2-1-.5-2 1L4 17.5l1-2-.5-1-2-.5v-4l2-.5.5-1-1-2L6.5 4l2 1 1-.5z"/><path d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0"/></g>') },
 ]);
 
 /** What a hotbar slot shows: {state, label, seconds, sweep (0..1 left), global}. Pure. */

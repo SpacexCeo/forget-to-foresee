@@ -394,9 +394,14 @@ export class LookDev {
 
   setReducedMotion(on) { this.reducedMotion = !!on; this.applyWeather(false); }
 
-  /** Governor step on the bottom tier (phones): render at a fraction of the tier's pixel ratio. */
+  /**
+   * Governor resolution step: below 1 (phones, the bottom tier) renders at a fraction of the tier's pixel ratio; above 1
+   * (desktop, the top tier with frames to spare) supersamples, the whole ratio capped at GOVERNORS.desktop.upRatioMax.
+   */
   setPixelScale(scale) {
-    scale = THREE.MathUtils.clamp(Number(scale) || 1, 0.5, 1);
+    const base = Math.min(window.devicePixelRatio || 1, this.cfg.pixelRatioCap);
+    const up = this.profile === 'desktop' ? Math.max(1, (GOVERNORS.desktop.upRatioMax || 1) / base) : 1;
+    scale = THREE.MathUtils.clamp(Number(scale) || 1, 0.5, up);
     if (scale === this.pixelScale) return;
     this.pixelScale = scale;
     this.applyPixelRatio();
