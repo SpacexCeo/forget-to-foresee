@@ -1,7 +1,8 @@
 // Iris's voice lines in the intro (sprint 7.6) with a fallback chain: the recorded file -> the browser's speech
 // synthesis with a female English voice -> silence (the subtitle always carries the line). Never blocks: play()
 // resolves with how it played ('file' | 'speech' | 'silent') and never rejects. The volume follows the master slider
-// (audio/mix.js). The files are an AI-generated placeholder (docs/audio/voice.md).
+// (audio/mix.js). The files are an AI-generated placeholder (docs/audio/voice.md). With howler.js on the page
+// (audio/audio.js loads it on the first gesture) a line plays as a Howl, through the game's audio engine.
 import { loadVolumes, sliderGain } from '../audio/mix.js';
 
 export const VOICE_LINES = Object.freeze({
@@ -54,7 +55,17 @@ export function createVoice({ base = '/', storage = globalThis.localStorage, Aud
       } catch { resolve('silent'); }
     });
   }
+  function viaHowl(src, Howl) {
+    return new Promise((resolve) => {
+      let done = false; const end = (ok) => { if (!done) { done = true; resolve(ok); } };
+      try {
+        const h = new Howl({ src: [src], volume: Math.min(1, gain()), onend: () => end(true), onloaderror: () => end(false), onplayerror: () => end(false) });
+        h.play(); setTimeout(() => end(true), timeoutMs);
+      } catch { end(false); }
+    });
+  }
   function viaFile(src) {
+    if (Audio === globalThis.Audio && globalThis.Howl) return viaHowl(src, globalThis.Howl);
     return new Promise((resolve) => {
       try {
         if (!Audio) return resolve(false);
