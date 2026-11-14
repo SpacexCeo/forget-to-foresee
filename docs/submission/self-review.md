@@ -44,5 +44,18 @@ after it. The relayer's day counter resets at 00:00 UTC.
 | 2 | README numbers from tonight's run (STATS, trades, guests, chests, dragons), the 1,082 failures stated plainly | this branch | this branch |
 | 3 | Real recent tx links per player action (guest mint, chest opening, dragon mint) | this branch | this branch |
 | 4 | Player moves on chain: a pledge, a gate payment, an item sale | gameplay + the Town works window (`wip/defi-pass`) | pledges and goals in the window; the chain moves come from players |
-| 5 | Turn on `damageNumbers` and `loadRitual` after a boot check | lead | proposed |
+| 5 | Turn on `damageNumbers` and `loadRitual` (see the flags below) | lead | proposed |
 | 6 | The jury video and the X post | owner | drafts in this folder |
+
+## Flags that are off on the live page ()
+
+New work ships with its flag on (owner, 14 Nov); a flag is only an off switch.
+
+| Flag | Ready to turn on? | Why |
+| --- | --- | --- |
+|  | **Yes**, after the lead's boot check | Wired in  and , pooled DOM (24 elements), ; worker 3 polishes it tonight |
+|  | **Yes**, after the lead's boot check | Wired in  (loading screen only),  |
+|  | Owner's call | Built and tested; placeholder models are being replaced tonight (Fable A/B) |
+| , , , ,  | No | Defined in  but nothing in the game reads them: turning them on changes nothing |
+
+The Town works goals and share () have no flag: they are part of the window.
