@@ -36,6 +36,7 @@ export function actKey(m) {
     case 'level': return 'mp.act.level';
     case 'quest': return 'mp.act.quest';
     case 'trade': return 'mp.act.trade';
+    case 'gate': return 'mp.act.gate';
     case 'chest': return m.v === 'rare' || m.v === 'legendary' ? 'mp.act.chest.' + m.v : 'mp.act.chest';
     case 'boss': return m.v === 'shoal' ? 'mp.act.boss.shoal' : m.v === 'crownrift' ? 'mp.act.boss.crownrift' : null;
     default: return null;

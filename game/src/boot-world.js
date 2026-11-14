@@ -308,6 +308,7 @@ const townMode = townPlan({ skip: params.get('skip'), town: params.get('town'), 
 let salvageView = null; // story TZ Q2 (?story=1)
 let fogCards = null, doorGlow = null, townShops = null, townProps = null, spotProps = null, townAudio = null, townBarks = null, photo = null, townMonsters = null;
 let splashGround = false; // the rain splashes got the town's ground sampler
+let loomMeter = null, loomTick = 0; // the Loom meter chip (flags loomMeter, presenceChip; ui/loom-meter.js): silk fed to the Gate-Loom today, who is in the valley
 let marketTicker = null, marketScene = null; // the townsfolk market on NEAR testnet (docs/town-economy.md; ?town=1 until ftf-town is live)
 const chestBag = createChestBag({ storage: ctx.storage });
 // Dragon companions (docs/companion-nft-plan.md): only the dragons the heroine token's account holds on chain fly with
@@ -542,6 +543,16 @@ if (townMode.town) {
       marketTicker = ui.createMarketTicker({ t, line: (r) => net.tradeLine(t, r), poll: () => net.fetchMarket(), onTrade: (r) => marketScene.onTrade(r),
         onLedger: () => (featureFlags.on('townLedger') ? () => window.dispatchEvent(new CustomEvent('ftf:menu-open', { detail: { tab: 'town' } })) : null) });
     }).catch((e) => console.warn('[town] market', e));
+  }
+  if (!loomMeter && (featureFlags.on('loomMeter') || featureFlags.on('presenceChip'))) { // the town's shared hungry object (owner 14.11)
+    loomMeter = { show() {}, update() {} }; // claimed while the modules load
+    Promise.all([import('./net/loom-stats.js'), import('./ui/loom-meter.js')]).then(([net, ui]) => {
+      const live = () => (mp && mp.presence && mp.presence.status === 'online' ? mp.presence : null); // real players only, never the demo bots
+      loomMeter = ui.createLoomMeter({ t: (k, a) => ctx.i18n.t(k, a), poll: () => net.fetchLoomStats(), count: () => (live() ? live().count : 0), acts: () => (live() ? live().chat : []),
+        flags: () => ({ loomMeter: featureFlags.on('loomMeter'), presenceChip: featureFlags.on('presenceChip') }),
+        onFed: (k) => { if (townPortal && !lookdev.reducedMotion) townPortal.flare(k); }, // anyone paid the Gate: the Loom burns white for a moment
+        onHunger: (k) => { if (townPortal && townPortal.setFed) townPortal.setFed(k); } });
+    }).catch((e) => { loomMeter = null; console.warn('[town] loom meter', e); });
   }
   mountTownAudio();
   import('./audio/haptics.js').then((m) => m.createHaptics({ storage: ctx.storage, reduced: () => lookdev.reducedMotion })).catch(() => {}); // feature 6: the same cues as a short pulse
@@ -800,6 +811,7 @@ async function leaveTown() {
   if (townMobs) { townMobs.dispose(); townMobs = null; }
   if (townBarks) townBarks.update(player.pos, false); // no bubble left over the archipelago
   if (marketTicker) marketTicker.show(false);
+  if (loomMeter) loomMeter.show(false);
   if (marketScene) marketScene.update(player.pos, false);
   if (photo) { photo.toggle(false); photo.setAvailable(false); }
   if (townAudio) { townAudio.dispose(); townAudio = null; } // the archipelago's play layer has its own audio
@@ -1498,6 +1510,7 @@ function frame() {
       marketScene.update(player.pos, free && !townFlow.talking);
       marketTicker.show(free);
     }
+    if (loomMeter) { const free = !(photo && photo.on) && !day1Open() && entered && !(townShops && townShops.inside) && !introOn; loomMeter.show(free); if (free && (loomTick += dt) > 1) { loomTick = 0; loomMeter.update(); } }
     if (townAudio) { // footsteps from the distance actually walked; the listener follows the camera
       const d = Math.hypot(player.pos[0] - lastStepPos[0], player.pos[2] - lastStepPos[2]);
       if (d < 3) { // the floor under her: wood in the shops, grass beyond the walls, stone in the streets

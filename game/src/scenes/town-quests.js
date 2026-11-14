@@ -329,6 +329,8 @@ export function createTownQuests({ scene = null, hudToast = null, storage, townL
     storyDo({ type: 'SILK', balanceC: Math.max(balanceC(), feeC()) });
     const r = storyDo({ type: 'PAY_GATE', balanceC: Math.max(balanceC(), feeC()), tx: p.hash || null });
     if (r.rejected) { twisting = false; payError = r.rejected; return false; }
+    // the town sees the Loom fed: our chip and Loom flare (ui/loom-meter.js) and the room hears it (play/feats.js -> presence act 'gate')
+    try { win.dispatchEvent(new CustomEvent('ftf:gate-paid', { detail: { tx: p.hash || null } })); win.dispatchEvent(new CustomEvent('ftf:feat', { detail: { k: 'gate' } })); } catch { /* no CustomEvent: nothing listens */ }
     if (depart) { try { await depart({ sub: t('story.twist.line') }); } catch { /* the transition logs its own failure */ } }
     storyDo({ type: 'TWIST_DONE' }); // the stipend; the title and the sealed chest below
     if (chests) chests.add({ tier: 'common', source: 'quest' });

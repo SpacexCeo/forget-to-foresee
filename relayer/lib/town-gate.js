@@ -152,5 +152,30 @@ export async function payGateFor(v, deps) {
   const key = deps.key || (await importSecretKey(cfg.coordKey));
   const r = await client.call({ key, signerId: cfg.coord, receiverId: cfg.town, methodName: 'pay_gate_for', args: { account_id: v.accountId, gate_id: v.gateId, request_hash: hash }, gas: GATE.gas });
   if (!r.ok) return { status: 502, body: { error: 'gate_failed', detail: String(r.failure || '').slice(0, 160), tx_hash: r.hash } };
+  // the Loom meter (GET /api/town/gate?stats=1): every paid gate is kept with its receipt, so the town can see it was fed
+  if (deps.log) deps.log({ at: (deps.now ? deps.now() : Date.now()), kind: 'gate', account: v.accountId, tx: r.hash, price: String(credit.body.gate_price) });
   return { status: 200, body: { paid: true, tx_hash: r.hash, request_hash: hash, gate: await client.view(cfg.town, 'gate_paid_of', { account_id: v.accountId }), contract: cfg.town } };
+}
+
+/**
+ * The Loom meter's day (pure): of the gate log's entries ({at, kind: 'gate', account, tx, price}), today's count and µsilk
+ * burned (UTC day of `now`) and the latest receipts, newest first. Other entries (the credits) are ignored.
+ */
+export function gateDayStats(entries, now = Date.now(), { recent = 5 } = {}) {
+  const day = Math.floor(now / 86_400_000);
+  const gates = (entries || []).filter((e) => e && e.kind === 'gate' && Number.isFinite(e.at) && typeof e.tx === 'string' && /^[A-Za-z0-9]{1,64}$/.test(e.tx))
+    .sort((a, b) => b.at - a.at);
+  const today = gates.filter((e) => Math.floor(e.at / 86_400_000) === day);
+  let burned = 0n; for (const e of today) { try { burned += BigInt(e.price || 0); } catch { /* a bad row counts nothing */ } }
+  return { day, gates: today.length, burned: String(burned), recent: gates.slice(0, recent).map((e) => ({ at: e.at, account: e.account, tx: e.tx })) };
+}
+
+/** The gate log's rows of today and yesterday (jsonlLog writes one file a day: market-YYYY-MM-DD.jsonl). Never throws. */
+export function readGateLog(dir, now = Date.now()) {
+  const out = [];
+  for (const d of [now, now - 86_400_000]) {
+    let s = ''; try { s = readFileSync(join(dir, `market-${new Date(d).toISOString().slice(0, 10)}.jsonl`), 'utf8'); } catch { continue; }
+    for (const line of s.split('\n')) { if (!line) continue; try { const e = JSON.parse(line); if (e && e.kind === 'gate') out.push(e); } catch { /* a torn line */ } }
+  }
+  return out;
 }
