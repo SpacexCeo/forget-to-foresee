@@ -18,7 +18,7 @@ import { FADE, findLookBones, applyLookTo } from './gait.js';
 import { townsfolkClips, mergeClips, faceLayerClip } from './anim-library.js';
 const MAX_STEP = 0.45; // the largest ground step a walker takes (play/town-paths.js MAX_STEP; no import: chunk order)
 import { MIN_GAP } from './townsfolk-plan.js';
-import { TOWNSFOLK, PROGRAMS, PersonPlan, tradeProgram, homeProgram, mayTrade, pickClip, animStride, LOOK_RADIUS, WAYFARERS, walkProgram } from './townsfolk-plan.js';
+import { TOWNSFOLK, PROGRAMS, PersonPlan, tradeProgram, homeProgram, mayTrade, pickClip, animStride, LOOK_RADIUS, WAYFARERS, walkProgram, PACK_FILE, PACK_CLIPS } from './townsfolk-plan.js';
 import { features } from '../features.js';
 
 const SIT_PELVIS_ABOVE = 0.10; // hip joint above the seat top when seated (m, scaled with the body)
@@ -78,8 +78,28 @@ class Person {
       // where the sit clip really puts the pelvis on this body is measured once in the pose (sitFix), then the root
       // is moved so the pelvis lands on the seat (owner 11.11: the elder sat on the back rail, legs through the seat)
       this.pelvis = model.getObjectByName('pelvis') || null; this.sitFix = null; this.sitScale = (sit && sit.userData && sit.userData.scale) || 1;
+      this.gltf = gltf; this.packFile = null; // a new body: the pack is retargeted onto it again
       this.state = 'loaded';
     });
+  }
+
+  /**
+   * The Tripo pack's social clips (assets/anim/townsfolk_pack.glb, one file for every body: retargeted here onto this
+   * one from a fresh rest-pose clone). They replace the older clips of the same names; a clip playing now restarts.
+   */
+  async addPack() {
+    const file = this.file, gltf = this.gltf;
+    let pack = [];
+    try { pack = await townsfolkClips(cloneSkinned(gltf.scene), { file: PACK_FILE, key: file, names: PACK_CLIPS, body: BODY[this.def.key] || 'adult' }); } catch (e) { console.warn('[townsfolk] pack failed', e); }
+    if (this.file !== file || this.gltf !== gltf) return; // the body changed meanwhile: the next pump retargets onto the new one
+    this.packFile = file;
+    for (const c of pack) {
+      const old = this.actions.get(c.name);
+      if (old) { old.stop(); this.mixer.uncacheAction(old.getClip()); this.actions.delete(c.name); }
+      if (this.current === c.name) this.current = null;
+      this.clips.set(c.name, c);
+    }
+    this.names = [...this.clips.keys()];
   }
 
   action(name) {
@@ -156,6 +176,11 @@ export function createTownsfolk({ scene, library, groundAt = null, visitors = ()
     const d = (p) => Math.hypot(p.plan.x - playerLocal[0], p.plan.z - playerLocal[2]);
     let next = people.filter((p) => p.state === 'absent' && has(p.def)).sort((a, b) => d(a) - d(b))[0];
     let lite = true;
+    // the pack's social clips once everyone stands in town (never in the first-frame budget): one person per pump
+    if (!next) {
+      const bare = people.filter((p) => p.state === 'loaded' && !p.def.visitor && p.packFile !== p.file).sort((a, b) => d(a) - d(b))[0];
+      if (bare) { loading = true; await bare.addPack(); await new Promise((r) => setTimeout(r, 120)); loading = false; return; }
+    }
     if (!next && !upgraded && !phone()) {
       next = people.filter((p) => p.state === 'loaded' && fileOf(p.def, false) !== p.file).sort((a, b) => d(a) - d(b))[0];
       lite = false;
