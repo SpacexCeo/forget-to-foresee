@@ -9,8 +9,13 @@ export const SPEAKERS = Object.freeze({
   lamplighter: { color: '#f0b24a' }, elder: { color: '#f6c860' }, iris: { color: '#f3e6c8', italic: true },
 });
 
-/** Speakers with a painted portrait (assets/ui/portraits, the quest givers' set); the others show their initial. */
-export const PORTRAITS = Object.freeze({ elder: 'assets/ui/portraits/elder_256.webp', guard: 'assets/ui/portraits/guard_256.webp', lamplighter: 'assets/ui/portraits/lamplighter_256.webp', iris: 'assets/cards/iris.webp' });
+/**
+ * Every wake-up speaker's bust portrait (assets/ui/portraits). The crowd's voices are the people who stand in the wake-up
+ * ring (cinematic/prologue/townsfolk-ring.js): the weaver is the baker's model, the townsperson the courier, the child child_a.
+ * Iris's is a bust crop of her card (owner 14.11: the full-body card squeezed into the circle).
+ */
+const P = (k) => `assets/ui/portraits/${k}_256.webp`;
+export const PORTRAITS = Object.freeze({ elder: P('elder'), guard: P('guard'), lamplighter: P('lamplighter'), iris: P('iris'), weaver: P('baker'), townsfolk: P('courier'), child: P('child_a') });
 /** The portrait URL of a speaker under `base`, or null (then the box shows the initial). */
 export const introPortrait = (sp, base = '/') => (PORTRAITS[sp] ? base + PORTRAITS[sp] : null);
 

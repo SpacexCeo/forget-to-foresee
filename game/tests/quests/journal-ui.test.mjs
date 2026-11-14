@@ -161,7 +161,8 @@ test('portraits: the five givers have one next to "From:" (letter fallback for a
   for (const g of PORTRAIT_GIVERS) for (const size of [128, 256]) {
     const p = portraitPath(g, size, '/'); assert.ok(existsSync(new URL('../../public' + p, import.meta.url)), p + ' ships');
   }
-  assert.equal(portraitPath('baker'), null);
+  assert.equal(portraitPath('baker', 128, '/'), '/assets/ui/portraits/baker_128.webp', 'every townsperson has a face now');
+  assert.equal(portraitPath('nobody'), null);
   const doc = makeDoc(), win = makeWin(); const s = spidersActive();
   const j = createJournalUI({ doc, win, say, giverName: gname, model: (q) => journalModel({ qs: s, now: T0, search: q, giverName: gname }), onWalk: () => {}, onTrack: () => ({ ok: true }), now: () => T0 });
   j.open(); doc.querySelector('[data-quest="q_spiders"]').click();

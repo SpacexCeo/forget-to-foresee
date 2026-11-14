@@ -43,7 +43,9 @@ test('the intro dialogue shows the painted portraits of the elder, the guard and
     assert.ok(url, sp);
     assert.ok(existsSync(new URL('../../public' + url, import.meta.url)), url + ' ships');
   }
-  assert.equal(introPortrait('townsfolk'), null);
+  for (const sp of new Set(WAKEUP.map((l) => l.speaker))) { const url = introPortrait(sp, '/'); assert.ok(url && existsSync(new URL('../../public' + url, import.meta.url)), sp + ' has a face'); }
+  assert.equal(introPortrait('iris', '/'), '/assets/ui/portraits/iris_256.webp', 'a bust, not the full-body card');
+  assert.equal(introPortrait('nobody'), null);
   assert.equal(introPortrait('elder', '/forget-to-foresee/'), '/forget-to-foresee/assets/ui/portraits/elder_256.webp');
   assert.ok(WAKEUP.some((l) => l.speaker === 'elder'));
 });
