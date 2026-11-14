@@ -25,6 +25,7 @@
     "firstSeenTips": true,
     "accountLogin": true,
     "glassShoal": false,
-    "townLedger": true
+    "townLedger": true,
+    "tales": true
   }
 }
