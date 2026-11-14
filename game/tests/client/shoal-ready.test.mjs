@@ -31,6 +31,7 @@ test('every step has its tracker line and the way-out labels exist, in all five 
 
 test('the arena shows its way out: Leave the Shoal mid-fight, then Open the chest and Fly home after the win', async () => {
   const { doc } = installDom();
+  doc.getElementById = doc.getElementById || (() => null);
   globalThis.document = doc;
   const THREE = await import('three');
   const { createShoalArena } = await import('../../src/scenes/shoal-arena.js');

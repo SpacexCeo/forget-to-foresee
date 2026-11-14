@@ -192,6 +192,7 @@ export function createGlassShoal(o) {
     const pulse = reduced() ? 0.35 : 0.22 + 0.16 * (0.5 + 0.5 * Math.sin(tAcc * 2.4));
     for (const r of [giverRay, bladeRay, stoneRay]) r.material.opacity = pulse;
     blade.visible = active && !save.blade && mode === 'town';
+    stone.visible = active; // the placeholder slab stands only once the quest is taken: the first hours of the town stay as they were
     bladeRay.visible = blade.visible;
     stoneRay.visible = mode === 'town' && active && R.stoneOpen(save);
     if (mode === 'town' && R.homeDue(save) && event('home')) toast(say('shoal.home') + ' ' + say('shoal.reward', { xp: R.REWARD.xp, title: say('shoal.title.' + R.REWARD.title) }));
