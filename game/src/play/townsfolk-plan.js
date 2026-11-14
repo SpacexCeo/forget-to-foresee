@@ -85,17 +85,26 @@ export const CLIP_FALLBACK = Object.freeze({
   // the Tripo pack's social clips (townsfolk.js PACK_CLIPS, loaded after the town is on screen; until then the older ones)
   greet: ['greet_04', 'wave', 'gesture_offer', 'talk', 'idle'], laugh: ['laugh_01', 'nod', 'idle'],
   idle_look: ['idle_look', 'idle_shift', 'idle'], scratch: ['scratch', 'idle_shift', 'idle'], arms_folded: ['think', 'idle_shift', 'idle'],
+  angry: ['angry_01', 'haggle', 'talk', 'idle'], laugh_b: ['laugh_02', 'laugh_01', 'nod', 'idle'],
+  clap: ['clap', 'nod', 'idle'], cheer: ['cheer', 'clap', 'wave', 'idle'], goodbye: ['wave_goodbye_01', 'wave', 'idle'],
+  phone: ['make_a_call_01', 'idle_shift', 'idle'], phone_game: ['take_photo', 'idle_shift', 'idle'], dance: ['dance_03', 'idle_shift', 'idle'],
 });
 
 /** The Tripo townsfolk pack (art/townsfolk/pack_index.json, art/tools/glb_town_pack.mjs): one file for every body,
  * retargeted at load (anim-library.js townsfolkClips) once the town is on screen. */
 export const PACK_FILE = 'townsfolk_pack';
-export const PACK_CLIPS = Object.freeze(['idle_look', 'wave', 'greet_04', 'nod', 'talk', 'talk_b', 'laugh_01', 'haggle', 'think', 'scratch']);
-/** A standing idle now and then turns into one of these for a few seconds (seeded per person). */
-export const IDLE_VARIETY = Object.freeze(['idle_look', 'scratch', 'arms_folded']);
-/** Two townsfolk talking take turns every TALK_TURN seconds: the talker's and the listener's clips cycle through these. */
+export const PACK_CLIPS = Object.freeze(['idle_look', 'wave', 'greet_04', 'nod', 'talk', 'talk_b', 'laugh_01', 'haggle', 'think', 'scratch',
+  'angry_01', 'clap', 'cheer', 'laugh_02', 'make_a_call_01', 'take_photo', 'sit', 'dance_03', 'wave_goodbye_01']);
+/** A standing idle now and then turns into one of these for a few seconds (seeded per person); near the musician
+ * while she plays, a dance instead (DANCE_RADIUS). */
+export const IDLE_VARIETY = Object.freeze(['idle_look', 'scratch', 'arms_folded', 'phone', 'phone_game']);
+export const DANCE_RADIUS = 7;
+/** Two townsfolk talking take turns every TALK_TURN seconds: the talker's and the listener's clips cycle through these
+ * (the talker's first is the step's own talk clip). */
 export const TALK_TURN = 5.5;
-export const TALKER_CLIPS = Object.freeze(['talk', 'haggle', 'talk_b']), LISTENER_CLIPS = Object.freeze(['listen', 'nod', 'laugh']);
+export const TALKER_CLIPS = Object.freeze(['talk', 'haggle', 'talk_b', 'angry']), LISTENER_CLIPS = Object.freeze(['listen', 'nod', 'laugh', 'laugh_b']);
+/** A win of Iris's nearby (townsfolk.js: a chest, a feat) makes the townsfolk within REACT_RADIUS clap or cheer. */
+export const REACT_RADIUS = 12, REACT_SECONDS = 4;
 
 /** The first clip of the chain that the list of available names has (or null). */
 export function pickClip(names, want) {
@@ -203,33 +212,6 @@ function programs() {
 const clearOfProps = (progs) => { for (const prog of Object.values(progs)) for (const st of prog.steps || []) if (st.walk) st.walk = detour(st.walk); return progs; };
 export const PROGRAMS = Object.freeze(clearOfProps(programs()));
 
-/**
- * The touring Wayfarers (flag `wayfarers`; the list itself is WAYFARERS below): three tall tourists from another world on
- * the model townsfolk_wayfarer (art/townsfolk/cast.py). They are visitors, not townsfolk: they tour the town along lines the
- * townsfolk already walk (the square round, the lamplighter's round and the sweeper's round, the other way), stop,
- * look around, take a picture with the crystal camera, haggle with the air. They never trade at the Exchange.
- */
-const TOURISTS = ['a', 'b', 'c'].map((k) => 'wayfarer_' + k);
-function wayfarerPrograms() {
-  const tour = (pts, acts) => { // walk the closed line leg by leg; at every stop: the act, then a look around
-    const steps = [];
-    for (let i = 0; i < pts.length; i++) {
-      steps.push({ walk: [pts[i], pts[(i + 1) % pts.length]] });
-      const act = acts[i % acts.length];
-      if (act) steps.push(stay(act === 'haggle' ? 3.5 : 3, act));
-      steps.push(stay(4 + (i % 3) * 2, 'idle'));
-    }
-    return { home: pts[0], heading: null, steps };
-  };
-  const turn = (pts, by) => pts.slice(by).concat(pts.slice(0, by));
-  const lamp = lampRoute().slice().reverse(), sweep = R.npc_route_sweeper.points.slice().reverse();
-  return {
-    wayfarer_a: tour(turn(SQUARE_ROUND.slice().reverse(), 1), ['take_photo', 'haggle', 'take_photo', null]),
-    wayfarer_b: tour(turn(lamp, Math.floor(lamp.length / 2)), ['take_photo', null, 'haggle']),
-    wayfarer_c: tour(turn(sweep, Math.floor(sweep.length / 2)), [null, 'take_photo']),
-  };
-}
-export const WAYFARER_PROGRAMS = Object.freeze(clearOfProps(wayfarerPrograms()));
 
 /** Trade slots at the Exchange door: along the front away from the trading board (scenes/town-footprints.js). */
 const EX_SLOT = (slot) => -0.3 - (slot % 5) * 0.8;
@@ -330,6 +312,7 @@ export class PersonPlan {
     this._p = { x: 0, y: 0, z: 0, dx: 0, dz: 1, corner: 0 };
     // the idle variety and the greeting's choice run on their own seeded stream: the step timing stays as it was
     this.vrng = seededRng(seed + ':variety:' + def.key); this.varNext = 0; this.varEnd = 0; this.varClip = null; this.greets = 0;
+    this.clock = 0; this.reactUntil = 0; this.reactClip = null; this.byeArmed = false;
     this.next();
   }
 
@@ -345,9 +328,12 @@ export class PersonPlan {
     else if (st.stay) this.until = st.stay * (0.85 + 0.3 * this.rng());
   }
 
+  /** A short reaction (clap, cheer) for `seconds` while standing, facing Iris (townsfolk.js: her win nearby). */
+  react(clip, seconds = REACT_SECONDS) { this.reactClip = clip; this.reactUntil = this.clock + seconds; }
+
   step(dt, ctx) {
     const st = this.current, iris = ctx.iris;
-    this.speed = 0;
+    this.speed = 0; this.clock += dt;
     const dIris = iris ? Math.hypot(iris[0] - this.x, iris[2] - this.z) + Math.abs(iris[1] - this.y) * 2 : Infinity;
     this.near = dIris;
     if (ctx.reduced) { this.clip = st.stay && st.sit ? st.clip : this.sit ? this.clip : 'idle'; this.side += (0 - this.side) * Math.min(1, dt * 4); return; } // steady: everyone holds still
@@ -409,22 +395,27 @@ export class PersonPlan {
       else {
         // take turns: one talks while the other listens, swapping every few seconds (the lower key starts); each round
         // the talk changes (talk, a complaint, the other talk) and so does the listening (listen, agree, laugh)
-        const turn = Math.floor(this.t / TALK_TURN), mine = (turn % 2 === 0) === (this.key < st.meet), k = Math.floor(turn / 2) % 3;
-        this.clip = mine ? (k === 0 ? st.clip : k === 1 ? TALKER_CLIPS[1] : (st.clip === 'talk' ? 'talk_b' : 'talk')) : LISTENER_CLIPS[k];
+        const turn = Math.floor(this.t / TALK_TURN), mine = (turn % 2 === 0) === (this.key < st.meet), k = Math.floor(turn / 2) % TALKER_CLIPS.length;
+        this.clip = mine ? (k === 0 ? st.clip : k === 2 ? (st.clip === 'talk' ? 'talk_b' : 'talk') : TALKER_CLIPS[k]) : LISTENER_CLIPS[k];
         if (this.t >= st.seconds) this.next();
       }
     } else {
       this.clip = st.clip; this.sit = st.sit || 0;
-      // a standing idle turns now and then into a look around, a scratch of the head or folded arms for a few seconds
+      // a standing idle turns now and then into a look around, a scratch of the head, folded arms or the phone for a few
+      // seconds; near the musician while she plays, a dance
       if (!st.sit && (st.clip === 'idle' || st.clip === 'idle_shift')) {
-        if (this.t >= this.varNext) { this.varClip = IDLE_VARIETY[Math.floor(this.vrng() * IDLE_VARIETY.length)]; this.varEnd = this.t + 4 + 2 * this.vrng(); this.varNext = this.varEnd + 8 + 8 * this.vrng(); }
+        if (this.t >= this.varNext) { const mu = this.key !== 'musician' && ctx.others && ctx.others.get('musician'); const music = mu && mu.clip === 'play' && Math.abs(mu.y - this.y) < 1.2 && Math.hypot(mu.x - this.x, mu.z - this.z) < DANCE_RADIUS;
+          this.varClip = music ? 'dance' : IDLE_VARIETY[Math.floor(this.vrng() * IDLE_VARIETY.length)]; this.varEnd = this.t + 4 + 2 * this.vrng(); this.varNext = this.varEnd + 8 + 8 * this.vrng(); }
         if (this.t < this.varEnd) this.clip = this.varClip;
       }
       // greet Iris once each time she comes close (a wave, the next time the pack's greeting)
-      if (st.greet && dIris < 4.2 && !this.greeted) { this.greeted = true; this.greetUntil = this.t + 2.6; this.greetClip = st.greet === 'wave' && this.greets++ % 2 ? 'greet' : st.greet; }
+      if (st.greet && dIris < 4.2 && !this.greeted) { this.greeted = true; this.greetUntil = this.t + 2.6; this.greetClip = st.greet === 'wave' && this.greets++ % 2 ? 'greet' : st.greet; this.byeArmed = st.greet === 'wave'; }
+      // ... and wave goodbye once when she walks off
+      if (this.byeArmed && dIris > 5.5 && this.t >= this.greetUntil) { this.byeArmed = false; this.greetUntil = this.t + 2.6; this.greetClip = 'goodbye'; }
       if (dIris > 8) this.greeted = false;
       if (this.t < this.greetUntil) { if (!st.sit) { this.clip = this.greetClip || st.greet; if (iris) face = iris; } } // seated people greet with their look only: the greeting clips stand
       else this.greetUntil = 0;
+      if (this.clock < this.reactUntil && !st.sit && this.t >= this.greetUntil) { this.clip = this.reactClip; if (iris) face = iris; } // Iris's win nearby
       if (this.key === 'guard' && dIris < 5 && !this.saluted) { this.saluted = true; this.greetUntil = this.t + 2.4; this._salute = true; }
       if (this.key === 'guard') { if (dIris > 9) this.saluted = false; if (this.t < this.greetUntil && this._salute) this.clip = 'salute'; else this._salute = false; }
       if (this.t >= this.until && this.t >= this.greetUntil) this.next();
@@ -447,10 +438,11 @@ export function animStride(distance, { phone = false, visible = true } = {}) {
 /**
  * The Wayfarers from Kallima (owner 14.11 night): visitors from another world who came "through the glass" like Iris.
  * Kept apart from TOWNSFOLK (the town's own thirteen, no hire talk, no temperament) and shown only with the flag
- * `wayfarers`. All of them wear the model townsfolk_wayfarer (art/townsfolk/cast.py) with its own clips: a springy walk,
+ * `wayfarers`. It wears the model townsfolk_wayfarer (art/townsfolk/cast.py) with its own clips: a springy walk,
  * an idle that looks around, `take_photo`, `haggle`.
  * `wayfarer` stands on the main street between the stairs (the Lost Tourist: scenes/wayfarer-tale.js walks them to the
- * Gate-Loom); `wayfarer_a..c` tour the town (WAYFARER_PROGRAMS above).
+ * Gate-Loom). One Wayfarer only (owner 14.11: every person on screen is a different character; the three touring
+ * copies are gone).
  */
 export const WAYFARER_HOME = Object.freeze([1.2, 2.5, 6.6]);
 /** The way down the main street to the Gate-Loom (town-local; the jury route's points, then in front of the portal). */
@@ -459,7 +451,6 @@ export const WAYFARERS = Object.freeze([
   Object.freeze({ key: 'wayfarer', height: 1.9, walk: 1.35, asset: 'townsfolk_wayfarer', visitor: true,
     program: Object.freeze({ home: WAYFARER_HOME, heading: Math.PI, steps: [stay(14, 'idle', { greet: 'wave' }), stay(3, 'take_photo'), stay(9, 'think'),
       stay(12, 'idle', { heading: Math.PI * 0.6 }), stay(3.5, 'haggle'), stay(8, 'idle_shift')] }) }),
-  ...TOURISTS.map((key) => Object.freeze({ key, height: 1.9, walk: 1.35, asset: 'townsfolk_wayfarer', visitor: true, program: WAYFARER_PROGRAMS[key] })),
 ]);
 /** A walk from where a visitor stands along `path`, then waiting there (the escort to the Gate-Loom). Pure. */
 export function walkProgram(from, path) {

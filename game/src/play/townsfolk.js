@@ -18,7 +18,7 @@ import { FADE, findLookBones, applyLookTo } from './gait.js';
 import { townsfolkClips, mergeClips, faceLayerClip } from './anim-library.js';
 const MAX_STEP = 0.45; // the largest ground step a walker takes (play/town-paths.js MAX_STEP; no import: chunk order)
 import { MIN_GAP } from './townsfolk-plan.js';
-import { TOWNSFOLK, PROGRAMS, PersonPlan, tradeProgram, homeProgram, mayTrade, pickClip, animStride, LOOK_RADIUS, WAYFARERS, walkProgram, PACK_FILE, PACK_CLIPS } from './townsfolk-plan.js';
+import { TOWNSFOLK, PROGRAMS, PersonPlan, tradeProgram, homeProgram, mayTrade, pickClip, animStride, LOOK_RADIUS, WAYFARERS, walkProgram, PACK_FILE, PACK_CLIPS, REACT_RADIUS } from './townsfolk-plan.js';
 import { features } from '../features.js';
 
 const SIT_PELVIS_ABOVE = 0.10; // hip joint above the seat top when seated (m, scaled with the body)
@@ -300,6 +300,14 @@ export function createTownsfolk({ scene, library, groundAt = null, visitors = ()
   }
 
   function setActive(on) { active = !!on; for (const p of people) if (!active) p.root.visible = false; }
+
+  // Iris wins something nearby (a chest picked up or opened, a feat): the townsfolk around clap or cheer (owner 14.11)
+  const onWin = (e) => {
+    if (e.type === 'ftf:chest' && !(e.detail && (e.detail.phase === 'pickup' || e.detail.phase === 'open'))) return;
+    let i = 0;
+    for (const p of people) if (p.state === 'loaded' && p.root.visible && p.plan.near < REACT_RADIUS) p.plan.react(i++ % 2 ? 'clap' : 'cheer');
+  };
+  if (typeof window !== 'undefined' && window.addEventListener) { window.addEventListener('ftf:chest', onWin); window.addEventListener('ftf:feat', onWin); }
 
   return {
     people, byKey, update, setActive, setBadge, sendToTrade, irisPush,
