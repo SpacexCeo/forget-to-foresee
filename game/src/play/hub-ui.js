@@ -214,7 +214,7 @@ export function createHubUi({ root, ctx, hub, onFly, onRejected = () => {} }) {
     return el(doc, 'section', { class: 'hub-box hub-dock', 'aria-label': t('hub.dock.title') },
       head(t('hub.dock.eyebrow')),
       el(doc, 'h3', { text: t('hub.dock.title') }),
-      el(doc, 'p', { text: t('hub.dock.hint') }),
+      el(doc, 'p', { text: t([...by.values()].some((v) => v.length) ? 'hub.dock.hint' : 'hub.dock.hintNone') }),
       // the first trial says once where the season lives (season-local.js); Settings repeats it with the restart
       obs.season.tick <= 1 ? el(doc, 'p', { class: 'hub-muted', 'data-season-note': '', text: t('season.local.note') }) : null,
       el(doc, 'div', { class: 'hub-shells' }, [1, 2, 3, 4].map((n) => {
