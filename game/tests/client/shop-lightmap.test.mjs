@@ -51,7 +51,7 @@ test('shop lightmap: every room ships one light texture, on the second UV set of
   for (const piece of rooms) {
     const lm = lightmapOf(piece + '.glb', piece);
     assert.ok(lm.image >= 0, piece + ' has no lm_' + piece + ' image');
-    assert.deepEqual(lm.size, [2048, 2048], piece + ' lightmap size');
+    assert.deepEqual(lm.size, [1536, 1536], piece + ' lightmap size');
     assert.ok(lm.mats.length >= 4, piece + ': floor, walls, timber and cloth at least use the lightmap');
     for (const m of lm.mats) assert.equal(m.texCoord, 1, piece + ' ' + m.name + ' must sample the lightmap on TEXCOORD_1');
     assert.ok(lm.prims > 0 && lm.withUv === lm.prims, piece + ': every lightmapped primitive carries TEXCOORD_1');

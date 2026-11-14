@@ -254,7 +254,13 @@ def make_materials():
         mats[f"altar_glyph_{k:02d}"] = glyph
     mats["altar_eye"] = ftf.simple_material("M_Altar_Eye", (0.9, 0.55, 0.18), 0.35, emit=(1.0, 0.55, 0.14), emit_strength=0.2)
     mats["ink"] = ftf.simple_material("M_Shop_Ink", (0.02, 0.022, 0.03), 0.5)
-    mats["fire"] = ftf.simple_material("M_Shop_Fire", (1.0, 0.5, 0.1), 0.5, emit=(1.0, 0.42, 0.06), emit_strength=5.0)
+    # flames carry their gradient in the vertex colour (white-yellow core, orange sheath, dark tip): glTF has no
+    # per-vertex emission, so the colour is the base colour under the room's ambient light plus a low even glow
+    fire = vc_material("M_Shop_Fire", (1.0, 1.0, 1.0), rough=0.6, double_sided=True)
+    fb = fire.node_tree.nodes["Principled BSDF"]
+    fb.inputs["Emission Color"].default_value = (1.0, 0.36, 0.06, 1.0)
+    fb.inputs["Emission Strength"].default_value = 0.6
+    mats["fire"] = fire
     # Interior-only materials (S-001..S-003). Interiors are lit by their baked vertex colour under a plain
     # ambient light in the client, so nothing here is a true metal (a metal has no diffuse and would go black).
     mats["window_day"] = vc_material("M_Shop_Daylight", (1.0, 1.0, 1.0), rough=0.9)          # painted daylight, never baked
@@ -370,7 +376,7 @@ BAKE_MID = float(os.environ.get("TOWN_BAKE_MID", "0.41"))         # where the me
 # interiors with a plain ambient light, and three.js multiplies ambient light by the occlusion map, so the map is a
 # greyscale lightmap there: soft shadows, contact darkening and lamp pools at texel density, while the vertex colour
 # keeps the tint and the light's hue. Small things (jars, books, candles) stay on per-vertex light.
-BAKE_GAMMA = float(os.environ.get("TOWN_BAKE_GAMMA", "1.7"))      # contrast of the baked light (1 = plain shoulder)
+BAKE_GAMMA = float(os.environ.get("TOWN_BAKE_GAMMA", "2.1"))      # contrast of the baked light (1 = plain shoulder)
 LM_SIZE = int(os.environ.get("TOWN_LM_SIZE", "2048"))
 LM_SUPER = int(os.environ.get("TOWN_LM_SUPER", "2"))               # bake at LM_SIZE x LM_SUPER, box-filter down
 LM_SAMPLES = int(os.environ.get("TOWN_LM_SAMPLES", "384"))
@@ -565,6 +571,8 @@ def bake_interior(sc, piece, grp, tb, all_objects, exposure=1.0):
     lm_objs = []
     for o in list(grp["meshes"]):
         if MAT_KEY[o.name] in BAKE_SKIP or MAT_KEY[o.name] == "case_glass" or not LM_SIZE:
+            continue
+        if o.parent is not None:   # a swinging lamp stays per-vertex: one props mesh and its flames, two draw calls
             continue
         small, has_big = split_small(o, LM_MIN_DIAG)
         if small is not None:
