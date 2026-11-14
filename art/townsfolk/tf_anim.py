@@ -38,9 +38,12 @@ def alive(P, S, u, shift=1.4):
 
 def clip_wayfarer_walk(key, S, u):
     """The shared walk with a softer toe-off: the Wayfarer's thick boot soles would dip into the ground at the shared
-    36-degree peel-off (review W3), so the foot rolls up to 22 degrees only."""
+    36-degree peel-off and the heel cap at the 14-degree strike (review W3): the foot rolls 18 degrees up and strikes at 6."""
     orig = A.gait_foot
-    def soft(ph, side, speed, T, stance, lift, sp, op, width, **kw): return orig(ph, side, speed, T, stance, lift, sp, op * 0.6, width, **kw)
+    def soft(ph, side, speed, T, stance, lift, sp, op, width, **kw):
+        f = orig(ph, side, speed, T, stance, lift, sp * 0.45, op * 0.5, width, **kw)
+        f['toe'] = f['toe'] * 1.6 + 5.0      # the body's toes curl up inside the boot instead of poking through its sole
+        return f
     A.gait_foot = soft
     try: return A.clip_locomotion(key, S, u, run=False)
     finally: A.gait_foot = orig

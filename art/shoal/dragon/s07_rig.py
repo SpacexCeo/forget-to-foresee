@@ -173,20 +173,20 @@ def _skin_mats(rots):
     for pb in rig.pose.bones: pb.rotation_quaternion = (1, 0, 0, 0)
     return M
 RELAX_POSES = {
-    'legs_tucked': [(b + sd, 'X', a) for sd in ('.L', '.R') for b, a in (('leg_h_upper', -28), ('leg_h_lower', 18), ('leg_h_foot', 38), ('leg_h_paw', 15), ('leg_f_upper', 34), ('leg_f_lower', -72), ('leg_f_paw', 40))],
+    'legs_tucked': [(b + sd, 'X', a) for sd in ('.L', '.R') for b, a in (('leg_h_upper', -28), ('leg_h_lower', 18), ('leg_h_foot', 38), ('leg_h_paw', 15), ('leg_f_upper', 30), ('leg_f_lower', -58), ('leg_f_paw', 36))],
     'neck_forward': [('neck1', 'X', 17), ('neck2', 'X', 12), ('neck3', 'X', 7), ('head', 'X', -32)],
     'head_turn_60': [(n, 'Z', 12) for n in ('neck1', 'neck2', 'neck3', 'neck4', 'head')],
     'step': [('leg_f_upper.L', 'X', -30), ('leg_h_upper.R', 'X', 30), ('leg_h_lower.R', 'X', -20)]}
 MATS_ = {k: _skin_mats(v) for k, v in RELAX_POSES.items()}
 Ph = np.concatenate([P, np.ones((len(P), 1))], 1); rl = np.linalg.norm(P[e[:, 0]] - P[e[:, 1]], axis=1); okl = rl > 0.004
-STRETCH_OK = float(A.get('stretch_ok', 1.5)); relax_log = []
+STRETCH_OK = float(A.get('stretch_ok', 1.4)); relax_log = []
 nbr = [[] for _ in range(len(P))]
 for a_, b_ in e: nbr[a_].append(b_); nbr[b_].append(a_)
 from mathutils.kdtree import KDTree as _KD
 KD = _KD(len(P))
 for i_, v_ in enumerate(P): KD.insert(v_, i_)
-KD.balance(); RAD = float(A.get('relax_r', 0.15))
-for it in range(int(A.get('relax', 10))):
+KD.balance(); RAD = float(A.get('relax_r', 0.18))
+for it in range(int(A.get('relax', 16))):
     bad = np.zeros(len(P), bool); worst = 0.0
     for k_, M in MATS_.items():
         D = np.einsum('vb,bij,vj->vi', bw, M, Ph)[:, :3]
@@ -232,7 +232,7 @@ TEST = {'neck_forward': [('neck1', 'X', 17), ('neck2', 'X', 12), ('neck3', 'X', 
         'wings_up': [('wing_arm.L', 'Y', -40), ('wing_arm.R', 'Y', 40), ('wing_fore.L', 'Y', -15), ('wing_fore.R', 'Y', 15)],
         # the flight pose of s08_clips.legs_tucked: hind legs trailing back, forelegs folded under the chest
         'legs_tucked': [(b + sd, 'X', a) for sd in ('.L', '.R') for b, a in (('leg_h_upper', -28), ('leg_h_lower', 18), ('leg_h_foot', 38), ('leg_h_paw', 15),
-                                                                                ('leg_f_upper', 34), ('leg_f_lower', -72), ('leg_f_paw', 40))],
+                                                                                ('leg_f_upper', 30), ('leg_f_lower', -58), ('leg_f_paw', 36))],
         'wings_down': [('wing_arm.L', 'Y', 30), ('wing_arm.R', 'Y', -30)],
         'head_turn_60': [(n, 'Z', 12) for n in ('neck1', 'neck2', 'neck3', 'neck4', 'head')],
         'tail_side_45': [(f'tail{i}', 'Z', 9) for i in range(1, 6)],

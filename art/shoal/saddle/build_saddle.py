@@ -1,7 +1,7 @@
 """dragon_saddle: the saddle and harness of the pearl dragon, built in code to the dragon's own back.
   blender -b --python build_saddle.py -- --root <saddle work root> --dragon <dragon work root>
 Reads the dragon's game mesh (work/06_bake.blend) and its saddle socket (dragon.json), builds the parts around it
-(blanket with a raised pad over the spine plates, seat with pommel and cantle, side flaps, two girths that close under
+(blanket with a raised pad over the spine plates, its front edge clear of the folded wing's root, seat with pommel and cantle, side flaps, two girths that close under
 the belly, stirrups on leathers, brass buckles and handles, a bedroll),
 lays the soft parts on the body's own cross-sections (ray casts), unwraps, bakes its procedural materials into one atlas and exports
 out/dragon_saddle_raw.glb with the origin at the socket (the game parents it to the dragon's `saddle` bone).
@@ -72,13 +72,13 @@ ridge = lambda ang: 0.03 + 0.07 * math.exp(-(ang / 0.22) ** 2)   # the pad stand
 
 
 # 1. blanket: over the back, a scalloped hem with a gold border
-hem = lambda u: 0.78 + 0.06 * math.cos(u * math.pi * 10)        # the blanket stays on the back, above the folded wing
-grid('blanket', lambda u, v: onbody((v * 2 - 1) * hem(u), Y0 - 0.72 + 1.48 * u, ridge((v * 2 - 1) * hem(u))), 22, 20, 'cloth')
+hem = lambda u: 0.64 + 0.05 * math.cos(u * math.pi * 10)        # the blanket stays on the back, above the folded wing
+grid('blanket', lambda u, v: onbody((v * 2 - 1) * hem(u), Y0 - 0.50 + 0.72 * u, ridge((v * 2 - 1) * hem(u))), 22, 20, 'cloth')
 for sgn in (1, -1):
-    grid(f'blanket_trim{sgn}', lambda u, v, sgn=sgn: onbody(sgn * (hem(u) * (0.93 + 0.08 * v)), Y0 - 0.72 + 1.48 * u, 0.04), 22, 1, 'trim')
+    grid(f'blanket_trim{sgn}', lambda u, v, sgn=sgn: onbody(sgn * (hem(u) * (0.93 + 0.08 * v)), Y0 - 0.50 + 0.72 * u, 0.04), 22, 1, 'trim')
 # 2. side flaps under the seat
 for sgn in (1, -1):
-    grid(f'flap{sgn}', lambda u, v, sgn=sgn: onbody(sgn * (0.16 + 0.48 * v * (0.8 + 0.2 * math.sin(u * math.pi))), Y0 - 0.46 + 0.92 * u, 0.055 + 0.07 * math.exp(-((0.16 + 0.48 * v) / 0.3) ** 2)), 8, 6, 'leather_dark')
+    grid(f'flap{sgn}', lambda u, v, sgn=sgn: onbody(sgn * (0.16 + 0.36 * v * (0.8 + 0.2 * math.sin(u * math.pi))), Y0 - 0.34 + 0.58 * u, 0.055 + 0.07 * math.exp(-((0.16 + 0.36 * v) / 0.3) ** 2)), 8, 6, 'leather_dark')
 # 3. two girths: closed loops on the body's own cross-section, with brass buckles on both sides
 GIRTHS = (Y0 - 0.40, Y0 - 0.06)        # both on the barrel, in front of the thighs
 for k, gy in enumerate(GIRTHS):
