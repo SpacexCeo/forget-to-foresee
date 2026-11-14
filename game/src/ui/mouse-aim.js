@@ -137,7 +137,13 @@ export function createMouseAim({ target, input, doc = globalThis.document, win =
     if (e.pointerType !== 'mouse' || !on()) return;
     e.preventDefault();
     ctrl = !!e.ctrlKey;
-    if (!locked) { if (!ctrl && !ui(true)) { engaged = true; tries = 0; wanted = true; lock(); } return; } // the click that takes the mouse is not an attack
+    if (!locked) {
+      // a click on the scene means back to the game: a text field (the chat line) gives up the focus, which the
+      // preventDefault above would otherwise keep there and with it the cursor (owner 14.11: the chat never closed)
+      const a = doc.activeElement; if (a && a !== doc.body && /^(INPUT|TEXTAREA)$/.test(a.tagName || '') && typeof a.blur === 'function') a.blur();
+      if (!ctrl && !ui(true)) { engaged = true; tries = 0; wanted = true; lock(); }
+      return;
+    } // the click that takes the mouse is not an attack
     const a = mouseAction(e.button, { prompt: prompt() });
     if (!a || held.has(e.button)) return;
     held.set(e.button, a); onAction(a, true, e.button);
@@ -163,6 +169,8 @@ export function createMouseAim({ target, input, doc = globalThis.document, win =
     get locked() { return locked; },
     get engaged() { return engaged; },
     update: () => sync(false),
+    /** A window the player closed (the chat): take the mouse back now, inside that key or click (it is the gesture the lock needs). */
+    resume() { if (!on()) return; engaged = true; tries = 0; wanted = true; if (!locked && !ctrl && !ui(true)) lock(); },
     /** Gives the cursor back until the next click into the scene (a cutscene, leaving the world). */
     release() { engaged = false; unlock(); },
     dispose() {
