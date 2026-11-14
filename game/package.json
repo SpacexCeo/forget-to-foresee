@@ -24,6 +24,7 @@
     "@fontsource/libre-caslon-text": "^5.3.0",
     "@fontsource/old-standard-tt": "^5.3.0",
     "@fontsource/source-sans-3": "^5.3.1",
+    "howler": "^2.2.4",
     "three": "^0.170.0"
   },
   "devDependencies": {

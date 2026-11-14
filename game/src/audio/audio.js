@@ -1,9 +1,13 @@
-// WebAudio runtime: buses (master/music/sfx, persisted), ducking under the Guest voice and stingers,
-// HRTF panning for 3D sources, zone ambience beds, the tension-keyed music stems and the licensed music beds
-// (setMusic: one looping track crossfaded by zone/weather, src/audio/music.js), which dip briefly under sound effects.
-// Nothing touches WebAudio until unlock() (call it from a user gesture). See docs/audio.md.
+// The game's audio runtime on howler.js (MIT, github.com/goldfire/howler.js; docs/licenses/howler.md; owner 14.11:
+// "an open-source game audio engine"). Howler owns the AudioContext, unlocks it on the first touch or click on phones
+// and streams the licensed music beds (html5 Howls crossfaded with fade()); our graph hangs under Howler.masterGain:
+// buses (master/music/sfx, persisted; master is Howler's global volume), ducking under the Guest voice and stingers,
+// HRTF panning for 3D sources, zone ambience beds, the tension-keyed music stems, short dips under sound effects.
+// howler is imported lazily inside unlock(), so it costs nothing before the first gesture. Without it (Node tests,
+// an injected AudioContextClass) the same graph runs on a plain AudioContext and media elements. See docs/audio.md.
 import { AUDIO_MANIFEST } from './manifest.js';
 import { MUSIC_MANIFEST } from './music-manifest.js';
+import { SAMPLE_OVERRIDES } from './sample-manifest.js';
 export { archipelagoMusic, markChapterDone } from './music.js'; // for the archipelago, which loads this module lazily
 import { createSafeStorage } from '../ui/storage.js';
 import { loadVolumes, saveVolumes, sanitizeVolumes, sliderGain, dbToGain, tensionMix, zoneMix, ZONES as ZONES_WITH_HUM, resolveSound, guestPlan, listenerPose, BUSES } from './mix.js';
@@ -24,8 +28,15 @@ export function withMusic(m, music = MUSIC_MANIFEST) {
   return { ...m, sounds: { ...m.sounds, ...(music?.sounds || {}) } };
 }
 
+/** The recorded replacements (CC0, art/audio/samples.py) over the synthesized sounds of the same names. */
+export function withSamples(m, over = SAMPLE_OVERRIDES) {
+  const sounds = { ...m.sounds };
+  for (const [name, o] of Object.entries(over || {})) if (sounds[name]) sounds[name] = { ...sounds[name], file: o.file, dur: o.dur, source: o.source };
+  return { ...m, sounds };
+}
+
 export function createAudio(opts = {}) {
-  const manifest = opts.manifest || withMusic(AUDIO_MANIFEST);
+  const manifest = opts.manifest || withSamples(withMusic(AUDIO_MANIFEST));
   const base = opts.base || defaultBase();
   const storage = opts.storage || createSafeStorage();
   const AC = opts.AudioContextClass || globalThis.AudioContext || globalThis.webkitAudioContext;
@@ -46,6 +57,9 @@ export function createAudio(opts = {}) {
   let streams = null, nextStream = 0;
   const pendingLoops = [];
   let hums = [];                   // one positional amb_shell_hum per Shell (setShellHums)
+  // howler (browser only): when an AudioContextClass is injected (tests) the plain path runs
+  const useHowler = opts.engine !== false && !opts.AudioContextClass && typeof window !== 'undefined';
+  let H = null, unlocking = null;  // {Howler, Howl} once loaded
 
   const now = () => ctx.currentTime;
   const ramp = (param, v, tc = 0.08) => { try { param.cancelScheduledValues(now()); param.setTargetAtTime(v, now(), tc); } catch { param.value = v; } };
@@ -56,8 +70,9 @@ export function createAudio(opts = {}) {
     try { n.limiter.threshold.value = -3; n.limiter.ratio.value = 12; n.limiter.attack.value = 0.003; n.limiter.release.value = 0.15; } catch { /* optional */ }
     n.musicDuck.connect(n.musicDip); n.musicDip.connect(n.music); n.music.connect(n.master);
     n.amb.connect(n.ambDuck); n.ambDuck.connect(n.sfx); n.sfx.connect(n.master);
-    n.master.connect(n.limiter); n.limiter.connect(ctx.destination);
+    n.master.connect(n.limiter); n.limiter.connect(H ? H.Howler.masterGain : ctx.destination);
     for (const b of BUSES) n[b].gain.value = sliderGain(vols[b]);
+    if (H) { n.master.gain.value = 1; H.Howler.volume(sliderGain(vols.master)); }   // master = Howler's global volume (beds too)
     return n;
   }
 
@@ -84,6 +99,7 @@ export function createAudio(opts = {}) {
     const d = duckCount > 0;
     ramp(nodes.musicDuck.gain, d ? DUCK.music : 1, d ? 0.05 : 0.4);
     ramp(nodes.ambDuck.gain, d ? DUCK.amb : 1, d ? 0.05 : 0.4);
+    bedVolume(d ? 0.05 : 0.4);
   }
 
   /** A short dip of the music under one sound effect (retriggers cleanly: the newest effect sets the release). */
@@ -215,9 +231,36 @@ export function createAudio(opts = {}) {
     } catch { streams = null; }
   }
 
+  /** The streamed bed's volume: its level x the music slider x the duck (html5 audio sits outside the WebAudio graph). */
+  function bedVolume(tc = 0.1) {
+    if (!H || !musicBed || !musicBed.h.howl) return;
+    const v = musicBed.h.level * sliderGain(vols.music) * (duckCount > 0 ? DUCK.music : 1);
+    const howl = musicBed.h.howl; howl.fade(howl.volume(), v, Math.max(30, tc * 3000));
+  }
+
+  /** A looping bed streamed by howler (html5 Howl), faded in and out with Howl.fade. */
+  function howlBed(name) {
+    const meta = manifest.sounds[name];
+    const howl = new H.Howl({ src: [base + meta.file], html5: true, loop: true, volume: 0, preload: true });
+    const h = { name, stopped: false, howl, level: 0 };
+    howl.play();
+    Object.assign(h, {
+      get playing() { return !h.stopped; },
+      setGain(g, tc = 0.1) { h.level = g; if (musicBed && musicBed.h === h) bedVolume(tc); else howl.fade(howl.volume(), g * sliderGain(vols.music), Math.max(30, tc * 3000)); },
+      stop(fade = 0.05) {
+        if (h.stopped) return; h.stopped = true;
+        howl.fade(howl.volume(), 0, Math.max(30, fade * 1000));
+        setTimeout(() => { try { howl.unload(); } catch { /* gone */ } }, fade * 1000 + 150);
+      },
+      ended: Promise.resolve(),
+    });
+    return h;
+  }
+
   /** A looping bed streamed from its file (falls back to a decoded buffer without media elements, e.g. in Node). */
   function streamBed(name) {
     const meta = manifest.sounds[name];
+    if (H) return howlBed(name);
     if (!streams) return play(name, { loop: true, gain: 0 });
     const s = streams[nextStream]; nextStream = 1 - nextStream;
     const h = { name, stopped: false };
@@ -247,6 +290,7 @@ export function createAudio(opts = {}) {
     musicBed?.h.stop(fade);
     musicBed = wantBed ? { name: wantBed, h: streamBed(wantBed) } : null;
     musicBed?.h.setGain(musicLevel, fade / 3);
+    bedVolume(fade / 3);
     applyTension();
   }
 
@@ -254,9 +298,20 @@ export function createAudio(opts = {}) {
   const api = {
     /** Create/resume the AudioContext; call from a click/keydown. Safe to call repeatedly. */
     async unlock() {
-      if (disposed || !AC) return false;
+      if (disposed) return false;
+      if (!ctx && useHowler && !H) {
+        // howler is fetched on the first gesture; a second click while it loads waits for the same promise
+        unlocking ||= import('howler').then((m) => {
+          const lib = m.Howler ? m : (m.default || m);
+          if (lib.Howler) { lib.Howler.autoSuspend = false; lib.Howler.volume(lib.Howler.volume()); }   // volume() sets up its context
+          if (lib.Howler && lib.Howler.usingWebAudio && lib.Howler.ctx) H = { Howler: lib.Howler, Howl: lib.Howl };
+        }).catch(() => { /* the plain path below */ });
+        await unlocking;
+        if (disposed) return false;
+      }
+      if (!ctx && !H && !AC) return false;
       if (!ctx) {
-        ctx = new AC({ latencyHint: 'interactive' });
+        ctx = H ? H.Howler.ctx : new AC({ latencyHint: 'interactive' });
         nodes = buildGraph();
         if (typeof document !== 'undefined' && document.addEventListener) {
           onVis = () => { if (document.hidden) ctx.suspend?.(); else ctx.resume?.(); };
@@ -265,7 +320,7 @@ export function createAudio(opts = {}) {
         for (const nm of ['ui_click', 'ui_hover', 'ui_confirm', 'amb_wind']) load(nm);
         for (const e of pendingLoops.splice(0)) { const inner = play(e.nameOrGroup, { ...e.o, pos: e.h.pos, gain: e.h.gain }); e.h.inner = inner; }
         applyZone();
-        primeStreams();
+        if (!H) primeStreams();
         applyBed(1.5);
         if (opts.music !== false) startMusic();
       }
@@ -307,7 +362,9 @@ export function createAudio(opts = {}) {
       if (!BUSES.includes(bus)) return;
       vols = sanitizeVolumes({ ...vols, [bus]: v });
       saveVolumes(storage, vols);
-      if (nodes) ramp(nodes[bus].gain, sliderGain(vols[bus]), 0.05);
+      if (H && bus === 'master') H.Howler.volume(sliderGain(vols.master));
+      else if (nodes) ramp(nodes[bus].gain, sliderGain(vols[bus]), 0.05);
+      if (bus === 'music') bedVolume(0.05);
     },
     getVolumes() { return { ...vols }; },
     /** Decodes sounds ahead of time; a group name loads every variant (steps must not miss their first beat). */
@@ -317,14 +374,16 @@ export function createAudio(opts = {}) {
       return Promise.all(all.map(load));
     },
     get context() { return ctx; },
-    get state() { return { unlocked: !!ctx, zone, tension, active: active.size, ducked: duckCount > 0, music: !!music, musicBed: musicBed?.name ?? null, bed: bed?.name ?? null, hums: hums.length }; },
+    get engine() { return H ? 'howler' : ctx ? 'webaudio' : null; },
+    get state() { return { unlocked: !!ctx, engine: H ? 'howler' : ctx ? 'webaudio' : null, zone, tension, active: active.size, ducked: duckCount > 0, music: !!music, musicBed: musicBed?.name ?? null, bed: bed?.name ?? null, hums: hums.length }; },
     _nodes: () => nodes, _music: () => music,
     dispose() {
       disposed = true;
       for (const h of [...active]) h.stop(0);
       if (music) for (const m of Object.values(music)) { try { m.src.stop(); } catch { /* ok */ } }
       if (onVis) document.removeEventListener('visibilitychange', onVis);
-      try { ctx?.close(); } catch { /* ok */ }
+      if (musicBed?.h.howl) { try { musicBed.h.howl.unload(); } catch { /* ok */ } }
+      if (!H) { try { ctx?.close(); } catch { /* ok */ } } else { try { nodes?.limiter.disconnect(); } catch { /* ok */ } }   // Howler's context is shared: leave it open
       if (streams) for (const s of streams) { clearTimeout(s.timer); try { s.el.pause(); s.el.removeAttribute('src'); } catch { /* ok */ } }
       ctx = null; nodes = null; music = null; musicBed = null; streams = null;
     },
