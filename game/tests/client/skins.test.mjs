@@ -24,7 +24,7 @@ test('the skin NFT is read for the guest account; no guest, no token or a dead n
 
 test('the skin is a hero of the shared rig that borrows the heroine\'s clips', () => {
   const h = heroById('sheriffchenko');
-  assert.deepEqual([h.model, h.sidecar, h.retarget, h.toon, h.gate], ['agent_sheriffchenko', 'iris', true, true, 'skin']);
+  assert.deepEqual([h.model, h.sidecar, h.retarget, h.toon, h.gate], ['agent_sheriffchenko', 'iris_agent', true, true, 'skin']);
 });
 
 test('wearing from the menu: owned skins are worn and remembered, the rest are tried on for a while and put back', () => {
