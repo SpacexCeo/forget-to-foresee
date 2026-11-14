@@ -159,6 +159,51 @@ for _ in range(int(A.get('agree', 8))):
     sm_ = acc / cnt[:, None]; bw[~frozen] = sm_[~frozen]
 bw = top4(bw)
 
+# ---- relax where the poses still tear (data-driven): skin the body in numpy for the poses the clips use, find the
+# edges stretched over STRETCH_OK, and smooth the weights over a few rings around them; repeat. Linear blend skinning
+# in numpy is exactly what the armature modifier computes: v' = sum_b w_b (pose_b @ rest_b^-1) v.
+from mathutils import Quaternion as _Q
+def _skin_mats(rots):
+    for pb in rig.pose.bones: pb.rotation_mode = 'QUATERNION'; pb.rotation_quaternion = (1, 0, 0, 0)
+    for bn, ax, deg in rots:
+        pb = rig.pose.bones[bn]; Rr = pb.bone.matrix_local.to_3x3().to_quaternion()
+        pb.rotation_quaternion = Rr.inverted() @ _Q({'X': (1, 0, 0), 'Y': (0, 1, 0), 'Z': (0, 0, 1)}[ax], math.radians(deg)) @ Rr
+    bpy.context.view_layer.update()
+    M = np.array([np.array(rig.pose.bones[n].matrix @ rig.data.bones[n].matrix_local.inverted()) for n in names])
+    for pb in rig.pose.bones: pb.rotation_quaternion = (1, 0, 0, 0)
+    return M
+RELAX_POSES = {
+    'legs_tucked': [(b + sd, 'X', a) for sd in ('.L', '.R') for b, a in (('leg_h_upper', -28), ('leg_h_lower', 18), ('leg_h_foot', 38), ('leg_h_paw', 15), ('leg_f_upper', 34), ('leg_f_lower', -72), ('leg_f_paw', 40))],
+    'neck_forward': [('neck1', 'X', 17), ('neck2', 'X', 12), ('neck3', 'X', 7), ('head', 'X', -32)],
+    'head_turn_60': [(n, 'Z', 12) for n in ('neck1', 'neck2', 'neck3', 'neck4', 'head')],
+    'step': [('leg_f_upper.L', 'X', -30), ('leg_h_upper.R', 'X', 30), ('leg_h_lower.R', 'X', -20)]}
+MATS_ = {k: _skin_mats(v) for k, v in RELAX_POSES.items()}
+Ph = np.concatenate([P, np.ones((len(P), 1))], 1); rl = np.linalg.norm(P[e[:, 0]] - P[e[:, 1]], axis=1); okl = rl > 0.004
+STRETCH_OK = float(A.get('stretch_ok', 1.5)); relax_log = []
+nbr = [[] for _ in range(len(P))]
+for a_, b_ in e: nbr[a_].append(b_); nbr[b_].append(a_)
+from mathutils.kdtree import KDTree as _KD
+KD = _KD(len(P))
+for i_, v_ in enumerate(P): KD.insert(v_, i_)
+KD.balance(); RAD = float(A.get('relax_r', 0.15))
+for it in range(int(A.get('relax', 10))):
+    bad = np.zeros(len(P), bool); worst = 0.0
+    for k_, M in MATS_.items():
+        D = np.einsum('vb,bij,vj->vi', bw, M, Ph)[:, :3]
+        r_ = np.linalg.norm(D[e[:, 0]] - D[e[:, 1]], axis=1) / np.maximum(rl, 1e-9); r_[~okl] = 1
+        hit = r_ > STRETCH_OK; bad[e[hit, 0]] = True; bad[e[hit, 1]] = True; worst = max(worst, float(r_.max()))
+    relax_log.append((int(bad.sum()), round(worst, 2)))
+    if not bad.any(): break
+    # smooth in SPACE, not along the edges: a vertex takes the mean weights of every body vertex within RAD of it, so
+    # near-by points of one surface end up with near-equal weights (a gentle gradient) wherever the topology runs
+    zone = bad & ~frozen; idx_z = np.where(zone)[0]
+    new = bw.copy()
+    for vi in idx_z:
+        near = [j for (_c, j, _d) in KD.find_range(P[vi], RAD)]
+        new[vi] = bw[near].mean(0)
+    bw = new
+    bw = top4(bw)
+print('RELAX', relax_log)
 for n in names:
     if n not in mesh.vertex_groups: mesh.vertex_groups.new(name=n)
 for n in names:
