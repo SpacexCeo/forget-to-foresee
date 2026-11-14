@@ -1255,6 +1255,7 @@ export default {
   'shard.nft.kind.promise': "promessa",
   'shard.nft.kind.insight': "intuizione",
   'shard.nft.kind.lie': "menzogna",
+  'shard.nft.card': "Frammento di memoria · {kind}",
 
   // ---- agent card NFT (src/ui/world-hud/agent-card.js) ----
   'agentcard.title': "{agent} · scheda dell’agente",

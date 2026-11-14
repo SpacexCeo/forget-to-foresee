@@ -1254,6 +1254,7 @@ export default {
   'shard.nft.kind.promise': "обіцянка",
   'shard.nft.kind.insight': "осяяння",
   'shard.nft.kind.lie': "брехня",
+  'shard.nft.card': "Уламок пам’яті · {kind}",
 
   // ---- agent card NFT (src/ui/world-hud/agent-card.js) ----
   'agentcard.title': "{agent} · картка агента",
