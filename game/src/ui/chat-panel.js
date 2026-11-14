@@ -37,6 +37,8 @@ export function actKey(m) {
     case 'quest': return 'mp.act.quest';
     case 'trade': return 'mp.act.trade';
     case 'gate': return 'mp.act.gate';
+    case 'joined': return 'mp.act.joined'; // told by our own presence on join / leave, never stored on the server
+    case 'left': return 'mp.act.left';
     case 'chest': return m.v === 'rare' || m.v === 'legendary' ? 'mp.act.chest.' + m.v : 'mp.act.chest';
     case 'boss': return m.v === 'shoal' ? 'mp.act.boss.shoal' : m.v === 'crownrift' ? 'mp.act.boss.crownrift' : null;
     default: return null;

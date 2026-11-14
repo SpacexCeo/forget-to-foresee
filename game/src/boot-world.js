@@ -1465,6 +1465,8 @@ function frame() {
   }
   if (mp && mpOn !== mpShown) { mpShown = mpOn; mp.setVisible(mpOn); }
   if (mp && mpOn) mp.update(dt, { pos: player.pos, heading: player.heading, speed: Math.hypot(player.vel[0], player.vel[1]), grounded: player.grounded !== false, reducedMotion: lookdev.reducedMotion });
+  // the shared town-hill spiders (presence v2, play/mobs.js MobBrain.share): the server's spiders once both are loaded
+  if (mp && mp.mobLink && townMobs && townMobs.brain && townMobs.brain.link !== mp.mobLink) townMobs.brain.share(mp.mobLink);
   else if (!mpTried && mpOn && !judge && params.get('mp') !== '0') {
     mpTried = true;
     import('./play/multiplayer.js').then((m) => { const d1 = loadDay1(ctx.storage); mp = m.createMultiplayer({ scene, camera, THREE, t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage, me: (d1.guest || {}).account_id || null, ledger: townLedger, chests: chestBag, name: d1.nickname || '', account: (d1.guest && d1.minted && d1.guest.account_id) || null, lv: townLedger && townLedger.level ? Math.min(99, townLedger.level.level) : null, skin: irisAvatar && irisAvatar.hero ? irisAvatar.hero.id : 'iris', phone: mobileDevice, bots: Math.max(0, Math.min(14, Number(params.get('bots')) || 0)) }); mpShown = true; if (window.__ftf) window.__ftf.mp = mp; })

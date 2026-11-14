@@ -1624,6 +1624,8 @@ export default {
   'mp.act.boss.shoal': "{name} перемагає Порожній Приплив на Скляній Мілині",
   'mp.act.trade': "{name} купує товар на ринку",
   'mp.act.gate': "{name} нагодував(ла) Ткацьку Браму",
+  'mp.act.joined': "{name} тепер у місті",
+  'mp.act.left': "{name} залишає місто",
   'set.title': "Налаштування",
   'set.close': "Закрити",
   'set.tab.graphics': "Графіка",

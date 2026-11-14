@@ -1625,6 +1625,8 @@ export default {
   'mp.act.boss.shoal': "{name} ha sconfitto la Marea Cava alla Secca di Vetro",
   'mp.act.trade': "{name} ha comprato merce al mercato",
   'mp.act.gate': "{name} ha nutrito il Telaio-Porta",
+  'mp.act.joined': "{name} entra in città",
+  'mp.act.left': "{name} lascia la città",
   'set.title': "Impostazioni",
   'set.close': "Chiudi",
   'set.tab.graphics': "Grafica",

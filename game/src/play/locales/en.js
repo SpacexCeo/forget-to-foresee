@@ -1631,6 +1631,8 @@ const EN = {
   'mp.act.boss.shoal': "{name} defeated the Hollow Tide at the Glass Shoal",
   'mp.act.trade': "{name} bought goods at the market",
   'mp.act.gate': "{name} fed the Gate-Loom",
+  'mp.act.joined': "{name} joined the town",
+  'mp.act.left': "{name} left the town",
   'set.title': "Settings",
   'set.close': "Close",
   'set.tab.graphics': "Graphics",
