@@ -246,6 +246,9 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
       panelShell(t('end.title'),
         el('p', { class: 'pl-strong', text: L.outcome }),
         el('p', { class: 'pl-muted', 'data-bio': 'season', text: L.season }),
+        // what the result means (owner 14.11): score, rank, rewards and what NEAR recorded, in plain words
+        el('section', { class: 'pl-results', 'data-results': '' }, el('h3', { text: t('res.title') }),
+          el('ul', { class: 'pl-list' }, el('li', { 'data-res': 'score', text: t('res.score', { silk: Number((obs.iris && obs.iris.silk) || 0) }) }), el('li', { 'data-res': 'rank', text: t('res.rank') }), el('li', { 'data-res': 'rewards', text: t('res.rewards') }), el('li', { 'data-res': 'chain', text: t('res.chain') }))),
         el('h3', { text: t('bio.remembered') }),
         el('ul', { class: 'pl-list pl-muted', 'data-bio': 'remembered' }, L.remembered.length ? L.remembered.map((x) => el('li', { text: '✓ ' + x })) : el('li', { text: t('bio.none') })),
         el('h3', { text: t('bio.sacrificed') }),
