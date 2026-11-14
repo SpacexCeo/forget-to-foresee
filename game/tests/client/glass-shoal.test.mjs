@@ -245,3 +245,14 @@ test('every Shoal text exists in all five locales', () => {
   const keys = Object.keys(SHOAL_TEXT.en);
   for (const loc of ['ru', 'uk', 'it', 'zh']) for (const k of keys) assert.ok(SHOAL_TEXT[loc][k], `${loc} ${k}`);
 });
+
+test('the boss is a finished episode: home again, a chapter-close card with the real rewards (owner 14.11)', async () => {
+  const { readFileSync } = await import('node:fs');
+  const src = readFileSync(new URL('../../src/scenes/glass-shoal.js', import.meta.url), 'utf8');
+  assert.equal((src.match(/event\('home'\)\) \{ toast\(say\('shoal\.home'\)\); chapterCard\(\); \}/g) || []).length, 2, 'both ways home close the chapter');
+  assert.match(src, /kicker: say\('shoal\.chapter\.kicker'\), heading: say\('shoal\.quest'\)/);
+  const { SHOAL_TEXT } = await import('../../src/locales/shoal.js');
+  for (const l of ['en', 'ru', 'uk', 'it', 'zh']) for (const k of ['shoal.chapter.kicker', 'shoal.chapter.title', 'shoal.chapter.chest', 'shoal.chapter.xp', 'shoal.chapter.continue']) assert.ok(SHOAL_TEXT[l][k], l + ' ' + k);
+  const { lootRowText } = await import('../../src/play/season-loot-ui.js');
+  assert.equal(lootRowText({ kind: 'boss_chest', text: 'A legendary chest' }, (k) => k), 'A legendary chest');
+});

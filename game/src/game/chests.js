@@ -61,6 +61,26 @@ export function chestEvent(phase, detail = {}, win = globalThis) {
   try { if (win && typeof win.dispatchEvent === 'function' && typeof CustomEvent === 'function') win.dispatchEvent(new CustomEvent(CHEST_EVENT, { detail: { phase, ...detail } })); } catch { /* no page */ }
 }
 
+// One opening at a time in this page (owner 14.11): a double click, Open while a batch runs, or the menu reopened during a
+// reveal never sends a second chain opening for the same sealed chest. Released when the service has answered (or after
+// CHEST_LOCK_MS if it never does, so a lost request cannot block the bag for good).
+let openLock = null;
+export const CHEST_LOCK_MS = 90_000;
+/** Takes the lock; false when an opening is already running. */
+export function beginChestOpen(now = Date.now()) { if (openLock != null && now - openLock < CHEST_LOCK_MS) return false; openLock = now; return true; }
+/** Releases the lock (the service answered). */
+export function endChestOpen() { openLock = null; }
+/** Whether an opening is running now. */
+export const chestOpenBusy = (now = Date.now()) => openLock != null && now - openLock < CHEST_LOCK_MS;
+
+/** The bag's batch buttons for n sealed chests (the service opens at most 10 per request): [{key, n, all}]. Pure. */
+export function openChoices(n) {
+  if (n < 2) return [];
+  const out = [{ key: 'chest.batch.open', n: Math.min(10, n), all: false }];
+  if (n > 10) out.push({ key: 'chest.batch.all', n, all: true });
+  return out;
+}
+
 export function createChestBag({ storage = null, now = () => Date.now(), win = globalThis } = {}) {
   const read = () => { try { const raw = storage && storage.getItem(CHEST_KEY); return raw ? (JSON.parse(raw).chests || []).filter((c) => c && c.id && CHEST_TIERS.includes(c.tier)) : []; } catch { return []; } };
   let list = read();

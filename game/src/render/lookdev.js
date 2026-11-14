@@ -415,6 +415,7 @@ export class LookDev {
   }
 
   applyPixelRatio() {
+    this.post.superScale = this.pixelScale;
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.cfg.pixelRatioCap) * this.pixelScale);
     const [w, h] = this.viewSize();
     this.renderer.setSize(w, h, false);

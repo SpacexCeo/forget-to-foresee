@@ -1,14 +1,21 @@
 // Procedural layers over Iris's existing clips for the prologue (sprint plan 9.9): nothing is redrawn and no clip is
 // changed; after the mixer has posed her, a few bones get an extra rotation, each layer with a weight 0..1.
-// Bones of the shared agent rig; rotations are in the bone's parent frame (premultiplied), axes in model space
-// (x = her left, y up, z = her front).
+// Bones of the shared agent rig or of the Tripo rig (the new Iris, 14.11: Spine01, R_Upperarm, ...); rotations are
+// premultiplied in the bone's parent frame about model-space axes (x = her left, y up, z = her front), so they ride on
+// whatever pose the clip gave and the rig's rest pose does not matter.
 import * as THREE from 'three';
 
 const X = new THREE.Vector3(1, 0, 0), Z = new THREE.Vector3(0, 0, 1), q = new THREE.Quaternion(), pw = new THREE.Quaternion(), wq = new THREE.Quaternion();
 
+/** The bones the layers turn, by rig: the first name the model has wins. */
+export const POSE_BONES = Object.freeze({
+  spine: ['spine', 'Spine01'], chest: ['chest', 'Spine02'], neck: ['neck', 'NeckTwist01'],
+  armR: ['upperarm_R', 'R_Upperarm'], armL: ['upperarm_L', 'L_Upperarm'], foreR: ['forearm_R', 'R_Forearm'], foreL: ['forearm_L', 'L_Forearm'],
+});
+
 export function createIrisPoses(model) {
-  const bone = (n) => model.getObjectByName(n) || null;
-  const B = { spine: bone('spine'), chest: bone('chest'), neck: bone('neck'), armR: bone('upperarm_R'), armL: bone('upperarm_L'), foreR: bone('forearm_R'), foreL: bone('forearm_L') };
+  const bone = (names) => { for (const n of names) { const b = model.getObjectByName(n); if (b) return b; } return null; };
+  const B = Object.fromEntries(Object.entries(POSE_BONES).map(([k, names]) => [k, bone(names)]));
   /** Rotates a bone by `angle` about a MODEL-space axis, whatever its own frame is. */
   const turn = (b, axis, angle) => {
     if (!b || !angle) return;

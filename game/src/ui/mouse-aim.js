@@ -40,8 +40,8 @@ export function wantsLock({ mode = 'aim', touch = false, active = false, engaged
  * Whether a lost pointer lock was the player's Esc: not the game's own release (Ctrl, a window), the page still has
  * the focus (not Alt+Tab), and no real Esc key event came with it (a browser that delivers the key needs no help). Pure.
  */
-export function unlockMeansEscape({ byScript = false, focused = true, escAgoMs = Infinity } = {}) {
-  return !byScript && !!focused && !(escAgoMs < 250);
+export function unlockMeansEscape({ byScript = false, focused = true, visible = true, escAgoMs = Infinity } = {}) {
+  return !byScript && !!focused && !!visible && !(escAgoMs < 250);
 }
 
 /** The ground point the crosshair aims at: AIM_REACH metres from `pos` along the camera's ground direction (rig yaw). Pure. */
@@ -96,6 +96,7 @@ export function createMouseAim({ target, input, doc = globalThis.document, win =
   const held = new Map(); // button -> action
   const on = () => mode() === 'aim' && !touch() && active();
   const focused = () => (typeof doc.hasFocus === 'function' ? doc.hasFocus() : true);
+  const visible = () => doc.visibilityState !== 'hidden';
   const ui = (fresh = false) => { const t = now(); if (fresh || t - uiAt > 90) { uiAt = t; uiOpen = uiNeedsCursor(doc, win, target); } return uiOpen; };
 
   function lock() {
@@ -112,21 +113,31 @@ export function createMouseAim({ target, input, doc = globalThis.document, win =
     locked = is; input.lookLocked = locked; cross.hidden = !locked; doc.body.classList.toggle('ftf-aiming', locked);
     if (locked) { tries = 0; byScript = false; return; }
     releaseHeld();
-    const esc = unlockMeansEscape({ byScript, focused: focused(), escAgoMs: now() - lastEsc });
+    const esc = unlockMeansEscape({ byScript, focused: focused(), visible: visible(), escAgoMs: now() - lastEsc });
     byScript = false;
-    if (esc) escTimer = setTimeout(() => { escTimer = 0; onEscape(); }, 60); // a real Esc key event right behind the unlock cancels it
+    // a real Esc key event right behind the unlock cancels it; so does the tab or the window going away (the browser drops the
+    // lock first and only then blurs the page: that was no Esc, and the menu must not open behind the player's back)
+    if (esc) escTimer = setTimeout(() => { escTimer = 0; if (focused() && visible()) onEscape(); }, 60);
   };
   const onKeyDown = (e) => {
     if (e.key === 'Escape' && e.isTrusted) { lastEsc = now(); if (escTimer) { clearTimeout(escTimer); escTimer = 0; } }
     if (e.key === 'Control' || e.ctrlKey) { ctrl = true; if (locked) unlock(); }
   };
   const onKeyUp = (e) => { if (e.key === 'Control' || !e.ctrlKey) { const was = ctrl; ctrl = false; if (was) { tries = 0; sync(true); } } };
-  const onBlur = () => { ctrl = false; releaseHeld(); };
+  // Leaving the tab or the window (owner 14.11: the crosshair never came back): the browser has dropped the lock, so stop
+  // asking for it until the player clicks the scene again; a request with no click behind it only fails and can leave the
+  // browser refusing the click that follows. The click re-engages (onDown).
+  const away = () => {
+    ctrl = false; releaseHeld(); engaged = false; tries = 0;
+    if (escTimer) { clearTimeout(escTimer); escTimer = 0; }
+  };
+  const onBlur = () => away();
+  const onVisibility = () => { if (!visible()) away(); };
   const onDown = (e) => {
     if (e.pointerType !== 'mouse' || !on()) return;
     e.preventDefault();
     ctrl = !!e.ctrlKey;
-    if (!locked) { if (!ctrl && !ui(true)) { engaged = true; tries = 0; lock(); } return; } // the click that takes the mouse is not an attack
+    if (!locked) { if (!ctrl && !ui(true)) { engaged = true; tries = 0; wanted = true; lock(); } return; } // the click that takes the mouse is not an attack
     const a = mouseAction(e.button, { prompt: prompt() });
     if (!a || held.has(e.button)) return;
     held.set(e.button, a); onAction(a, true, e.button);
@@ -144,7 +155,7 @@ export function createMouseAim({ target, input, doc = globalThis.document, win =
     else if (!locked && want && tries < 3 && now() >= nextTry) lock();
   }
 
-  doc.addEventListener('pointerlockchange', onLockChange);
+  doc.addEventListener('pointerlockchange', onLockChange); doc.addEventListener('visibilitychange', onVisibility);
   win.addEventListener('keydown', onKeyDown, true); win.addEventListener('keyup', onKeyUp, true); win.addEventListener('blur', onBlur);
   target.addEventListener('pointerdown', onDown); win.addEventListener('pointerup', onUp, true);
 
@@ -156,7 +167,7 @@ export function createMouseAim({ target, input, doc = globalThis.document, win =
     release() { engaged = false; unlock(); },
     dispose() {
       unlock(); if (escTimer) clearTimeout(escTimer);
-      doc.removeEventListener('pointerlockchange', onLockChange);
+      doc.removeEventListener('pointerlockchange', onLockChange); doc.removeEventListener('visibilitychange', onVisibility);
       win.removeEventListener('keydown', onKeyDown, true); win.removeEventListener('keyup', onKeyUp, true); win.removeEventListener('blur', onBlur);
       target.removeEventListener('pointerdown', onDown); win.removeEventListener('pointerup', onUp, true);
       cross.remove(); doc.body.classList.remove('ftf-aiming'); input.lookLocked = false; input.aimMode = false;

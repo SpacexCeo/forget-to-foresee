@@ -1,7 +1,12 @@
 // The Glass Resonator (sprint plan 9.7): a stone-and-brass plinth, a ring with a turning glyph band and a glass pane
 // that fills with light: an echo of the town's Gate-Loom, so the two read as one invention. States by `power` 0..1:
 // dormant (0) -> armed -> humming -> open (1). Built facing +Z; the lab turns it to face the room.
+// When the owner's model (`lab_device`: a white tower, three pillars round a crystal between two light rings) has
+// loaded, attachModel() puts it in place of the plinth, ring and pane, and the light grows in the crystal instead.
 import * as THREE from 'three';
+
+/** Where the crystal sits in the device model (metres, its own frame) and the glow round it. */
+export const CRYSTAL = Object.freeze({ y: 1.3, glow: 0.55, rings: [1.05, 1.58], ringR: 0.36 });
 
 export function buildDevice() {
   const root = new THREE.Group(); root.name = 'resonator'; const trash = [];
@@ -28,14 +33,41 @@ export function buildDevice() {
   }); trash.push(paneMat);
   const pane = add(new THREE.CircleGeometry(0.98, 48), paneMat, 1.5);
   const light = new THREE.PointLight(0xbfe8ff, 0, 9, 2); light.position.set(0, 1.5, 0.3); root.add(light);
+  // the crystal glow for the model: a soft sprite in the crystal and the two rings lit, both brightening with power
+  const glowTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.25, 'rgba(190,235,255,.75)'); gr.addColorStop(1, 'rgba(120,200,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })(); trash.push(glowTex);
+  const glowMat = new THREE.SpriteMaterial({ map: glowTex, color: 0xbfeaff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 }); trash.push(glowMat);
+  const glow = new THREE.Sprite(glowMat); glow.position.y = CRYSTAL.y; glow.visible = false; root.add(glow);
+  const ringMat = new THREE.MeshBasicMaterial({ color: 0x7fd8ff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }); trash.push(ringMat);
+  const ringGeo = new THREE.TorusGeometry(CRYSTAL.ringR, 0.018, 8, 48); trash.push(ringGeo);
+  const glowRings = CRYSTAL.rings.map((y) => { const r = new THREE.Mesh(ringGeo, ringMat); r.rotation.x = Math.PI / 2; r.position.y = y; r.visible = false; root.add(r); return r; });
+  const procedural = root.children.filter((o) => o.isMesh && o !== glow && !glowRings.includes(o));
+  let model = null;
+
   let spin = 0;
   return {
     root, ring, pane, light,
+    get model() { return model; },
+    /** Puts the owner's device model (a glTF scene, cloned here) in place of the procedural plinth, ring and pane. */
+    attachModel(scene) {
+      if (model) return;
+      model = scene.clone(true); model.name = 'lab_device_model';
+      model.traverse((o) => { if (o.isMesh) o.frustumCulled = false; });
+      root.add(model);
+      for (const o of procedural) o.visible = false;
+      glow.visible = true; for (const r of glowRings) r.visible = true;
+      light.position.set(0, CRYSTAL.y, 0.55);
+    },
     /** power 0..1: the band spins up to 1.5 turns a second, the pane fills with light. */
     update(dt, t, power) {
       spin += dt * power * 1.5 * Math.PI * 2; band.rotation.y = spin; bandMat.opacity = 0.25 + 0.75 * power;
-      paneMat.uniforms.uTime.value = t; paneMat.uniforms.uPower.value = power; light.intensity = 7 * power; // a cool light: at arm's length a warm 11 turned her black jacket olive (QA 14.11)
+      paneMat.uniforms.uTime.value = t; paneMat.uniforms.uPower.value = power; light.intensity = 4 * power; // a cool light: at arm's length a warm 11 turned her black jacket olive (QA 14.11)
       light.color.setRGB(0.72 + 0.12 * power, 0.9, 1.0 - 0.08 * power);
+      if (model) {
+        const hum = 0.85 + 0.15 * Math.sin(t * 6.0);
+        glowMat.opacity = Math.min(1, 0.12 + 0.9 * power * hum); glow.scale.setScalar(CRYSTAL.glow * (0.7 + 1.1 * power));
+        ringMat.opacity = Math.min(1, 0.2 + 0.8 * power * hum);
+        glowRings.forEach((r, i) => { r.position.y = CRYSTAL.rings[i] + Math.sin(t * 2.2 * (1 + power) + i * Math.PI) * 0.03 * power; });
+      }
     },
     dispose() { for (const x of trash) x.dispose(); },
   };

@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import { createShoalLook } from './shoal-look.js';
 import { lookFromQuery } from './shoal-look-data.js';
 import { createShoalPanel } from './shoal-panel.js';
+import { dressShoalProps } from './shoal-props.js';
 
 /**
  * @param {object} o
@@ -23,6 +24,8 @@ export function createArenaLook({ renderer, scene, camera, lookdev, arena, tier 
   look.setVisible(false);
   const A = arena.look || {};
   let active = false, saved = null, attachT = 0, panel = null;
+  // the owner's Tripo crystals in place of the placeholder monoliths and spires (render/shoal-props.js)
+  dressShoalProps(arena).catch((e) => console.warn('[shoal props]', e));
 
   // what the town shows that the Shoal replaces
   const townBits = () => [lookdev.sky && lookdev.sky.mesh, lookdev.clouds && lookdev.clouds.group, lookdev.motes && lookdev.motes.points,

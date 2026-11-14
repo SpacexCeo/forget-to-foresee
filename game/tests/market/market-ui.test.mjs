@@ -120,3 +120,31 @@ test('art: resource icons and deed cards point at files that exist, and keep a l
   const withImg = artBox(doc, '/x.webp', 'veil dust');
   withImg.querySelector('img').dispatchEvent({ type: 'error' }); assert.equal(withImg.textContent, 'V'); // a failed image keeps the letter
 });
+
+test('the header balance follows every roll in Games (play silk) and shows the silk on NEAR in the other tabs, from the one silk view (owner 14.11)', async () => {
+  const { doc } = installDom();
+  const i18n = createPlayI18n('en'); const t = (k, a) => i18n.t(k, a);
+  const { createMarketUi } = await import('../../src/market/market-ui.js');
+  const { createDice } = await import('../../src/market/dice.js');
+  const { installSilkModel, computeSilkView } = await import('../../src/net/silk-core.js');
+  const m = new Map(); const storage = { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => m.set(k, String(v)) };
+  m.set('ftf.games.ok.v1', '1');
+  const subs = new Set();
+  let silk = 2480; const onChainC = 480; // 4.80 silk on chain, 20 play silk on this device
+  const ledger = { get silk() { return silk; }, grant: ({ silk: s }) => { silk += s; subs.forEach((f) => f()); }, spend: ({ silkC }) => (silk >= silkC ? (silk -= silkC, subs.forEach((f) => f()), { ok: true }) : { ok: false }) };
+  const view = () => computeSilkView({ localTotalC: silk, onChainC, chainOk: true });
+  installSilkModel({ view, refresh: async () => view(), syncNow: async () => ({ ok: false }), subscribe: (f) => { const g = () => f(view()); subs.add(g); return () => subs.delete(g); } });
+  try {
+    const dice = createDice({ storage, ledger, play: () => view().playC, wheelId: 'w-head', now: () => NOW });
+    const ui = createMarketUi({ t, client: fakeClient().client, dice, storage, doc, now: () => NOW });
+    ui.open('games'); await tick();
+    const head = () => doc.querySelector('.mk2-silk').textContent;
+    assert.equal(head(), 'Your play silk: 20', 'Games shows the balance the dice spend');
+    [...doc.body.querySelectorAll('button')].find((b) => b.textContent === 'Roll').click(); await tick();
+    assert.notEqual(head(), 'Your play silk: 20', 'it moved with the roll');
+    assert.equal(head(), 'Your play silk: ' + (silk - onChainC === 2092 ? '20.92' : '19'));
+    [...doc.body.querySelectorAll('.mk2-tabs button')].find((b) => b.dataset.tab === 'buy').click(); await tick();
+    assert.match(head(), /4\.8/, 'the other tabs show the silk on NEAR');
+    ui.close();
+  } finally { installSilkModel(null); }
+});

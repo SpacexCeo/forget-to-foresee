@@ -11,45 +11,73 @@ import { artBox, resIconPath } from './art.js';
 
 const TX = /^[1-9A-HJ-NP-Za-km-z]{32,64}$/;
 const CSS = `
-.mk2-wrap { position: fixed; inset: 0; z-index: calc(var(--z-modal, 40) + 1); display: grid; place-items: center; padding: 16px; background: rgba(0, 0, 0, .5); }
-.mk2 { width: min(1180px, 100%); height: min(680px, calc(100vh - 32px)); display: grid; grid-template-rows: auto auto auto 1fr; background: var(--ftf-panel-solid, #101f1a); color: var(--ftf-text, #eef0ea); border: 1px solid rgba(197, 164, 105, .45); border-radius: 14px; font: 14px/1.4 var(--font-ui, system-ui, sans-serif); overflow: hidden; }
-.mk2-head { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid rgba(197, 164, 105, .2); }
-.mk2-head h3 { margin: 0; flex: 1; font: 700 20px/1.2 var(--font-title, Georgia, serif); color: var(--ftf-gold-bright, #dcc08a); }
-.mk2-silk { font-variant-numeric: tabular-nums; color: var(--ftf-gold-bright, #dcc08a); font-weight: 700; }
-.mk2-x { min-width: 40px; min-height: 40px; border-radius: 10px; border: 1px solid var(--ftf-border, rgba(197,164,105,.4)); background: transparent; color: var(--ftf-text, #eef0ea); font: 700 18px var(--font-ui, system-ui); cursor: pointer; }
-.mk2-tabs { display: flex; gap: 4px; padding: 8px 16px 0; }
-.mk2-tabs button { min-height: 40px; padding: 8px 16px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--ftf-muted, #aab6b0); font: 600 14px var(--font-ui, system-ui); cursor: pointer; }
-.mk2-tabs button[aria-selected="true"] { color: var(--ftf-gold-bright, #dcc08a); border-bottom-color: var(--ftf-gold, #c5a469); }
-.mk2-chip { margin: 8px 16px 0; padding: 6px 10px; border-radius: 8px; font-size: 12px; background: #4a3410; color: #ffd98a; }
-.mk2-chip.chain { background: rgba(74, 163, 255, .14); color: #9ccfff; }
-.mk2-body { overflow: auto; padding: 12px 16px 16px; }
-.mk2-items { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
-.mk2-items button { min-height: 34px; padding: 6px 12px; border-radius: 99px; border: 1px solid var(--ftf-border, rgba(197,164,105,.4)); background: transparent; color: var(--ftf-text, #eef0ea); font: 600 13px var(--font-ui, system-ui); cursor: pointer; text-transform: capitalize; }
-.mk2-items button[aria-pressed="true"] { background: rgba(197, 164, 105, .18); border-color: var(--ftf-gold, #c5a469); color: var(--ftf-gold-bright, #dcc08a); }
+.mk2-wrap { position: fixed; inset: 0; z-index: calc(var(--z-modal, 40) + 1); display: grid; place-items: center; padding: clamp(12px, 2.2vw, 28px); background: rgba(3, 8, 7, .72); backdrop-filter: blur(5px) saturate(.8); }
+.mk2 { --mk2-gold: var(--ftf-gold, #c5a469); --mk2-ink: #0a1713; width: min(1060px, 100%); max-height: min(760px, calc(100vh - 32px)); display: grid; grid-template-rows: auto auto auto minmax(0, 1fr); background: radial-gradient(circle at 82% 0%, rgba(197, 164, 105, .075), transparent 34%), var(--ftf-panel-solid, #101f1a); color: var(--ftf-text, #eef0ea); border: 1px solid rgba(211, 177, 112, .5); border-radius: 16px; font: 14px/1.45 var(--font-ui, system-ui, sans-serif); overflow: hidden; }
+.mk2 ::selection { background: rgba(213, 175, 103, .32); color: #fff8e8; }
+.mk2-head { display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 0 18px 0 22px; border-bottom: 1px solid rgba(197, 164, 105, .16); }
+.mk2-head h3 { display: flex; align-items: center; gap: 12px; margin: 0; flex: 1; font: 700 22px/1.15 var(--font-title, Georgia, serif); letter-spacing: -.015em; color: var(--ftf-gold-bright, #e2c58d); }
+.mk2-head h3::before { content: ''; width: 10px; height: 10px; border: 1px solid var(--mk2-gold); transform: rotate(45deg); box-shadow: inset 0 0 0 2px var(--mk2-ink); background: var(--mk2-gold); }
+.mk2-silk { display: inline-flex; align-items: center; gap: 8px; min-height: 34px; padding: 0 12px; border-radius: 999px; background: rgba(197, 164, 105, .1); color: var(--ftf-gold-bright, #e2c58d); font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mk2-silk::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: #e4bd67; box-shadow: 0 0 10px rgba(228, 189, 103, .45); }
+.mk2-x { position: relative; width: 40px; height: 40px; flex: 0 0 40px; border-radius: 10px; border: 1px solid rgba(197,164,105,.38); background: rgba(4, 12, 10, .38); color: var(--ftf-text, #eef0ea); cursor: pointer; }
+.mk2-x::before, .mk2-x::after { content: ''; position: absolute; left: 12px; top: 19px; width: 15px; height: 1.5px; border-radius: 2px; background: currentColor; transform: rotate(45deg); }
+.mk2-x::after { transform: rotate(-45deg); }
+.mk2-x:hover { color: #fff8e8; background: rgba(197, 164, 105, .12); border-color: rgba(225, 193, 132, .72); }
+.mk2-tabs { display: flex; gap: 22px; padding: 0 22px; border-bottom: 1px solid rgba(197, 164, 105, .1); }
+.mk2-tabs button { position: relative; min-height: 54px; padding: 0 2px; border: 0; background: transparent; color: var(--ftf-muted, #aab6b0); font: 650 14px var(--font-ui, system-ui); cursor: pointer; }
+.mk2-tabs button::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; border-radius: 2px 2px 0 0; background: var(--mk2-gold); transform: scaleX(0); transform-origin: center; transition: transform 180ms cubic-bezier(.2, .8, .2, 1); }
+.mk2-tabs button:hover { color: #f0e7d4; }
+.mk2-tabs button[aria-selected="true"] { color: var(--ftf-gold-bright, #e2c58d); }
+.mk2-tabs button[aria-selected="true"]::after { transform: scaleX(1); }
+.mk2-chip { display: flex; align-items: center; gap: 8px; margin: 12px 22px 0; padding: 8px 11px; border-radius: 9px; font-size: 12px; background: rgba(134, 92, 22, .22); color: #f2cc80; }
+.mk2-chip::before { content: ''; width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: currentColor; opacity: .8; }
+.mk2-chip.chain { background: rgba(57, 143, 178, .14); color: #9fd7ee; }
+.mk2-body { min-height: 0; overflow: auto; padding: 16px 22px 24px; scrollbar-width: thin; scrollbar-color: rgba(197,164,105,.5) rgba(0,0,0,.12); }
+.mk2-body::-webkit-scrollbar { width: 8px; height: 8px; }
+.mk2-body::-webkit-scrollbar-track { background: rgba(0,0,0,.12); }
+.mk2-body::-webkit-scrollbar-thumb { border-radius: 8px; background: rgba(197,164,105,.48); }
+.mk2-items { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+.mk2-items button { display: inline-flex; align-items: center; min-height: 42px; padding: 7px 13px 7px 8px; border-radius: 12px; border: 1px solid rgba(197,164,105,.27); background: rgba(7, 16, 13, .42); color: #d9ded9; font: 620 13px var(--font-ui, system-ui); cursor: pointer; text-transform: capitalize; transition: border-color 160ms ease, background 160ms ease, color 160ms ease, transform 160ms ease; }
+.mk2-items button:hover { border-color: rgba(218, 181, 110, .58); color: #fff8e8; transform: translateY(-1px); }
+.mk2-items button[aria-pressed="true"] { background: rgba(197, 164, 105, .15); border-color: var(--mk2-gold); color: var(--ftf-gold-bright, #e2c58d); }
 .mk2 table { width: 100%; border-collapse: collapse; }
 .mk2 th { text-align: left; font: 600 12px var(--font-ui, system-ui); color: #a99f8e; padding: 8px 6px; border-bottom: 1px solid rgba(197, 164, 105, .2); }
 .mk2 td { padding: 10px 6px; border-bottom: 1px solid rgba(197, 164, 105, .1); font-variant-numeric: tabular-nums; }
 .mk2 td.mk2-name { text-transform: capitalize; font-weight: 600; }
 .mk2 .mk2-badge { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 99px; font-size: 11px; background: rgba(197, 164, 105, .14); color: #e9cf95; }
 .mk2 .mk2-badge.agent { background: rgba(176, 108, 255, .16); color: #d6b6ff; }
-.mk2 button.mk2-act { min-height: 32px; padding: 4px 12px; border-radius: 8px; border: 1px solid #8c6a2a; background: var(--ftf-gold, #c5a469); color: #1b1406; font: 700 13px var(--font-ui, system-ui); cursor: pointer; }
+.mk2 button.mk2-act { min-height: 40px; padding: 8px 16px; border-radius: 10px; border: 0; background: var(--mk2-gold); color: #171006; font: 750 13px var(--font-ui, system-ui); cursor: pointer; transition: background 160ms ease, transform 160ms ease; }
+.mk2 button.mk2-act:hover:not([disabled]) { background: #d9b874; transform: translateY(-1px); }
 .mk2 button.mk2-ghost { background: transparent; color: var(--ftf-text, #eef0ea); border-color: var(--ftf-border, rgba(197,164,105,.4)); }
 .mk2 button[disabled] { opacity: .5; cursor: default; }
-.mk2-form { display: grid; gap: 10px; max-width: 520px; }
-.mk2-form label { display: grid; gap: 4px; font-size: 13px; color: var(--ftf-muted, #aab6b0); }
-.mk2-form input { padding: 8px; border-radius: 8px; border: 1px solid var(--ftf-border, rgba(197,164,105,.4)); background: #0b0e10; color: #fff; font: 15px var(--font-ui, system-ui); max-width: 160px; }
+.mk2 button:focus-visible, .mk2 input:focus-visible, .mk2 summary:focus-visible { outline: 2px solid #e5bf72; outline-offset: 3px; }
+.mk2-sell-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(270px, 340px); gap: 18px; align-items: stretch; }
+.mk2-form { display: grid; gap: 18px; min-width: 0; padding: 20px; border-radius: 14px; background: rgba(5, 13, 11, .42); }
+.mk2-selected { display: flex; align-items: center; gap: 12px; min-height: 56px; padding-bottom: 16px; border-bottom: 1px solid rgba(197, 164, 105, .14); }
+.mk2-selected-copy { display: grid; gap: 3px; min-width: 0; }
+.mk2-selected-name { color: #f4efe5; font-weight: 700; font-size: 16px; text-transform: capitalize; }
+.mk2-field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.mk2-form label { display: grid; align-content: start; gap: 7px; color: #bdc8c1; font-size: 12px; font-weight: 650; }
+.mk2-form input { box-sizing: border-box; width: 100%; min-height: 46px; padding: 9px 12px; border-radius: 10px; border: 1px solid rgba(197,164,105,.32); background: #09110f; color: #fff8e8; font: 650 16px var(--font-ui, system-ui); font-variant-numeric: tabular-nums; caret-color: #e5bf72; }
+.mk2-form input:hover { border-color: rgba(218,181,110,.55); }
+.mk2-receipt { display: flex; flex-direction: column; min-width: 0; padding: 20px; border-radius: 14px; background: rgba(197, 164, 105, .085); }
+.mk2-receipt-label { margin: 0 0 6px; color: #aebbb4; font-size: 12px; }
+.mk2-receipt-value { margin: 0 0 18px; color: #f1d69f; font: 700 22px/1.25 var(--font-title, Georgia, serif); font-variant-numeric: tabular-nums; }
+.mk2-receipt .mk2-act { width: 100%; min-height: 46px; margin-top: auto; }
+.mk2-receipt .mk2-state { margin-bottom: 0; }
 .mk2-note { font-size: 12px; color: var(--ftf-muted, #aab6b0); }
 .mk2-state { min-height: 20px; margin-top: 8px; font-size: 13px; }
 .mk2-state.err { color: #ff8a7a; } .mk2-state a { color: var(--ftf-ok, #5ccf8a); }
 .mk2-confirm { margin-top: 10px; padding: 12px; border-radius: 10px; border: 1px solid rgba(197, 164, 105, .35); background: rgba(197, 164, 105, .06); display: grid; gap: 8px; }
-.mk2-empty { padding: 28px 0; text-align: center; color: var(--ftf-muted, #aab6b0); }
+.mk2-empty { padding: 48px 20px; text-align: center; color: var(--ftf-muted, #aab6b0); }
 .mk2-empty b { display: block; color: var(--ftf-text, #eef0ea); margin-bottom: 4px; }
 .mk2-game { display: grid; gap: 10px; max-width: 560px; }
 .mk2-game .mk2-items button { text-transform: none; }
 .mk2-roll { font: 700 44px/1 var(--font-title, Georgia, serif); color: var(--ftf-gold-bright, #dcc08a); min-height: 48px; }
 .mk2-win { color: var(--ftf-ok, #5ccf8a); font-weight: 700; } .mk2-lose { color: #ff8a7a; font-weight: 700; }
 .mk2-modal { padding: 16px; border-radius: 12px; border: 1px solid rgba(197, 164, 105, .45); background: var(--ftf-panel-solid, #101f1a); display: grid; gap: 10px; max-width: 480px; }
-@media (max-width: 640px) { .mk2 { height: calc(100vh - 32px); } .mk2 th:nth-child(6), .mk2 td:nth-child(6) { display: none; } }
+@media (max-width: 760px) { .mk2-wrap { padding: 0; } .mk2 { width: 100%; height: 100dvh; max-height: none; border-radius: 0; border: 0; } .mk2-head { padding-inline: 16px; } .mk2-silk { max-width: 38vw; overflow: hidden; text-overflow: ellipsis; } .mk2-tabs { gap: 0; justify-content: space-between; padding-inline: 16px; overflow-x: auto; } .mk2-tabs button { min-width: max-content; padding-inline: 10px; } .mk2-chip { margin-inline: 16px; } .mk2-body { padding: 14px 16px 24px; } .mk2-sell-layout { grid-template-columns: 1fr; } .mk2-receipt { min-height: 180px; } .mk2 th:nth-child(6), .mk2 td:nth-child(6) { display: none; } }
+@media (max-width: 460px) { .mk2-head h3 { font-size: 19px; } .mk2-silk { padding-inline: 9px; font-size: 12px; } .mk2-field-grid { grid-template-columns: 1fr; } .mk2-items { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } .mk2-items button { width: 100%; } }
 @media (prefers-reduced-motion: reduce) { .mk2 * { transition: none !important; } }
 `;
 
@@ -67,6 +95,7 @@ export function createMarketUi({ t, client, dice = null, storage = null, doc = g
   const silk = (c) => t('p2p.silk', { n: formatSilkC(c) });
   const errText = (r) => t('p2p.err.' + (['outside_band', 'not_enough_items', 'not_enough_silk', 'listing_gone', 'limit_listings', 'daily_cap', 'self_trade', 'paused', 'rate_limited', 'network', 'need_guest', 'too_small', 'not_configured', 'market_not_live'].includes(r.error) ? r.error : 'other'),
     { min: formatSilkC(r.minC || 0), max: formatSilkC(r.maxC || 0), need: formatSilkC(r.needC || 0), have: formatSilkC(r.haveC || 0), qty: r.have ?? '' });
+  let paintSilk = () => {}; // the header balance, repainted on every silk change and every tab switch
   let root = null, body = null, chip = null, silkEl = null, tab = 'buy', item = TRADABLE[0], unSilk = null, settlement = 'chain';
   const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); close(); } else if (['1', '2', '3', '4'].includes(e.key) && !(e.target && e.target.tagName === 'INPUT')) show(['buy', 'sell', 'mine', 'games'][Number(e.key) - 1]); };
 
@@ -146,12 +175,19 @@ export function createMarketUi({ t, client, dice = null, storage = null, doc = g
     setChip(book.live);
     const held = null; // the relayer checks the real holdings on NEAR when the listing is made
     const band = bandOf(book.referenceUnitC);
+    const layout = el('div', 'mk2-sell-layout');
     const form = el('div', 'mk2-form');
     const qty = el('input'); qty.type = 'number'; qty.min = '1'; qty.max = String(MARKET.qtyMax); qty.value = '1';
     const price = el('input'); price.type = 'number'; price.step = '0.01'; price.value = String(book.referenceUnitC / 100);
     const lq = el('label', null, t('p2p.qty') + (held != null ? ' · ' + t('p2p.have', { n: held }) : '')); lq.append(qty);
     const lp = el('label', null, t('p2p.price')); lp.append(price, el('span', 'mk2-note', t('p2p.allowed', { min: formatSilkC(band.minC), max: formatSilkC(band.maxC) })));
-    const preview = el('p', 'mk2-note'); const state = el('p', 'mk2-state');
+    const selected = el('div', 'mk2-selected');
+    const selectedCopy = el('div', 'mk2-selected-copy');
+    selectedCopy.append(el('div', 'mk2-selected-name', name(item)), el('div', 'mk2-note', t('p2p.ref', { x: formatSilkC(book.referenceUnitC) })));
+    selected.append(artBox(doc, resIconPath(item), name(item), { size: 46, radius: 12 }), selectedCopy);
+    const fields = el('div', 'mk2-field-grid'); fields.append(lq, lp);
+    const receipt = el('div', 'mk2-receipt');
+    const preview = el('p', 'mk2-receipt-value'); const state = el('p', 'mk2-state');
     const go = btn(t('p2p.list'), async () => {
       go.disabled = true;
       const r = await client.list(item, Math.floor(Number(qty.value)), Math.round(Number(price.value) * 100));
@@ -161,8 +197,10 @@ export function createMarketUi({ t, client, dice = null, storage = null, doc = g
     const render = () => { const total = Math.floor(Number(qty.value) || 0) * Math.round(Number(price.value) * 100); preview.textContent = t('p2p.youGet', { x: formatSilkC(Math.max(0, total - feeOf(total))) }); };
     qty.addEventListener('input', render); price.addEventListener('input', render); render();
     go.disabled = !live; if (!live) go.title = t('p2p.notLive');
-    form.append(lq, lp, preview, go, el('p', 'mk2-note', t('p2p.duration')), state);
-    body.replaceChildren(head, form);
+    form.append(selected, fields);
+    receipt.append(el('p', 'mk2-receipt-label', t('p2p.price')), preview, el('p', 'mk2-note', t('p2p.duration')), go, state);
+    layout.append(form, receipt);
+    body.replaceChildren(head, layout);
   }
 
   async function mineTab() {
@@ -224,7 +262,7 @@ export function createMarketUi({ t, client, dice = null, storage = null, doc = g
       rollEl.textContent = String(r.roll);
       out.replaceChildren(el('p', r.win ? 'mk2-win' : 'mk2-lose', r.win ? t('games.win', { x: formatSilkC(r.payoutC - r.stakeC) }) : t('games.lose', { x: formatSilkC(r.stakeC) })));
       fair.replaceChildren(t('games.fair', { k: r.k, seed: r.seed.slice(0, 16) + '…' }) + ' ', btn(t('games.verify'), () => { const v = rollOf(dice.state().wheelId, r.k); fair.append(' ' + t(v.roll === r.roll ? 'games.verified' : 'games.mismatch', { roll: v.roll })); }, 'mk2-act mk2-ghost'));
-      refreshSilk(false).catch(() => {}); paint();
+      paintSilk(); refreshSilk(false).catch(() => {}); paint();
     }
     const play = el('p', 'mk2-note');
     g.append(el('p', 'mk2-note', t('games.rule')), bets, stakes, summary, go, hint, rollEl, out, fair, counters, play, odds, el('p', 'mk2-note', t('games.footer')));
@@ -232,7 +270,7 @@ export function createMarketUi({ t, client, dice = null, storage = null, doc = g
   }
 
   function show(next) {
-    tab = next;
+    tab = next; paintSilk();
     for (const b of root.querySelectorAll('.mk2-tabs button')) b.setAttribute('aria-selected', String(b.dataset.tab === tab));
     Promise.resolve((tab === 'buy' ? buyTab : tab === 'sell' ? sellTab : tab === 'games' ? gamesTab : mineTab)()).catch(() => body.replaceChildren(el('p', 'mk2-state err', t('p2p.err.network'))));
   }
@@ -241,13 +279,17 @@ export function createMarketUi({ t, client, dice = null, storage = null, doc = g
     root = el('div', 'mk2-wrap'); root.addEventListener('pointerdown', (e) => { e.stopPropagation(); if (e.target === root) close(); });
     const box = el('div', 'mk2'); box.setAttribute('role', 'dialog'); box.setAttribute('aria-modal', 'true'); box.setAttribute('aria-label', t('p2p.title'));
     const head = el('div', 'mk2-head'); silkEl = el('span', 'mk2-silk');
-    const x = btn('×', close, 'mk2-x'); x.setAttribute('aria-label', t('p2p.close'));
+    const x = btn('', close, 'mk2-x'); x.setAttribute('aria-label', t('p2p.close'));
     head.append(el('h3', null, t('p2p.title')), silkEl, x);
     const tabs = el('div', 'mk2-tabs'); tabs.setAttribute('role', 'tablist');
     for (const k of ['buy', 'sell', 'mine', 'games']) { const b = btn(t(k === 'games' ? 'games.tab' : 'p2p.tab.' + k), () => show(k), ''); b.setAttribute('role', 'tab'); b.dataset.tab = k; tabs.append(b); }
     chip = el('div', 'mk2-chip'); chip.hidden = true; body = el('div', 'mk2-body');
     box.append(head, tabs, chip, body); root.append(box); doc.body.append(root);
-    const paintSilk = () => { const v = silkView(); silkEl.textContent = v.chainOk ? silk(v.gateC) : ''; silkEl.title = t('silk.tip.gate', { n: formatSilkC(v.gateC) }); };
+    // the header shows the balance this tab spends: play silk in Games (the dice change it on every roll; owner 14.11 saw the
+    // chain balance stand still while the rolls won and lost), the silk on NEAR elsewhere. One source: the shared silk view.
+    paintSilk = () => { if (!silkEl) return; const v = silkView(), games = tab === 'games';
+      silkEl.textContent = games ? t('games.play', { n: formatSilkC(v.playC) }) : v.chainOk ? silk(v.gateC) : '';
+      silkEl.title = games ? t('silk.tip.play', { n: formatSilkC(v.playC) }) : t('silk.tip.gate', { n: formatSilkC(v.gateC) }); };
     unSilk = subscribeSilk(paintSilk); paintSilk();
     root.addEventListener('keydown', (e) => { e.stopPropagation(); onKey(e); }); // focus stays inside the window (the close button first)
     show(first); x.focus && x.focus();

@@ -24,12 +24,12 @@ behaviour in the client.
 | `scribe` | 03 | Scribe of Signs, M 32 | 1.76 | long moss work coat, ochre scarf with tails, scroll tube and pouch, hair tied up |
 | `innkeeper` | 04 | Innkeeper, F 50 | 1.78 | terracotta dress, leather waist apron with a towel, auburn hair pinned up |
 | `baker` | 05 | Baker, M 38 | 1.72 | ochre shirt, cream bib apron, linen head wrap, full dark beard, terracotta trousers |
-| `sweeper` | 06 | Street sweeper, F 27 | 1.62 | moss tunic, full ochre trousers, ochre kerchief, straw broom |
+| `sweeper` | 06 | Street sweeper, F 27 | 1.62 | the owner's Tripo sweeper (14.11) with her broom skinned to the right hand; agent rig names (art/townsfolk/tripo_person.py) |
 | `lamplighter` | 07 | Lamplighter, M 40 | 1.86 | indigo work coat over rolled linen sleeves, tool belt and cross strap, lantern |
 | `guard` | 08 | Gate guard, F 30 | 1.92 | quilted moss coat, leather cuirass and pauldrons, terracotta sash, sheathed sidearm |
 | `elder` | 09 | Elder, M 76 | 1.65 | ochre shawl over an indigo vest, cane, white hair and beard, gentle stoop |
-| `child_a` | 10 | Child, F 10 | 1.32 | moss pinafore over a linen shirt, two braids |
-| `child_b` | 11 | Child, M 8 | 1.22 | ochre tunic, terracotta shorts, wool socks, mop of curls |
+| `child_a` | 10 | Child, F 10 | 1.28 | the owner's Tripo girl (14.11): built by art/townsfolk/tripo_person.py on the agent rig names |
+| `child_b` | 11 | Child, M 8 | 1.22 | the owner's Tripo boy (14.11): agent rig names (art/townsfolk/tripo_person.py) |
 | `musician` | 12 | Street musician, NB 25 | 1.74 | long terracotta vest, indigo trousers, lute on a strap |
 | `courier` | 13 | Courier, F 22 | 1.68 | moss shirt with rolled sleeves, full indigo trousers, satchel, high ponytail |
 | `shrinekeeper` | 13b | Shrine keeper, F 65 | 1.60 | indigo robe with wide sleeves over an ivory dress, amber beads, grey low bun |

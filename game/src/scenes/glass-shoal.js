@@ -167,14 +167,26 @@ export function createGlassShoal(o) {
     dragon.root.visible = false; mode = 'arena-wait';
     loadArena().then((a) => { event('landed'); mode = 'arena'; a.enter(save); toast(say('shoal.landed')); }).catch((e) => { console.warn('[shoal] arena', e); mode = 'town'; backToStone(); });
   }
+  /** Back in town: the town's own home spot when the game gives one (o.home: a grounded town point, a short drop above it), else the
+   *  ground beside the cliff stone. Never the stone's height 3 m back: on the slope that was inside the hill (owner 14.11: she fell through). */
   function backToStone() {
-    const w = stoneAt.clone().add(new THREE.Vector3(0, 0.2, -3));
-    player.teleport([w.x, w.y + 0.2, w.z], Math.PI);
+    const h = o.home && o.home();
+    if (h && h.position) { player.teleport(h.position, h.heading ?? Math.PI); return; }
+    const w = stoneAt.clone().add(new THREE.Vector3(0, 0, -3)), g = groundAt(w.x, w.z);
+    player.teleport([w.x, (g == null ? stoneAt.y : g) + 0.6, w.z], Math.PI);
   }
   function flyHome() {
     if (arena) arena.leave();
     mode = 'town'; backToStone();
-    if (event('home')) toast(say('shoal.home') + ' ' + say('shoal.reward', { xp: R.REWARD.xp, title: say('shoal.title.' + R.REWARD.title) }));
+    if (event('home')) { toast(say('shoal.home')); chapterCard(); }
+  }
+  /** The episode's end (owner: the boss as a finished episode, a chapter close): the homecoming card with the rewards. */
+  function chapterCard() {
+    const title = say('shoal.title.' + R.REWARD.title);
+    import('../play/season-loot-ui.js').then((m) => m.openSeasonLoot({ t: (k) => k, base: (import.meta.env && import.meta.env.BASE_URL) || '/', reduced: reduced(),
+      kicker: say('shoal.chapter.kicker'), heading: say('shoal.quest'), line: say('shoal.victory'), cont: say('shoal.chapter.continue'),
+      rows: [{ kind: 'title', text: say('shoal.chapter.title', { title }) }, { kind: 'boss_chest', tier: R.REWARD.chest, text: say('shoal.chapter.chest') }, { kind: 'xp', text: say('shoal.chapter.xp', { xp: R.REWARD.xp }) }] }))
+      .catch((e) => { console.warn('[shoal] chapter card', e); toast(say('shoal.reward', { xp: R.REWARD.xp, title })); });
   }
 
   // ---- per frame
@@ -200,7 +212,7 @@ export function createGlassShoal(o) {
     stone.visible = active; // the placeholder slab stands only once the quest is taken: the first hours of the town stay as they were
     bladeRay.visible = blade.visible;
     stoneRay.visible = mode === 'town' && active && R.stoneOpen(save);
-    if (mode === 'town' && R.homeDue(save) && event('home')) toast(say('shoal.home') + ' ' + say('shoal.reward', { xp: R.REWARD.xp, title: say('shoal.title.' + R.REWARD.title) }));
+    if (mode === 'town' && R.homeDue(save) && event('home')) { toast(say('shoal.home')); chapterCard(); }
     if (!reduced()) blade.rotation.y += dt * 0.6;
     // the tracker line
     const tk = mode === 'town' ? R.trackerKey(save, lv) : null;
@@ -257,6 +269,8 @@ export function createGlassShoal(o) {
     /** Whether she has taken the Loomblade (play/held-blade.js puts it in her hand). */
     hasBlade: () => !!save.blade,
     owns: () => mode === 'ride' || mode === 'arena' || mode === 'arena-wait',
+    /** On the dragon's back (boot-world seats her: the `ride` clip, hips on the saddle). */
+    riding: () => mode === 'ride',
     update, interact,
     /** Input while owned (keys from boot-world's Input). */
     input(input) {

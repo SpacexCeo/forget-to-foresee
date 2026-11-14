@@ -86,3 +86,20 @@ test('client-core never statically imports a module of the play chunk', async ()
   }
   assert.deepEqual(bad, []);
 });
+
+// Lead, 14.11: play/townsfolk.js (client-core, CORE_PLAY) imported the new play/townsfolk-smooth.js, which the plan put in
+// play; client-core <-> play became a cycle and the build died at boot. Rule: a CORE_PLAY module only imports modules that
+// stay out of the play chunk.
+test("CORE_PLAY modules never statically import a module of the play chunk", async () => {
+  const { CORE_PLAY } = await import("../../build/chunks.js");
+  const root = new URL("../../", import.meta.url);
+  const bad = [];
+  for (const m of CORE_PLAY) {
+    const src = readFileSync(new URL("." + m, root), "utf8");
+    for (const x of src.matchAll(/^import\s+(?:[^\x27"]+from\s+)?[\x27"](\.\.?\/[^\x27"]+)[\x27"]/gm)) {
+      const target = new URL(x[1], new URL("." + m, root)).pathname.replace(/^.*\/src\//, "/repo/game/src/");
+      if (chunkFor(target) === "play") bad.push(`${m} -> ${x[1]}`);
+    }
+  }
+  assert.deepEqual(bad, []);
+});

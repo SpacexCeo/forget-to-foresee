@@ -25,6 +25,34 @@ let loader = null;
 const cache = new Map();
 const baseUrl = () => (import.meta.env && import.meta.env.BASE_URL) || '/';
 
+/**
+ * Playback speed per clip file (owner 14.11: "speed up the animation of the new models by 30%"): the owner's Tripo pack
+ * clips (the new Iris and Elise, the shared townsfolk pack, the Wayfarer) play this much faster. Applied once at load:
+ * key times shrink, and so do the timing extras the game reads (impact_s, release_s, step_s, full_s), so a strike still
+ * lands on its impact event; `speed` (ground speed the feet match) grows by the same factor, so a walk or run cycles
+ * faster only while the body moves faster (no sliding feet). The old hand-keyed and motion-capture files are left as
+ * they are (iris_agent: Sheriffchenko, townsfolk: the shared town walk). `?animspeed=1` turns it off (QA, before/after).
+ */
+export const CLIP_TIME_SCALE = Object.freeze({ iris: 2, elise: 2, iris_agent: 2, townsfolk_pack: 1.3, townsfolk_wayfarer: 1.3 }); // heroines 2x (owner 14.11: "animation twice as fast, physics as is")
+const TIMING = ['impact_s', 'release_s', 'step_s', 'full_s'];
+export function timeScaleFor(name, search = typeof location !== 'undefined' ? location.search : '') {
+  const o = Number(new URLSearchParams(search).get('animspeed'));
+  return o > 0 ? (CLIP_TIME_SCALE[name] ? o : 1) : (CLIP_TIME_SCALE[name] || 1);
+}
+/** Plays `clips` k times faster (in place): key times, duration and the timing extras shrink, ground speed grows. */
+export function speedUpClips(clips, k) {
+  if (!(k > 0) || k === 1) return clips;
+  for (const c of clips) {
+    for (const t of c.tracks) { const times = new Float32Array(t.times.length); for (let i = 0; i < times.length; i++) times[i] = t.times[i] / k; t.times = times; }
+    c.duration /= k;
+    const u = c.userData || (c.userData = {});
+    for (const n of TIMING) if (typeof u[n] === 'number') u[n] /= k;
+    if (typeof u.speed === 'number') u.speed *= k;
+    u.time_scale = k;
+  }
+  return clips;
+}
+
 function loadFile(name, base) {
   const key = base + name;
   if (!cache.has(key)) {
@@ -32,6 +60,7 @@ function loadFile(name, base) {
     cache.set(key, loader.loadAsync(`${base}assets/anim/${name}.glb`).then((g) => {
       const extras = (g.parser.json.animations || []).map((a) => a.extras || {});
       g.animations.forEach((c, i) => { c.userData = { ...extras[i] }; });
+      speedUpClips(g.animations, timeScaleFor(name));
       return g;
     }));
   }
@@ -39,10 +68,8 @@ function loadFile(name, base) {
 }
 
 /** The side-car clips of a model ([] when it has none or the file fails: the model's own clips stay). */
-export function sidecarClips(asset, base = baseUrl(), search = typeof location !== 'undefined' ? location.search : '') {
-  let name = SIDECAR[asset];
-  // `?anim=v1`: Iris's clips as they were before the 12.11 animation pass, kept until the owner approves the new ones
-  if (name === 'iris' && new URLSearchParams(search).get('anim') === 'v1') name = 'iris_v1';
+export function sidecarClips(asset, base = baseUrl()) {
+  const name = SIDECAR[asset]; // (`?anim=v1`, the pre-12.11 clips, is gone: they were cut for the old rig and bind to nothing on the Tripo heroines)
   if (!name) return Promise.resolve([]);
   return loadFile(name, base).then((g) => g.animations, (e) => { console.warn('[anim] side-car clips failed', name, e); return []; });
 }

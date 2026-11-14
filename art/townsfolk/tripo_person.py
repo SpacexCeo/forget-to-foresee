@@ -1,5 +1,5 @@
 """A Tripo character with a Mixamo rig into a townsfolk model: helpers out, clips out, scaled to its height (14.11).
-  blender -b --python art/townsfolk/tripo_person.py -- --src <tripo .glb> --out <model.glb> --height 1.9
+  blender -b --python art/townsfolk/tripo_person.py -- --src <tripo .glb> --out <model.glb> --height 1.9 [--rename art/townsfolk/tripo_to_agent.json]
 The clips go into a separate side-car made by art/heroes/retarget_pack.py (the game loads it as the character's baked
 clips: play/anim-library.js BAKED_CLIPS), so the model file carries the mesh and the skeleton only. The importer's
 helper objects (a cube and a sphere Tripo leaves in the file) are dropped; the whole character is scaled about its feet
@@ -19,6 +19,11 @@ if arm.animation_data:
     for tr in list(arm.animation_data.nla_tracks): arm.animation_data.nla_tracks.remove(tr)
 for a in list(bpy.data.actions): bpy.data.actions.remove(a)
 for pb in arm.pose.bones: pb.location = (0, 0, 0); pb.rotation_quaternion = (1, 0, 0, 0); pb.rotation_euler = (0, 0, 0); pb.scale = (1, 1, 1)
+# --rename <json>: bone names to the town's shared agent rig (pelvis, thigh_L ...), so the shared clips retarget onto
+# the body at load like on every townsperson (play/anim-library.js townsfolkClips); Blender renames the vertex groups too
+if 'rename' in A:
+    for old, new in json.load(open(A['rename'])).items():
+        if not old.startswith('_') and old in arm.data.bones: arm.data.bones[old].name = new
 bpy.context.view_layer.update()
 pts = [o.matrix_world @ v.co for o in body for v in o.data.vertices]
 h = max(p.z for p in pts) - min(p.z for p in pts); k = float(A.get('height', 1.9)) / h

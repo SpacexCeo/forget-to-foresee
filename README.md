@@ -44,6 +44,24 @@ to the FastNear + archival RPC pair, and none after it (`failures_today` in `/ap
 at 00:00 UTC). On 14 Nov by 05:35 UTC: 2,198 trades sent; 2 sends failed around the relayer restart at 00:32 UTC, and the
 indexer shows 0 failed transactions on chain for 00:00–01:05 UTC.
 
+## A new player's three beats (about 3 minutes)
+
+1. **First contact (0:00-1:00).** Open https://spacexceo.github.io/forget-to-foresee/. A card says who Iris is and the
+   goal: 200 silk to open the Gate-Loom and go home. The town asks your name and gives a free Elise card, minted to an
+   account of your own on NEAR testnet (no wallet, no gas). The prologue and the townsfolk's welcome follow (Esc skips
+   them). After that, the **Starter guide** on the right shows one step at a time: move (W A S D), turn the camera (R),
+   talk to the Elder (E), open the Journal (J).
+2. **One closed loop (1:00-2:30).** The guide's next step sends you to a stone spider just outside the walls: **F**
+   strikes, **Q** fires the Lance. Your first kill always drops a chest. Walk over it to pick it up, and the guide
+   ticks the step. Press **I**, then **Open**: the chest is opened on chain, the reward card shows what came out, and
+   its transaction link proves it. The kill already moved your XP and level bar. With several chests, **Open n**
+   opens up to ten at once and **Open all** opens them in batches of ten. A chest is opened only once, and on an error
+   every chest stays sealed.
+3. **The end of the chapter (2:30-).** From level 5 the Shardkeeper offers the Glass Shoal: the Loomblade, a dragon
+   ride and a three-phase boss, then a legendary chest and the title Tidebreaker. To go straight to the fight, open
+   [`?shoal=arena`](https://spacexceo.github.io/forget-to-foresee/?shoal=arena). The great dragon and the boss are still
+   placeholder shapes (see [Real vs mock](#real-vs-mock)).
+
 ## Judge path: do X, see Y (90 seconds)
 
 | # | Do (on https://spacexceo.github.io/forget-to-foresee/) | See | Proof |
