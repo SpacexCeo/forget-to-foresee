@@ -14,6 +14,7 @@ import { hasModelFile, fetchGltf, getModelVariant } from '../render/assets.js';
 import { bossAnimStep, freshBossAnim, fadeWeights, BOSS_ANIM, clipOn } from '../game/shoal-boss-anim.js';
 import { createAddsView } from './shoal-adds-view.js';
 import { createHitFx } from '../render/hit-fx.js';
+import { createSpellFx } from '../render/spell-fx.js';
 import { createSerpentFx, crackMaterial, setTele } from '../render/serpent-fx.js';
 import { impactOf, IMPACT } from '../render/hit-fx-core.js';
 import { cue, cueAt } from '../audio/town-audio.js';
@@ -134,11 +135,11 @@ export function createShoalArena(o) {
   const chest = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.9, 0.9), new THREE.MeshStandardMaterial({ color: 0xd8b25a, metalness: 0.8, roughness: 0.3, emissive: 0x6a4a10, emissiveIntensity: 0.5 }));
   chest.position.set(R.ARENA.chest[0], 0.45, R.ARENA.chest[1]); chest.visible = false; root.add(chest);
   // projectiles and the Tempest's spiral share these
-  const orbGeo = new THREE.SphereGeometry(0.32, 10, 8), discGeo = new THREE.CylinderGeometry(0.7, 0.7, 0.06, 20);
-  const fireMat = new THREE.MeshBasicMaterial({ color: 0xff8a3a }), windMat = new THREE.MeshBasicMaterial({ color: 0xc8f0ff, transparent: true, opacity: 0.8 });
   const SPIRAL = 16;
   const spiral = new THREE.Group(); spiral.visible = false; root.add(spiral);
-  const spiralBits = Array.from({ length: SPIRAL }, (_, i) => { const m = new THREE.Mesh(i % 2 ? discGeo : orbGeo, i % 2 ? windMat : fireMat); spiral.add(m); return m; });
+  // the casts' look (render/spell-fx.js): flame orbs with ribbon trails and shed embers, spinning wind shurikens with tip streaks
+  const spell = createSpellFx({ THREE, parent: root, scale: mobile ? 0.5 : 1 });
+  const spiralBits = Array.from({ length: SPIRAL }, (_, i) => { const m = i % 2 ? spell.gale(0xc8f0ff) : spell.ember(0xff8a3a, 0.5); spiral.add(m); return m; });
   const burst = new THREE.Mesh(new THREE.RingGeometry(0.85, 1, 64), new THREE.MeshBasicMaterial({ color: 0xffb060, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide }));
   burst.rotation.x = -Math.PI / 2; burst.position.y = 0.08; root.add(burst);
   // the aim: a small ring on the mirror where her casts will fly (cursor or the nearest foe)
@@ -163,6 +164,7 @@ export function createShoalArena(o) {
     if (color != null) imp.color = color;
     const dx = at[0] - me3.x, dz = at[2] - me3.z, l = Math.hypot(dx, dz) || 1;
     fx.impact(at, [dx / l, dz / l], imp, 0);
+    spell.impact(src === 'ember' || src === 'gale' ? src : 'blade', at, [dx / l, dz / l], 0);
     if (imp.shake > 0) { if (shakeT <= 0) shakeAmp = 0; shakeAmp = Math.max(shakeAmp, imp.shake * 0.5); shakeT = 0.22; }
     if (!red && imp.stop) stopT = Math.max(stopT, imp.stop);
   }
@@ -338,7 +340,7 @@ export function createShoalArena(o) {
   }
   function shoot(s, offset, angle, at) {
     const h = me3.heading + angle, dx = Math.sin(h), dz = Math.cos(h);
-    const mesh = new THREE.Mesh(s.id === 'gale_discs' ? discGeo : orbGeo, s.id === 'gale_discs' ? windMat : fireMat);
+    const mesh = s.id === 'gale_discs' ? spell.gale(0xc8f0ff) : spell.ember(0xff8a3a);
     const x = me3.x + Math.cos(me3.heading) * offset, z = me3.z - Math.sin(me3.heading) * offset, y = 1.3 + me3.lift;
     // from the air the casts dip toward the mirror where she aims (the adds walk there); at the boss they stay level
     const dist = Math.max(4, Math.hypot(at[0] - me3.x, at[1] - me3.z));
@@ -462,9 +464,9 @@ export function createShoalArena(o) {
     for (let i = shots.length - 1; i >= 0; i--) {
       const sh = shots[i], step = sh.s.speed * sdt;
       sh.x += sh.dx * step; sh.z += sh.dz * step; sh.left -= step; sh.y = Math.max(0.6, sh.y + sh.vy * sdt);
-      sh.mesh.position.set(sh.x, sh.y, sh.z); if (sh.s.id === 'gale_discs') sh.mesh.rotation.y += sdt * 20;
+      sh.mesh.position.set(sh.x, sh.y, sh.z);
       const gale = sh.s.id === 'gale_discs', src = sh.s.src || (gale ? 'gale' : 'ember'), col = sh.s.color || IMPACT[src].color, hitCue = sh.s.hitCue || (gale ? 'gale_hit' : 'ember_hit');
-      sh.wake = (sh.wake || 0) - sdt; if (sh.wake <= 0) { sh.wake = (gale ? 0.035 : 0.018) * (mobile ? 2 : 1); fx.trail([sh.x, sh.y, sh.z], col, gale ? 0.22 : 0.32, gale ? 0.25 : 0.12); }
+      sh.wake = (sh.wake || 0) - sdt; if (sh.s.ally && sh.wake <= 0) { sh.wake = (gale ? 0.035 : 0.018) * (mobile ? 2 : 1); fx.trail([sh.x, sh.y, sh.z], col, gale ? 0.22 : 0.32, gale ? 0.25 : 0.12); }
       let spent = sh.left <= 0;
       if (!won && !sh.hitBoss && Math.hypot(sh.x - R.ARENA.boss[0], sh.z - R.ARENA.boss[1]) <= R.BOSS.contact * 0.6 + sh.s.radius) { damageBoss(sh.s.damage, { noCharge: !!sh.s.ally }); sh.hitBoss = true; landFx(src, [sh.x, sh.y, sh.z], false, col); serpentHit([sh.x, sh.y, sh.z]); cue(hitCue); if (!sh.s.pierce) spent = true; }
       if (B.adds.length && sh.y < 3) {
@@ -478,7 +480,7 @@ export function createShoalArena(o) {
           if (!sh.s.pierce) spent = true;
         }
       }
-      if (spent) { if (sh.left <= 0 && !sh.hitBoss && !sh.hit.size) fx.burst([sh.x, sh.y, sh.z], col, 3, 0.3); sh.mesh.removeFromParent(); if (sh.s.ally) sh.mesh.material.dispose(); shots.splice(i, 1); }
+      if (spent) { if (sh.left <= 0 && !sh.hitBoss && !sh.hit.size) { if (sh.s.ally) fx.burst([sh.x, sh.y, sh.z], col, 3, 0.3); else spell.impact(src, [sh.x, sh.y, sh.z], [sh.dx, sh.dz]); } sh.mesh.removeFromParent(); if (sh.s.ally) sh.mesh.material.dispose(); shots.splice(i, 1); }
     }
     draw(dt, sdt);
   }
@@ -539,12 +541,12 @@ export function createShoalArena(o) {
         const ph = (ultEl * 0.9 + i / SPIRAL) % 1, a = (i / SPIRAL) * Math.PI * 2 + ultEl * spin + ph * 3;
         const r = 1 + ph * (R.ULT.radius - 1);
         m.position.set(Math.sin(a) * r, 1.2 + Math.sin(ph * Math.PI) * 1.4 - ph * me3.lift * 0.8, Math.cos(a) * r);
-        if (i % 2) m.rotation.y += sdt * 18;
       });
     }
     if (burstT > 0) { burstT -= dt; const k = 1 - burstT / 0.35; const r = 1 + k * R.ULT.radius; burst.position.set(me3.x, 0.08, me3.z); burst.scale.set(r, r, r); burst.material.opacity = 0.7 * (1 - k); }
     else burst.material.opacity = 0;
     if (reduced()) fx.still();
+    spell.update(sdt, camera);
     fx.update(sdt); // under the hit-stop the sparks hang in the air with everything else
     // the aim ring (desktop: the cursor; touch: the auto target), only while there is something to aim at
     const showAim = elise() && !won && deadT <= 0 && (hover || touchAim);
@@ -620,6 +622,6 @@ export function createShoalArena(o) {
     debugCharge() { H = { ...H, ult: R.ULT.max }; },
     /** Dev and tests: the boss falls and the chest opens (the reward runs as in a real win). */
     debugWin() { B = { ...B, exposed: 0 }; damageBoss(1e9 / R.BOSS.armor); chestOpen = true; },
-    dispose() { leave(); fx.dispose(); sfx.dispose(); root.removeFromParent(); hud.remove(); },
+    dispose() { leave(); fx.dispose(); spell.dispose(); sfx.dispose(); root.removeFromParent(); hud.remove(); },
   };
 }

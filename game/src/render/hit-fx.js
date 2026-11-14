@@ -14,6 +14,7 @@
 //   fx.trail([x, y, z], 0x9ff5ea);      // one mote behind a projectile, call every frame or two
 //   fx.update(dt); camera.position.add(fx.kick)
 import { FRAG, KICK, fragVelocities, kickStep, crackle as crackleLine } from './hit-fx-core.js';
+import { createStreaks } from './spell-fx.js';
 
 const FLASHES = 8, RINGS = 4, CRACKLES = 12, CRACKLE_SEGS = 6, SLASHES = 3, SLASH_ARC = 2.3;
 const CAP = { ice: 96, spark: 160 };
@@ -31,7 +32,7 @@ function canvasTex(THREE, doc, draw) {
 export function createHitFx({ THREE, parent, doc = globalThis.document, rand = Math.random, scale = 1 }) {
   const group = new THREE.Group(); group.name = 'hit-fx'; parent.add(group);
   const soft = canvasTex(THREE, doc, (g) => {
-    const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.3, 'rgba(255,255,255,0.6)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+    const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.08, 'rgba(255,255,255,0.85)'); gr.addColorStop(0.25, 'rgba(255,255,255,0.22)'); gr.addColorStop(0.6, 'rgba(255,255,255,0.04)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
     g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
   });
   const shard = canvasTex(THREE, doc, (g) => {
@@ -56,9 +57,13 @@ export function createHitFx({ THREE, parent, doc = globalThis.document, rand = M
     const pts = new THREE.Points(geo, mat); pts.frustumCulled = false; pts.renderOrder = 5; group.add(pts);
     return { kind, n, pos, col, geo, vel: new Float32Array(n * 3), base: new Float32Array(n * 3), life: new Float32Array(n), max: new Float32Array(n), grav: new Float32Array(n), next: 0, live: 0, pts };
   }
-  const P = { ice: particles('ice', shard || soft), spark: particles('spark', soft) };
+  // sparks are velocity-stretched streaks with a hot-to-colour ramp (render/spell-fx.js), not round blobs
+  const streaks = createStreaks(THREE, group, CAP.spark * 2);
+  const sparkSink = { kind: 'spark' };
+  const P = { ice: particles('ice', shard || soft), spark: sparkSink };
   const tmpC = new THREE.Color();
   function emit(p, at, v, color, life, grav) {
+    if (p === sparkSink) { streaks.emit(at[0], at[1], at[2], v[0] * 1.4, v[1] * 1.4, v[2] * 1.4, life * 1.3, 0xffffff, color, 2.6, FRAG.spark.size * 0.3, 0.035, 1.5, -grav); return; }
     const i = p.next; p.next = (p.next + 1) % p.n;
     p.pos.set(at, i * 3); p.vel.set(v, i * 3);
     tmpC.set(color); p.base[i * 3] = tmpC.r; p.base[i * 3 + 1] = tmpC.g; p.base[i * 3 + 2] = tmpC.b;
@@ -119,7 +124,7 @@ export function createHitFx({ THREE, parent, doc = globalThis.document, rand = M
 
   function flash(at, color, size, dur = 0.16) {
     const f = flashes[flashNext]; flashNext = (flashNext + 1) % FLASHES;
-    f.sp.position.set(at[0], at[1], at[2]); f.sp.material.color.set(color); f.s = size; f.t = 0; f.dur = dur; f.sp.visible = true;
+    f.sp.position.set(at[0], at[1], at[2]); f.sp.material.color.set(color); f.s = size * 0.6; // a tight hot core (owner 14.11: no big glare balls) f.t = 0; f.dur = dur; f.sp.visible = true;
   }
   function ring(at, color, radius, dur = 0.42) {
     if (!(radius > 0)) return;
@@ -180,7 +185,9 @@ export function createHitFx({ THREE, parent, doc = globalThis.document, rand = M
         f.sp.scale.setScalar(f.s * (0.55 + 0.75 * (1 - (1 - u) * (1 - u)))); f.sp.material.opacity = 1 - u * u;
         if (u >= 1) f.sp.visible = false;
       }
+      streaks.update(dt);
       for (const p of Object.values(P)) {
+        if (p === sparkSink) continue;
         let live = 0;
         for (let i = 0; i < p.n; i++) {
           if (p.life[i] <= 0) continue;
@@ -233,7 +240,8 @@ export function createHitFx({ THREE, parent, doc = globalThis.document, rand = M
     dispose() {
       group.parent?.remove(group);
       for (const f of flashes) f.sp.material.dispose();
-      for (const p of Object.values(P)) { p.geo.dispose(); p.pts.material.dispose(); }
+      for (const p of Object.values(P)) if (p !== sparkSink) { p.geo.dispose(); p.pts.material.dispose(); }
+      streaks.dispose();
       cGeo.dispose(); cLines.material.dispose(); ringGeo.dispose(); slashGeo.dispose(); for (const S of slashes) S.m.material.dispose(); for (const r of rings) r.m.material.dispose();
       if (soft) soft.dispose(); if (shard) shard.dispose();
     },
