@@ -156,6 +156,11 @@ export function playLoop(area, seed, n = 10) {
  * upper stairs' rails.
  */
 export const SQUARE_ROUND = Object.freeze(R.npc_route_square_round.points.map((p) => Object.freeze([Math.sign(p[0]) * 8.4, p[1], p[2]])));
+/** The square's talking pair stands 2.6 m east of the exported chat points: the courier's lane (x = -5.6) ran right
+ * between them and he stood behind the talkers for half a minute (a 10-minute town sim, 14.11). */
+const CHAT_SHIFT = 2.6;
+const CHAT_A = Object.freeze([P.npc_chat_a.position[0] + CHAT_SHIFT, P.npc_chat_a.position[1], P.npc_chat_a.position[2]]);
+const CHAT_B = Object.freeze([P.npc_chat_b.position[0] + CHAT_SHIFT, P.npc_chat_b.position[1], P.npc_chat_b.position[2]]);
 const TERRACE_TURN = Object.freeze([0, 2.5, 9.0]);
 /** The lower lane west of the big stairs (the sound half of the exported lower stroll): joins the children's play spot. */
 const LOWER_LANE = Object.freeze([[-30, 0, 20], [-8, 0, 20], [-4.6, 0, 20.2]]);
@@ -179,8 +184,8 @@ function programs() {
   const sq = SQUARE_ROUND; // [NW, NE, SE, SW] corners of the walk round the square
   const zS = sq[2][2], y = sq[0][1];
   // The two shopkeepers of the square meet at the chat points, talk, and walk back to their doors.
-  const exOut = [ex.position, [sq[1][0], y, ex.position[2]], [sq[2][0], y, zS], [P.npc_chat_b.position[0], y, zS], P.npc_chat_b.position];
-  const scOut = [sc.position, [sq[0][0], y, sc.position[2]], [sq[3][0], y, zS], [P.npc_chat_a.position[0], y, zS], P.npc_chat_a.position];
+  const exOut = [ex.position, [sq[1][0], y, ex.position[2]], [sq[2][0], y, zS], [CHAT_B[0], y, zS], CHAT_B];
+  const scOut = [sc.position, [sq[0][0], y, sc.position[2]], [sq[3][0], y, zS], [CHAT_A[0], y, zS], CHAT_A];
   const sweep = [];
   for (const [a, b] of chop([...R.npc_route_sweeper.points, R.npc_route_sweeper.points[0]], 7)) sweep.push({ walk: [a, b] }, stay(7, 'sweep'));
   const lamp = [];
@@ -195,9 +200,9 @@ function programs() {
   return {
     guard: post(P.npc_gate_guard, [stay(16, 'idle'), stay(9, 'idle_shift'), stay(5, 'think')]),
     shardkeeper: { home: ex.position, heading: ex.heading, steps: [stay(40, 'idle', { heading: ex.heading, greet: 'wave' }), stay(12, 'idle_shift', { heading: ex.heading, greet: 'wave' }),
-      { walk: exOut }, { meet: 'scribe', seconds: 34, clip: 'talk', face: P.npc_chat_a.position }, { walk: exOut.slice().reverse() }] },
+      { walk: exOut }, { meet: 'scribe', seconds: 34, clip: 'talk', face: CHAT_A }, { walk: exOut.slice().reverse() }] },
     scribe: { home: sc.position, heading: sc.heading, steps: [stay(30, 'idle', { heading: sc.heading, greet: 'wave' }), stay(14, 'think', { heading: sc.heading, greet: 'wave' }),
-      { walk: scOut }, { meet: 'shardkeeper', seconds: 34, clip: 'talk_b', face: P.npc_chat_b.position }, { walk: scOut.slice().reverse() }] },
+      { walk: scOut }, { meet: 'shardkeeper', seconds: 34, clip: 'talk_b', face: CHAT_B }, { walk: scOut.slice().reverse() }] },
     innkeeper: post(inn, [stay(18, 'idle', { greet: 'wave' }), stay(10, 'counter', { greet: 'wave' }), stay(8, 'idle_shift', { greet: 'wave' })]),
     baker: post(P.npc_market_seller_square, [stay(14, 'counter', { greet: 'wave' }), stay(10, 'idle', { greet: 'wave' }), stay(6, 'idle_shift', { greet: 'wave' })]),
     shrinekeeper: post(P.npc_shrine_keeper, [stay(20, 'idle', { greet: 'nod' }), stay(10, 'idle_shift', { greet: 'nod' })]),
