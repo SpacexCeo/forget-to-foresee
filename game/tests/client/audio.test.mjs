@@ -112,7 +112,7 @@ test('runtime: unlock, spatial play, ducking, zones, tension and persisted volum
   await a.unlock();
   await flush();
   const ctx = FakeCtx.last;
-  assert.equal(ctx.panners[0].panningModel, 'HRTF');
+  assert.equal(ctx.panners[0].panningModel, 'equalpower');
   assert.equal(ctx.panners[0].positionZ.value, 50);
   assert.ok(hum.inner, 'queued loop started on unlock');
   assert.equal(a.state.bed, 'amb_camp_sol');

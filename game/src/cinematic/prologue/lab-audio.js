@@ -9,7 +9,7 @@ export function createLabAudio({ reduced = false, musicUrl = null, makeAudio = n
   let ac = null, master = null, hum = null, humGain = null, bed = null, fade = 0, howlBed = null;
   // howler: injected (tests), already on the page, or fetched now (the prologue's chunk is lazy already)
   let H = howler || (globalThis.Howl && globalThis.Howler ? { Howl: globalThis.Howl, Howler: globalThis.Howler } : null);
-  if (!H && !makeAudio && typeof window !== 'undefined') import('howler').then((m) => { const lib = m.Howl ? m : (m.default || m); if (lib.Howl) H = { Howl: lib.Howl, Howler: lib.Howler }; }).catch(() => {});
+  if (!H && !makeAudio && typeof window !== 'undefined') import('howler').then((m) => { const lib = m.Howl ? m : (m.default || m); if (lib.Howl) { if (lib.Howler) lib.Howler._mobileUnloaded = true; H = { Howl: lib.Howl, Howler: lib.Howler }; } }).catch(() => {});
   const newAudio = makeAudio || ((url) => new globalThis.Audio(url));
   const bedTo = (target, seconds) => { // a small volume ramp on the bed (HTMLAudio has no gain automation)
     if (!bed) return; clearInterval(fade); const from = bed.volume, t0 = clock(), ms = Math.max(1, seconds * 1000);

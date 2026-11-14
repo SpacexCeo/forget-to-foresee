@@ -21,6 +21,8 @@ const defaultBase = () => {
 
 const DUCK_KINDS = new Set(['voice', 'sting']);
 const VARY_KINDS = new Set(['sfx', 'step', 'ui']);
+export const MAX_ONE_SHOTS = 24;      // concurrent non-looping voices; more are dropped (inaudible in a mix anyway)
+export const SAME_SOUND_GAP = 0.04;   // seconds; the same sample started again inside this gap is skipped
 const DUCK = { music: dbToGain(-9), amb: dbToGain(-6) };
 const SFX_DIP = dbToGain(-4); // music under a strike, a hit or a cast: a short dip so the effect reads
 
@@ -50,6 +52,7 @@ export function createAudio(opts = {}) {
   let ctx = null, nodes = null, disposed = false;
   const buffers = new Map();       // name -> Promise<AudioBuffer|null>
   const active = new Set();
+  const lastStart = new Map();   // sound name -> ctx.currentTime of its last start (repeat guard)
   const lastVariant = new Map();
   let duckCount = 0;
   let zone = null, bed = null, wind = null, tension = 0, music = null, musicStarting = false;
@@ -126,6 +129,16 @@ export function createAudio(opts = {}) {
     if (name !== nameOrGroup) lastVariant.set(nameOrGroup, name);
     const meta = manifest.sounds[name];
     const loop = o.loop ?? !!meta.loop;
+    // Voice budget: a crowded town (townsfolk steps, mobs, hits) used to start dozens of one-shots at once and
+    // the audio thread dropped out. Cap concurrent one-shots and skip a repeat of the same sound within 40 ms.
+    if (ctx && !loop) {
+      let shots = 0;
+      for (const h of active) if (!h.loop) shots++;
+      if (shots >= MAX_ONE_SHOTS) return dummy(name);
+      const t = ctx.currentTime, prev = lastStart.get(name);
+      if (prev !== undefined && t - prev < SAME_SOUND_GAP) return dummy(name);
+      lastStart.set(name, t);
+    }
     if (!ctx) {
       if (!loop) return dummy(name);
       const h = { name, playing: false, inner: null, pos: o.pos, gain: o.gain,
@@ -140,14 +153,16 @@ export function createAudio(opts = {}) {
     let panner = null;
     if (o.pos) {
       panner = ctx.createPanner();
-      Object.assign(panner, { panningModel: 'HRTF', distanceModel: 'inverse', refDistance: meta.ref ?? 3, maxDistance: 250, rolloffFactor: meta.rolloff ?? 1 });
+      // equalpower, not HRTF: HRTF convolution per voice is the most expensive node in Web Audio and starved
+      // the audio thread on integrated GPUs/phones once many positional sounds overlapped.
+      Object.assign(panner, { panningModel: 'equalpower', distanceModel: 'inverse', refDistance: meta.ref ?? 3, maxDistance: 250, rolloffFactor: meta.rolloff ?? 1 });
       setPannerPos(panner, o.pos);
       out.connect(panner); panner.connect(busFor(meta.kind));
     } else out.connect(busFor(meta.kind));
     let src = null, stopped = false, resolveEnded;
     const ended = new Promise((r) => { resolveEnded = r; });
     const handle = {
-      name, get playing() { return !!src && !stopped; },
+      name, loop, get playing() { return !!src && !stopped; },
       stop(fade = 0.05) {
         if (stopped) return; stopped = true;
         if (src) { ramp(out.gain, 0, fade / 3); try { src.stop(now() + fade); } catch { /* ok */ } } else finish();
@@ -312,13 +327,22 @@ export function createAudio(opts = {}) {
         // howler is fetched on the first gesture; a second click while it loads waits for the same promise
         unlocking ||= import('howler').then((m) => {
           const lib = m.Howler ? m : (m.default || m);
-          if (lib.Howler) { lib.Howler.autoSuspend = false; lib.Howler.volume(lib.Howler.volume()); }   // volume() sets up its context
+          if (lib.Howler) { lib.Howler.autoSuspend = false; lib.Howler._mobileUnloaded = true; lib.Howler.volume(lib.Howler.volume()); }   // volume() sets up its context
           if (lib.Howler && lib.Howler.usingWebAudio && lib.Howler.ctx) H = { Howler: lib.Howler, Howl: lib.Howl };
         }).catch(() => { /* the plain path below */ });
         await unlocking;
         if (disposed) return false;
       }
       if (!ctx && !H && !AC) return false;
+      // Howler's first unlock calls Howler.unload() when the device runs at a sample rate other than 44100 Hz
+      // (a Mobile Safari workaround; most desktops run at 48000 Hz). That CLOSES the context our graph was built
+      // on and makes a new one, so every game sound went silent right after the arrival scene. Opt out of it,
+      // and if the shared context was closed anyway, rebuild the graph on the live one.
+      if (H && H.Howler) H.Howler._mobileUnloaded = true;
+      if (ctx && H && ctx.state === 'closed' && H.Howler.ctx && H.Howler.ctx !== ctx) {
+        try { nodes?.limiter.disconnect(); } catch { /* ok */ }
+        ctx = null; buffers.clear();
+      }
       if (!ctx) {
         ctx = H ? H.Howler.ctx : new AC({ latencyHint: 'interactive' });
         nodes = buildGraph();
