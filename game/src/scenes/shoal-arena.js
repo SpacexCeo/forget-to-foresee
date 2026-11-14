@@ -568,6 +568,8 @@ export function createShoalArena(o) {
   return {
     root, look, spawns,
     enter, leave, update, interact,
+    /** QA: the serpent's clip state (the rules' clip, the one shown on the model, and the model's clip names). */
+    get bossAnim() { return { clip: bossAnim.clip, time: +bossAnim.time.toFixed(2), shown: bossActions ? clipOn(bossAnim.clip, (n) => !!bossActions[n]) : null, clips: bossActions ? Object.keys(bossActions) : [] }; },
     /** Settles once the boss model is in (or failed and the stand-in shows). */
     ready: modelReady,
     /** The arena-frame direction from her to the serpent (radians, atan2(dx, dz)), and her own heading (the camera lock). */
