@@ -229,16 +229,16 @@ test('touch aim: the nearest add in range, else the boss', () => {
   assert.deepEqual(R.autoAim([0, 20], [{ x: 30, z: 20 }]), [...R.ARENA.boss], 'too far: the boss');
 });
 
-test('balance: a scripted average Elise beats the Hollow Tide in about 2.5 to 5 minutes', () => {
+test('balance: a scripted average Elise beats the Hollow Tide in about 1.5 to 3 minutes (owner 14.11: the fight dragged)', () => {
   const runs = []; for (let s = 1; s <= 12; s++) runs.push(simulateElise(s));
   assert.ok(runs.every((r) => r.won), 'every run wins');
   const t = runs.map((r) => r.seconds).sort((a, b) => a - b), median = t[6];
   // the scripted player stands still and never misses a pickup: a real fight adds walking, aiming and flying
-  assert.ok(median >= 150 && median <= 300, `median ${median} s`);
-  assert.ok(runs.reduce((a, r) => a + r.ults, 0) / runs.length >= 2, 'the Tempest comes up a few times a fight');
+  assert.ok(median >= 80 && median <= 180, `median ${median} s`);
+  assert.ok(runs.reduce((a, r) => a + r.ults, 0) / runs.length >= 1.5, 'the Tempest comes up a couple of times a fight');
   // a strong player is faster but still needs a while
   const good = []; for (let s = 1; s <= 8; s++) good.push(simulateElise(s, { aim: 0.8, dodge: 0.7, evade: 0.2 }).seconds);
-  assert.ok(good.sort((a, b) => a - b)[4] >= 75, 'not a melt');
+  assert.ok(good.sort((a, b) => a - b)[4] >= 45, 'not a melt');
 });
 
 test('every Shoal text exists in all five locales', () => {

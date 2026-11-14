@@ -88,7 +88,7 @@ test('the killing blow clears the boss\'s attack: no telegraph is left glowing a
 
 // ---- the ice serpent (owner 14.11): ice breath (inhale, then a cone) and a stagger when its crest opens; the winged
 // moves (claw, takeoff, dive) stay in the rules for another boss; any clip the model lacks plays its stand-in
-test('the ice serpent: breath in every phase, the cone, a stagger once per opening, stand-in clips', () => {
+test('the ice serpent: breath in every phase, the cone, a stagger at an opening (at most one per gap), stand-in clips', () => {
   const B = R.BOSS;
   for (const P of B.phases) { assert.ok(P.rotation.includes('breath')); for (const k of ['claw', 'takeoff', 'dive']) assert.ok(!P.rotation.includes(k), k); }
   const breath = { kind: 'breath', at: [0, 0], dir: [0, 1] };
@@ -105,7 +105,9 @@ test('the ice serpent: breath in every phase, the cone, a stagger once per openi
   a = bossAnimStep(a, { ...rest, exposed: 2 }, 1 / 60, 1.4); assert.equal(a.clip, 'stagger');
   for (let i = 0; i < 90; i++) a = bossAnimStep(a, { ...rest, exposed: 1 }, 1 / 60, 1.4);
   assert.equal(a.clip, 'idle', 'it plays once per opening');
-  a = bossAnimStep(a, { ...rest, exposed: 0 }, 1 / 60, 1.4); a = bossAnimStep(a, { ...rest, exposed: 2 }, 1 / 60, 1.4); assert.equal(a.clip, 'stagger', 'and again at the next opening');
+  a = bossAnimStep(a, { ...rest, exposed: 0 }, 1 / 60, 1.4); a = bossAnimStep(a, { ...rest, exposed: 2 }, 1 / 60, 1.4); assert.equal(a.clip, 'idle', 'not again within the gap (a reel on every dodge read as spam)');
+  for (let i = 0; i < 60 * 12; i++) a = bossAnimStep(a, { ...rest, exposed: 0 }, 1 / 60, 1.4);
+  a = bossAnimStep(a, { ...rest, exposed: 2 }, 1 / 60, 1.4); assert.equal(a.clip, 'stagger', 'and again at an opening after the gap');
   const tide = (n) => BOSS_CLIPS.includes(n);
   for (const [c, s2] of Object.entries(CLIP_STANDIN)) { assert.equal(clipOn(c, tide), s2); assert.equal(clipOn(c, () => true), c); }
 });
