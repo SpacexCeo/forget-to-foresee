@@ -4,11 +4,11 @@
   "file": "mob_skitter.glb",
   "phone": "mob_skitter_m.glb",
   "role": "swarm",
-  "height_m": 0.42,
-  "length_m": 0.65,
+  "height_m": 0.359,
+  "length_m": 0.577,
   "glow": "teal",
-  "tris": 1880,
-  "tris_m": 1030,
+  "tris": 3948,
+  "tris_m": 1974,
   "clips": {
    "idle": {
     "frames": 60,
@@ -16,13 +16,13 @@
     "loop": true
    },
    "walk": {
-    "frames": 16,
-    "seconds": 0.533,
+    "frames": 8,
+    "seconds": 0.26666666666666666,
     "loop": true
    },
    "run": {
-    "frames": 10,
-    "seconds": 0.333,
+    "frames": 5,
+    "seconds": 0.16666666666666666,
     "loop": true
    },
    "attack": {
@@ -45,7 +45,8 @@
    "walk": 0.83,
    "run": 1.63
   },
-  "note": ""
+  "note": "six legs on a clean rig (body + 3 bones a leg); walk 8 frames, run 5 frames at the same ground speeds, feet held by IK",
+  "source": "the owner's Tripo model spider_futuristic.glb (14.11), rerigged and animated by art/mobs/tripo_spider.py"
  },
  "hulker": {
   "display": "hulker",
