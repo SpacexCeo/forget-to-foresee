@@ -238,4 +238,13 @@ test('recorded sounds (CC0, art/audio/samples.py) replace the weak synthesized o
     assert.ok(existsSync(new URL('../../public/assets/audio/' + o.file, import.meta.url)), o.file);
   }
   assert.equal(m.sounds.amb_wind.file, AUDIO_MANIFEST.sounds.amb_wind.file);   // the rest stays synthesized
+  // the trailer pass (art/audio/samples_polish.py): new sounds and overrides, all CC0, files shipped, groups resolve
+  const { SAMPLE_POLISH } = await import('../../src/audio/sample-polish.js');
+  for (const [name, o] of Object.entries(SAMPLE_POLISH.sounds)) {
+    assert.equal(m.sounds[name].file, o.file, name); assert.match(o.source, /CC0/, name);
+    if (AUDIO_MANIFEST.sounds[name]) assert.equal(m.sounds[name].kind, AUDIO_MANIFEST.sounds[name].kind, name + ' keeps its kind');
+    assert.ok(existsSync(new URL('../../public/assets/audio/' + o.file, import.meta.url)), o.file);
+  }
+  for (const g of ['boss_roar', 'mob_death_bug', 'strike_impact']) for (const n of m.groups[g]) assert.ok(m.sounds[n], g + ': ' + n);
+  for (const n of ['boss_breath', 'boss_inhale', 'boss_stagger', 'chest_open', 'nft_reveal', 'quest_accept', 'quest_complete', 'level_up']) assert.ok(m.sounds[n], n);
 });

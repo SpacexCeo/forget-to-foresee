@@ -201,7 +201,7 @@ export function openChestReveal({ doc = document, t, chest, client, guest, items
       if (!reduced) {
         const v0 = outcomeView(op.outcome, { t, items: full, base });
         beamEl.style.setProperty('--g', GLOW[v0.frame === 'mythic' ? 'mythic' : v0.rarity] || GLOW.common);
-        chestEl.classList.remove('co-shake'); chestEl.classList.add('co-opened'); cue('gift_chime');
+        chestEl.classList.remove('co-shake'); chestEl.classList.add('co-opened'); cue('chest_open');
         await new Promise((res) => setTimeout(res, 900));
         chestEl.classList.add('co-fade'); setTimeout(() => { chestEl.hidden = true; }, 400);
       }
@@ -218,7 +218,7 @@ export function openChestReveal({ doc = document, t, chest, client, guest, items
       stage.replaceChildren(card);
       reel.hidden = true; // the card takes the reel's place (short screens)
       setTimeout(() => card.classList.add('co-in'), 30);
-      cue('gift_chime');
+      cue(op.outcome.kind === 'nft' ? 'nft_reveal' : 'gift_chime');
       // the verification line (a ?chestpreview fixture says so and links nothing)
       if (op.preview) { info.replaceChildren(el('div', 'co-ver co-no', null)); info.firstChild.append(el('b', null, t('chest.preview'))); closeBtn(); return; }
       const ver = el('div', 'co-ver' + (verification.verified ? '' : ' co-no'));

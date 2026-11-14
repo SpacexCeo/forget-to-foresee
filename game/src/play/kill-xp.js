@@ -61,7 +61,7 @@ export function createKillXp({ THREE, scene, camera, player, ledger, t, toast, r
     if (!(floatNumber && pos && floatNumber({ kind: 'xp', amount: r.gained, pos: [pos[0], pos[1] + 1.6, pos[2]] }))) label(t('xp.gain', { n: r.gained }), pos);
     if (r.levelUp) {
       toast(t('xp.levelUp', { level: r.levelUp }));
-      cueAt('gift_chime', null, 0.55);
+      cueAt('level_up', null, 0.8);
       if (!reduced()) { burstT = 0; burst.visible = true; }
     }
     return r;

@@ -1,0 +1,4 @@
+rubberduck (opengameart.org/users/rubberduck): "80 CC0 RPG SFX", "80 CC0 creature SFX", "80 CC0 creature SFX #2",
+"100 CC0 SFX", "100 CC0 SFX #2". Licence: CC0 1.0 Universal (public domain dedication),
+https://creativecommons.org/publicdomain/zero/1.0/ . Used in game/public/assets/audio/p_*.ogg (art/audio/samples_polish.py);
+per-file sources in game/src/audio/sample-polish.js.

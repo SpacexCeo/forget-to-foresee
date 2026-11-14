@@ -8,6 +8,7 @@
 import { AUDIO_MANIFEST } from './manifest.js';
 import { MUSIC_MANIFEST } from './music-manifest.js';
 import { SAMPLE_OVERRIDES } from './sample-manifest.js';
+import { SAMPLE_POLISH } from './sample-polish.js';
 export { archipelagoMusic, markChapterDone } from './music.js'; // for the archipelago, which loads this module lazily
 import { createSafeStorage } from '../ui/storage.js';
 import { loadVolumes, saveVolumes, sanitizeVolumes, sliderGain, dbToGain, tensionMix, zoneMix, ZONES as ZONES_WITH_HUM, resolveSound, guestPlan, listenerPose, BUSES } from './mix.js';
@@ -29,10 +30,12 @@ export function withMusic(m, music = MUSIC_MANIFEST) {
 }
 
 /** The recorded replacements (CC0, art/audio/samples.py) over the synthesized sounds of the same names. */
-export function withSamples(m, over = SAMPLE_OVERRIDES) {
+export function withSamples(m, over = SAMPLE_OVERRIDES, polish = SAMPLE_POLISH) {
   const sounds = { ...m.sounds };
   for (const [name, o] of Object.entries(over || {})) if (sounds[name]) sounds[name] = { ...sounds[name], file: o.file, dur: o.dur, source: o.source };
-  return { ...m, sounds };
+  // the trailer pass (art/audio/samples_polish.py): overrides keep the old kind, new sounds bring theirs and their groups
+  for (const [name, o] of Object.entries(polish?.sounds || {})) sounds[name] = sounds[name] ? { ...sounds[name], file: o.file, dur: o.dur, source: o.source } : { ...o };
+  return { ...m, sounds, groups: { ...(m.groups || {}), ...(polish?.groups || {}) } };
 }
 
 export function createAudio(opts = {}) {

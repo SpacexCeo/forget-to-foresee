@@ -87,7 +87,7 @@ test('kill XP view: the window events credit the ledger; a level up toasts once 
     assert.equal(ledger.stats.mobsKilled, 4);
     assert.equal(toasts.length, 1);
     assert.match(toasts[0], /xp\.levelUp.*"level":2/);
-    assert.ok(sounds.some((d) => d && d.name === 'gift_chime'), 'the level-up chime');
+    assert.ok(sounds.some((d) => d && d.name === 'level_up'), 'the level-up chime');
     win.fire('ftf:critter-killed', { pos: [1, 0, 1] });
     assert.equal(ledger.stats.mobsKilled, 5, 'the moss critters count too');
     active = false;
