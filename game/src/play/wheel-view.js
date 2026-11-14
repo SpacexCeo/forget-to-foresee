@@ -259,7 +259,7 @@ export const WHEEL_CSS = `
 @keyframes wv-pop { from { transform: scale(.7); opacity: 0; } }
 .wv-art img, .wv-art svg { width: 84px; height: 84px; display: block; }
 .wv-art img.wv-skin { width: auto; height: 150px; border-radius: 10px; filter: drop-shadow(0 6px 12px rgba(0,0,0,.5)); }
-.wv-gp { display: grid; grid-template-columns: 76px 1fr; gap: 12px; align-items: center; margin: 12px 0 4px; padding: 10px 12px; border-radius: 14px; border: 1px solid rgba(255,215,106,.55); background: radial-gradient(circle at 20% 30%, rgba(255,215,106,.18), rgba(0,0,0,.3)); }
+.wv-gp { display: grid; grid-template-columns: 76px 1fr; gap: 12px; align-items: center; margin: 12px 0 4px; padding: 10px 12px; border-radius: 14px; border: 1px solid rgba(255,215,106,.55); background: radial-gradient(circle at 20% 30%, rgba(255,215,106,.18), rgba(255,215,106,0) 70%), var(--ftf-panel-solid, #101f1a); isolation: isolate; } /* opaque: the town wheel behind the menu showed through as a second wheel (owner 14.11) */
 .wv-gp-art { height: 112px; display: grid; place-items: end center; border-radius: 10px; background: radial-gradient(circle at 50% 70%, rgba(255,231,168,.35), transparent 70%); overflow: hidden; }
 .wv-gp-art img { height: 108px; width: auto; filter: drop-shadow(0 4px 8px rgba(0,0,0,.5)); }
 .wv-gp .wv-name { display: block; margin: 2px 0; } .wv-gp .gm-note { margin: 2px 0 6px; } .wv-try { min-height: 36px; }

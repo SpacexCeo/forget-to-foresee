@@ -33,13 +33,13 @@ const CSS = `
 .co-tile img { width: 64px; height: 64px; object-fit: contain; }
 .co-tile b { font: 600 22px/1 "Cormorant Garamond", Georgia, serif; color: var(--g, #e9e6dc); }
 .co-mark { position: absolute; top: 4px; bottom: 4px; left: 50%; width: 2px; transform: translateX(-1px); background: #d9b26a; box-shadow: 0 0 10px #d9b26a; }
-.co-card { position: relative; width: min(250px, 62vw, calc((100vh - 220px) * .6667)); min-width: 150px; aspect-ratio: 2 / 3; opacity: 0; transform: translateY(24px) scale(.94); transition: opacity .5s ease, transform .6s cubic-bezier(.2, 1.4, .4, 1); }
+.co-card { position: relative; z-index: 1; margin: 6px 0; width: min(250px, 62vw, calc((100dvh - 260px) * .6667)); min-width: 150px; aspect-ratio: 2 / 3; overflow: visible; opacity: 0; transform: translateY(24px) scale(.94); transition: opacity .5s ease, transform .6s cubic-bezier(.2, 1.4, .4, 1); }
 .co-card.co-in { opacity: 1; transform: none; }
 .co-card .co-frame { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
 .co-card .co-art { position: absolute; left: 16%; right: 16%; top: 18%; height: 42%; display: grid; place-items: center; border-radius: 10px; background: radial-gradient(circle, var(--g) 0%, transparent 70%); }
 .co-card .co-art img { width: 70%; height: 70%; object-fit: contain; filter: drop-shadow(0 6px 10px rgba(0,0,0,.5)); }
 .co-card .co-art b { font: 600 46px/1 "Cormorant Garamond", Georgia, serif; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,.6); }
-.co-card .co-name { position: absolute; left: 12%; right: 12%; top: 64%; font: 600 20px/1.15 "Cormorant Garamond", Georgia, serif; }
+.co-card .co-name { position: absolute; left: 9%; right: 9%; top: 63%; font: 600 clamp(15px, 4.6vw, 18px)/1.15 "Cormorant Garamond", Georgia, serif; text-wrap: balance; } /* one line where it fits, never cut (owner 14.11) */
 .co-card .co-rar { position: absolute; left: 12%; right: 12%; top: 77%; font: 600 11px/1.2 system-ui; letter-spacing: .16em; text-transform: uppercase; color: var(--g); }
 .co-glow { position: absolute; inset: -30%; background: radial-gradient(circle, var(--g) 0%, transparent 60%); opacity: .35; pointer-events: none; }
 .co-ver { font-size: 13px; max-width: 560px; } .co-ver b { color: #7fd18b; } .co-ver.co-no b { color: #ff8a7a; }
