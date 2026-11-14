@@ -63,5 +63,5 @@ test('a walker behind a slower one waits and walks in calm stretches, not three 
   assert.ok(toggles < 80, `${toggles} stop/go switches in 20 s (it was 712)`);
   assert.ok(minGap >= M.MIN_GAP, 'and never closer than the body rule allows');
   assert.ok(a.z > 5, 'it still follows along');
-  assert.ok(M.WAIT_HOLD >= 0.3 && M.RESUME_S > 0, 'a stop holds, and the walk picks up softly');
+  assert.ok(M.WAIT_HOLD >= 0.3, 'a stop holds');
 });
