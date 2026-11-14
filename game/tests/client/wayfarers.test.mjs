@@ -58,14 +58,19 @@ test('wayfarers: four minutes of the whole town with the visitors: nobody overla
   for (const w of WAYFARERS) if (w.key !== 'wayfarer') assert.ok(far.get(w.key) > 5, w.key + ' toured ' + far.get(w.key).toFixed(1) + ' m from its start');
 });
 
-test('wayfarer model: both files ship with the own clips on the townsfolk rig, inside the budget', { skip: !existsSync(MODEL) && 'model not built yet' }, () => {
+const glbJson = (url) => { const b = readFileSync(url); return { b, json: JSON.parse(b.subarray(20, 20 + b.readUInt32LE(12)).toString()) }; };
+
+test('wayfarer model: the owner's Tripo model (mesh + skin) and its baked clip file from the pack, inside the budget', { skip: !existsSync(MODEL) && 'model not built yet' }, () => {
+  const clips = glbJson(new URL('../../public/assets/anim/townsfolk_wayfarer.glb', import.meta.url));
+  const names = clips.json.animations.map((a) => a.name);
+  for (const c of ['idle', 'idle_shift', 'idle_look', 'walk', 'wave', 'nod', 'talk', 'think', 'take_photo', 'haggle']) assert.ok(names.includes(c), 'the clip file has ' + c);
+  assert.ok(clips.b.length <= 8e6, 'the clip file is ' + clips.b.length + ' bytes');
   for (const [file, maxBytes, maxTris] of [['townsfolk_wayfarer.glb', 6e6, 20000], ['townsfolk_wayfarer_m.glb', 2.5e6, 20000]]) {
-    const b = readFileSync(new URL('../../public/assets/models/' + file, import.meta.url));
-    const json = JSON.parse(b.subarray(20, 20 + b.readUInt32LE(12)).toString());
+    const { b, json } = glbJson(new URL('../../public/assets/models/' + file, import.meta.url));
     assert.ok(b.length <= maxBytes, file + ' is ' + b.length + ' bytes');
-    const names = json.animations.map((a) => a.name);
-    for (const c of ['idle', 'walk', 'take_photo', 'haggle']) assert.ok(names.includes(c), file + ' has ' + c);
-    for (const bone of ['pelvis', 'chest', 'head', 'hand_R', 'prop_R', 'foot_L']) assert.ok(json.nodes.some((n) => n.name === bone), file + ' has the bone ' + bone);
+    assert.equal(json.skins.length, 1, file + ' is skinned');
+    const bones = new Set(json.skins[0].joints.map((j) => json.nodes[j].name));
+    for (const n of clips.json.nodes.map((x) => x.name)) if (/Hips|Spine|Head|Hand|Foot/.test(n)) assert.ok(bones.has(n), file + ' has the bone ' + n + ' the clips move');
     const tris = json.meshes.flatMap((m) => m.primitives).reduce((n, p) => n + json.accessors[p.indices].count / 3, 0);
     assert.ok(tris <= maxTris, file + ' has ' + tris + ' triangles');
   }

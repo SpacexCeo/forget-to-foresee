@@ -1,0 +1,1173 @@
+{
+ "fps": 30,
+ "hips_scale": {
+  "townsfolk_wayfarer": 1.9009
+ },
+ "_": "speed_mps and root_motion_m are measured on the pack; a character moves them times its hips_scale (its stride is that much longer)",
+ "clips": [
+  {
+   "name": "afraid",
+   "pack_name": "afraid.001",
+   "tag": "social",
+   "seconds": 2.583,
+   "loop": true,
+   "root_motion_m": 0.0,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 1.44
+   }
+  },
+  {
+   "name": "angry_01",
+   "pack_name": "angry_01.001",
+   "tag": "social",
+   "seconds": 3.5,
+   "loop": false,
+   "root_motion_m": 0.005,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 7.91
+   }
+  },
+  {
+   "name": "angry_02",
+   "pack_name": "angry_02.001",
+   "tag": "social",
+   "seconds": 2.167,
+   "loop": false,
+   "root_motion_m": 2.781,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 19.88
+   }
+  },
+  {
+   "name": "angry_03",
+   "pack_name": "angry_03.001",
+   "tag": "social",
+   "seconds": 3.583,
+   "loop": false,
+   "root_motion_m": 0.002,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 5.29
+   }
+  },
+  {
+   "name": "basketball_shot",
+   "pack_name": "basketball_shot.001",
+   "tag": "activity",
+   "seconds": 6.583,
+   "loop": false,
+   "root_motion_m": 2.867,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 110.6
+   }
+  },
+  {
+   "name": "box_01",
+   "pack_name": "box_01.001",
+   "tag": "combat",
+   "seconds": 2.208,
+   "loop": true,
+   "root_motion_m": 0.0,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 0.0
+   }
+  },
+  {
+   "name": "box_02",
+   "pack_name": "box_02.001",
+   "tag": "combat",
+   "seconds": 2.792,
+   "loop": false,
+   "root_motion_m": 0.149,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 81.78
+   }
+  },
+  {
+   "name": "box_03",
+   "pack_name": "box_03.001",
+   "tag": "combat",
+   "seconds": 2.542,
+   "loop": true,
+   "root_motion_m": 0.0,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 0.19
+   }
+  },
+  {
+   "name": "cast_a_spell",
+   "pack_name": "cast_a_spell.001",
+   "tag": "combat",
+   "seconds": 5.375,
+   "loop": true,
+   "root_motion_m": 0.0,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 0.0
+   }
+  },
+  {
+   "name": "cheer",
+   "pack_name": "cheer.001",
+   "tag": "social",
+   "seconds": 12.083,
+   "loop": false,
+   "root_motion_m": 0.016,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 22.64
+   }
+  },
+  {
+   "name": "chop",
+   "pack_name": "chop.001",
+   "tag": "activity",
+   "seconds": 6.583,
+   "loop": true,
+   "root_motion_m": 0.0,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 0.0
+   }
+  },
+  {
+   "name": "clap",
+   "pack_name": "clap.001",
+   "tag": "social",
+   "seconds": 13.667,
+   "loop": false,
+   "root_motion_m": 0.001,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 20.58
+   }
+  },
+  {
+   "name": "climb",
+   "pack_name": "climb.001",
+   "tag": "locomotion",
+   "seconds": 3.458,
+   "loop": true,
+   "root_motion_m": 3.394,
+   "speed_mps": 0.981,
+   "seam_deg": {
+    "townsfolk_wayfarer": 2.38
+   }
+  },
+  {
+   "name": "crossover_dribble",
+   "pack_name": "crossover_dribble.001",
+   "tag": "activity",
+   "seconds": 9.792,
+   "loop": false,
+   "root_motion_m": 0.306,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 61.76
+   }
+  },
+  {
+   "name": "cry",
+   "pack_name": "cry.001",
+   "tag": "social",
+   "seconds": 7.875,
+   "loop": true,
+   "root_motion_m": 0.0,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 0.0
+   }
+  },
+  {
+   "name": "dance_01",
+   "pack_name": "dance_01.001",
+   "tag": "social",
+   "seconds": 23.167,
+   "loop": false,
+   "root_motion_m": 0.124,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 6.14
+   }
+  },
+  {
+   "name": "dance_02",
+   "pack_name": "dance_02.001",
+   "tag": "social",
+   "seconds": 12.792,
+   "loop": false,
+   "root_motion_m": 0.613,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 11.53
+   }
+  },
+  {
+   "name": "dance_03",
+   "pack_name": "dance_03.001",
+   "tag": "social",
+   "seconds": 12.792,
+   "loop": true,
+   "root_motion_m": 0.086,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 2.66
+   }
+  },
+  {
+   "name": "dance_04",
+   "pack_name": "dance_04.001",
+   "tag": "social",
+   "seconds": 10.792,
+   "loop": true,
+   "root_motion_m": 0.001,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 2.85
+   }
+  },
+  {
+   "name": "dance_05",
+   "pack_name": "dance_05.001",
+   "tag": "social",
+   "seconds": 2.875,
+   "loop": false,
+   "root_motion_m": 0.031,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 21.55
+   }
+  },
+  {
+   "name": "dance_06",
+   "pack_name": "dance_06.001",
+   "tag": "social",
+   "seconds": 10.875,
+   "loop": false,
+   "root_motion_m": 0.018,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 3.15
+   }
+  },
+  {
+   "name": "defeat_02",
+   "pack_name": "defeat_02.001",
+   "tag": "combat",
+   "seconds": 8.458,
+   "loop": true,
+   "root_motion_m": 0.0,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 0.0
+   }
+  },
+  {
+   "name": "defeat_03",
+   "pack_name": "defeat_03.001",
+   "tag": "combat",
+   "seconds": 5.542,
+   "loop": false,
+   "root_motion_m": 0.377,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 122.75
+   }
+  },
+  {
+   "name": "depressed",
+   "pack_name": "depressed.001",
+   "tag": "social",
+   "seconds": 4.583,
+   "loop": false,
+   "root_motion_m": 2.057,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 8.15
+   }
+  },
+  {
+   "name": "dig",
+   "pack_name": "dig.001",
+   "tag": "activity",
+   "seconds": 16.375,
+   "loop": true,
+   "root_motion_m": 0.005,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 2.86
+   }
+  },
+  {
+   "name": "dive",
+   "pack_name": "dive.001",
+   "tag": "combat",
+   "seconds": 2.708,
+   "loop": true,
+   "root_motion_m": 3.489,
+   "speed_mps": 1.288,
+   "seam_deg": {
+    "townsfolk_wayfarer": 1.07
+   }
+  },
+  {
+   "name": "dribble",
+   "pack_name": "dribble.001",
+   "tag": "activity",
+   "seconds": 9.292,
+   "loop": false,
+   "root_motion_m": 1.546,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 79.26
+   }
+  },
+  {
+   "name": "fall",
+   "pack_name": "fall.001",
+   "tag": "combat",
+   "seconds": 3.0,
+   "loop": false,
+   "root_motion_m": 1.558,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 104.97
+   }
+  },
+  {
+   "name": "fire",
+   "pack_name": "fire.001",
+   "tag": "combat",
+   "seconds": 1.5,
+   "loop": true,
+   "root_motion_m": 0.0,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 0.0
+   }
+  },
+  {
+   "name": "flee_01",
+   "pack_name": "flee_01.001",
+   "tag": "locomotion",
+   "seconds": 2.667,
+   "loop": false,
+   "root_motion_m": 7.264,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 12.47
+   }
+  },
+  {
+   "name": "flee_02",
+   "pack_name": "flee_02.001",
+   "tag": "locomotion",
+   "seconds": 3.667,
+   "loop": false,
+   "root_motion_m": 14.922,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 129.23
+   }
+  },
+  {
+   "name": "flip",
+   "pack_name": "flip.001",
+   "tag": "combat",
+   "seconds": 4.458,
+   "loop": true,
+   "root_motion_m": 3.549,
+   "speed_mps": 0.796,
+   "seam_deg": {
+    "townsfolk_wayfarer": 0.0
+   }
+  },
+  {
+   "name": "football_catch",
+   "pack_name": "football_catch.001",
+   "tag": "activity",
+   "seconds": 3.458,
+   "loop": false,
+   "root_motion_m": 0.628,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 36.97
+   }
+  },
+  {
+   "name": "football_pass",
+   "pack_name": "football_pass.001",
+   "tag": "activity",
+   "seconds": 11.0,
+   "loop": false,
+   "root_motion_m": 1.267,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 47.66
+   }
+  },
+  {
+   "name": "football_save",
+   "pack_name": "football_save.001",
+   "tag": "activity",
+   "seconds": 3.292,
+   "loop": false,
+   "root_motion_m": 4.493,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 36.97
+   }
+  },
+  {
+   "name": "freaky",
+   "pack_name": "freaky.001",
+   "tag": "social",
+   "seconds": 0.792,
+   "loop": false,
+   "root_motion_m": 0.021,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 19.77
+   }
+  },
+  {
+   "name": "frightened",
+   "pack_name": "frightened.001",
+   "tag": "social",
+   "seconds": 3.375,
+   "loop": false,
+   "root_motion_m": 0.023,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 6.12
+   }
+  },
+  {
+   "name": "front_kick_01",
+   "pack_name": "front_kick_01.001",
+   "tag": "combat",
+   "seconds": 2.5,
+   "loop": false,
+   "root_motion_m": 0.332,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 3.94
+   }
+  },
+  {
+   "name": "front_kick_02",
+   "pack_name": "front_kick_02.001",
+   "tag": "combat",
+   "seconds": 1.375,
+   "loop": false,
+   "root_motion_m": 0.011,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 16.63
+   }
+  },
+  {
+   "name": "frustrated_02",
+   "pack_name": "frustrated_02.001",
+   "tag": "social",
+   "seconds": 10.792,
+   "loop": true,
+   "root_motion_m": 0.0,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 0.7
+   }
+  },
+  {
+   "name": "greet_02",
+   "pack_name": "greet_02.001",
+   "tag": "social",
+   "seconds": 5.583,
+   "loop": true,
+   "root_motion_m": 0.005,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 1.1
+   }
+  },
+  {
+   "name": "greet_03",
+   "pack_name": "greet_03.001",
+   "tag": "social",
+   "seconds": 9.083,
+   "loop": false,
+   "root_motion_m": 0.023,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 5.54
+   }
+  },
+  {
+   "name": "greet_04",
+   "pack_name": "greet_04.001",
+   "tag": "social",
+   "seconds": 2.792,
+   "loop": true,
+   "root_motion_m": 2.404,
+   "speed_mps": 0.861,
+   "seam_deg": {
+    "townsfolk_wayfarer": 1.04
+   }
+  },
+  {
+   "name": "haggle",
+   "pack_name": "frustrated_01.001",
+   "tag": "social",
+   "seconds": 3.542,
+   "loop": true,
+   "root_motion_m": 0.0,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 0.0
+   }
+  },
+  {
+   "name": "heart_pose",
+   "pack_name": "heart_pose.001",
+   "tag": "social",
+   "seconds": 5.375,
+   "loop": false,
+   "root_motion_m": 0.063,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 12.49
+   }
+  },
+  {
+   "name": "hit_to_body_01",
+   "pack_name": "hit_to_body_01.001",
+   "tag": "combat",
+   "seconds": 1.292,
+   "loop": true,
+   "root_motion_m": 0.0,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 0.0
+   }
+  },
+  {
+   "name": "hit_to_body_02",
+   "pack_name": "hit_to_body_02.001",
+   "tag": "combat",
+   "seconds": 1.708,
+   "loop": true,
+   "root_motion_m": 0.0,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 0.0
+   }
+  },
+  {
+   "name": "hit_to_head",
+   "pack_name": "hit_to_head.001",
+   "tag": "combat",
+   "seconds": 1.833,
+   "loop": true,
+   "root_motion_m": 0.0,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 0.0
+   }
+  },
+  {
+   "name": "hit_to_side",
+   "pack_name": "hit_to_side.001",
+   "tag": "combat",
+   "seconds": 1.25,
+   "loop": true,
+   "root_motion_m": 0.0,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 0.0
+   }
+  },
+  {
+   "name": "hit_to_stomach",
+   "pack_name": "hit_to_stomach.001",
+   "tag": "combat",
+   "seconds": 1.542,
+   "loop": true,
+   "root_motion_m": 0.0,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 0.0
+   }
+  },
+  {
+   "name": "hug",
+   "pack_name": "hug.001",
+   "tag": "social",
+   "seconds": 5.583,
+   "loop": false,
+   "root_motion_m": 0.499,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 76.67
+   }
+  },
+  {
+   "name": "idle",
+   "pack_name": "idle.001",
+   "tag": "idle",
+   "seconds": 15.333,
+   "loop": true,
+   "root_motion_m": 0.0,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 0.1
+   }
+  },
+  {
+   "name": "idle_look",
+   "pack_name": "look_around.001",
+   "tag": "idle",
+   "seconds": 15.583,
+   "loop": false,
+   "root_motion_m": 0.004,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 4.62
+   }
+  },
+  {
+   "name": "idle_shift",
+   "pack_name": "wait.001",
+   "tag": "idle",
+   "seconds": 6.0,
+   "loop": true,
+   "root_motion_m": 0.0,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 0.0
+   }
+  },
+  {
+   "name": "jump",
+   "pack_name": "jump.001",
+   "tag": "locomotion",
+   "seconds": 2.208,
+   "loop": false,
+   "root_motion_m": 0.044,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 11.37
+   }
+  },
+  {
+   "name": "jump_down",
+   "pack_name": "jump_down.001",
+   "tag": "locomotion",
+   "seconds": 3.708,
+   "loop": false,
+   "root_motion_m": 2.295,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 63.57
+   }
+  },
+  {
+   "name": "jump_rope_01",
+   "pack_name": "jump_rope_01.001",
+   "tag": "locomotion",
+   "seconds": 9.667,
+   "loop": false,
+   "root_motion_m": 0.327,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 32.7
+   }
+  },
+  {
+   "name": "jump_rope_02",
+   "pack_name": "jump_rope_02.001",
+   "tag": "locomotion",
+   "seconds": 9.667,
+   "loop": false,
+   "root_motion_m": 0.047,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 35.43
+   }
+  },
+  {
+   "name": "laugh_01",
+   "pack_name": "laugh_01.001",
+   "tag": "social",
+   "seconds": 5.583,
+   "loop": true,
+   "root_motion_m": 0.001,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 0.83
+   }
+  },
+  {
+   "name": "laugh_02",
+   "pack_name": "laugh_02.001",
+   "tag": "social",
+   "seconds": 5.583,
+   "loop": true,
+   "root_motion_m": 0.001,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 0.27
+   }
+  },
+  {
+   "name": "lift_heavy",
+   "pack_name": "lift_heavy.001",
+   "tag": "activity",
+   "seconds": 19.5,
+   "loop": false,
+   "root_motion_m": 4.301,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 132.56
+   }
+  },
+  {
+   "name": "make_a_call_01",
+   "pack_name": "make_a_call_01.001",
+   "tag": "social",
+   "seconds": 17.583,
+   "loop": true,
+   "root_motion_m": 0.0,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 0.48
+   }
+  },
+  {
+   "name": "make_a_call_02",
+   "pack_name": "make_a_call_02.001",
+   "tag": "social",
+   "seconds": 17.292,
+   "loop": true,
+   "root_motion_m": 0.0,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 0.22
+   }
+  },
+  {
+   "name": "nod",
+   "pack_name": "agree.001",
+   "tag": "social",
+   "seconds": 4.0,
+   "loop": true,
+   "root_motion_m": 0.002,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 0.0
+   }
+  },
+  {
+   "name": "pitch_baseball",
+   "pack_name": "pitch_baseball.001",
+   "tag": "activity",
+   "seconds": 3.792,
+   "loop": false,
+   "root_motion_m": 0.472,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 115.58
+   }
+  },
+  {
+   "name": "play_video_game",
+   "pack_name": "play_video_game.001",
+   "tag": "activity",
+   "seconds": 15.792,
+   "loop": false,
+   "root_motion_m": 0.016,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 62.98
+   }
+  },
+  {
+   "name": "press_up",
+   "pack_name": "press-up.001",
+   "tag": "activity",
+   "seconds": 1.958,
+   "loop": true,
+   "root_motion_m": 0.0,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 0.0
+   }
+  },
+  {
+   "name": "run",
+   "pack_name": "run.001",
+   "tag": "locomotion",
+   "seconds": 1.25,
+   "loop": false,
+   "root_motion_m": 6.066,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 19.5
+   }
+  },
+  {
+   "name": "run_upstairs",
+   "pack_name": "run_upstairs.001",
+   "tag": "locomotion",
+   "seconds": 0.792,
+   "loop": true,
+   "root_motion_m": 0.577,
+   "speed_mps": 0.729,
+   "seam_deg": {
+    "townsfolk_wayfarer": 1.32
+   }
+  },
+  {
+   "name": "salute",
+   "pack_name": "bow.001",
+   "tag": "social",
+   "seconds": 6.0,
+   "loop": true,
+   "root_motion_m": 0.002,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 0.41
+   }
+  },
+  {
+   "name": "scared_01",
+   "pack_name": "scared_01.001",
+   "tag": "social",
+   "seconds": 3.292,
+   "loop": false,
+   "root_motion_m": 0.004,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 5.51
+   }
+  },
+  {
+   "name": "scared_02",
+   "pack_name": "scared_02.001",
+   "tag": "social",
+   "seconds": 3.292,
+   "loop": true,
+   "root_motion_m": 0.008,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 2.79
+   }
+  },
+  {
+   "name": "scratch",
+   "pack_name": "scratch.001",
+   "tag": "social",
+   "seconds": 13.792,
+   "loop": true,
+   "root_motion_m": 0.0,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 0.04
+   }
+  },
+  {
+   "name": "shoot",
+   "pack_name": "shoot.001",
+   "tag": "combat",
+   "seconds": 9.042,
+   "loop": false,
+   "root_motion_m": 5.354,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 126.65
+   }
+  },
+  {
+   "name": "shovel",
+   "pack_name": "shovel.001",
+   "tag": "activity",
+   "seconds": 15.5,
+   "loop": false,
+   "root_motion_m": 0.176,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 44.67
+   }
+  },
+  {
+   "name": "sing_01",
+   "pack_name": "sing_01.001",
+   "tag": "social",
+   "seconds": 15.5,
+   "loop": true,
+   "root_motion_m": 0.099,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 0.07
+   }
+  },
+  {
+   "name": "sing_02",
+   "pack_name": "sing_02.001",
+   "tag": "social",
+   "seconds": 15.083,
+   "loop": true,
+   "root_motion_m": 0.445,
+   "speed_mps": 0.03,
+   "seam_deg": {
+    "townsfolk_wayfarer": 0.84
+   }
+  },
+  {
+   "name": "sing_03",
+   "pack_name": "sing_03.001",
+   "tag": "social",
+   "seconds": 13.5,
+   "loop": true,
+   "root_motion_m": 0.319,
+   "speed_mps": 0.024,
+   "seam_deg": {
+    "townsfolk_wayfarer": 1.83
+   }
+  },
+  {
+   "name": "sing_04",
+   "pack_name": "sing_04.001",
+   "tag": "social",
+   "seconds": 17.5,
+   "loop": true,
+   "root_motion_m": 0.116,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 0.74
+   }
+  },
+  {
+   "name": "sit",
+   "pack_name": "sit.001",
+   "tag": "idle",
+   "seconds": 7.167,
+   "loop": true,
+   "root_motion_m": 0.0,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 2.69
+   }
+  },
+  {
+   "name": "slash",
+   "pack_name": "slash.001",
+   "tag": "combat",
+   "seconds": 6.583,
+   "loop": true,
+   "root_motion_m": 0.0,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 0.0
+   }
+  },
+  {
+   "name": "sob",
+   "pack_name": "sob.001",
+   "tag": "social",
+   "seconds": 5.583,
+   "loop": false,
+   "root_motion_m": 0.002,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 4.63
+   }
+  },
+  {
+   "name": "standing_relax",
+   "pack_name": "standing_relax.001",
+   "tag": "idle",
+   "seconds": 17.583,
+   "loop": true,
+   "root_motion_m": 0.002,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 1.54
+   }
+  },
+  {
+   "name": "surf",
+   "pack_name": "surf.001",
+   "tag": "activity",
+   "seconds": 3.667,
+   "loop": false,
+   "root_motion_m": 0.055,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 60.73
+   }
+  },
+  {
+   "name": "swagger",
+   "pack_name": "swagger.001",
+   "tag": "locomotion",
+   "seconds": 3.667,
+   "loop": false,
+   "root_motion_m": 4.848,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 6.59
+   }
+  },
+  {
+   "name": "swim",
+   "pack_name": "swim.001",
+   "tag": "locomotion",
+   "seconds": 5.708,
+   "loop": true,
+   "root_motion_m": 2.399,
+   "speed_mps": 0.42,
+   "seam_deg": {
+    "townsfolk_wayfarer": 0.0
+   }
+  },
+  {
+   "name": "take_photo",
+   "pack_name": "play_mobile_game.001",
+   "tag": "social",
+   "seconds": 17.792,
+   "loop": false,
+   "root_motion_m": 0.0,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 4.81
+   }
+  },
+  {
+   "name": "talk",
+   "pack_name": "complain_01.001",
+   "tag": "social",
+   "seconds": 6.292,
+   "loop": false,
+   "root_motion_m": 0.091,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 12.66
+   }
+  },
+  {
+   "name": "talk_b",
+   "pack_name": "complain_02.001",
+   "tag": "social",
+   "seconds": 8.375,
+   "loop": false,
+   "root_motion_m": 0.035,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 53.8
+   }
+  },
+  {
+   "name": "think",
+   "pack_name": "fold_arms.001",
+   "tag": "idle",
+   "seconds": 17.083,
+   "loop": true,
+   "root_motion_m": 0.001,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 0.62
+   }
+  },
+  {
+   "name": "turn",
+   "pack_name": "turn.001",
+   "tag": "locomotion",
+   "seconds": 3.833,
+   "loop": false,
+   "root_motion_m": 0.625,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 176.69
+   }
+  },
+  {
+   "name": "volleyball",
+   "pack_name": "volleyball.001",
+   "tag": "activity",
+   "seconds": 8.583,
+   "loop": false,
+   "root_motion_m": 1.174,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 76.66
+   }
+  },
+  {
+   "name": "walk",
+   "pack_name": "walk.001",
+   "tag": "locomotion",
+   "seconds": 2.333,
+   "loop": true,
+   "root_motion_m": 3.107,
+   "speed_mps": 1.332,
+   "seam_deg": {
+    "townsfolk_wayfarer": 0.06
+   }
+  },
+  {
+   "name": "warm_up",
+   "pack_name": "warm_up.001",
+   "tag": "activity",
+   "seconds": 18.292,
+   "loop": false,
+   "root_motion_m": 0.119,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 7.32
+   }
+  },
+  {
+   "name": "wave",
+   "pack_name": "greet_01.001",
+   "tag": "social",
+   "seconds": 3.5,
+   "loop": false,
+   "root_motion_m": 4.58,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 18.66
+   }
+  },
+  {
+   "name": "wave_goodbye_01",
+   "pack_name": "wave_goodbye_01.001",
+   "tag": "social",
+   "seconds": 6.583,
+   "loop": true,
+   "root_motion_m": 0.02,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 0.77
+   }
+  },
+  {
+   "name": "wave_goodbye_02",
+   "pack_name": "wave_goodbye_02.001",
+   "tag": "social",
+   "seconds": 5.875,
+   "loop": false,
+   "root_motion_m": 2.445,
+   "speed_mps": 0.0,
+   "seam_deg": {
+    "townsfolk_wayfarer": 60.79
+   }
+  }
+ ]
+}

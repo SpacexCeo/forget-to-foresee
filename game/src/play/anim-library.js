@@ -95,7 +95,8 @@ export const BODY_STYLE = Object.freeze({
  * solved on that very body, its own walking speed in `userData.speed`): assets/anim/<name>.glb. The phone model
  * (`<name>_m`) has the same skeleton and plays the same file.
  */
-export const BAKED_CLIPS = Object.freeze(['npc_guard', 'npc_innkeeper', 'npc_elder', 'npc_lamplighter', 'npc_shardkeeper']);
+export const BAKED_CLIPS = Object.freeze(['npc_guard', 'npc_innkeeper', 'npc_elder', 'npc_lamplighter', 'npc_shardkeeper',
+  'townsfolk_wayfarer']); // the Wayfarer: the owner's Tripo model with the Tripo animation pack (art/townsfolk/pack_clips.json)
 
 /** The baked clip file of a cache key ('npc_guard', 'npc_guard_m', 'npc_guard:check' → 'npc_guard'), or null. */
 export function bakedClipFile(key) {
