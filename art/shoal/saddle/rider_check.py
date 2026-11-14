@@ -10,6 +10,7 @@ from lib import *
 from animkit import q
 from mathutils import Matrix, Vector, Quaternion
 from mathutils.kdtree import KDTree
+from mathutils.bvhtree import BVHTree
 
 A = args(); ROOT = A['root']; DR = A['dragon']
 CFG = json.load(open(os.path.join(os.path.dirname(HERE), 'dragon', 'dragon.json'))); SOCKET = Vector(CFG['saddle']['pos'])
@@ -38,14 +39,35 @@ def at(clip, frame):
     return co
 
 
+def outside(co):
+    """The wing vertices that are outside the body (the membrane's root runs along and into the flank by design: what
+    is inside the body cannot touch the saddle you see). Inside = an odd number of body crossings straight up."""
+    body_set = set(body_v); polys = [list(p.vertices) for p in dragon.data.polygons if p.material_index != wing_slot]
+    bvh = BVHTree.FromPolygons([tuple(c) for c in co], polys)
+    out = []
+    def odd(o, d):
+        n = 0
+        for _ in range(12):
+            hit = bvh.ray_cast(o, d)
+            if hit[0] is None: break
+            n += 1; o = hit[0] + d * 1e-4
+        return n % 2 == 1
+    for i in wing_v:      # inside when most of three rays (up, left, right) cross the body an odd number of times (single-sided crest
+        o = Vector(co[i])  # petals and open plate shells can flip one ray, not three)
+        if sum(odd(o, Vector(d)) for d in ((0, 0, 1), (1, 0, 0), (-1, 0, 0))) < 2: out.append(i)
+    return out
+
+
 def clearance(co):
     kd = KDTree(len(sad_rest)); M = sad.matrix_world
     for i, v in enumerate(sad_rest): kd.insert(M @ v, i)
     kd.balance()
-    wing = min(kd.find(co[i])[2] for i in wing_v)
+    vis = outside(co)
+    wing = min(kd.find(co[i])[2] for i in vis)
     kd2 = KDTree(len(UPPER))                                  # the seat, blanket and flaps: what sits on the back
     for j, i in enumerate(UPPER): kd2.insert(M @ sad_rest[i], j)
-    kd2.balance(); upper = min(kd2.find(co[i])[2] for i in wing_v)
+    kd2.balance(); hits = [(kd2.find(co[i])[2], i, kd2.find(co[i])[1]) for i in vis]; upper, wi, sj = min(hits)
+    print('CLOSEST', round(upper, 3), 'wing vertex', [round(x, 2) for x in co[wi]], 'saddle rest', [round(x, 2) for x in sad_rest[UPPER[sj]]])
     return round(wing, 3), round(upper, 3)
 
 
