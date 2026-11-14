@@ -5,7 +5,7 @@ export const SETTINGS_DEFAULTS = Object.freeze({
   resScale: 1, shadows: true, bloom: true, weather: true, fpsCap: 0, // fpsCap 0 = the display's rate
   sensitivity: 1, invertY: false,
   quickCast: true, // desktop: Q / V cast at once toward the cursor (scenes/town-casting.js quickCastPoint)
-  mouseMode: 'aim', // desktop: 'aim' = the mouse turns the camera with no button held (ui/mouse-aim.js); 'classic' = hold the right button
+  mouseMode: 'classic', // default classic since 15.11 (owner: the system cursor always works); desktop: 'aim' = the mouse turns the camera with no button held (ui/mouse-aim.js); 'classic' = hold the right button
 });
 export const SETTINGS_OPTIONS = Object.freeze({
   resScale: [0.5, 0.6, 0.75, 0.85, 1], fpsCap: [0, 30, 60], sensitivity: [0.4, 0.6, 0.8, 1, 1.25, 1.5, 2], mouseMode: ['aim', 'classic'],

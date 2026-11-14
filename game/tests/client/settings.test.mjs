@@ -77,10 +77,10 @@ test('Tournament warning: skipped after "don\'t show again"; strings in five loc
 });
 
 test('mouse mode: aim is the default, Classic mouse is the fallback, in all five locales', async () => {
-  assert.equal(SETTINGS_DEFAULTS.mouseMode, 'aim');
+  assert.equal(SETTINGS_DEFAULTS.mouseMode, 'classic');
   assert.equal(cleanSettings({ mouseMode: 'classic' }).mouseMode, 'classic');
-  assert.equal(cleanSettings({ mouseMode: 'orbit' }).mouseMode, 'aim');
-  assert.equal(cleanSettings({}).mouseMode, 'aim');
+  assert.equal(cleanSettings({ mouseMode: 'orbit' }).mouseMode, 'classic');
+  assert.equal(cleanSettings({}).mouseMode, 'classic');
   for (const l of ['en', 'ru', 'uk', 'it', 'zh']) {
     const m = await import(`../../src/play/locales/${l}.js`), dict = m.default || Object.values(m)[0];
     for (const k of ['set.ctl.mouse', 'set.ctl.mouse.aim', 'set.ctl.mouse.classic', 'set.ctl.mouseNote']) assert.ok(typeof dict[k] === 'string' && dict[k], `${l}: ${k}`);
