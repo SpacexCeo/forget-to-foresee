@@ -80,6 +80,8 @@ export function createMarketTicker({ doc = globalThis.document, t, line, poll, o
       if (data && data.today != null) root.hidden = !shown;
     },
     destroy() { if (timer) timers.clearTimeout(timer); root.remove(); },
+    /** The locale changed: redraw every label now (the poll would only catch up on its next tick). */
+    relabel() { lbl.textContent = t('mk.label'); if (more) more.textContent = t('led.open') + ' →'; render(new Set()); },
     state: () => ({ shown, data }),
   };
 }
