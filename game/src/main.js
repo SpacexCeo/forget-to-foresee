@@ -139,6 +139,14 @@ async function entryGate(ctx, w) {
   } catch (e) { console.warn('[entry]', e); }
 }
 
+/** "Press F11 for fullscreen" (ui/fullscreen-hint.js; owner 14.11): desktop only, quiet while a first-time film or card runs. */
+function fullscreenHint(ctx) {
+  Promise.all([import('./ui/fullscreen-hint.js'), import('./ui/onboarding-queue.js')]).then(([m, q]) => m.mountFullscreenHint({
+    t: (k) => ctx.i18n.t(k), params,
+    busy: () => { const a = q.onboardingActive(); return a === 'name' || a === 'intro' || !!document.querySelector('.npe-gl-wrap, .npe-dim, .ftf-replay'); },
+  })).catch((e) => console.warn('[fs-hint]', e));
+}
+
 ctxP.then(async (ctx) => {
   loading.setTranslator((k) => ctx.i18n.t(k));
   // ?replay=r1.…: replay a linked season and show its NEAR root check over whatever loads beneath (net/replay.js)
@@ -180,7 +188,7 @@ ctxP.then(async (ctx) => {
     marks.gate = Math.round(performance.now() - t0);
     if (town) await entryGate(ctx, w);
     await loading.finish();
-    if (town) premise(ctx);
+    if (town) { premise(ctx); fullscreenHint(ctx); }
   }
   clearInterval(slowTimer);
   marks.done = Math.round(performance.now() - t0);

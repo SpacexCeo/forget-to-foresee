@@ -642,6 +642,10 @@ export default {
   'entry.enter': "进入世界",
   'entry.lang': "选择语言",
   'entry.ready': "小镇已就绪",
+  // ---- "Press F11 for fullscreen" (ui/fullscreen-hint.js) ----
+  'fs.hint': "按 F11 进入全屏",
+  'fs.hint.click': "点击进入全屏",
+  'fs.hint.close': "隐藏，直到下次访问",
   'intro.skip': "跳过",
   'spot.wheel': "转动转盘",
   'item.prop_wheel_of_fortune': "幸运转盘",

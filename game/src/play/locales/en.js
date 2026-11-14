@@ -647,6 +647,10 @@ const EN = {
   'entry.enter': "Enter the world",
   'entry.lang': "Choose your language",
   'entry.ready': "The town is ready",
+  // ---- "Press F11 for fullscreen" (ui/fullscreen-hint.js) ----
+  'fs.hint': "Press F11 for fullscreen",
+  'fs.hint.click': "Click to go fullscreen",
+  'fs.hint.close': "Hide until the next visit",
   'intro.skip': "Skip",
   'spot.wheel': "Spin the wheel",
   'item.prop_wheel_of_fortune': "Wheel of fortune",
