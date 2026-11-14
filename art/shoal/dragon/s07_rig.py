@@ -128,6 +128,14 @@ for r_ in np.unique(roots):
     elif len(idx) < 0.4 * len(P) and ext < 2.0 and not soles[idx].any():          # larger shells (throat and chest plates, the frill): stiffened, not rigid
         k_ = float(A.get('stiff', 0.6)); bw[idx] = (1 - k_) * bw[idx] + k_ * bw[idx].mean(0); islands.append((len(idx), round(ext, 2)))
 print('ISLANDS', len(np.unique(roots)), 'rigid', len(islands), sorted(islands)[-12:])
+# a very short edge must not span two different blends: its ends take their mean (review A.48: the few 9-11x edges
+# were 1-3 cm long); the rigid skull and paws keep their bone
+elen = np.linalg.norm(P[e[:, 0]] - P[e[:, 1]], axis=1); short = e[elen < float(A.get('short', 0.035))]
+keep_rigid = core | soles
+for _ in range(3):
+    m = (bw[short[:, 0]] + bw[short[:, 1]]) / 2
+    for k_ in (0, 1):
+        ok = ~keep_rigid[short[:, k_]]; bw[short[ok, k_]] = m[ok]
 # at most 4 bones, normalised
 order = np.argsort(-bw, axis=1); keep = np.zeros_like(bw, bool); np.put_along_axis(keep, order[:, :4], True, axis=1); bw[~keep] = 0
 bw[bw < 0.01] = 0; ssum = bw.sum(1, keepdims=True); zero = int((ssum[:, 0] < 1e-6).sum()); bw /= np.maximum(ssum, 1e-9)

@@ -9,7 +9,7 @@ export const BOSS_CLIPS = Object.freeze(['idle', 'rise', 'slam', 'lunge', 'sweep
 /** Clip lengths in seconds (report/b02.json of the art pipeline; tests read them from the file too). */
 export const BOSS_ANIM = Object.freeze({
   wind: 1.0, fade: 0.2,
-  len: Object.freeze({ idle: 4.0, rise: 2.4, slam: 2.55, lunge: 2.4, sweep: 2.55, hit: 0.7, roar: 2.2, death: 3.4 }),
+  len: Object.freeze({ idle: 4.0, rise: 2.4, slam: 2.55, lunge: 2.4, sweep: 2.55, hit: 1.0, roar: 2.2, death: 3.4 }),
 });
 const ATTACKS = new Set(['slam', 'lunge', 'sweep']);
 const clamp01 = (x) => Math.max(0, Math.min(1, x));
