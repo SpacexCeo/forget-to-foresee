@@ -17,6 +17,7 @@ test('sample: interpolates between snapshots, extrapolates a little past the new
   assert.deepEqual(sample(buf, 50).p, [0.5, 0, 0]); assert.ok(Math.abs(sample(buf, 50).speed - 10) < 1e-9);
   assert.deepEqual(sample(buf, 200).p, [2, 0, 0]);
   assert.deepEqual(sample(buf, 10_000).p, [3.5, 0, 0], 'extrapolation stops after 250 ms');
+  assert.deepEqual(sample([buf[0], { ...buf[1], a: 'idle' }], 300).p, [1, 0, 0], 'a stop is never extrapolated past');
   assert.ok(Math.abs(lerpAngle(3, -3, 0.5) - Math.PI) < 0.01, 'angles blend the short way');
   assert.equal(changed({ p: [0, 0, 0], h: 0, a: 'idle' }, { p: [0.01, 0, 0], h: 0, a: 'idle' }), false);
   assert.equal(changed({ p: [0, 0, 0], h: 0, a: 'idle' }, { p: [0, 0, 0], h: 0, a: 'walk' }), true);

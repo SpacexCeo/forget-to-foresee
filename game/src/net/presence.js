@@ -84,6 +84,9 @@ export function sample(buf, t) {
     }
   }
   const a = buf[buf.length - 2], b = buf[buf.length - 1];
+  // she stopped: the last snapshot is where she stands (extrapolating the step before it overshot by up to a metre,
+  // then snapped back on the next keep-alive)
+  if (b.a === 'idle') return { p: b.p.slice(), h: b.h, a: b.a, speed: 0 };
   const dt = Math.max(1, b.at - a.at), over = Math.min(EXTRAPOLATE_MS, t - b.at) / dt;
   const speed = Math.hypot(b.p[0] - a.p[0], b.p[2] - a.p[2]) / (dt / 1000);
   return { p: b.p.map((v, j) => v + (v - a.p[j]) * over), h: b.h, a: b.a, speed };
@@ -162,7 +165,10 @@ export function createPresence({ url = presenceUrl(), name = '', skin = 'iris', 
       for (const [pid, x, y, z, h, a] of m.s) {
         if (pid === id) continue;
         const pl = players.get(pid); if (!pl) continue;
-        pl.buf.push({ at: t, p: [x, y, z], h, a });
+        // two snapshots that arrive in one burst (network jitter) are spread half a send apart, never past the render delay,
+        // so the interpolation glides instead of jumping
+        const prev = pl.buf[pl.buf.length - 1], at = prev ? Math.min(t + DELAY_MS / 2, Math.max(t, prev.at + 500 / SEND_HZ)) : t;
+        pl.buf.push({ at, p: [x, y, z], h, a });
         while (pl.buf.length > 2 && pl.buf[1].at < t - 1000) pl.buf.shift();
         if (pl.buf.length > 20) pl.buf.shift();
       }
