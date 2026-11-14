@@ -6,9 +6,10 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { CLIP_TIME_SCALE, timeScaleFor, speedUpClips } from '../../src/play/anim-library.js';
 
-test('anim speed: the new pack files play 1.3x, the old ones as they were, ?animspeed overrides for QA', () => {
-  for (const n of ['iris', 'elise', 'townsfolk_pack', 'townsfolk_wayfarer']) assert.equal(timeScaleFor(n, ''), 1.3, n);
-  for (const n of ['iris_agent', 'townsfolk', 'npc_guard', 'iris_v1']) assert.equal(timeScaleFor(n, ''), 1, n);
+test('anim speed: the heroines play 2x, the town pack 1.3x, the old ones as they were, ?animspeed overrides for QA', () => {
+  for (const n of ['iris', 'elise', 'iris_agent']) assert.equal(timeScaleFor(n, ''), 2, n);
+  for (const n of ['townsfolk_pack', 'townsfolk_wayfarer']) assert.equal(timeScaleFor(n, ''), 1.3, n);
+  for (const n of ['townsfolk', 'npc_guard', 'iris_v1']) assert.equal(timeScaleFor(n, ''), 1, n);
   assert.equal(timeScaleFor('iris', '?animspeed=1'), 1); assert.equal(timeScaleFor('townsfolk', '?animspeed=2'), 1, 'an old file never changes');
   assert.ok(Object.isFrozen(CLIP_TIME_SCALE));
 });

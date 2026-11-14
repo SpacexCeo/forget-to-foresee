@@ -33,7 +33,7 @@ const baseUrl = () => (import.meta.env && import.meta.env.BASE_URL) || '/';
  * faster only while the body moves faster (no sliding feet). The old hand-keyed and motion-capture files are left as
  * they are (iris_agent: Sheriffchenko, townsfolk: the shared town walk). `?animspeed=1` turns it off (QA, before/after).
  */
-export const CLIP_TIME_SCALE = Object.freeze({ iris: 1.3, elise: 1.3, townsfolk_pack: 1.3, townsfolk_wayfarer: 1.3 });
+export const CLIP_TIME_SCALE = Object.freeze({ iris: 2, elise: 2, iris_agent: 2, townsfolk_pack: 1.3, townsfolk_wayfarer: 1.3 }); // heroines 2x (owner 14.11: "animation twice as fast, physics as is")
 const TIMING = ['impact_s', 'release_s', 'step_s', 'full_s'];
 export function timeScaleFor(name, search = typeof location !== 'undefined' ? location.search : '') {
   const o = Number(new URLSearchParams(search).get('animspeed'));
