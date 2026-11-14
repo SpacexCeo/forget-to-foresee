@@ -19,7 +19,17 @@ function nameplate(text) {
   const c = doc.createElement('canvas'); c.width = 512; c.height = 96; const g = c.getContext && c.getContext('2d'); if (!g) return null;
   g.fillStyle = 'rgba(14,16,24,0.78)'; g.strokeStyle = 'rgba(246,200,96,0.9)'; g.lineWidth = 4;
   if (g.roundRect) { g.beginPath(); g.roundRect(4, 4, 504, 88, 20); g.fill(); g.stroke(); } else { g.fillRect(4, 4, 504, 88); g.strokeRect(4, 4, 504, 88); }
-  g.fillStyle = '#f6c860'; g.font = '600 34px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, 256, 50);
+  g.fillStyle = '#f6c860'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  // fit inside the frame (owner, 14.11: "Hatchkeeper · Companions" ran past it): shrink, then wrap to two lines
+  const MAX = 460, fit = (lines, size, min) => { for (;; size -= 2) { g.font = `600 ${size}px system-ui, sans-serif`; if (size <= min || lines.every((l) => g.measureText(l).width <= MAX)) return size; } };
+  let lines = [text], size = fit(lines, 34, 26);
+  if (g.measureText(text).width > MAX) {
+    const cut = text.includes(' · ') ? text.indexOf(' · ') : text.lastIndexOf(' ', text.length / 2);
+    if (cut > 0) lines = [text.slice(0, cut).trim(), text.slice(cut).replace(/^\s*·?\s*/, '')];
+    size = fit(lines, lines.length > 1 ? 32 : 26, 12);
+  }
+  const step = size * 1.1, y0 = 50 - (step * (lines.length - 1)) / 2;
+  lines.forEach((l, i) => g.fillText(l, 256, y0 + i * step, MAX));
   const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false })); s.scale.set(2.2, 0.41, 1); s.name = 'hatchkeeper_sign';
   return s;

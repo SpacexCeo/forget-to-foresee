@@ -74,25 +74,60 @@ function done(markSeen) {
   const next = queue.shift(); if (next) showTip(next);
 }
 
+/** A visible element's box, or null (missing, hidden or zero-size anchors fall back to the default spot). */
+function rectOf(e) {
+  if (!e || !e.getBoundingClientRect) return null;
+  const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 ? r : null;
+}
+/** Boxes of the visible buttons on screen (the tip itself excluded): the tip must not cover any of them. */
+function buttonRects(doc, self) {
+  if (!doc.querySelectorAll) return [];
+  const out = [];
+  for (const e of doc.querySelectorAll('button, a[href], input, select, textarea, [role="button"], [role="tab"]')) {
+    if (self.contains(e)) continue;
+    const r = rectOf(e); if (!r) continue;
+    try { const s = (doc.defaultView || globalThis).getComputedStyle(e); if (s.visibility === 'hidden' || +s.opacity === 0 || s.pointerEvents === 'none') continue; } catch { /* keep it */ }
+    out.push(r);
+  }
+  return out;
+}
+/**
+ * Where a w x h tip goes in a W x H screen: next to the anchor (below, above, right, left), else upper centre; the
+ * first spot that covers no button wins, else the nearest free spot on a 24 px grid, else the least covering one.
+ */
+export function placeTip({ W, H, w, h, anchor = null, avoid = [] }) {
+  const clamp = (l, t) => ({ left: Math.max(8, Math.min(l, W - w - 8)), top: Math.max(8, Math.min(t, H - h - 8)) });
+  const cover = (p) => { let s = 0; for (const r of avoid) { const x = Math.min(p.left + w, r.right) - Math.max(p.left, r.left), y = Math.min(p.top + h, r.bottom) - Math.max(p.top, r.top); if (x > 0 && y > 0) s += x * y; } return s; };
+  const prefer = [];
+  if (anchor) prefer.push(clamp(anchor.left, anchor.bottom + 10), clamp(anchor.left, anchor.top - h - 10), clamp(anchor.right + 10, anchor.top), clamp(anchor.left - w - 10, anchor.top));
+  prefer.push(clamp((W - w) / 2, H * 0.18));
+  for (const p of prefer) if (!cover(p)) return p;
+  const home = prefer[0]; const grid = [];
+  for (let t = 8; t <= H - h - 8; t += 24) for (let l = 8; l <= W - w - 8; l += 24) grid.push({ left: l, top: t });
+  grid.sort((p, q) => Math.hypot(p.left - home.left, p.top - home.top) - Math.hypot(q.left - home.left, q.top - home.top));
+  let best = home, bestCover = cover(home);
+  for (const p of grid) { const c = cover(p); if (c < bestCover) { best = p; bestCover = c; if (!c) break; } }
+  return best;
+}
+
 function render(doc, tip) {
   const el = doc.createElement('div'); el.className = 'ftf-tip'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', tip.title || 'Tip');
-  el.style.cssText = 'position:fixed;z-index:var(--z-coach,35);max-width:min(calc(320 * var(--u, 1px) + 40px), calc(100vw - 32px));box-sizing:border-box;padding:12px 14px;'
-    + 'background:var(--ftf-panel-solid,#0e1018);border:1px solid var(--ftf-gold,#f6c860);border-radius:var(--radius,10px);color:var(--ftf-text,#eef0f6);'
-    + 'font:var(--fs-sm,14px)/1.4 var(--font-ui,system-ui,sans-serif);box-shadow:var(--shadow,0 8px 32px rgba(0,0,0,.55));overflow-wrap:anywhere';
-  const h = doc.createElement('div'); h.style.cssText = 'font-weight:700;color:var(--ftf-gold,#f6c860);margin-bottom:4px'; h.textContent = tip.title || '';
+  el.style.cssText = 'position:fixed;left:0;top:0;z-index:var(--z-coach,35);width:max-content;max-width:min(340px, calc(100vw - 32px));box-sizing:border-box;padding:12px 14px;'
+    // the in-game HUD's panel look (cast bar, profile pill): dark green glass, a thin gold hairline, warm text
+    + 'background:rgba(12,20,17,.9);border:1px solid rgba(201,163,90,.6);border-radius:14px;color:#f1ead8;'
+    + 'font:14px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;box-shadow:0 8px 22px rgba(0,0,0,.35);backdrop-filter:blur(8px);overflow-wrap:anywhere';
+  const h = doc.createElement('div'); h.style.cssText = 'font-weight:700;color:#e9b44c;margin-bottom:4px'; h.textContent = tip.title || '';
   const p = doc.createElement('div'); p.textContent = tip.body || '';
   const row = doc.createElement('div'); row.style.cssText = 'display:flex;gap:8px;margin-top:10px;justify-content:flex-end';
-  const mk = (text, fn, primary) => { const b = doc.createElement('button'); b.type = 'button'; b.textContent = text; b.style.cssText = `min-height:40px;padding:0 14px;border-radius:8px;cursor:pointer;font-weight:700;${primary ? 'background:var(--ftf-gold,#f6c860);color:#1b1608;border:0' : 'background:transparent;color:var(--ftf-muted,#aab1c5);border:1px solid var(--ftf-border,#3a3f55)'}`; b.addEventListener('click', fn); return b; };
+  const mk = (text, fn, primary) => { const b = doc.createElement('button'); b.type = 'button'; b.textContent = text; b.style.cssText = `min-height:36px;padding:0 14px;border-radius:999px;cursor:pointer;font:600 13px system-ui,sans-serif;${primary ? 'background:rgba(201,163,90,.22);color:#f6df9b;border:1px solid rgba(201,163,90,.75)' : 'background:transparent;color:#a9b3a8;border:1px solid rgba(255,255,255,.18)'}`; b.addEventListener('click', fn); return b; };
   row.append(mk('Skip tips', () => { skipTips(); emit('tip.dismissed', { id: tip.id, skipped: true }); }, false), mk('Got it', () => done(true), true));
   el.append(h, p, row);
   doc.body.append(el);
-  // place next to the anchor (selector or element), else bottom centre
+  // place next to the anchor (selector or element), else upper centre; never over a visible button (owner, 14.11)
   const a = typeof tip.anchor === 'string' ? doc.querySelector(tip.anchor) : tip.anchor;
   const win = doc.defaultView || globalThis, W = win.innerWidth || 1280, H = win.innerHeight || 720;
   const b = el.getBoundingClientRect ? el.getBoundingClientRect() : { width: 300, height: 120 };
-  let left = (W - b.width) / 2, top = H - b.height - 120;
-  if (a && a.getBoundingClientRect) { const r = a.getBoundingClientRect(); left = Math.max(16, Math.min(r.left, W - b.width - 16)); top = r.bottom + 10 + b.height > H - 16 ? Math.max(16, r.top - b.height - 10) : r.bottom + 10; }
-  left = Math.max(8, Math.min(left, W - b.width - 8)); top = Math.max(8, Math.min(top, H - b.height - 8));
+  const { left, top } = placeTip({ W, H, w: b.width, h: b.height, anchor: rectOf(a), avoid: buttonRects(doc, el) });
   el.style.left = Math.round(left) + 'px'; el.style.top = Math.round(top) + 'px';
   // closes on a tap anywhere outside it, or on Esc
   const outside = (e) => { if (!el.contains(e.target)) done(true); };
