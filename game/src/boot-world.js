@@ -889,6 +889,9 @@ const openAccount = (nickname = null) => import('./play/account-panel.js').then(
   t: (k, a) => ctx.i18n.t(k, a), nickname,
   makeLogin: () => Promise.all([import('./net/account-login.js'), import('./net/near-tx.js'), import('./net/day1-deployment.js'), import('./net/near-deployment.js')])
     .then(([a, n, d, nd]) => a.createAccountLogin({ relayer: d.DAY1_DEPLOYMENT.relayer, guests: d.DAY1_DEPLOYMENT.guests, mint: day1Mint, client: n.createTxClient({ rpcUrls: nd.NEAR_DEPLOYMENT.rpcUrls }), storage: ctx.storage })),
+  // email sign-in and the linked methods (net/account-email.js; owner 14.11 "link an email, sign in by email on the phone")
+  makeEmail: () => Promise.all([import('./net/account-email.js'), import('./net/account-login.js'), import('./net/near-tx.js'), import('./net/day1-deployment.js'), import('./net/near-deployment.js')])
+    .then(([e, a, n, d, nd]) => e.createAccountEmail({ relayer: d.DAY1_DEPLOYMENT.relayer, guests: d.DAY1_DEPLOYMENT.guests, mint: day1Mint, client: n.createTxClient({ rpcUrls: nd.NEAR_DEPLOYMENT.rpcUrls }), signerFor: a.edSigner, newKey: n.generateKeyPair })),
 }).done).catch((e) => { console.warn('[account]', e); return { status: 'guest' }; });
 const day1On = () => {
   const q = params.get('day1');
