@@ -27,6 +27,20 @@ export function quickCastPoint(cast, from, cursor, heading = 0) {
   return [from[0] + dx / d * r, cursor[1], from[2] + dz / d * r];
 }
 
+/**
+ * Touch assist (owner 14.11, phones): where a skill tapped on the hotbar goes at once, with no aim step: the creature the
+ * player targeted (Tab / tap), else the soft lock (play/mobs.js locked), else the nearest living creature in range; null
+ * when none is in range (the cast then flies along her facing). Each candidate is {pos, state}. Pure.
+ */
+export function assistPoint(from, range, { target = null, locked = null, mobs = [] } = {}) {
+  const alive = (m) => m && m.pos && m.state !== 'dead' && m.state !== 'gone';
+  const dist = (m) => Math.hypot(m.pos[0] - from[0], m.pos[2] - from[2]);
+  for (const m of [target, locked]) if (alive(m) && dist(m) <= range) return [m.pos[0], m.pos[1], m.pos[2]];
+  let best = null, bd = Infinity;
+  for (const m of mobs || []) if (alive(m)) { const d = dist(m); if (d <= range && d < bd) { bd = d; best = m; } }
+  return best ? [best.pos[0], best.pos[1], best.pos[2]] : null;
+}
+
 /** Seconds Iris stays rooted after the release frame of a cast (the overshoot and the held key pose); then a step cancels the settle. */
 export const CAST_ROOT_AFTER = 0.24;
 export const CAST_KEYS = Object.freeze({ KeyQ: 'lance', Digit1: 'lance', KeyV: 'snare', Digit2: 'snare' });
@@ -73,9 +87,10 @@ const CSS = `
  * @param {(id: string, shot: {from: number[], point: number[], dir: number[]}) => void} [o.onCast] a cast left Iris's hands, on the release frame (the sound, the critters' hit test)
  * @param {() => (number[]|null)} [o.handPos] world position of her casting hand on the release frame (the snare's leash starts there)
  * @param {(c: {id: string, from: number[], dir: number[], point: number[]}) => void} [o.onFire] where it goes (play/mobs.js: the hits)
+ * @param {(id: string, range: number) => (number[]|null)} [o.assist] touch: the world point a tapped skill goes to at once (assistPoint)
  * @param {Document} [o.doc]
  */
-export function createTownCasting({ scene, camera, town, player, i18n, coarse = false, storage = null, onCastStart = null, onCast = null, onFire = null, handPos = null, extra = [], base = (import.meta.env && import.meta.env.BASE_URL) || '/', doc = globalThis.document }) {
+export function createTownCasting({ scene, camera, town, player, i18n, coarse = false, storage = null, onCastStart = null, onCast = null, onFire = null, handPos = null, assist = null, extra = [], base = (import.meta.env && import.meta.env.BASE_URL) || '/', doc = globalThis.document }) {
   const fx = createCastEffects(scene);
   if (!doc.getElementById('ftf-cast-style')) { const st = doc.createElement('style'); st.id = 'ftf-cast-style'; st.textContent = CSS; doc.head.append(st); }
   const root = doc.createElement('div'); root.className = 'ftf-cast'; root.hidden = true;
@@ -204,6 +219,12 @@ export function createTownCasting({ scene, camera, town, player, i18n, coarse = 
       if (code === 'Escape') { if (state.armed) { setArmed(null); return true; } return false; }
       const id = CAST_KEYS[code];
       if (!id || !state.field) return false;
+      if (coarse && assist) {                           // touch (owner 14.11): a tapped skill fires at once at the targeted / locked / nearest creature
+        let p = null; try { p = assist(id, CASTS[id].range); } catch { p = null; }
+        setArmed(id); state.aim = null;
+        if (!release(quickCastPoint(CASTS[id], player.pos, p, player.heading))) setArmed(null);
+        return true;
+      }
       if (quickOn()) {                                  // quick cast: at once toward the cursor, no aim preview
         const cur = state.aimPoint || (state.pointer ? pick(state.pointer[0], state.pointer[1]) : null);
         setArmed(id); state.aim = null;
