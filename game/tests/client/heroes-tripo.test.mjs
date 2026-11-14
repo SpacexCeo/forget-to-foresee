@@ -18,7 +18,7 @@ test('heroes: Elise plays agent_elise with the side-car elise, Iris agent_iris w
 
 for (const id of ['elise', 'iris']) test(id + ': the clip file has the game names, the timing extras inside each clip, and binds to the model bones', () => {
   const MAP = mapOf(id), { b, json } = glb('anim/' + id + '.glb');
-  assert.ok(b.length <= 2e6, 'the clip file is ' + b.length + ' bytes');
+  assert.ok(b.length <= 4.5e6, 'the clip file is ' + b.length + ' bytes'); // with fly and the 15 emotes (owner 14.11)
   const byName = new Map(json.animations.map((a) => [a.name, a]));
   for (const n of ['idle', 'idle_look', 'walk', 'run', 'register', 'greet', 'dash', 'strike1', 'strike2', 'strike3', 'slash1', 'strike_charge', 'strike_super', 'cast_lance', 'cast_snare']) assert.ok(byName.has(n), 'has ' + n);
   for (const [name, e] of Object.entries(MAP)) {

@@ -175,6 +175,14 @@ export class IrisAvatar {
   /** A short one-shot on Iris (e.g. `understand`: the wink when she has understood a Guest's sign). */
   react(clip, now = 0) { this.irisReaction = { clip, until: now + (REACTION_SECONDS[clip] || 3) }; }
 
+  /** An emote from the wheel (ui/emote-wheel.js): her clip `emote_<id>`, played once for its own length (walking cancels it). */
+  emote(id, now = 0) {
+    const m = this.irisModel, c = m && m.clips.find((x) => x.name === 'emote_' + id);
+    if (!c) return false;
+    this.irisReaction = { clip: c.name, until: now + c.duration };
+    return true;
+  }
+
   /**
    * Iris's gait: idle / walk / run blended by the actual ground speed (procedural bob when no clips).
    * @param {number[]|null} lookTarget world point she looks at (the clan she talks to), null fades the look out
@@ -195,7 +203,7 @@ export class IrisAvatar {
       if (rc && (!m.react || m.react.getClip() !== rc)) {
         if (m.react) m.react.fadeOut(FADE);
         m.react = m.mixer.clipAction(rc);
-        const once = ONE_SHOT_CLIPS.includes(r.name);
+        const once = ONE_SHOT_CLIPS.includes(r.name) || r.name.startsWith('emote_'); // an emote plays once and holds its last pose
         m.react.reset(); m.react.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity); m.react.clampWhenFinished = once;
         m.react.play();
       }

@@ -1,5 +1,5 @@
 {
- "_": "The new Iris (the owner's Tripo iris_anim_pack FBX, Tripo rig with BoneRoot; converted by art/heroes/fbx2glb.py): the game's hero clip names cut from the pack's clips (art/tools/glb_game_clips.mjs). window: [start, end] seconds of the pack clip; the extras are what play/iris-avatar.js reads (impact_s, release_s, step_s: the window starts just before the hand or foot speed peak, art/heroes/peaks.py, so a strike lands within 0.13-0.18 s, a cast lets go at 0.1 s and slash1 hits at 0.3 s like the game's old keyed moves). Walk: one stride of the pack walk (its clip holds two). Run: one stride of the pack run (owner 14.11 picked it from five: variant 2, the sprint with pumping arms), the closest-pose window (14 deg at worst); the player runs at 4.43 m/s (physics/character.js), so both heroines play it near their own cadence, its window shifted so the left foot lands in the same phase as in the walk (the gait blends both on one stride phase). Speed: the hips travel over the window in the pack (art/heroes/runmeasure.py); contact: each foot's landing as a fraction of the stride (the footstep events). The pack run is not a clean cycle: the window is the closest-pose pair (14 deg at worst, the same pack timing as Elise's, art/heroes/loopcut2.py).",
+ "_": "The new Iris (the owner's Tripo iris_anim_pack FBX, Tripo rig with BoneRoot; converted by art/heroes/fbx2glb.py): the game's hero clip names cut from the pack's clips (art/tools/glb_game_clips.mjs). window: [start, end] seconds of the pack clip; the extras are what play/iris-avatar.js reads (impact_s, release_s, step_s: the window starts just before the hand or foot speed peak, art/heroes/peaks.py, so a strike lands within 0.13-0.18 s, a cast lets go at 0.1 s and slash1 hits at 0.3 s like the game's old keyed moves). Walk: one stride of the pack walk (its clip holds two). Run: one stride of the pack run (owner 14.11 picked it from five: variant 2, the sprint with pumping arms), the closest-pose window (14 deg at worst); the player runs at 4.43 m/s (physics/character.js), so both heroines play it near their own cadence, its window shifted so the left foot lands in the same phase as in the walk (the gait blends both on one stride phase). Speed: the hips travel over the window in the pack (art/heroes/runmeasure.py); contact: each foot's landing as a fraction of the stride (the footstep events). The pack run is not a clean cycle: the window is the closest-pose pair (14 deg at worst, the same pack timing as Elise's, art/heroes/loopcut2.py). fly: the pack swim (horizontal strokes) for her air states; emote_*: the emote wheel (owner 14.11, 15 social clips).",
  "idle": {
   "from": "idle",
   "extras": {
@@ -181,6 +181,102 @@
    "hand": "R",
    "step_s": 0.1,
    "step_foot": "R"
+  }
+ },
+ "fly": {
+  "from": "swim",
+  "extras": {
+   "loop": true
+  }
+ },
+ "emote_wave": {
+  "from": "wave",
+  "extras": {
+   "loop": false
+  }
+ },
+ "emote_greet": {
+  "from": "greet_04",
+  "extras": {
+   "loop": false
+  }
+ },
+ "emote_bow": {
+  "from": "salute",
+  "extras": {
+   "loop": false
+  }
+ },
+ "emote_agree": {
+  "from": "nod",
+  "extras": {
+   "loop": false
+  }
+ },
+ "emote_clap": {
+  "from": "clap",
+  "extras": {
+   "loop": false
+  }
+ },
+ "emote_cheer": {
+  "from": "cheer",
+  "extras": {
+   "loop": false
+  }
+ },
+ "emote_laugh": {
+  "from": "laugh_01",
+  "extras": {
+   "loop": false
+  }
+ },
+ "emote_laugh_b": {
+  "from": "laugh_02",
+  "extras": {
+   "loop": false
+  }
+ },
+ "emote_angry": {
+  "from": "angry_01",
+  "extras": {
+   "loop": false
+  }
+ },
+ "emote_complain": {
+  "from": "talk",
+  "extras": {
+   "loop": false
+  }
+ },
+ "emote_cry": {
+  "from": "cry",
+  "extras": {
+   "loop": false
+  }
+ },
+ "emote_hug": {
+  "from": "hug",
+  "extras": {
+   "loop": false
+  }
+ },
+ "emote_heart": {
+  "from": "heart_pose",
+  "extras": {
+   "loop": false
+  }
+ },
+ "emote_dance": {
+  "from": "dance_03",
+  "extras": {
+   "loop": false
+  }
+ },
+ "emote_arms": {
+  "from": "think",
+  "extras": {
+   "loop": false
   }
  }
 }
