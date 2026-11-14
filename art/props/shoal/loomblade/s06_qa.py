@@ -94,7 +94,7 @@ def main():
         "game": ((0.6, -7.0, 0.9), (0, 0, 0.40), 35),
     }
     # the 1 m bar: white, 1 cm square, standing beside the sword from the pommel's level
-    bpy.ops.mesh.primitive_cube_add(size=1, location=(0.22, 0.0, -0.156 + 0.5))
+    bpy.ops.mesh.primitive_cube_add(size=1, location=(0.22, 0.22, -0.156 + 0.5))   # off both view axes: never hidden behind the sword
     bar = bpy.context.object
     bar.scale = (0.01, 0.01, 1.0)
     bm_ = bpy.data.materials.new("bar")

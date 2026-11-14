@@ -347,7 +347,7 @@ def hanging_ring_lamp(tb, name, x, z, h, r=0.8, candles=8):
             tb.cyl("wax", (cx, h - 0.66, cz), 0.022, 0.022, 0.14, 6)
             flame(tb, cx, h - 0.52, cz, 1.0)
     tb.socket(name, (x, h - 0.62, z))
-    tb.light((x, h - 1.0, z), (1.0, 0.70, 0.40), 560.0, 0.35)
+    tb.light((x, h - 1.25, z), (1.0, 0.70, 0.40), 1500.0, 0.18)
 
 
 def sconce(tb, name, wall_m, off, y=2.25):
@@ -363,10 +363,10 @@ def sconce(tb, name, wall_m, off, y=2.25):
                     tb.box("iron", (sx * 0.08, -0.12, 0.3 + sz * 0.08), (0.02, 0.28, 0.02))
             tb.box("iron", (0, -0.26, 0.3), (0.18, 0.03, 0.18))
         tb.socket(name, (0, -0.12, 0.36))
-        tb.light((0, -0.12, 0.42), (1.0, 0.66, 0.34), 26.0, 0.08)
+        tb.light((0, -0.12, 0.42), (1.0, 0.66, 0.34), 16.0, 0.08)
 
 
-def window_lights(tb, w, d, walls=("west", "east"), power=20.0):
+def window_lights(tb, w, d, walls=("west", "east"), power=14.0):
     """Daylight spilling in through the painted windows (bake only)."""
     for name, (m, ww) in _walls(w, d).items():
         if name not in walls:
@@ -505,11 +505,16 @@ def build_exchange(tb):
                 p1 = (math.cos(a1) * 0.24, 0.7, -math.sin(a1) * 0.24)
                 q0 = (math.cos(a0) * 0.2, 0.42, -math.sin(a0) * 0.2)
                 q1 = (math.cos(a1) * 0.2, 0.42, -math.sin(a1) * 0.2)
-                pale, deep = (1.0, 0.94, 1.0), (0.62, 0.46, 1.0)
-                warm, ember = (1.0, 0.96, 0.82), (0.86, 0.42, 0.14)
-                tb.poly("shard", [p0, p1, (0, 1.42, 0)], [pale, pale, deep])
-                tb.quad("shard_amber", q1, q0, (q0[0] * 1.2, 0.7, q0[2] * 1.2), (q1[0] * 1.2, 0.7, q1[2] * 1.2), [(1.0, 0.72, 0.4), (1.0, 0.72, 0.4), warm, warm])
-                tb.poly("shard_amber", [q1, q0, (0, 0.0, 0)], [(1.0, 0.72, 0.4), (1.0, 0.72, 0.4), ember])
+                # one painted gradient on the never-baked light material (pure vertex colour on screen), each facet a
+                # touch lighter or darker than its neighbour so the six sides read without a light
+                fk = (1.0, 0.86, 0.94, 0.8, 1.0, 0.9)[kk]
+                ember, gold, pale, lilac, violet = (tint(c, fk) for c in ((0.82, 0.36, 0.10), (1.0, 0.70, 0.34), (1.0, 0.93, 0.84), (0.80, 0.68, 1.0), (0.50, 0.36, 0.95)))
+                w0, w1 = (q0[0] * 1.2, 0.7, q0[2] * 1.2), (q1[0] * 1.2, 0.7, q1[2] * 1.2)
+                m0, m1 = (p0[0] * 0.62, 1.06, p0[2] * 0.62), (p1[0] * 0.62, 1.06, p1[2] * 0.62)
+                tb.poly("window_day", [q1, q0, (0, 0.0, 0)], [gold, gold, ember])
+                tb.quad("window_day", q1, q0, w0, w1, [gold, gold, pale, pale])
+                tb.quad("window_day", w0, w1, m1, m0, [pale, pale, lilac, lilac])
+                tb.poly("window_day", [m0, m1, (0, 1.42, 0)], [lilac, lilac, violet])
         tb.col_cyl((0, 0, 0), 1.25, 0.48, 12)
         tb.col_cyl((0, 0, 0), 0.4, 2.6, 8)
         tb.socket("socket_lamp_pedestal", (0, 1.9, 0.4))
@@ -723,7 +728,7 @@ def build_inn(tb):
             with tb.at(T(1.55, 0.12 + (i // 3) * 0.2, 0.3 + (i % 3) * 0.0), RZ(90)):
                 tb.cyl("timber", (0, -0.25 + (i % 3) * 0.0, -0.18 + (i % 3) * 0.18), 0.09, 0.09, 0.5, 7, tint(TIMBER_LIGHT, 0.8), cap_top=True, cap_bot=True)
         tb.socket("socket_lamp_hearth", (0, 0.8, 1.0))
-        tb.light((0, 0.7, 0.9), (1.0, 0.42, 0.12), 820.0, 0.3)
+        tb.light((0, 0.6, 1.0), (1.0, 0.42, 0.12), 1500.0, 0.2)
         tb.col_box((0, 1.0, 0.45), (2.9, 2.0, 0.9))
     rug(tb, -2.9, -0.6, 2.6, 2.0, (0.52, 0.18, 0.12), rot=90)
     # bench nook in the front-left corner with cushions
@@ -1174,19 +1179,19 @@ def grotto(tb, d, x0, x1, top, rr):
     shard_cluster(tb, x1 - 0.12, 0.0, zs - 1.45, 3, 0.15, 48, amber=0.6)
     for i, (hx, hz) in enumerate(((-0.9, 0.5), (0.8, -0.9), (-0.3, -1.3), (1.1, 0.7))):
         hy = 3.55 - (math.hypot(hx, hz) - 0.62) * 0.385 + 0.08   # the roof's height there, a little into the rock
-        tb.blob("ceramic", (C[0] + hx, hy + 0.02, C[2] + hz), 0.3, tint(rock, 0.8), seed=980 + i, squash=0.5, sub=1, col_var=0.05)   # the knot of rock they grow from
+        tb.blob("ceramic", (C[0] + hx, hy - 0.06, C[2] + hz), 0.46, tint(rock, 0.8), seed=980 + i, squash=0.6, sub=2, col_var=0.05)   # the knot of rock they grow from
         shard_cluster(tb, C[0] + hx, hy - 0.08, C[2] + hz, 3, 0.36, 60 + i, amber=0.2, hang=True)
         tb.light((C[0] + hx, hy - 0.5, C[2] + hz), (0.66, 0.5, 1.0), 16.0, 0.1)
     tb.col_cyl((C[0] - 0.1, 0, C[2] - 2.25), 0.55, 1.3, 8)
     tb.col_cyl((C[0] - 2.15, 0, C[2] - 0.5), 0.36, 1.0, 6)
     tb.col_cyl((C[0] + 2.3, 0, C[2] - 1.5), 0.38, 1.0, 6)
     # every growth is a light: violet and amber pools on the floor and the walls behind them
-    tb.light((C[0] - 0.1, 1.0, C[2] - 1.8), (0.70, 0.48, 1.0), 150.0, 0.2)
-    tb.light((C[0] - 0.1, 0.45, C[2] - 2.0), (1.0, 0.60, 0.24), 60.0, 0.12)
-    tb.light((C[0] - 1.85, 0.6, C[2] - 0.45), (0.62, 0.46, 1.0), 70.0, 0.12)
-    tb.light((C[0] + 2.0, 0.6, C[2] - 1.4), (0.62, 0.46, 1.0), 75.0, 0.12)
-    tb.light((C[0] - 1.4, 0.4, C[2] + 1.45), (0.66, 0.50, 1.0), 34.0, 0.08)
-    tb.light((C[0] + 1.65, 0.45, C[2] + 1.35), (1.0, 0.62, 0.30), 34.0, 0.08)
+    tb.light((C[0] - 0.1, 0.7, C[2] - 1.7), (0.70, 0.48, 1.0), 380.0, 0.1)
+    tb.light((C[0] - 0.1, 0.35, C[2] - 1.9), (1.0, 0.60, 0.24), 160.0, 0.08)
+    tb.light((C[0] - 1.8, 0.4, C[2] - 0.45), (0.62, 0.46, 1.0), 190.0, 0.08)
+    tb.light((C[0] + 1.95, 0.4, C[2] - 1.4), (0.62, 0.46, 1.0), 200.0, 0.08)
+    tb.light((C[0] - 1.35, 0.3, C[2] + 1.4), (0.66, 0.50, 1.0), 90.0, 0.06)
+    tb.light((C[0] + 1.6, 0.3, C[2] + 1.3), (1.0, 0.62, 0.30), 90.0, 0.06)
     tb.light((px + 0.1, 0.35, pz - 0.1), (0.62, 0.46, 1.0), 14.0, 0.08)
     tb.light((xm, 1.1, zs - 1.0), (0.66, 0.50, 1.0), 6.0, 0.08)
     tb.socket("socket_lamp_grotto", (C[0] - 0.1, 1.2, C[2] - 1.9))
