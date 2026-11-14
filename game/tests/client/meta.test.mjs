@@ -10,7 +10,7 @@ const meta = (attr, name) => { const m = new RegExp(`<meta ${attr}="${name}" con
 test('link preview tags and favicon', () => {
   const d = meta('name', 'description'); assert.ok(d && d.length <= 160, 'description ≤ 160 chars');
   for (const k of ['og:title', 'og:description', 'og:image', 'og:url']) assert.ok(meta('property', k), k);
-  assert.match(meta('property', 'og:image'), /^https:\/\/spacexceo\.github\.io\/forget-to-foresee\/og\.jpg$/);
+  assert.equal(meta('property', 'og:image'), '%VITE_FTF_SITE_URL%og.jpg', 'the site URL comes from the build (build/site.js): Pages, or the owner domain');
   assert.equal(meta('name', 'twitter:card'), 'summary_large_image');
   assert.ok(!html.includes('href="data:,"'), 'no blank favicon');
   assert.match(html, /rel="icon"[^>]*href="%BASE_URL%favicon\.svg"/);
