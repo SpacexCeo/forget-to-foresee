@@ -822,7 +822,7 @@ export default {
   'item.part_crank': 'Crank',
   'item.part_rivet_plate': 'Rivet Plate',
   'item.part_spindle': 'Spindle',
-  'item.prop_wheel_of_fortune': 'Silk wheel',
+  'item.prop_wheel_of_fortune': 'Wheel of Fortune',
   'item.trading_board': 'Trading Board',
   "mk.title": "Town market",
   "mk.today": "{n, plural, one {# trade today} other {# trades today}}",

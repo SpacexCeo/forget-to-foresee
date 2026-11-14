@@ -7,6 +7,7 @@
 import { MARKET, TRADABLE, feeOf, bandOf } from './market-rules.js';
 import { formatSilkC, silkView, subscribeSilk, refreshSilk } from '../net/silk-core.js';
 import { DICE, oddsTable, payoutOf, stakeAllowed, rollOf } from './dice.js';
+import { sha256 } from '../game/crypto.js';
 import { artBox, resIconPath } from './art.js';
 import { EXPLORER } from '../net/network.js';
 
@@ -101,7 +102,7 @@ export function createMarketUi({ t, client, dice = null, storage = null, doc = g
     { min: formatSilkC(r.minC || 0), max: formatSilkC(r.maxC || 0), need: formatSilkC(r.needC || 0), have: formatSilkC(r.haveC || 0), qty: r.have ?? '' });
   let paintSilk = () => {}; // the header balance, repainted on every silk change and every tab switch
   let root = null, body = null, chip = null, silkEl = null, tab = 'buy', item = TRADABLE[0], unSilk = null, settlement = 'chain';
-  const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); close(); } else if (['1', '2', '3', '4'].includes(e.key) && !(e.target && e.target.tagName === 'INPUT')) show(['buy', 'sell', 'mine', ...(dice ? ['games'] : [])][Number(e.key) - 1] || tab); };
+  const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); close(); } else if (['1', '2', '3', '4'].includes(e.key) && !(e.target && e.target.tagName === 'INPUT')) show(['buy', 'sell', 'mine', 'games'][Number(e.key) - 1]); };
 
   let live = null;
   function setChip(isLive) {
@@ -246,6 +247,9 @@ export function createMarketUi({ t, client, dice = null, storage = null, doc = g
     const g = el('div', 'mk2-game');
     const bets = el('div', 'mk2-items'), stakes = el('div', 'mk2-items');
     const summary = el('p', 'mk2-note'), out = el('div'), hint = el('div'), rollEl = el('div', 'mk2-roll'), fair = el('p', 'mk2-note'), counters = el('p', 'mk2-note');
+    // provably fair (jury pass 15.11): before each roll the hash of its seed is shown; after it the seed itself, and Verify
+    // checks that the seed hashes to what was shown and gives the roll
+    const commitEl = el('p', 'mk2-note'), commits = new Map();
     const go = btn(t('games.roll'), () => doRoll());
     const odds = el('details'); odds.append(el('summary', null, t('games.odds')));
     const tb = el('table'); const hr = el('tr'); for (const k of ['bet', 'chance', 'pays', 'back', 'edge']) hr.append(el('th', null, t('games.col.' + k))); tb.append(hr);
@@ -257,6 +261,7 @@ export function createMarketUi({ t, client, dice = null, storage = null, doc = g
       summary.textContent = t('games.summary', { x: formatSilkC(payoutOf(stake, bet)), p: bet });
       const s = dice.state(), why = dice.blocker(stake, bet);
       play.textContent = t('games.play', { n: formatSilkC(dice.play()) });
+      { const k = s.rolls + 1; if (!commits.has(k)) commits.set(k, sha256(rollOf(s.wheelId, k).seed)); commitEl.textContent = t('games.next', { k, hash: commits.get(k).slice(0, 16) + '…' }); }
       counters.textContent = t('games.counters', { up: formatSilkC(Math.max(0, s.netC)), down: formatSilkC(Math.max(0, -s.netC)), rolls: s.rollsToday });
       go.disabled = !!why && why !== 'cooldown'; go.title = why ? t('games.why.' + why) : '';
       hint.replaceChildren(...(why && why !== 'cooldown' ? [el('p', 'mk2-note', t('games.why.' + why))] : []));
@@ -266,11 +271,11 @@ export function createMarketUi({ t, client, dice = null, storage = null, doc = g
       if (!r.ok) { out.replaceChildren(el('p', 'mk2-state err', t('games.why.' + r.reason))); return; }
       rollEl.textContent = String(r.roll);
       out.replaceChildren(el('p', r.win ? 'mk2-win' : 'mk2-lose', r.win ? t('games.win', { x: formatSilkC(r.payoutC - r.stakeC) }) : t('games.lose', { x: formatSilkC(r.stakeC) })));
-      fair.replaceChildren(t('games.fair', { k: r.k, seed: r.seed.slice(0, 16) + '…' }) + ' ', btn(t('games.verify'), () => { const v = rollOf(dice.state().wheelId, r.k); fair.append(' ' + t(v.roll === r.roll ? 'games.verified' : 'games.mismatch', { roll: v.roll })); }, 'mk2-act mk2-ghost'));
+      fair.replaceChildren(t('games.fair', { k: r.k, seed: r.seed.slice(0, 16) + '…' }) + ' ', btn(t('games.verify'), () => { const v = rollOf(dice.state().wheelId, r.k), shown = commits.get(r.k), kept = !shown || sha256(v.seed) === shown; fair.append(' ' + t(v.roll === r.roll && kept ? (shown ? 'games.verifiedCommit' : 'games.verified') : 'games.mismatch', { roll: v.roll })); }, 'mk2-act mk2-ghost'));
       paintSilk(); refreshSilk(false).catch(() => {}); paint();
     }
     const play = el('p', 'mk2-note');
-    g.append(el('p', 'mk2-note', t('games.rule')), bets, stakes, summary, go, hint, rollEl, out, fair, counters, play, odds, el('p', 'mk2-note', t('games.footer')));
+    g.append(el('p', 'mk2-note mk2-playnote', t('games.note')), el('p', 'mk2-note', t('games.rule')), bets, stakes, summary, commitEl, go, hint, rollEl, out, fair, counters, play, odds, el('p', 'mk2-note', t('games.footer')));
     body.replaceChildren(g); paint();
   }
 
@@ -287,7 +292,7 @@ export function createMarketUi({ t, client, dice = null, storage = null, doc = g
     const x = btn('', close, 'mk2-x'); x.setAttribute('aria-label', t('p2p.close'));
     head.append(el('h3', null, t('p2p.title')), silkEl, x);
     const tabs = el('div', 'mk2-tabs'); tabs.setAttribute('role', 'tablist');
-    for (const k of ['buy', 'sell', 'mine', ...(dice ? ['games'] : [])]) { const b = btn(t(k === 'games' ? 'games.tab' : 'p2p.tab.' + k), () => show(k), ''); b.setAttribute('role', 'tab'); b.dataset.tab = k; tabs.append(b); }
+    for (const k of ['buy', 'sell', 'mine', 'games']) { const b = btn(t(k === 'games' ? 'games.tab' : 'p2p.tab.' + k), () => show(k), ''); b.setAttribute('role', 'tab'); b.dataset.tab = k; tabs.append(b); }
     chip = el('div', 'mk2-chip'); chip.hidden = true; body = el('div', 'mk2-body');
     box.append(head, tabs, chip, body); root.append(box); doc.body.append(root);
     // the header shows the balance this tab spends: play silk in Games (the dice change it on every roll; owner 14.11 saw the

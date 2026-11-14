@@ -828,7 +828,7 @@ export default {
   'item.part_crank': 'Рукоятка',
   'item.part_rivet_plate': 'Клепана пластина',
   'item.part_spindle': 'Веретено',
-  'item.prop_wheel_of_fortune': 'Шовкове колесо',
+  'item.prop_wheel_of_fortune': 'Колесо фортуни',
   'item.trading_board': 'Торгове табло',
   "mk.title": "Міський ринок",
   "mk.today": "{n, plural, one {# угода сьогодні} few {# угоди сьогодні} many {# угод сьогодні} other {# угоди сьогодні}}",
