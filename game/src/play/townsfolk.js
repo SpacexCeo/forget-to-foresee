@@ -26,7 +26,7 @@ const SIT_PELVIS_Z = -0.07;    // hip joint along the 0.46 m deep seat (bench lo
 const _pelvis = new THREE.Vector3();
 
 const _sphere = new THREE.Sphere(), _frustum = new THREE.Frustum(), _m = new THREE.Matrix4(), _target = [0, 0, 0], _local = [0, 0, 0];
-const ONE_SHOT = new Set(['wave', 'salute', 'nod', 'gesture_offer', 'understand']);
+const ONE_SHOT = new Set(['wave', 'salute', 'nod', 'gesture_offer', 'understand', 'take_photo', 'haggle']);
 /** Body type of the shared mocap set (anim-library.js townsfolkClips): posture and stride per kind of person. */
 const BODY = { child_a: 'child', child_b: 'child', guard: 'guard' }; // the elder is a grown man, not an old one (owner 13.11): the default body
 

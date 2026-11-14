@@ -34,7 +34,7 @@ export function hourClass(name) {
  */
 export function barkCandidates({ key, hour = 'day', rain = 0, hired = false, extra = [] }) {
   if (hired) return ['bark.hired.1', 'bark.hired.2'];
-  if (key === 'wayfarer') return WAYFARER_BARKS.slice();
+  if (key.startsWith('wayfarer')) return WAYFARER_BARKS.slice(); // the Lost Tourist and the touring visitors
   const out = [];
   if (rain > 0.35) out.push('bark.rain.1', 'bark.rain.2');
   const h = hourClass(hour);

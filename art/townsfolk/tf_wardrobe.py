@@ -931,6 +931,17 @@ def props(ctx, e):
         b = bmesh.new()
         tube_path(b, [gp + V((0, 0, -0.088)), gp + V((0, 0, -0.232))], 0.044, n=10)
         ctx.add(obj("lantern_glass", b), "amber", mat="amber", rule="rigid:prop_L")
+    if "crystal_camera" in ex:                        # the Wayfarer: a crystal block in a brass frame with a round lens, in the right hand
+        c = gR + V((0.0, -0.035, -0.025))
+        b = bmesh.new()
+        box(b, c, 0.085, 0.045, 0.062)
+        ctx.add(obj("camera_body", b, smooth=False), "ice", mat="amber", rule="rigid:prop_R")
+        b = bmesh.new()
+        tube_path(b, [c + V((0, -0.020, 0)), c + V((0, -0.052, 0))], [0.022, 0.026], n=12)
+        torus(b, c + V((0, -0.052, 0)), 0.024, 0.004, axis=V((0, 1, 0)), n=14, m=5)
+        for sx in (-1, 1):
+            box(b, c + V((sx * 0.044, 0, 0)), 0.006, 0.049, 0.066)
+        ctx.add(obj("camera_frame", b), "brass", mat="metal", rule="rigid:prop_R")
     # ---- things held in the right hand (the prop bone carries them)
     stick = None
     b = bmesh.new()
