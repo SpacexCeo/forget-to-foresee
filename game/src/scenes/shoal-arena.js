@@ -376,12 +376,8 @@ export function createShoalArena(o) {
   function strikeLands(atk, damage) {
     // the boss's blow lands: a shock on the mirror where it does, and the slam's sound
     const A = R.BOSS.attacks[atk.kind];
-    if (A && atk.kind === 'slam' && atk.at) fx.shock([atk.at[0], 0, atk.at[1]], 0xff9a5a, A.radius);
-    else if (A && atk.kind === 'sweep') fx.shock([R.ARENA.boss[0], 0, R.ARENA.boss[1]], 0xff9a5a, A.radius);
-    else if (A && atk.kind === 'lunge' && atk.at && atk.dir) fx.shock([atk.at[0] + atk.dir[0] * A.length * 0.5, 0, atk.at[1] + atk.dir[1] * A.length * 0.5], 0xff9a5a, A.width * 1.2);
-    else if (A && atk.kind === 'dive' && atk.at) { fx.shock([atk.at[0], 0, atk.at[1]], 0x9fe8ff, A.radius); shakeT = 0.22; shakeAmp = reduced() ? 0 : 0.25; }
-    else if (A && atk.kind === 'breath' && atk.dir) fx.shock([atk.at[0] + atk.dir[0] * A.length * 0.6, 0, atk.at[1] + atk.dir[1] * A.length * 0.6], 0x9fe8ff, A.length * 0.4);
-    else if (A && atk.kind === 'claw' && atk.dir) fx.shock([atk.at[0] + atk.dir[0] * A.radius * 0.6, 0, atk.at[1] + atk.dir[1] * A.radius * 0.6], 0xff9a5a, A.radius * 0.5);
+    // no flat shock rings (owner 14.11): the landing is the serpent's own effect below (geyser, frost ripple, shards)
+    if (A && atk.kind === 'dive' && atk.at) { shakeT = 0.22; shakeAmp = reduced() ? 0 : 0.25; } // the dive still shakes; its look is sfx.strike
     cue(atk.kind === 'breath' ? 'cast_release_frost' : atk.kind === 'claw' ? 'strike_heavy' : 'mob_hulker_slam');
     sfx.strike(atk.kind, { at: atk.at || R.ARENA.boss, dir: atk.dir, A, boss: [boss.position.x, boss.position.z] });
     if (!R.inDanger(atk, me3.x, me3.z, R.BOSS, me3.lift)) return;

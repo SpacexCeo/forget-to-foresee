@@ -64,8 +64,8 @@ void main(){
   float tt = t + (n2(vW.xz * 0.6 + uSeed) - 0.5) * 0.14;
   float reveal = 1.0 - smoothstep(uK - 0.05, uK + 0.01, tt);
   float rim = 1.0 - smoothstep(0.82, 1.0, tt);
-  float e1 = edge(vW.xz * 0.45), e2 = edge(vW.xz * 1.4 + 7.3);
-  float w1 = 0.05 + 0.04 * (1.0 - t), core = 1.0 - smoothstep(0.0, w1 * 0.45, e1), halo = 1.0 - smoothstep(0.0, w1 * 1.7, e1);
+  float e1 = edge(vW.xz * 0.32), e2 = edge(vW.xz * 1.1 + 7.3);
+  float w1 = 0.075 + 0.045 * (1.0 - t), core = 1.0 - smoothstep(0.0, w1 * 0.45, e1), halo = 1.0 - smoothstep(0.0, w1 * 1.7, e1);
   float fine = (1.0 - smoothstep(0.0, 0.035, e2)) * smoothstep(uK - 0.35, uK, tt);
   float front = exp(-abs(tt - uK) * 22.0) * step(uK, 0.995);
   float a = uOp * reveal * rim * clamp(halo * 0.9 + fine * 0.5 + front * halo * 0.6, 0.0, 1.0);
@@ -97,7 +97,7 @@ const PTS_FRAG = `varying float vA; varying vec3 vC; void main(){ vec2 c = gl_Po
 const WAVE_VERT = `varying vec2 vUv; varying vec2 vQ; void main(){ vUv = uv; vQ = position.xy; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
 const WAVE_FRAG = `uniform vec3 uColor; uniform float uA, uSeed; varying vec2 vUv; varying vec2 vQ;
 void main(){ float ang = atan(vQ.y, vQ.x);
-  float broken = 0.55 + 0.45 * sin(ang * 7.0 + uSeed) * sin(ang * 13.0 - uSeed * 1.7);  // a ripple of frost, broken round its circle
+  float broken = clamp(0.3 + 0.9 * sin(ang * 7.0 + uSeed) * sin(ang * 13.0 - uSeed * 1.7) + 0.3 * sin(ang * 23.0 + uSeed * 0.4), 0.0, 1.0);  // a ripple of frost, broken round its circle
   float lead = vUv.y + 0.12 * sin(ang * 9.0 + uSeed * 2.3);
   gl_FragColor = vec4(mix(uColor, vec3(1.0), 0.35), uA * broken * smoothstep(0.0, 0.7, lead) * (1.0 - smoothstep(0.8, 1.0, lead))); }`;
 const GEY_FRAG = `uniform vec3 uColor; uniform float uA; varying vec2 vUv; void main(){ float h = vUv.y; gl_FragColor = vec4(uColor * (1.2 - h * 0.5), uA * (1.0 - h) * (0.55 + 0.45 * sin(vUv.x * 37.7))); }`;
@@ -232,7 +232,7 @@ export function createSerpentFx({ THREE, parent, mobile = false, rand = Math.ran
      * 'ring' {at, r}, 'band' {at, r0, r1}, 'strip' {at, dir, len, width}, 'cone' {at, dir, half, len}; k the tell's progress.
      */
     tellFrame(kind, g, k, dt) {
-      const n = Math.max(1, Math.round((mobile ? 26 : 60) * dt));
+      const big = kind === 'band' || kind === 'cone' || kind === 'strip', n = Math.max(1, Math.round((mobile ? 26 : 60) * (big ? 2.6 : 1) * dt));
       for (let i = 0; i < n; i++) {
         let x = 0, z = 0;
         if (kind === 'ring') { const a = rand() * 6.283, r = g.r * Math.min(1, k + 0.02) * (0.85 + 0.15 * rand()); x = g.at[0] + Math.sin(a) * r; z = g.at[2] + Math.cos(a) * r; }
