@@ -18,7 +18,7 @@ Mistakes afterwards go through https://nearhackathon.com/request-changes.
 | `nearAddress` | `TODO(owner)` | **mainnet** account for the payout (`something.near` or 64 hex). Created by the owner in any NEAR wallet; never invented |
 | `projectUrl` | `https://github.com/SpacexCeo/forget-to-foresee` | public |
 | `demoUrl` | `TODO(owner)` | the X post URL once published (`docs/submission/x-post.md`) |
-| `idea` | text below | 20–2000 characters; the draft is 1,912 characters, re-count after edits |
+| `idea` | text below | 20–2000 characters; the draft is 1,722 characters, re-count after edits |
 | `consent` | `true` | only after the owner has read: "I agree that the organizers may use these details to review our submission and contact us about this hackathon." |
 | `requestId` | `6d93ee96-620e-4ae1-a013-d48ae6dc159e` | generated once on 14.11; reuse this exact value on any retry after a network error or 503 |
 
@@ -26,27 +26,19 @@ Do **not** send a `website` field (spam trap: any value rejects the submission) 
 
 ## `idea` (project description, 20–2000 characters)
 
-> Forget to Foresee is a 3D browser game set in a hill town whose economy runs live on NEAR testnet.
+> Forget to Foresee is a 3D browser action-RPG in a hill town whose economy runs live on NEAR testnet. Play now: https://ftf-game.xyz/ (judge mode: https://ftf-game.xyz/?judge=1). No install, no wallet popups.
 >
-> Live economy: 20 trader accounts, each with its own key (trader-01 to trader-20.ftf-town.testnet), trade silk on the town contract ftf-town.testnet all day, over 21,000 trades on 13 Nov; nobody presses a button. Prices follow stock and recent demand by rules in one file, and every trade carries a readable reason ("why this price"). Live stats: https://159-195-130-113.sslip.io/api/market/stats. The traders are scripted: about once an hour a model on NEAR AI Cloud sets each clan's bounded strategy, with an attestation id, and the rules engine makes every trade. Town items are NEP-245 multi-tokens (items.ftf-town.testnet). In the game, the Town Ledger window shows today's count, the latest trades with their reasons and explorer links, every trader's account and the clans' strategy calls; the Economy Lab plays a week of the market in a minute.
+> Live economy: 20 trader accounts, each with its own key (trader-01 to trader-20.ftf-town.testnet), trade on the town contract ftf-town.testnet all day: over 23,000 trades today, nobody presses a button. Prices follow stock and demand by rules in one file; every trade carries a readable reason. A model on NEAR AI Cloud sets each clan's bounded strategy about once an hour, with an attestation id; the rules engine makes every trade. In game, the Town Ledger shows the trades, reasons and explorer links.
 >
-> Players on chain so far: 56 guest accounts, each owning its heroine NFT; chests opened from a deck committed on chain; dragon NFTs owned by a heroine NFT's own account.
+> Players on chain: 88 guest accounts, each owning an Elise heroine NFT whose token has its own account; dragon NFTs are minted to that account, so the dragon follows the heroine. Loot chests open from a deck committed on chain, each draw verifiable.
 >
-> Sign-in: play as a guest at once, with no wallet popups (the browser makes a free testnet guest account), or sign in with a NEAR, EVM or Solana wallet or a passkey.
+> Play: walk the town, talk to townsfolk, fight stone spiders, open chests, trade at the market, unlock the tournament, ride a dragon to the Glass Shoal and beat the ice serpent. Shared multiplayer town (server-side spiders, fair loot), sign in as a guest, by email, or with a NEAR, EVM or Solana wallet; 5 languages; desktop and phone.
 >
-> Story: Iris, a doctor-linguist from another planet, year 2048, came through the glass. She pays for prophecy with her own memories. Each season's prophecies are sealed before the first move: committed to a Merkle root on ftf-seasons.testnet and revealed with proofs anyone can check. A forgotten memory becomes a memory shard, a NEP-171 NFT (ftf-shards.testnet) bound to its sealed season.
+> Story: Iris, a doctor-linguist from 2048, pays for prophecy with her own memories. Each season's prophecies are sealed before the first move (Merkle root on ftf-seasons.testnet, revealed with proofs); a forgotten memory becomes a memory shard, a NEP-171 NFT (ftf-shards.testnet).
 >
-> Honest scope: testnet only, free to play, nothing has money value; the trades are scripted NPC activity, not player volume. MIT, open source, CI on every push.
->
-> Play: https://ftf-game.xyz/ (judge mode: https://ftf-game.xyz/?judge=1)
+> Honest scope: testnet only, free to play, nothing has money value; the trades are scripted NPC activity. MIT, open source, CI on every push.
 
-Character count of the quoted text (without the `> ` prefixes, newlines included): 1,912 (recounted 14.11 after the move to https://ftf-game.xyz/). Rewritten 13.11 (jury review):
-leads with the live economy (20 trader accounts with their own keys on `ftf-town.testnet`, the readable price reasons,
-the Town Ledger window, the Economy Lab week), then sign-in, then the sealed seasons and memory shards. Every claim
-matches the README "Live on NEAR testnet right now" block and `docs/ai-use.md` (scripted traders; the clans' strategy
-layer asks NEAR AI Cloud about once an hour; the rules engine makes every trade). "Over 21,000 trades on 13 Nov": the
-recount of the whole UTC day from the public indexer is 21,233 market trades (`docs/proof/tx-2026-11-13.md`). "56 guest
-accounts": `stats` on `guests.ftf-coordinator.testnet` at 00:00 UTC 14 Nov. NEP-245: the item contract is deployed; do not claim mints until `items.ftf-town.testnet` shows supply.
+Character count of the quoted text (without the `> ` prefixes, newlines included): 1,722 (final text of 15 Nov, matches the owner's submission folder `02-idea.txt`). Every claim must match the README; "over 23,000 trades today" and "88 guest accounts" are the 15 Nov figures and must be rechecked on the day of sending.
 Re-count before sending:
 `node -e 'console.log(require("fs").readFileSync(0,"utf8").trim().length)' < idea.txt`.
 
@@ -59,7 +51,7 @@ Re-count before sending:
   and the NEP-171 contract `contracts/memory-shard` runs on testnet as `ftf-shards.testnet` (21 tests, 3 shards of
   the recorded season minted by the coordinator script). In the game, Profile → NFTs → Holder access reads them from
   the chain. Also claimed: an NFT that owns an NFT.
-  Every Day 1 guest gets an Elise heroine NFT whose token has its own sub-account (56 by the end of 13 Nov); dragon NFTs
+  Every Day 1 guest gets an Elise heroine NFT whose token has its own sub-account (88 by 15 Nov); dragon NFTs
   are minted to that sub-account (`companions.ftf-coordinator.testnet`, 6), so the dragon follows the heroine.
   Not claimed: Iris is not an NFT, live seasons mint nothing, and a player-owned agent NFT is future work.
 - Not claimed: `social` (we have no shared budget / DAO), `agents` (our agents do not pay for anything in NEAR),
@@ -80,7 +72,7 @@ Only `leadName`, `email`, `size`, `nearAddress` and `demoUrl` are left to the ow
   "nearAddress": "TODO(owner)",
   "projectUrl": "https://github.com/SpacexCeo/forget-to-foresee",
   "demoUrl": "TODO(owner): https://x.com/.../status/...",
-  "idea": "Forget to Foresee is a 3D browser game set in a hill town whose economy runs live on NEAR testnet.\n\nLive economy: 20 trader accounts, each with its own key (trader-01 to trader-20.ftf-town.testnet), trade silk on the town contract ftf-town.testnet all day, over 21,000 trades on 13 Nov; nobody presses a button. Prices follow stock and recent demand by rules in one file, and every trade carries a readable reason (\"why this price\"). Live stats: https://159-195-130-113.sslip.io/api/market/stats. The traders are scripted: about once an hour a model on NEAR AI Cloud sets each clan's bounded strategy, with an attestation id, and the rules engine makes every trade. Town items are NEP-245 multi-tokens (items.ftf-town.testnet). In the game, the Town Ledger window shows today's count, the latest trades with their reasons and explorer links, every trader's account and the clans' strategy calls; the Economy Lab plays a week of the market in a minute.\n\nPlayers on chain so far: 56 guest accounts, each owning its heroine NFT; chests opened from a deck committed on chain; dragon NFTs owned by a heroine NFT's own account.\n\nSign-in: play as a guest at once, with no wallet popups (the browser makes a free testnet guest account), or sign in with a NEAR, EVM or Solana wallet or a passkey.\n\nStory: Iris, a doctor-linguist from another planet, year 2048, came through the glass. She pays for prophecy with her own memories. Each season's prophecies are sealed before the first move: committed to a Merkle root on ftf-seasons.testnet and revealed with proofs anyone can check. A forgotten memory becomes a memory shard, a NEP-171 NFT (ftf-shards.testnet) bound to its sealed season.\n\nHonest scope: testnet only, free to play, nothing has money value; the trades are scripted NPC activity, not player volume. MIT, open source, CI on every push.\n\nPlay: https://ftf-game.xyz/ (judge mode: https://ftf-game.xyz/?judge=1)",
+  "idea": "Forget to Foresee is a 3D browser action-RPG in a hill town whose economy runs live on NEAR testnet. Play now: https://ftf-game.xyz/ (judge mode: https://ftf-game.xyz/?judge=1). No install, no wallet popups.\n\nLive economy: 20 trader accounts, each with its own key (trader-01 to trader-20.ftf-town.testnet), trade on the town contract ftf-town.testnet all day: over 23,000 trades today, nobody presses a button. Prices follow stock and demand by rules in one file; every trade carries a readable reason. A model on NEAR AI Cloud sets each clan's bounded strategy about once an hour, with an attestation id; the rules engine makes every trade. In game, the Town Ledger shows the trades, reasons and explorer links.\n\nPlayers on chain: 88 guest accounts, each owning an Elise heroine NFT whose token has its own account; dragon NFTs are minted to that account, so the dragon follows the heroine. Loot chests open from a deck committed on chain, each draw verifiable.\n\nPlay: walk the town, talk to townsfolk, fight stone spiders, open chests, trade at the market, unlock the tournament, ride a dragon to the Glass Shoal and beat the ice serpent. Shared multiplayer town (server-side spiders, fair loot), sign in as a guest, by email, or with a NEAR, EVM or Solana wallet; 5 languages; desktop and phone.\n\nStory: Iris, a doctor-linguist from 2048, pays for prophecy with her own memories. Each season's prophecies are sealed before the first move (Merkle root on ftf-seasons.testnet, revealed with proofs); a forgotten memory becomes a memory shard, a NEP-171 NFT (ftf-shards.testnet).\n\nHonest scope: testnet only, free to play, nothing has money value; the trades are scripted NPC activity. MIT, open source, CI on every push.",
   "consent": true
 }
 ```
