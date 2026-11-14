@@ -34,21 +34,29 @@ const baseUrl = () => (import.meta.env && import.meta.env.BASE_URL) || '/';
  * they are (iris_agent: Sheriffchenko, townsfolk: the shared town walk). `?animspeed=1` turns it off (QA, before/after).
  */
 export const CLIP_TIME_SCALE = Object.freeze({ iris: 2, elise: 2, iris_agent: 2, townsfolk_pack: 1.3, townsfolk_wayfarer: 1.3 }); // heroines 2x (owner 14.11: "animation twice as fast, physics as is")
+/**
+ * The heroines' walk and run (clips with a ground `speed`) keep their own rate: the gait layer (play/gait.js) sets their
+ * cadence from the ground speed anyway, and 2x only pushed the run's rate under the gait's floor, so the legs spun
+ * faster than she moved (owner 14.11: the run looked terribly fast).
+ */
+export const LOCOMOTION_TIME_SCALE = Object.freeze({ iris: 1, elise: 1, iris_agent: 1 });
 const TIMING = ['impact_s', 'release_s', 'step_s', 'full_s'];
 export function timeScaleFor(name, search = typeof location !== 'undefined' ? location.search : '') {
   const o = Number(new URLSearchParams(search).get('animspeed'));
   return o > 0 ? (CLIP_TIME_SCALE[name] ? o : 1) : (CLIP_TIME_SCALE[name] || 1);
 }
-/** Plays `clips` k times faster (in place): key times, duration and the timing extras shrink, ground speed grows. */
-export function speedUpClips(clips, k) {
-  if (!(k > 0) || k === 1) return clips;
+/** Plays `clips` k times faster (in place; a clip with a ground speed: kMove times): key times, duration and the timing extras shrink, ground speed grows. */
+export function speedUpClips(clips, k, kMove = k) {
+  if (!(k > 0) || (k === 1 && kMove === 1)) return clips;
   for (const c of clips) {
-    for (const t of c.tracks) { const times = new Float32Array(t.times.length); for (let i = 0; i < times.length; i++) times[i] = t.times[i] / k; t.times = times; }
-    c.duration /= k;
+    const moves = c.userData && c.userData.speed > 0, f = moves ? kMove : k;
+    if (!(f > 0) || f === 1) continue;
+    for (const t of c.tracks) { const times = new Float32Array(t.times.length); for (let i = 0; i < times.length; i++) times[i] = t.times[i] / f; t.times = times; }
+    c.duration /= f;
     const u = c.userData || (c.userData = {});
-    for (const n of TIMING) if (typeof u[n] === 'number') u[n] /= k;
-    if (typeof u.speed === 'number') u.speed *= k;
-    u.time_scale = k;
+    for (const n of TIMING) if (typeof u[n] === 'number') u[n] /= f;
+    if (typeof u.speed === 'number') u.speed *= f;
+    u.time_scale = f;
   }
   return clips;
 }
@@ -60,7 +68,8 @@ function loadFile(name, base) {
     cache.set(key, loader.loadAsync(`${base}assets/anim/${name}.glb`).then((g) => {
       const extras = (g.parser.json.animations || []).map((a) => a.extras || {});
       g.animations.forEach((c, i) => { c.userData = { ...extras[i] }; });
-      speedUpClips(g.animations, timeScaleFor(name));
+      const k = timeScaleFor(name);
+      speedUpClips(g.animations, k, name in LOCOMOTION_TIME_SCALE && k !== 1 ? LOCOMOTION_TIME_SCALE[name] : k);
       return g;
     }));
   }

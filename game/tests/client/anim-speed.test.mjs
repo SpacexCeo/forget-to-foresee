@@ -25,3 +25,13 @@ test('anim speed: keys, duration and the timing extras shrink together, the grou
   assert.ok(Math.abs(walk.userData.speed - 1.56) < 1e-6, 'feet match: the cycle covers the same ground in less time');
   assert.equal(walk.userData.loop, true);
 });
+
+test('anim speed: the heroines\' walk and run keep their own rate (the gait matches cadence to the ground); a move clip can be scaled apart', async () => {
+  const { LOCOMOTION_TIME_SCALE } = await import('../../src/play/anim-library.js');
+  for (const n of ['iris', 'elise', 'iris_agent']) assert.equal(LOCOMOTION_TIME_SCALE[n], 1, n);
+  const run = new THREE.AnimationClip('run', 0.7, [new THREE.VectorKeyframeTrack('pelvis.position', [0, 0.7], [0, 0, 0, 0, 0, 0])]); run.userData = { speed: 4.5, contact: { L: [0.5, 0.5], R: [0, 0] } };
+  const hit = new THREE.AnimationClip('strike1', 0.6, [new THREE.VectorKeyframeTrack('pelvis.position', [0, 0.6], [0, 0, 0, 0, 0, 0])]); hit.userData = { impact_s: 0.15 };
+  speedUpClips([run, hit], 2, 1);
+  assert.equal(run.duration, 0.7); assert.equal(run.userData.speed, 4.5, 'the run as authored');
+  assert.equal(hit.duration, 0.3); assert.equal(hit.userData.impact_s, 0.075, 'the strike twice as fast');
+});
