@@ -13,7 +13,7 @@ originality, sustainability; first layer: AI screening of reproducibility and cl
 | 5 | Merge `wip/p0-opus` before the tag: on a mid laptop (CPU x4) the boss fight drew the town 700 m away (1390 draw calls a frame, now 470; p50 42 to 31 ms), the town's first walk froze for 1.2 s (now 0.1 s); the serpent's stagger now plays, E opens the chest and flies home, the reward is the real legendary chest | design, technical | lead merge + CI | **lead** (`24b36983`) |
 | 6 | GitHub About, website and topics (suggested text in `score-gaps.md`): screening agents and judges start from the repo card | impact | 2 min | **owner** |
 | 7 | Regenerate `docs/STATS.md` on Linux (`node scripts/stats.mjs --write`) so the counts in `AGENTS.md` match the suites a screener runs | technical (reproducibility) | 10 min | **lead** |
-| 8 | Keep the relayer and the traders funded and running through 18.11 (judging): the live market numbers are the strongest Games-track proof (22,696 trades on 14 Nov by 23:00 UTC, 20 trader accounts) | technical, impact | check daily | **owner** |
+| 8 | Keep the relayer and the traders funded and running through 18.11 (judging): the live market numbers are the strongest Games-track proof (22,696 trades on 14 Nov by 22:20 UTC, 20 trader accounts) | technical, impact | check daily | **owner** |
 | 9 | The README's first screen shows the game at its best: the boss still is now the serpent rearing over the frost-crack tells (RTX 5090 capture of the `wip/p0-opus` camera, so merge both); a 10-second clip of the opening drone shot and the fight at the top is the next step | design, impact | 5 min + 30 min | still done; clip open |
 | 10 | A mainnet deployment of one contract with its full-access keys deleted (the whitelist-pass runbook) | sustainability | 1–2 h | **owner** (agents never sign mainnet) |
 
@@ -24,7 +24,7 @@ originality, sustainability; first layer: AI screening of reproducibility and cl
   `economy-lab.html`, the relayer's `/api/health` and `/api/market/stats`); NearBlocks answers 403 to scripts only
   (a browser opens them); the compare link waits for the `hackathon-submission` tag, as the README says.
 - Every relative link in the README points at a file that exists.
-- The live claims hold on 14 Nov 23:00 UTC: the market relayer is trading (`/api/market/stats`: 20 traders, 22,696
+- The live claims hold on 14 Nov 22:20 UTC: the market relayer is trading (`/api/market/stats`: 20 traders, 22,696
   trades today), the TEE agents answer (`/api/health`: `tee.configured: true`), the chests and the guests contracts
   are configured.
 - `cheat.html` ("Try to Cheat") is the security page with six attacks on the guards, not a cheat tool: kept.
