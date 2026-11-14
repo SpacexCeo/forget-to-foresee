@@ -96,7 +96,7 @@ export function createPrologue(ctx = {}) {
       const power = Math.max(ss(15.8, 19.5, t) * 0.6, 0.6 * ss(15.8, 19.5, t) + 0.4 * ss(22.0, 25.8, t));
       lab.device.update(dt, t, power); audio.power(power);
       const flick = reduced ? 1 - 0.3 * ss(16.5, 19, t) : (t > 17.0 && t < 17.12) || (t > 17.6 && t < 17.72) ? 0.15 : 1;
-      lab.lights.ceil.intensity = 14 * flick * (1 - 0.6 * ss(26.5, 29, t)); lab.lights.stripMat.color.setScalar(flick);
+      lab.lights.ceil.intensity = 14 * flick * (1 - 0.6 * ss(26.5, 29, t)); lab.lights.stripMat.color.copy(lab.lights.stripMat.userData.base || lab.lights.stripMat.color).multiplyScalar(flick);
       // papers tremble as the device wakes, then fly into the vortex with the coat
       const pull = ss(26.5, 30.5, t);
       lab.props.papers.forEach((p, i) => {
