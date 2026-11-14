@@ -20,6 +20,7 @@ import { CameraRig } from './render/camera-rig.js';
 import { cueShot, cueState, stepCue } from './render/dialogue-camera.js';
 import { on as onBus } from './sprint/bus.js';
 import { setIntroHud } from './ui/intro-hud.js';
+import { createStrikeTrail } from './render/strike-trail.js';
 import { fixedSteps, rayCast, moveCapsule, MASK_PLAYER } from './physics/collision.js';
 import { PHYSICS_DT, steerTo, clickStuck } from './physics/character.js';
 import { damp } from './physics/motion.js';
@@ -393,6 +394,14 @@ function townHome(spot = TOWN_SPAWN) {
   // never below the spot's own data height: a piece not streamed in yet (the altar steps) would answer with the terrain under it
   return { position: [p[0], Math.max(d ? d[1] : -Infinity, p[1] + SPAWN_DROP), p[2]], heading: spot.heading };
 }
+// the heroine's strike trails and contact flashes (render/strike-trail.js), driven by her clips' own moments
+const strikeTrail = createStrikeTrail({ THREE, parent: scene });
+window.addEventListener('ftf:iris-action', (e) => {
+  const d = e.detail || {}, m = irisAvatar && irisAvatar.irisModel;
+  if (!m || !m.model || d.clip === 'dash' || d.clip === 'strike_charge') return; // the dash has its own trail; a held wind-up is no swing
+  if (d.phase === 'start') strikeTrail.start(m.model, d.clip, d.impact, heldBlade ? heldBlade.sword : null);
+  else if (d.phase === 'impact') strikeTrail.impact();
+});
 let heldBlade = null, heldBladeLoading = false; // the Loomblade in her fist once she has taken it (play/held-blade.js)
 let shoalArt = null, shoalArtLoading = false; // the Shoal's look for the fight (render/shoal-arena-look.js), loaded when the arena first opens
 let town = null, townFlow = null, townCasting = null, townMobs = null, inTown = false, townGrounded = false, irisAvatar = null, killXp = null, endgamePass = null, stallMounted = false, worksMounted = false, tournMounted = false;
@@ -1593,6 +1602,8 @@ function frame() {
   else if (irisAvatar) irisAvatar.update(dt, movingState, avatar, clock.elapsedTime, speed, player.run && movingState, lookdev.reducedMotion, null); // the town: her gait before the season
   // the sword in her hand: after the mixer, so the closed fist sits on top of every clip
   if (heldBlade) heldBlade.update(dt, lookdev.reducedMotion);
+  strikeTrail.update(dt, lookdev.reducedMotion); // after the mixer and the grip: the trail follows the pose drawn this frame
+  if (heldBlade) { /* loaded */ }
   else if (!heldBladeLoading && glassShoal && glassShoal.hasBlade && glassShoal.hasBlade()) {
     heldBladeLoading = true;
     import('./play/held-blade.js').then((m) => { heldBlade = m.createHeldBlade({ THREE, fetchGltf: prefetchGltf, hasModelFile, mobile: mobileDevice,
