@@ -20,6 +20,8 @@ const { execFileSync } = require('child_process');
       return q && { state: q.state, file: q.file, pack: q.packFile, clips: q.names.length, clip: q.current }; }, key).catch(() => null);
     if (st && st.pack && st.pack === st.file && !/_m$/.test(st.file)) break; await p.waitForTimeout(2000);
   }
+  // MOVING=1: wait (up to 60 s more) until she walks or runs, so the clip shows her moving
+  if (process.env.MOVING) for (let i = 0; i < 120; i++) { const v = await p.evaluate((k) => window.__ftf.town.scene.townsfolk.byKey.get(k).plan.speed, key).catch(() => 0); if (v > 0.5) break; await p.waitForTimeout(500); }
   console.log('state', JSON.stringify(st), 'after', ((Date.now() - t0) / 1000).toFixed(1), 's');
   await p.evaluate(() => { for (const el of document.querySelectorAll('body *')) if (/What should the town call you/.test(el.textContent || '') && el.children.length < 8) { let n = el; while (n.parentElement && getComputedStyle(n).position !== 'fixed' && n.parentElement !== document.body) n = n.parentElement; n.style.display = 'none'; } });
   await p.evaluate((k) => { const F = window.__ftf, r = F.renderer, q = F.town.scene.townsfolk.byKey.get(k), cam = F.camera.clone(), at = q.root.position.clone();
