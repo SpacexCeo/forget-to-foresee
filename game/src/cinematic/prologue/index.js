@@ -4,8 +4,14 @@
 // dialogue layer shows the subtitles and plays the voice. Skippable: skip() snaps to the end within 1.2 s.
 import * as THREE from 'three';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { buildLab, LAB_MODELS } from '../../scenes/lab/index.js';
-import { buildVortexDisk, buildTunnel } from './vortex.js';
+import { buildVortexDisk, buildTunnel, buildVortexFx, buildTunnelStreaks, WarpShader } from './vortex.js';
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { createLabAudio } from './lab-audio.js';
 import { createIrisPoses } from './iris-poses.js';
 import { createTimeline } from './timeline.js';
@@ -64,14 +70,30 @@ export function createPrologue(ctx = {}) {
     let renderer;
     try { renderer = new THREE.WebGLRenderer({ canvas, antialias: !phone, powerPreference: 'high-performance' }); } catch { host.remove(); throw new Error('no renderer for the prologue'); }
     renderer.setPixelRatio(Math.min(globalThis.devicePixelRatio || 1, phone ? 1 : 1.5)); renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
+    if (!phone) { renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; }
     const scene = new THREE.Scene(); scene.background = new THREE.Color(0x05070c);
+    // a soft studio environment: the lacquer, steel and glass get reflections, the shadows a little fill
+    const pmrem = new THREE.PMREMGenerator(renderer), envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture; pmrem.dispose();
+    scene.environment = envTex; scene.environmentIntensity = 0.3;
     const camera = new THREE.PerspectiveCamera(40, 1, 0.05, 200);
-    const resize = () => { const w = host.clientWidth || innerWidth, h = host.clientHeight || innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); };
+    // bloom on what is brighter than white (LED lines, downlight discs, the crystal, the vortex); phones draw direct
+    let composer = null, bloom = null, warp = null;
+    if (!phone) {
+      composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 }));
+      composer.addPass(new RenderPass(scene, camera));
+      warp = new ShaderPass(WarpShader); composer.addPass(warp);   // the pull's swirl, shock ring, zoom blur and fringes
+      bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.5, 0.45, 2.0); composer.addPass(bloom);
+      composer.addPass(new OutputPass());
+    }
+    const resize = () => { const w = host.clientWidth || innerWidth, h = host.clientHeight || innerHeight; renderer.setSize(w, h, false); if (composer) composer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); };
     resize(); addEventListener('resize', resize);
     const lab = buildLab(); scene.add(lab.root);
     labModelsP.then((m) => { if (live) lab.attachModels(m); });
     const disk = buildVortexDisk(); disk.mesh.position.set(DEVICE.x - 0.08, DEVICE.y, DEVICE.z); disk.mesh.rotation.y = -Math.PI / 2; scene.add(disk.mesh);
+    const fx = buildVortexFx({ phone }); disk.mesh.add(fx.root);   // sparks, core and arcs ride with the disk (its scale too)
     const tunnel = buildTunnel({ phone }); tunnel.root.position.set(0, -300, 0); scene.add(tunnel.root);
+    const streaks = buildTunnelStreaks({ phone }); tunnel.root.add(streaks.lines);
+    const ndc = new THREE.Vector3(), drawSize = new THREE.Vector2();
     const audio = createLabAudio({ reduced, musicUrl: ((import.meta.env && import.meta.env.BASE_URL) || '/') + 'assets/audio/mus_lab.ogg' });
     let iris = null; irisP.then((i) => { if (i && live) { iris = i; scene.add(i.model); i.model.visible = false; } });
     const timeline = createTimeline({ reduced, onCue: (c) => { audio.cue(c.id); emit('prologue.cue', c.card ? { id: c.id, durMs: c.durMs } : { ...c }); if (typeof ctx.onCue === 'function') ctx.onCue(c); } });
@@ -106,7 +128,10 @@ export function createPrologue(ctx = {}) {
         p.rotation.x = -Math.PI / 2 + k * p.userData.spin * 3; p.rotation.y = k * p.userData.spin * 2; p.visible = k < 0.98;
       });
       const ck = ss(27.5, 30.8, t); lab.props.coat.position.copy(lab.props.coat.userData.home).lerp(DEVICE, ck * ck); lab.props.coat.rotation.set(ck * 4, ck * 6, 0); lab.props.coat.visible = ck < 0.97;
-      disk.update(t, ss(26.5, 27.3, t) * (cam.tunnel ? 0 : 1), 1.2 + 2.0 * ss(26.5, 31, t));
+      const open = ss(26.5, 27.3, t) * (cam.tunnel ? 0 : 1), radius = 1.2 + 2.0 * ss(26.5, 31, t);
+      disk.update(t, open, radius); renderer.getDrawingBufferSize(drawSize);
+      fx.update(t, reduced ? open * 0.6 : open, 1, drawSize.y); // fx inherits the disk's scale
+      lab.device.light.intensity *= 1 - 0.5 * open;   // the vortex lights the room, not the device's own lamp
       // ---- Iris: her path and clips, the layers on top, the pull, the tumble in the tunnel
       const ir = irisAt(t);
       if (iris) {
@@ -126,8 +151,20 @@ export function createPrologue(ctx = {}) {
       if (cam.shake) camera.position.add(tmp.set(Math.sin(t * 88) * cam.shake, Math.sin(t * 71 + 1) * cam.shake * 0.6, 0));
       camera.fov = cam.fov; camera.updateProjectionMatrix(); camera.up.set(0, 1, 0); camera.lookAt(look);
       if (cam.roll) camera.rotateZ(THREE.MathUtils.degToRad(cam.tunnel ? cam.roll * (t - 31) : Math.sin(t * 3) * cam.roll * cam.k));
-      if (cam.tunnel) tunnel.update(t - 31, (t - 31) / 4.5);
-      renderer.render(scene, camera);
+      if (cam.tunnel) { tunnel.update(t - 31, (t - 31) / 4.5); streaks.update(t - 31, (t - 31) / 4.5, 18 + 30 * ss(31, 33, t)); }
+      // the screen warp: the vortex sucks the picture in, a shock ring at the opening, zoom blur and fringes in the tunnel
+      if (warp) {
+        const u = warp.uniforms, motion = reduced ? 0.25 : 1;
+        u.uAspect.value = camera.aspect;
+        if (cam.tunnel) { u.uCenter.value.set(0.5, 0.5); u.uPinch.value = 0; u.uRing.value = -1; u.uZoom.value = motion * (0.7 + 2.5 * (1 - ss(31, 31.8, t)) + 1.2 * ss(33.5, 34.8, t)); u.uChroma.value = motion * 0.006; }
+        else {
+          camera.updateMatrixWorld(); ndc.copy(DEVICE).project(camera); u.uCenter.value.set(ndc.x * 0.5 + 0.5, ndc.y * 0.5 + 0.5);
+          u.uPinch.value = motion * open * (0.25 + 0.45 * ss(27.5, 31, t)) * (ndc.z < 1 ? 1 : 0);
+          u.uRing.value = t >= 26.5 && t < 27.9 ? (t - 26.5) * 1.3 : -1; u.uZoom.value = motion * 0.6 * ss(29.5, 31, t);
+          u.uChroma.value = motion * (0.0015 + 0.012 * open * ss(27.5, 31, t));
+        }
+      }
+      if (composer) composer.render(); else renderer.render(scene, camera);
       if (st.done) { finish(resolve); return; }
       raf = requestAnimationFrame(() => frame(resolve));
     };
@@ -135,7 +172,7 @@ export function createPrologue(ctx = {}) {
       cancelAnimationFrame(raf); removeEventListener('resize', resize);
       const skipped = timeline.skipped; live = null;
       if (iris) { scene.remove(iris.model); iris.model.position.set(0, 0, 0); iris.model.rotation.set(0, 0, 0); iris.model.scale.setScalar(1); }
-      audio.dispose(); lab.dispose(); disk.dispose(); tunnel.dispose(); renderer.dispose(); try { renderer.forceContextLoss(); } catch { /* gone */ }
+      audio.dispose(); lab.dispose(); disk.dispose(); fx.dispose(); tunnel.dispose(); streaks.dispose(); envTex.dispose(); if (composer) { composer.dispose(); bloom.dispose(); } renderer.dispose(); try { renderer.forceContextLoss(); } catch { /* gone */ }
       host.remove(); resolve(skipped ? 'skipped' : 'done');
     };
     return new Promise((resolve) => { raf = requestAnimationFrame(() => frame(resolve)); });
