@@ -385,6 +385,7 @@ function hatchPet() {
 let townTales = null; // town tales (flag tales): scenes/town-tales.js, game/tales.js
 let townQuests = null, townPortal = null, townBoard = null, expeditionSync = null, questMarkers = null; // the Expedition (?story=1): scenes/town-quests.js, town-portal.js
 let glassShoal = null, shoalLoading = false;
+let heldBlade = null, heldBladeLoading = false; // the Loomblade in her fist once she has taken it (play/held-blade.js)
 let shoalArt = null, shoalArtLoading = false; // the Shoal's look for the fight (render/shoal-arena-look.js), loaded when the arena first opens
 let town = null, townFlow = null, townCasting = null, townMobs = null, inTown = false, townGrounded = false, irisAvatar = null, killXp = null, endgamePass = null, stallMounted = false, worksMounted = false, tournMounted = false;
 let restoreCamera = () => {};
@@ -1556,6 +1557,13 @@ function frame() {
   void moving;
   if (play && !inTown) play.update(dt, { focus, moving: movingState, speed, running: player.run && movingState });
   else if (irisAvatar) irisAvatar.update(dt, movingState, avatar, clock.elapsedTime, speed, player.run && movingState, lookdev.reducedMotion, null); // the town: her gait before the season
+  // the sword in her hand: after the mixer, so the closed fist sits on top of every clip
+  if (heldBlade) heldBlade.update();
+  else if (!heldBladeLoading && glassShoal && glassShoal.hasBlade && glassShoal.hasBlade()) {
+    heldBladeLoading = true;
+    import('./play/held-blade.js').then((m) => { heldBlade = m.createHeldBlade({ THREE, fetchGltf: prefetchGltf, hasModelFile, mobile: mobileDevice,
+      model: () => (inTown && irisAvatar && irisAvatar.irisModel && irisAvatar.hero && irisAvatar.hero.id === 'iris' ? irisAvatar.irisModel.model : null), held: () => !!glassShoal && glassShoal.hasBlade() }); }).catch(() => { heldBladeLoading = false; });
+  }
   // the sticks: the town, and the archipelago in normal play; ?demo=judge keeps tap-to-move and its buttons (README path)
   if (play && !inTown) { if (!panelCollapse) panelCollapse = createPanelCollapse({ t: (k, a) => ctx.i18n.t(k, a) }); panelCollapse.update(); } // the inside-Shell panel folds
   if (touchSticks) touchSticks.update({ active: (!!(inTown && townFlow && townFlow.phase === 'town') || (!!play && !inTown && !judge)) && !document.querySelector('dialog[open], .gm, .pl-panel:not([hidden])') });
