@@ -39,7 +39,7 @@ export function createHaptics({ win = globalThis, nav = globalThis.navigator, st
     const p = PATTERNS[cue];
     if (!p || !hapticsOn(storage, reduced())) return false;
     let did = false;
-    try { if (nav && typeof nav.vibrate === 'function') did = nav.vibrate(p[0]) || did; } catch { /* not allowed */ }
+    try { if (nav && typeof nav.vibrate === 'function' && !(nav.userActivation && !nav.userActivation.hasBeenActive)) did = nav.vibrate(p[0]) || did; } catch { /* not allowed */ }
     try {
       const pads = nav && typeof nav.getGamepads === 'function' ? nav.getGamepads() : [];
       for (const g of pads || []) {
