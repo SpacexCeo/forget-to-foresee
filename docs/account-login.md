@@ -87,26 +87,27 @@ One canonical account per player: the Day-1 NEAR account every login maps to. In
 browser sees **Linked sign-in methods** (each with Unlink), **Link an email**, and a note that another wallet is linked
 by signing in with it while this account is open. A browser with no account sees **Sign in with email**.
 
-- **Link an email** ( linkStart / linkFinish; ): an account proof (a message
-  signed by a full-access key of the account, used once, 5 minutes) and the email go to ; a
-  6-digit code is mailed. The browser makes a dedicated **email key**, adds it to the account on chain (AddKey, signed
-  by its own key), then sends the code, the key and a second proof to . The relayer checks the
-  key is on the account and stores it **encrypted** (AES-256-GCM, ) under ; the
-  address itself is never stored (only a hint like ).
-- **Sign in with email**:  (the same answer for a known and an unknown address; no mail to an
-  unknown one), then  with the code returns the account and its email key while that key is
-  still on the account. The browser plays as that account: mints and transfers go there, as with every login.
+- **Link an email** (`net/account-email.js` linkStart / linkFinish; `relayer/lib/email-auth.js`): an account proof (a
+  message signed by a full-access key of the account, used once, 5 minutes) and the email go to
+  `POST /api/auth/email/start`; a 6-digit code is mailed. The browser makes a dedicated **email key**, adds it to the
+  account on chain (AddKey, signed by its own key), then sends the code, the key and a second proof to
+  `POST /api/auth/email/link`. The relayer checks that the key is on the account and stores it **encrypted**
+  (AES-256-GCM, `FTF_EMAIL_KEY_SECRET`) under `email:<sha256>`; the address itself is never stored (only a hint like
+  `a***@gmail.com`).
+- **Sign in with email**: `POST /api/auth/email/start` (the same answer for a known and an unknown address; no mail to
+  an unknown one), then `POST /api/auth/email/login` with the code returns the account and its email key while that key
+  is still on the account. The browser plays as that account: mints and transfers go there, as with every login.
 - Codes: 10 minutes, 5 tries, one use, 5 an hour per address, kept only as salted hashes in memory. No passwords exist.
--  and  (each with a fresh proof). Unlinking an email destroys its stored
+- `POST /api/auth/methods` and `POST /api/auth/unlink` (each with a fresh proof). Unlinking an email destroys its stored
   key; a device that already signed in with it keeps that key until it is removed from the account (DeleteKey is not
   wired in the panel yet).
 - **Custody, stated plainly:** email sign-in means the relayer holds an encrypted testnet key per linked email. The
   account holds testnet NEAR and game items with no real-world value.
-- **Configuration (owner):**  and  (a sender on a domain verified in Resend), and
-   (32 random bytes, base64). Without them the email routes answer 503  and
-  the panel says "Email sign-in is not available yet"; the methods list works regardless.
-- Tests: ,  (desktop link + phone sign-in
-  against the real relayer code).
+- **Configuration (owner):** `RESEND_API_KEY` and `FTF_EMAIL_FROM` (a sender on a domain verified in Resend), and
+  `FTF_EMAIL_KEY_SECRET` (32 random bytes, base64). Without them the email routes answer 503 `email_not_configured`
+  and the panel says "Email sign-in is not available yet"; the methods list works regardless.
+- Tests: `relayer/tests/email-auth.test.mjs`, `game/tests/client/account-email.test.mjs` (a desktop link and a phone
+  sign-in against the real relayer code).
 
 ## Files
 
