@@ -17,6 +17,8 @@ export const STRIKE_LOOK = Object.freeze({
   slash: { color: 0xfff1c9, width: 0.0 },   // the blade: the ribbon spans hilt to tip, no extra width
   cast: { color: 0xa8e4ff, width: 0.26 },
 });
+/** Metres of forearm a fist's ribbon spans (a punch's path is short; the width carries it). */
+export const HAND_WIDTH = 0.62;
 export const RIBBON = 32, TRAIL_FADE = 0.42, AFTER_IMPACT = 0.18;
 
 /** Which look a clip takes (pure). */
@@ -89,7 +91,7 @@ export function createStrikeTrail({ THREE, parent }) {
     /** The impact frame: a flash at the leading limb (or the blade's tip). */
     impact() {
       const p = api.tip(_w); if (!p) return;
-      flash.position.copy(p); flashT = 0; flashSize = 0.55 + look.width * 1.6; flash.material.color.setHex(look.color);
+      flash.position.copy(p); flashT = 0; flashSize = (0.55 + look.width * 1.6) * (lead && /hand|wrist/i.test(lead.bone.name) ? 1.35 : 1); flash.material.color.setHex(look.color);
     },
     /** The point the trail follows now (the blade's tip, else the leading limb), written into `out`; null if none. */
     tip(out) {
@@ -111,7 +113,9 @@ export function createStrikeTrail({ THREE, parent }) {
         if (blade) { _v.set(0, 0.15, 0); blade.localToWorld(_v); _w.set(0, 0.94, 0); blade.localToWorld(_w); ok = true; }
         else if (lead) {
           lead.bone.getWorldPosition(_w); lead.bone.parent.getWorldPosition(_d);
-          _v.subVectors(_d, _w); const len = _v.length() || 1; _v.multiplyScalar(Math.min(1, look.width / len)).add(_w); ok = true;
+          // a fist travels a short path: its ribbon spans the whole forearm so a punch reads as boldly as a kick (owner 14.11)
+          const w = /hand|wrist/i.test(lead.bone.name) ? Math.max(look.width, HAND_WIDTH) : look.width;
+          _v.subVectors(_d, _w); const len = _v.length() || 1; _v.multiplyScalar(Math.min(1.25, w / len)).add(_w); ok = true;
         }
         if (ok) {
           const i = head; head = (head + 1) % RIBBON;
