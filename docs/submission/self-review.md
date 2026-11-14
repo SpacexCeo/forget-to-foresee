@@ -44,7 +44,7 @@ after it. The relayer's day counter resets at 00:00 UTC.
 | 2 | README numbers from tonight's run (STATS, trades, guests, chests, dragons), the 1,082 failures stated plainly | this branch | this branch |
 | 3 | Real recent tx links per player action (guest mint, chest opening, dragon mint) | this branch | this branch |
 | 4 | Player moves on chain: a pledge, a gate payment, an item sale | gameplay + the Town works window (`wip/defi-pass`) | pledges and goals in the window; the chain moves come from players |
-| 5 | Turn on `damageNumbers` and `loadRitual` (see the flags below) | lead | proposed |
+| 5 | Turn on `loadRitual` (see the flags below; `damageNumbers` is on) | lead | proposed |
 | 6 | The jury video and the X post | owner | drafts in this folder |
 
 ## Flags that are off on the live page (`game/public/features.json`)
@@ -53,7 +53,7 @@ New work ships with its flag on (owner, 14 Nov); a flag is only an off switch.
 
 | Flag | Ready to turn on? | Why |
 | --- | --- | --- |
-| `damageNumbers` | **Yes**, after the lead's boot check | Wired in `boot-world.js` and `play/mobs.js`, pooled DOM (24 elements), `tests/client/float-numbers.test.mjs`; worker 3 polishes it tonight |
+| `damageNumbers` | **On** since 14 Nov | Shipped with the night combat pass |
 | `loadRitual` | **Yes**, after the lead's boot check | Wired in `main.js` (loading screen only), `tests/client/load-ritual.test.mjs` |
 | `glassShoal` | Owner's call | Built and tested; placeholder models are being replaced tonight (Fable A/B) |
 | `loomMeter`, `presenceChip`, `tuneOverlay`, `statusBanner`, `register` | No | Defined in `src/features.js`, but nothing in the game reads them: turning them on changes nothing |
