@@ -6,7 +6,7 @@ import { LOOT_ICONS, silkText } from './season-loot.js';
 const CSS = `
 .sl-wrap { position: fixed; inset: 0; z-index: calc(var(--z-modal, 40) + 3); display: grid; place-items: center; padding: 16px; box-sizing: border-box;
   width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; border: 0; color: inherit;
-  background: radial-gradient(ellipse at 50% 40%, rgba(40, 32, 12, .55), rgba(3, 6, 6, .72)); animation: sl-fade .35s ease both; }
+  background: radial-gradient(ellipse at 50% 45%, rgba(20, 16, 8, .25), rgba(3, 6, 6, .7)), var(--sl-bg, none) center / cover no-repeat, #0b0f0e; animation: sl-fade .35s ease both; }
 .sl-card { position: relative; width: min(420px, 100%); max-height: calc(100vh - 32px); overflow-y: auto; box-sizing: border-box; padding: 22px 22px 18px;
   border: 1px solid rgba(220, 192, 138, .55); border-radius: 14px; background: linear-gradient(180deg, #17221e, #0e1614 70%);
   box-shadow: 0 18px 50px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 240, 200, .08); color: #ecebe4; font: 15px/1.45 var(--font-ui, system-ui, sans-serif);
@@ -56,6 +56,8 @@ export function openSeasonLoot({ rows, outcome = null, t, base = '/', reduced = 
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   // an open <dialog> (not modal: the page keeps its own layers): the world's keys and the mouse aim stand down while it shows
   const wrap = el('dialog', 'sl-wrap' + (reduced ? ' sl-still' : '')); wrap.setAttribute('open', ''); wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true'); wrap.setAttribute('aria-labelledby', 'sl-title');
+  // the homecoming scene behind the card (owner's GPT art: the town gate at dusk, the trophies by the doors)
+  wrap.style.setProperty('--sl-bg', `url("${base}assets/ui/season/season_return_bg_${(globalThis.innerWidth || 1280) > 900 ? 1600 : 800}.webp")`);
   const card = el('div', 'sl-card'); wrap.append(card);
   const title = el('h2', 'sl-title', t('loot.title')); title.id = 'sl-title';
   card.append(el('p', 'sl-kicker', t('loot.kicker')), title);

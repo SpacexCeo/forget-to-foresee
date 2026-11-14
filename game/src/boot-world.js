@@ -225,6 +225,26 @@ import('./net/silk-balance.js').then((m) => { const model = m.createSilkModel({ 
 // One game menu at a time (owner 13.11: I, then I or C again, stacked a second layer): a hotkey or a tray button for the
 // open tab closes the menu, for another tab switches to it (ui/window-toggle.js menuKeyAction); other windows close first.
 let gameMenu = null, gameMenuLoading = null;
+// The town map (M and the tray Map; owner 14.11 "redraw the map"): the painted map with live marks (play/town-map-ui.js)
+let townMap = null, townMapLoading = false;
+registerWindow('map', { isOpen: () => !!townMap, close: () => townMap && townMap.close() });
+function toggleTownMap() {
+  if (townMap) { townMap.close(); return; }
+  if (townMapLoading || !inTown || !town) return;
+  townMapLoading = true; claimWindow('map');
+  import('./play/town-map-ui.js').then((m) => {
+    townMapLoading = false; if (!inTown) return;
+    const local = (w) => (w ? [w[0] - TOWN_ORIGIN_W[0], w[1] - TOWN_ORIGIN_W[1], w[2] - TOWN_ORIGIN_W[2]] : null);
+    clearWorldInput();
+    townMap = m.openTownMap({ t: (k, a) => ctx.i18n.t(k, a), base: import.meta.env.BASE_URL, big: !mobileDevice,
+      iris: () => ({ pos: local(player.pos), heading: player.heading }),
+      quests: () => [...(townQuests ? townQuests.markers() : []), ...errandMarkers(), ...(townTales ? townTales.markers() : [])]
+        .map((q) => { const f = town.townsfolk && town.townsfolk.byKey.get(q.giver); return { key: q.giver, sym: q.sym, pos: f ? [f.plan.x, f.plan.y, f.plan.z] : null, name: ctx.i18n.t('folk.name.' + q.giver) }; }), // plan positions are town-local
+      onClose: () => { townMap = null; clearWorldInput(); } });
+    cue('ui_click');
+  }).catch((e) => { townMapLoading = false; console.warn('[map]', e); });
+}
+window.addEventListener('ftf:town-map', toggleTownMap);
 registerWindow('menu', { isOpen: () => !!gameMenu, close: () => gameMenu && gameMenu.close() });
 const openProfileFor = (quest = null, tab = 'profile', toggle = false) => {
   const act = menuKeyAction({ open: !!gameMenu, tab: gameMenu && (gameMenu.tab === 'wheel' ? 'inventory' : gameMenu.tab) }, tab === 'wheel' ? 'inventory' : tab, toggle);

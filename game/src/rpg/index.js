@@ -54,7 +54,7 @@ export function mount(ctx) {
     onSilk: () => { if (ctx.ui && ctx.ui.openWallet) ctx.ui.openWallet(); else win.dispatchEvent(new CustomEvent('ftf:open-window', { detail: { id: 'wallet' } })); },
     onMap: () => openWindow('map'), onZoom: (d) => map && map.zoom(d), onFrame: () => openWindow('character'),
     onDropSkill: (i, id) => { bar = S.placeOnSlot(bar, i, id); save(); } });
-  import('./minimap.js').then((m) => { map = m.createMinimap({ canvas: hud.canvas, markers: ctx.markers, mobs: mobsOf, player: ctx.player, origin: () => (ctx.townOrigin ? ctx.townOrigin() : (win.__ftf && win.__ftf.town && win.__ftf.town.origin) || [0, 0, 0]),
+  import('./minimap.js').then((m) => { map = m.createMinimap({ canvas: hud.canvas, base: ctx.base || '/', markers: ctx.markers, mobs: mobsOf, player: ctx.player, origin: () => (ctx.townOrigin ? ctx.townOrigin() : (win.__ftf && win.__ftf.town && win.__ftf.town.origin) || [0, 0, 0]),
     players: () => (win.__ftf && win.__ftf.mp && win.__ftf.mp.bodies ? win.__ftf.mp.bodies() : []), reveal: () => !!(self.buffs.reveal && self.buffs.reveal.until > now()) }); }).catch(() => {});
   emit('hud.mounted', { layout: win.innerWidth < 900 ? 'phone' : 'desktop' });
   // one identity (design review 13.11): the name the player gave on Day 1 (ftf.day1.v1), else "Traveller" (the base HUD's word)
