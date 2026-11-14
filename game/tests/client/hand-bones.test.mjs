@@ -39,13 +39,20 @@ test('hands: the shipped heroine models resolve a right hand (the cast start and
   }
 });
 
-test('the blade: a rig with no fitted grip holds no sword; the game rig keeps its grip', async () => {
+test('the blade: each rig holds the sword with its own fitted grip; a rig without one holds none', async () => {
   const { pickGrip, KNOWN_GRIPS } = await import('../../src/play/held-blade.js');
   const { GRIP } = await import('../../src/play/grip-pose.js');
   const has = (names) => (n) => names.includes(n);
   assert.equal(pickGrip(has(['prop_R', ...Object.keys(GRIP.pose)])), GRIP);
-  assert.equal(pickGrip(has(['R_Hand', 'R_Index1', 'R_Index2', 'R_Index3', 'R_Thumb1'])), KNOWN_GRIPS.find((g) => g.seat === 'R_Hand') || null);
-  assert.equal(pickGrip(has(['mixamorigRightHand'])), KNOWN_GRIPS.find((g) => g.seat === 'mixamorigRightHand') || null);
+  // the fitted grips of the new rigs (art/agents/grip_fit_rig.mjs): a model with the seat and every posed finger bone
+  // holds the sword; one bone short and it fights with empty hands
+  for (const seat of ['R_Hand', 'mixamorigRightHand']) {
+    const g = KNOWN_GRIPS.find((x) => x.seat === seat);
+    assert.ok(g && Object.keys(g.pose).length >= 15, seat + ': a fitted grip with every finger');
+    assert.equal(g.sword_in_seat.length, 16);
+    assert.equal(pickGrip(has([seat, ...Object.keys(g.pose)])), g);
+    assert.equal(pickGrip(has([seat, ...Object.keys(g.pose).slice(1)])), null);
+  }
 });
 
 test('clips: the heroines\' clip files carry every clip the fight and the town ask for', () => {
