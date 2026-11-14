@@ -164,7 +164,7 @@ export function createShoalArena(o) {
     if (color != null) imp.color = color;
     const dx = at[0] - me3.x, dz = at[2] - me3.z, l = Math.hypot(dx, dz) || 1;
     fx.impact(at, [dx / l, dz / l], imp, 0);
-    spell.impact(src === 'ember' || src === 'gale' ? src : 'blade', at, [dx / l, dz / l]);
+    spell.impact(src === 'ember' || src === 'gale' ? src : 'blade', at, [dx / l, dz / l], 0);
     if (imp.shake > 0) { if (shakeT <= 0) shakeAmp = 0; shakeAmp = Math.max(shakeAmp, imp.shake * 0.5); shakeT = 0.22; }
     if (!red && imp.stop) stopT = Math.max(stopT, imp.stop);
   }

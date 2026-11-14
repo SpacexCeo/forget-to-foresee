@@ -135,6 +135,31 @@ void main() {
   gl_FragColor = vec4(mix(uColor, vec3(1.0), rim * 0.5) * 1.3, a);
 }`;
 
+const SHOCK_VS = /* glsl */`varying vec2 vP; void main() { vP = position.xz; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
+// A ground shockwave / scorch: a hot thin front racing out, a soft wake inside it, radial streaks, a cooling burn mark.
+const SHOCK_FS = /* glsl */`
+uniform vec3 uColor;
+uniform float uT, uSeed, uBurn;
+varying vec2 vP;
+float h(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float n(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(h(i), h(i + vec2(1, 0)), f.x), mix(h(i + vec2(0, 1)), h(i + vec2(1, 1)), f.x), f.y); }
+void main() {
+  float r = length(vP);
+  float ang = atan(vP.y, vP.x);
+  float front = 1.0 - pow(1.0 - clamp(uT * 1.6, 0.0, 1.0), 3.0);
+  float ragged = (n(vec2(ang * 5.0 + uSeed, uSeed)) - 0.5) * 0.12;
+  float band = exp(-pow((r - front - ragged) / 0.05, 2.0)) * (1.0 - uT);
+  float wake = smoothstep(front, front * 0.4, r) * step(r, front + 0.05) * (1.0 - uT) * 0.25;
+  float rays = pow(n(vec2(ang * 14.0 + uSeed * 3.0, r * 2.0)), 3.0) * smoothstep(front + 0.05, front * 0.5, r) * (1.0 - uT) * 0.9;
+  float core = exp(-r * r * 30.0) * max(0.0, 1.0 - uT * 3.0) * 2.0;
+  float burn = uBurn * exp(-r * r * 5.0) * (0.5 + 0.5 * n(vP * 9.0 + uSeed)) * (1.0 - uT) * 0.6;
+  vec3 hot = mix(vec3(1.0, 0.97, 0.9), uColor, 0.45);
+  vec3 col = hot * (band * 2.2 + core) + uColor * (wake + rays) + uColor * vec3(1.0, 0.55, 0.3) * burn;
+  float a = clamp(band + wake + rays + core + burn, 0.0, 1.0) * step(r, 1.0);
+  gl_FragColor = vec4(col, a);
+}`;
+
 /** The shuriken's outline: four swept crescent blades round a hub (XY plane, radius ~0.8). */
 function shurikenShape(THREE) {
   const s = new THREE.Shape(), P = (r, a) => [Math.cos(a) * r, Math.sin(a) * r];
@@ -291,15 +316,35 @@ export function createSpellFx({ THREE, parent, scale = 1, rand = Math.random }) 
   const time = { value: 0 };
   const _w = new THREE.Vector3(), _eye = new THREE.Vector3();
   const N = (k) => Math.max(1, Math.round(k * scale));
+  // ground shockwaves (pooled) and a brief light flash on the surfaces round an impact (desktop only: two lights that
+  // always exist, so the light count never changes and no material recompiles)
+  const shockGeo = new THREE.CircleGeometry(1, 48); shockGeo.rotateX(-Math.PI / 2);
+  const shocks = Array.from({ length: 6 }, () => {
+    const m = new THREE.Mesh(shockGeo, new THREE.ShaderMaterial({ uniforms: { uColor: { value: new THREE.Color() }, uT: { value: 1 }, uSeed: { value: 0 }, uBurn: { value: 0 } }, vertexShader: SHOCK_VS, fragmentShader: SHOCK_FS, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+    m.visible = false; m.renderOrder = 5; m.frustumCulled = false; group.add(m); return { m, t: 1, dur: 0.6 };
+  });
+  let shockNext = 0;
+  const lights = scale < 1 ? [] : Array.from({ length: 2 }, () => { const l = new THREE.PointLight(0xffffff, 0, 9, 2); l.castShadow = false; group.add(l); return { l, t: 1, dur: 0.25, peak: 0 }; });
+  let lightNext = 0;
+  function shock(x, y, z, color, radius, dur, burn = 0) {
+    const S = shocks[shockNext]; shockNext = (shockNext + 1) % shocks.length;
+    S.m.position.set(x, y + 0.04, z); S.m.scale.setScalar(radius); S.t = 0; S.dur = dur; S.m.visible = true;
+    const u = S.m.material.uniforms; u.uColor.value.setHex(color); u.uSeed.value = rand() * 10; u.uBurn.value = burn; u.uT.value = 0;
+  }
+  function flashLight(x, y, z, color, peak, dur) {
+    if (!lights.length) return;
+    const L = lights[lightNext]; lightNext = (lightNext + 1) % lights.length;
+    L.l.position.set(x, y + 0.4, z); L.l.color.setHex(color); L.t = 0; L.dur = dur; L.peak = peak;
+  }
 
-  function ember(color = 0xff8a3a, size = 0.7) {
+  function ember(color = 0xff8a3a, size = 1.0) {
     const obj = new THREE.Group(); obj.name = 'spell-ember';
     const m = new THREE.Mesh(plane, new THREE.ShaderMaterial({
       uniforms: { uTime: time, uSeed: { value: rand() }, uSize: { value: size }, uColor: { value: new THREE.Color(color) } },
       vertexShader: FLAME_VS, fragmentShader: FLAME_FS, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
     }));
     m.frustumCulled = false; m.renderOrder = 7; obj.add(m);
-    projs.push({ kind: 'ember', obj, color, mats: [m.material], ribs: [ribbons.take(color, 0.26, 0.26, 1.6), ribbons.take(0xffe6b0, 0.07, 0.12, 2.2)], last: null, acc: 0 });
+    projs.push({ kind: 'ember', obj, color, mats: [m.material], ribs: [ribbons.take(color, 0.42, 0.34, 1.9), ribbons.take(0xffe6b0, 0.1, 0.16, 2.6)], last: null, acc: 0 });
     return obj;
   }
 
@@ -310,25 +355,28 @@ export function createSpellFx({ THREE, parent, scale = 1, rand = Math.random }) 
     const blade = new THREE.Mesh(blades, bm); blade.frustumCulled = false; blade.renderOrder = 7; spin.add(blade);
     const um = new THREE.ShaderMaterial({ uniforms: { uColor: { value: new THREE.Color(color) }, uTime: time, uFade: { value: 1 } }, vertexShader: BLUR_VS, fragmentShader: BLUR_FS, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
     const blur = new THREE.Mesh(blurGeo, um); blur.frustumCulled = false; blur.renderOrder = 6; obj.add(blur);
-    obj.rotation.z = (rand() - 0.5) * 0.3;
-    projs.push({ kind: 'gale', obj, spin, color, mats: [bm, um], ribs: [ribbons.take(0xffffff, 0.05, 0.16, 1.8), ribbons.take(0xffffff, 0.05, 0.16, 1.8), ribbons.take(color, 0.5, 0.22, 0.55)], last: null, acc: 0, ang: rand() * 6.28 });
+    spin.scale.setScalar(1.35); blur.scale.setScalar(1.35); obj.rotation.z = (rand() - 0.5) * 0.3; obj.rotation.x = -0.32;
+    projs.push({ kind: 'gale', obj, spin, color, mats: [bm, um], ribs: [ribbons.take(0xffffff, 0.08, 0.24, 2.2), ribbons.take(0xffffff, 0.08, 0.24, 2.2), ribbons.take(color, 0.75, 0.3, 0.7)], last: null, acc: 0, ang: rand() * 6.28 });
     return obj;
   }
 
   /** The look of a cast landing (on top of render/hit-fx.js's flash and kick): sparks, embers, wind cuts. */
-  function impact(kind, at, away = [0, 1]) {
+  function impact(kind, at, away = [0, 1], ground = 0) {
     const [x, y, z] = at;
+    if (kind === 'ember') { shock(x, ground, z, 0xff8a3a, 2.6, 0.7, 1); flashLight(x, y, z, 0xff9a50, 26, 0.3); }
+    else if (kind === 'gale') { shock(x, ground, z, 0xc8f0ff, 2.2, 0.5); flashLight(x, y, z, 0xc8f0ff, 14, 0.2); }
+    else { shock(x, ground, z, 0xffe2a0, 1.6, 0.45); flashLight(x, y, z, 0xffe2a0, 12, 0.18); }
     if (kind === 'ember') {
-      streaks.emit(x, y, z, 0, 0.01, 0, 0.12, 0xffffff, 0xff9a40, 4, 0.32, 0);           // a tiny hot core, not a bloom ball
-      for (let i = 0; i < N(34); i++) {
+      streaks.emit(x, y, z, 0, 0.01, 0, 0.14, 0xffffff, 0xff9a40, 6, 0.4, 0);           // a tiny hot core, not a bloom ball
+      for (let i = 0; i < N(60); i++) {
         const a = rand() * 6.283, e = (rand() - 0.3) * 1.4, s = 5 + rand() * 9;
-        streaks.emit(x, y, z, Math.cos(a) * Math.cos(e) * s + away[0] * 3, Math.sin(e) * s + 1.5, Math.sin(a) * Math.cos(e) * s + away[1] * 3, 0.25 + rand() * 0.35, 0xffd890, 0xff3a10, 3.2, 0.022, 0.035, 3.5, -9);
+        streaks.emit(x, y, z, Math.cos(a) * Math.cos(e) * s + away[0] * 3, Math.sin(e) * s + 1.5, Math.sin(a) * Math.cos(e) * s + away[1] * 3, 0.3 + rand() * 0.45, 0xffd890, 0xff3a10, 4, 0.028, 0.055, 3, -9);
       }
       for (let i = 0; i < N(14); i++) streaks.emit(x + (rand() - 0.5) * 0.5, y + (rand() - 0.5) * 0.4, z + (rand() - 0.5) * 0.5, (rand() - 0.5) * 1.6, 0.6 + rand() * 1.6, (rand() - 0.5) * 1.6, 0.8 + rand() * 0.8, 0xffb060, 0x8a1a08, 2.4, 0.028, 0.02, 1.2, 1.4);
     } else if (kind === 'gale') {
-      for (let i = 0; i < N(18); i++) {
-        const a = rand() * 6.283, s = 7 + rand() * 8, tilt = (rand() - 0.5) * 0.9;
-        streaks.emit(x, y, z, Math.cos(a) * s, tilt * s, Math.sin(a) * s, 0.16 + rand() * 0.14, 0xffffff, 0x9fd8ff, 2.6, 0.016, 0.09, 6, 0);
+      for (let i = 0; i < N(34); i++) {
+        const a = rand() * 6.283, s = 8 + rand() * 10, tilt = (rand() - 0.5) * 0.9;
+        streaks.emit(x, y, z, Math.cos(a) * s, tilt * s, Math.sin(a) * s, 0.2 + rand() * 0.18, 0xffffff, 0x9fd8ff, 3.2, 0.02, 0.12, 5, 0);
       }
       for (let k = 0; k < 2; k++) {                                                           // the cut: two long crossing slashes
         const a = Math.atan2(away[0], away[1]) + (k ? 0.9 : -0.9);
@@ -336,7 +384,7 @@ export function createSpellFx({ THREE, parent, scale = 1, rand = Math.random }) 
       }
       for (let i = 0; i < N(10); i++) streaks.emit(x, y, z, (rand() - 0.5) * 3, rand() * 2, (rand() - 0.5) * 3, 0.5 + rand() * 0.4, 0xe8f8ff, 0x6aa8d0, 1.6, 0.02, 0.02, 1.5, -2);
     } else {
-      for (let i = 0; i < N(22); i++) {
+      for (let i = 0; i < N(36); i++) {
         const a = Math.atan2(away[0], away[1]) + (rand() - 0.5) * 2.6, s = 4 + rand() * 7;
         streaks.emit(x, y, z, Math.sin(a) * s, 1 + rand() * 4, Math.cos(a) * s, 0.2 + rand() * 0.3, 0xffffff, 0xffb050, 3, 0.018, 0.04, 2.5, -12);
       }
@@ -359,10 +407,10 @@ export function createSpellFx({ THREE, parent, scale = 1, rand = Math.random }) 
       if (P.kind === 'ember') {
         if (P.ribs[0] >= 0) ribbons.push(P.ribs[0], x, y, z);
         if (P.ribs[1] >= 0) ribbons.push(P.ribs[1], x, y, z);
-        P.acc += dt * 90 * scale;
+        P.acc += dt * 150 * scale;
         for (; P.acc >= 1; P.acc--) {
           const j = 0.12;
-          streaks.emit(x + (rand() - 0.5) * j, y + (rand() - 0.5) * j, z + (rand() - 0.5) * j, -dx * 0.12 + (rand() - 0.5) * 2.2, -dy * 0.12 + (rand() - 0.3) * 2.2, -dz * 0.12 + (rand() - 0.5) * 2.2, 0.18 + rand() * 0.3, 0xffd890, 0xff3010, 2.6, 0.02, 0.03, 4, 1.2);
+          streaks.emit(x + (rand() - 0.5) * j, y + (rand() - 0.5) * j, z + (rand() - 0.5) * j, -dx * 0.12 + (rand() - 0.5) * 2.2, -dy * 0.12 + (rand() - 0.3) * 2.2, -dz * 0.12 + (rand() - 0.5) * 2.2, 0.22 + rand() * 0.4, 0xffd890, 0xff3010, 3.2, 0.026, 0.05, 3, 1.2);
         }
       } else {
         P.ang += dt * 26; P.spin.rotation.y = P.ang;
@@ -370,18 +418,23 @@ export function createSpellFx({ THREE, parent, scale = 1, rand = Math.random }) 
         for (let k = 0; k < 2; k++) {
           if (P.ribs[k] < 0) continue;
           const a = P.ang + k * Math.PI + 0.42;
-          _w.set(Math.cos(a) * 0.8, 0, -Math.sin(a) * 0.8).applyMatrix4(o.matrixWorld); group.worldToLocal(_w);
+          _w.set(Math.cos(a) * 1.08, 0, -Math.sin(a) * 1.08).applyMatrix4(o.matrixWorld); group.worldToLocal(_w);
           ribbons.push(P.ribs[k], _w.x, _w.y, _w.z);
         }
         if (P.ribs[2] >= 0) ribbons.push(P.ribs[2], x, y, z);
-        P.acc += dt * 60 * scale;
+        P.acc += dt * 140 * scale;
         const l = sp || 1;
         for (; P.acc >= 1; P.acc--) {
-          const a = rand() * 6.283, r = 0.5 + rand() * 0.6;
-          streaks.emit(x + Math.cos(a) * r, y + (rand() - 0.5) * 0.25, z + Math.sin(a) * r, -dx / l * 3, 0, -dz / l * 3, 0.16 + rand() * 0.12, 0xffffff, 0x9fd8ff, 1.3, 0.01, 0.07, 2, 0);
+          const a = rand() * 6.283, r = 0.6 + rand() * 0.9;
+          streaks.emit(x + Math.cos(a) * r, y + (rand() - 0.5) * 0.25, z + Math.sin(a) * r, -dx / l * 4, (rand() - 0.5) * 0.4, -dz / l * 4, 0.2 + rand() * 0.16, 0xffffff, 0x9fd8ff, 1.8, 0.012, 0.14, 1.5, 0);
         }
       }
     }
+    for (const S of shocks) {
+      if (!S.m.visible) continue;
+      S.t += dt; const u = Math.min(1, S.t / S.dur); S.m.material.uniforms.uT.value = u; if (u >= 1) S.m.visible = false;
+    }
+    for (const L of lights) { L.t += dt; const u = Math.min(1, L.t / L.dur); L.l.intensity = u >= 1 ? 0 : L.peak * (1 - u) * (1 - u); }
     streaks.update(dt);
     ribbons.update(dt, _eye);
   }
@@ -392,6 +445,7 @@ export function createSpellFx({ THREE, parent, scale = 1, rand = Math.random }) 
     stats: () => ({ projectiles: projs.length, streaks: streaks.live, ribbons: ribbons.used }),
     dispose() {
       for (const P of projs) for (const m of P.mats) m.dispose();
+      for (const S of shocks) S.m.material.dispose(); shockGeo.dispose();
       projs.length = 0; streaks.dispose(); ribbons.dispose(); plane.dispose(); blades.dispose(); blurGeo.dispose(); group.removeFromParent();
     },
   };
