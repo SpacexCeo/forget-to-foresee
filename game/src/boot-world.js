@@ -1008,7 +1008,8 @@ function updateAltarTimer() {
 const INTRO_KEY = 'ftf.intro.v1';
 /** Shot timing (seconds) and framing: the flight, then the swing; the drone's distance and pitch over the street. */
 const INTRO_SHOT = Object.freeze({ fly: 2.3, swing: 1.2, droneDist: 15, dronePitch: 30, hudFade: 0.6 });
-const INTRO_CSS = `body.ftf-intro > :not(#app):not(#boot):not(.ftf-intro-skip){opacity:0!important;pointer-events:none!important}
+// .acct: the entry gate opens the account panel (Play as guest) before the loading screen lifts; hidden, it deadlocked a first visit
+const INTRO_CSS = `body.ftf-intro > :not(#app):not(#boot):not(.ftf-intro-skip):not(.acct){opacity:0!important;pointer-events:none!important}
 body.ftf-intro-out > :not(#app):not(#boot){transition:opacity ${INTRO_SHOT.hudFade}s ease}`;
 /** A Day-1 panel (welcome, name, cards, claim) is on screen: the street's talk prompts and barks wait. */
 const day1Open = () => !!document.querySelector('.d1-panel, .d1-card');
