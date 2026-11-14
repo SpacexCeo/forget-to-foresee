@@ -42,13 +42,19 @@ export const CUES = Object.freeze([
 ]);
 export const WAKE_CUES = Object.freeze([{ id: 'eyes_open', t: 0.0 }, { id: 'crowd', t: 3.0 }, { id: 'sit_up', t: 6.0 }]);
 
-/** Iris: where she is and which clip plays. [t0, t1, from [x, z], to [x, z], clip]; she stands at `to` afterwards. */
+/**
+ * Iris: where she is and which clip plays. [t0, t1, from [x, z], to [x, z], clip]; she stands at `to` afterwards.
+ * She only ever walks, at an unhurried pace (owner, 14.11: "only a slow animation"): no segment is faster than
+ * WALK_MAX m/s, and the prologue plays the walk clip at her actual speed so the feet never slide.
+ */
+export const WALK_SPEED = 1.25;   // m/s at which the walk clip plays at its own rate
+export const WALK_MAX = 1.4;
 export const IRIS_PATH = Object.freeze([
   [3.0, 3.6, [-3, 5.5], [-3, 5.5], 'idle'],            // behind the door while it opens
-  [3.6, 7.4, [-3, 5.5], [-2.6, 1.6], 'run'],
-  [7.4, 9.6, [-2.6, 1.6], [0.6, -2.4], 'walk'],
-  [9.6, 10.6, [0.6, -2.4], [0.6, -2.4], 'idle'],
-  [10.6, 12.0, [0.6, -2.4], [1.9, -2.75], 'walk'],     // to the desk
+  [3.6, 6.6, [-3, 5.5], [-2.6, 1.6], 'walk'],
+  [6.6, 10.5, [-2.6, 1.6], [0.6, -2.4], 'walk'],
+  [10.5, 10.9, [0.6, -2.4], [0.6, -2.4], 'idle'],
+  [10.9, 12.0, [0.6, -2.4], [1.9, -2.75], 'walk'],     // to the desk
   [12.0, 15.9, [1.9, -2.75], [1.9, -2.75], 'idle'],
   [15.9, 19.5, [1.9, -2.75], [-0.3, 0.6], 'walk'],     // she turns and steps back into the room
   [19.5, 23.2, [-0.3, 0.6], [2.2, 0.5], 'walk'],       // toward the device
@@ -81,7 +87,7 @@ export function irisAt(t) {
   for (const s of IRIS_PATH) { if (t < s[1]) { seg = s; break; } const dx = s[3][0] - s[2][0], dz = s[3][1] - s[2][1]; if (Math.hypot(dx, dz) > 1e-3) prevDir = Math.atan2(dx, dz); }
   const [t0, t1, a, b, clip] = seg, k = clamp01((t - t0) / (t1 - t0));
   const dx = b[0] - a[0], dz = b[1] - a[1], moving = Math.hypot(dx, dz) > 1e-3 && t < t1;
-  return { x: lerp(a[0], b[0], k), z: lerp(a[1], b[1], k), heading: moving ? Math.atan2(dx, dz) : prevDir, clip, moving };
+  return { x: lerp(a[0], b[0], k), z: lerp(a[1], b[1], k), heading: moving ? Math.atan2(dx, dz) : prevDir, clip, moving, speed: moving ? Math.hypot(dx, dz) / (t1 - t0) : 0 };
 }
 
 /** The cues that fall in (from, to]. */
