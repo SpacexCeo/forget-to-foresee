@@ -377,6 +377,13 @@ LM_SAMPLES = int(os.environ.get("TOWN_LM_SAMPLES", "384"))
 LM_MIN_DIAG = 0.6                                                   # islands smaller than this stay per-vertex, metres
 LM_EDGE = 1.0                                                       # tessellation of lightmapped meshes (hue only)
 LM_WARM = (1.0, 0.90, 0.76)
+# Draw calls and size (3D review, 14.11). Indoors nothing but the base colour reaches the screen (one ambient light:
+# no speculars, no normal mapping), so a room ships no normal or ORM textures, every untextured material and every
+# small prop shares ONE vertex-coloured material (its base colour goes into the vertex colour), and the static
+# meshes are joined per material. Only the hanging lamps stay separate nodes (they swing).
+PROPS_BASE = {"bronze": (0.62, 0.40, 0.16), "iron": (0.10, 0.095, 0.09), "ceramic": (1.0, 1.0, 1.0), "paper": (0.93, 0.87, 0.72),
+              "wax": (1.0, 0.95, 0.84), "ink": (0.02, 0.022, 0.03)}
+PROPS_SMALL = ("timber", "stone", "plaster", "cloth", "rock")   # small pieces of these lose the tiling texture, not the colour
 LM_FLOOR = 0.035                                                    # darkest light value kept (never pure black)
 
 
@@ -486,6 +493,30 @@ def lightmap_uv(objs):
         log("lightmap: average_islands_scale skipped:", exc)
     bpy.ops.uv.pack_islands(rotate=True, margin_method="FRACTION", margin=0.0016, shape_method="AABB")
     bpy.ops.object.mode_set(mode="OBJECT")
+
+
+def props_material():
+    """The one vertex-coloured material of a room's props (double sided: paper sheets, cloth edges)."""
+    return bpy.data.materials.get("M_Shop_Props") or vc_material("M_Shop_Props", (1.0, 1.0, 1.0), rough=0.8, double_sided=True)
+
+
+def strip_pbr(m, keep_occlusion):
+    """Leaves only what an interior shows: base colour (x vertex colour), emission, and the lightmap as occlusion."""
+    nt = m.node_tree
+    b = nt.nodes.get("Principled BSDF")
+    if b is None:
+        return m
+    for name in ("Normal", "Roughness", "Metallic"):
+        for lk in list(b.inputs[name].links):
+            nt.links.remove(lk)
+    b.inputs["Roughness"].default_value = 0.9
+    b.inputs["Metallic"].default_value = 0.0
+    if not keep_occlusion:
+        for n in nt.nodes:
+            if n.type == "GROUP" and n.node_tree and n.node_tree.name == "glTF Material Output":
+                for lk in list(n.inputs["Occlusion"].links):
+                    nt.links.remove(lk)
+    return m
 
 
 def lightmap_material(src, img, tag):
@@ -676,6 +707,20 @@ def bake_interior(sc, piece, grp, tb, all_objects, exposure=1.0):
     for o in meshes:
         o.data.materials[0] = keep[o.name]
         o.hide_render = False
+    # the props material: untextured things and small pieces carry their base colour in the vertex colour
+    pm = props_material()
+    for o in lit:
+        key = MAT_KEY[o.name]
+        base = PROPS_BASE.get(key) or (FLAT[key] if key in PROPS_SMALL and o not in lm_objs else None)
+        if base is None:
+            continue
+        n = len(o.data.loops)
+        c = np.zeros(n * 4, dtype=np.float32)
+        o.data.color_attributes["Col"].data.foreach_get("color", c)
+        c = c.reshape(n, 4)
+        c[:, :3] *= np.array(base, dtype=np.float32)
+        o.data.color_attributes["Col"].data.foreach_set("color", c.ravel())
+        o.data.materials[0] = pm
     if lm_light is not None:
         tone = np.clip(_tone(lm_light, k_lm), LM_FLOOR, 1.0).max(axis=2)
         log("lightmap stats", piece, "coverage", round(float(cov.mean()), 3), "light p10/p50/p90", [round(float(v), 4) for v in np.percentile(lm_light.max(axis=2)[cov], [10, 50, 90])],
@@ -697,6 +742,31 @@ def bake_interior(sc, piece, grp, tb, all_objects, exposure=1.0):
                 lm_mats[src.name] = lightmap_material(src, lm_img, tag)
             o.data.materials[0] = lm_mats[src.name]
             o.data.uv_layers.active = o.data.uv_layers[0]
+    # no normal / ORM textures indoors; then one mesh per material (the swinging lamps keep their own nodes)
+    tag = "_" + piece.replace("town_shop_", "")
+    plain = {}
+    for o in meshes:
+        m = o.data.materials[0]
+        if "_LM_" in m.name:
+            strip_pbr(m, True)
+        elif m.name.startswith("M_Town_") and any(n.type == "TEX_IMAGE" for n in m.node_tree.nodes):
+            if m.name not in plain:
+                cp = m.copy()
+                cp.name = f"{m.name}_S{tag}"
+                plain[m.name] = strip_pbr(cp, False)
+            o.data.materials[0] = plain[m.name]
+    by_mat = {}
+    for o in grp["meshes"]:
+        if o.parent is None:
+            by_mat.setdefault(o.data.materials[0].name, []).append(o)
+    gone = {o for objs in by_mat.values() for o in objs[1:]}
+    grp["meshes"] = [o for o in grp["meshes"] if o not in gone]
+    for mname, objs in by_mat.items():
+        key = MAT_KEY[objs[0].name]
+        for o in objs:
+            o.data.uv_layers.active = o.data.uv_layers[0]
+        j = ftf.join(objs, f"{piece}_{mname.replace('M_Town_', '').replace('M_Shop_', '').lower()}")
+        MAT_KEY[j.name] = key
     for lo in lights:
         bpy.data.objects.remove(lo, do_unlink=True)
     for o in others:

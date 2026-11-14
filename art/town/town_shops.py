@@ -9,6 +9,7 @@ streams it when Iris enters. Empties: `shop_spawn`, `shop_exit`, `shop_counter`,
     town_shop_inn        S-003 Inn: hearth, long tables, the bar, the six clan banners
 """
 
+import contextlib
 import math
 import random
 
@@ -43,7 +44,7 @@ def room(tb, w, d, h, plaster, rr, windows=("west", "east"), door_w=1.5, floor=T
     lit windows. `openings`: wall name -> (x0, x1, top) in wall space, a doorway cut through that wall (plaster,
     dado, shell and collider all leave it free)."""
     openings = openings or {}
-    n = int(w / 0.5) if floor else 0
+    n = int(w / 0.19) if floor else 0   # boards about 19 cm wide, laid lengthwise from the door
     for i in range(n):
         x0, x1 = -w / 2 + w * i / n, -w / 2 + w * (i + 1) / n
         # each plank row is cut into boards of uneven length, every board its own tone
@@ -336,7 +337,7 @@ def sconce(tb, name, wall_m, off, y=2.25):
     with tb.at(wall_m, T(off, y, 0)):
         tb.box("iron", (0, 0, 0.02), (0.16, 0.24, 0.04))
         tb.beam("iron", (0, 0.08, 0.02), (0, 0.08, 0.32), 0.035, 0.035)
-        with tb.swing(name.replace("socket_", ""), (0, 0.06, 0.3), length=0.2):
+        if True:   # the head is fixed to its bracket (a wall lantern barely swings; one node less per sconce)
             tb.box("iron", (0, 0.03, 0.3), (0.2, 0.04, 0.2))
             tb.box("lamp", (0, -0.12, 0.3), (0.15, 0.26, 0.15))
             for sx in (-1, 1):
@@ -496,7 +497,7 @@ def build_exchange(tb):
         tb.light((0, 1.9, 0.0), (0.72, 0.5, 1.0), 120.0, 0.2)
     potted_plant(tb, 3.6, 0, d / 2 - 0.6, 7)
     dress_exchange(tb, w, d, h, rr)
-    hanging_ring_lamp(tb, "socket_lamp_ceiling", 0, 0.6, h, 0.85)
+    hanging_ring_lamp(tb, "socket_lamp_ceiling", 0, 1.9, h, 0.85)   # over the runner, clear of the pedestal's ring in plan
     walls = _walls(w, d)
     for wn in ("west", "east"):
         for off in (-3.6, 3.6):
@@ -600,7 +601,7 @@ def build_scribe(tb):
         desk(tb, sx * 2.35, cz, rot, k, rr, lamp_side=-sx)
         k += 1
     chart_rack(tb, -w / 2 + 0.75, -d / 2 + 1.2, 60, rr)
-    chart_rack(tb, -w / 2 + 0.55, -d / 2 + 2.7, 90, rr)
+    chart_rack(tb, -w / 2 + 0.55, -d / 2 + 3.2, 90, rr)   # clear of the corner rack
     shelf(tb, w / 2 - 0.3, -d / 2 + 1.6, 2.0, rot=-90, goods="books", seed=4)
     shelf(tb, w / 2 - 0.3, d / 2 - 1.6, 1.8, rot=-90, goods="scrolls", seed=5)
     with tb.at(T(-w / 2 + 0.6, 0, d / 2 - 1.2)):   # a basket of tall rolled charts by the door
@@ -757,10 +758,10 @@ def build_inn(tb):
 
 # ------------------------------------------------------------------ dressing pass (14.11): what makes each room its own
 
-def hanging_lantern(tb, name, x, z, h, drop=1.3, power=38.0, col=(1.0, 0.68, 0.36)):
+def hanging_lantern(tb, name, x, z, h, drop=1.3, power=38.0, col=(1.0, 0.68, 0.36), swing=True):
     """A small bronze lantern on a chain over a table or a case: a swing node, a lamp socket and a bake light,
     so the surface below sits in its own warm pool."""
-    with tb.swing(name.replace("socket_", ""), (x, h - 0.02, z), length=drop):
+    with (tb.swing(name.replace("socket_", ""), (x, h - 0.02, z), length=drop) if swing else contextlib.nullcontext()):
         tb.cyl("iron", (x, h - drop + 0.2, z), 0.012, 0.012, drop - 0.2, 4, cap_top=False)
         tb.lathe("bronze", (x, h - drop + 0.08, z), [(0.02, 0.12), (0.13, 0.04), (0.15, 0.0)], 8)
         tb.box("lamp", (x, h - drop - 0.02, z), (0.13, 0.2, 0.13))
@@ -940,8 +941,19 @@ def dress_exchange(tb, w, d, h, rr):
     k = 0
     for sx in (-1, 1):
         for cz in (-2.2, 0.4, 3.0):
-            hanging_lantern(tb, f"socket_lamp_caselight_{k}", sx * (w / 2 - 0.62), cz, h, 1.75, 22.0, (1.0, 0.74, 0.46))
+            hanging_lantern(tb, f"socket_lamp_caselight_{k}", sx * (w / 2 - 0.62), cz, h, 1.75, 22.0, (1.0, 0.74, 0.46), swing=False)
             k += 1
+    # the bays between the windows: a velvet pennant with the bronze ring in each
+    for wn in ("west", "east"):
+        with tb.at(_walls(w, d)[wn][0]):
+            for off in (-1.83, 1.83):
+                col = (0.24, 0.17, 0.40)
+                tb.beam("bronze", (off - 0.36, 3.02, 0.06), (off + 0.36, 3.02, 0.06), 0.03, 0.03)
+                tb.box("cloth", (off, 2.42, 0.03), (0.58, 1.16, 0.02), col, skip="z")
+                tb.poly("cloth", [(off - 0.29, 1.84, 0.04), (off, 1.62, 0.04), (off + 0.29, 1.84, 0.04)], col)
+                tb.box("cloth", (off, 2.94, 0.042), (0.58, 0.07, 0.02), tint(col, 0.6), skip="z")
+                tb.ring("bronze", (off, 2.46, 0.05), 0.17, 0.13, 0.012, 16)
+                shard(tb, off, 2.38, 0.06, 0.07, int(off * 100) % 97 + (5 if wn == "east" else 0), "shard_amber" if off > 0 else "shard")
     # strongboxes and a ledger stand by the counter; velvet drapes framing the shelves
     strongbox(tb, 2.9, -d / 2 + 2.3, -20, 0.72)
     strongbox(tb, 3.55, -d / 2 + 1.55, 12, 0.56)

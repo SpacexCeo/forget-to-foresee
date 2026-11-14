@@ -15,13 +15,13 @@
     "ring":        {"attach": "habaki",      "color": "brass",         "center_z": 0.150, "major": 0.030, "minor": 0.0055},
     "studs":       {"attach": "ring",        "color": "pearl",         "count": 12, "radius": 0.0021, "hp_only": true},
     "warp":        {"attach": "habaki",      "color": "gold thread, glowing", "count": 5, "spread_bottom": 0.018, "spread_top": 0.0081, "z0": 0.121, "z1": 0.173, "radius": 0.0011, "radius_low": 0.0014},
-    "habaki":      {"attach": "blade",       "color": "brass",         "z0": 0.170, "z1": 0.192, "half_width": [0.0245, 0.0232], "half_thick": [0.0065, 0.0052]},
+    "habaki":      {"attach": "blade",       "color": "brass",         "z0": 0.170, "z1": 0.192, "half_width": [0.0315, 0.0302], "half_thick": [0.0065, 0.0052]},
     "blade":       {"attach": "habaki",      "color": "woven pale gold, pearl-steel edges", "z0": 0.176, "z1": 0.944,
-                    "width_keys_u_w": [[0.0, 0.0220], [0.35, 0.0180], [0.80, 0.0205]], "tip_from_u": 0.80, "tip_power": 1.6,
+                    "width_keys_u_w": [[0.0, 0.0290], [0.40, 0.0230], [0.80, 0.0185]], "tip_from_u": 0.80, "tip_power": 1.6,
                     "half_thick_base": 0.0035, "half_thick_end": 0.0022,
-                    "fuller_half_width": 0.0060, "fuller_depth": 0.0016, "fuller_u": [0.03, 0.06, 0.76, 0.80]},
-    "braid":       {"attach": "blade",       "color": "gold thread, glowing", "strands": 3, "radius": 0.0015, "amp_x": 0.0036, "amp_y": 0.0007, "periods": 22, "u0": 0.045, "u1": 0.785, "hp_only": true}
+                    "fuller_half_width": 0.0076, "fuller_depth": 0.0016, "fuller_u": [0.03, 0.06, 0.76, 0.80]},
+    "braid":       {"attach": "blade",       "color": "gold thread, glowing", "strands": 3, "radius": 0.0018, "amp_x": 0.0046, "amp_y": 0.0007, "periods": 22, "u0": 0.045, "u1": 0.785, "hp_only": true}
   },
   "sockets": {"socket_grip": [0, 0, 0], "socket_guard": [0, 0, 0.150], "socket_tip": [0, 0, 0.944]},
-  "bake": {"size": 4096, "out": 2048, "out_m": 1024, "cage": 0.003, "samples_ao": 64, "emissive_strength": 2.5}
+  "bake": {"size": 4096, "out": 1024, "out_m": 512, "cage": 0.003, "samples_ao": 64, "emissive_strength": 2.5}
 }
