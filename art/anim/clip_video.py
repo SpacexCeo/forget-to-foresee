@@ -1,6 +1,8 @@
 """A 5-second review video of one clip on one character (the owner's workflow: one clip, one good angle).
   blender -b --python art/anim/clip_video.py -- --model <model_with_clips.glb> --clip walk --out <file.mp4>
       [--speed 1.7] [--seconds 5] [--view 0.75,-1,0.32] [--dist 4.6] [--fps 30] [--samples 32]
+--clip may be a sequence, e.g. spawn,walk,walk,bite,idle,death: the clips play one after another (the last pose
+holds) and the character travels at --speed only during the ones named walk or run.
 The model is one plain .glb with its clips as actions: art/tools/glb_with_clips.mjs makes it from a shipped model
 and its side-car clip file (bound by bone name, as the game does). A locomotion
 clip is in place, so the character is carried forward at `--speed` (default: the clip's own `speed` extra) over a
@@ -19,41 +21,46 @@ rig = max((o for o in bpy.data.objects if o.type == 'ARMATURE'), key=lambda o: l
 for o in bpy.data.objects:                             # helpers that ship in the file but are never drawn in the game
     if o.type == 'MESH' and (o.name.endswith('_col') or o.name.startswith('Icosphere') or o.find_armature() is not rig and o.parent is not rig): o.hide_render = True
 acts = {a.name.split('|')[-1]: a for a in bpy.data.actions}
-act = acts[A['clip']]
-rig.animation_data_create(); rig.animation_data.use_nla = False
-for pb in rig.pose.bones:                              # bones the clip does not key rest (the importer leaves the last clip's pose)
-    pb.location = (0, 0, 0); pb.rotation_quaternion = (1, 0, 0, 0); pb.rotation_euler = (0, 0, 0); pb.scale = (1, 1, 1)
-for tr in rig.animation_data.nla_tracks: tr.mute = True
-rig.animation_data.action = act
-if hasattr(rig.animation_data, 'action_slot') and getattr(act, 'slots', None): rig.animation_data.action_slot = act.slots[0]
-f0, f1 = act.frame_range; LEN = max(1.0, f1 - f0)
-speed = float(A['speed']) if 'speed' in A else float(act.get('speed', 0.0) or 0.0)
+SEQ = A['clip'].split(',')
 sc = bpy.context.scene; SRC_FPS = sc.render.fps / sc.render.fps_base      # the importer keyed the clips at this rate
 sc.render.fps = FPS; sc.frame_start = 1; sc.frame_end = N
 sc.render.frame_map_old = int(round(SRC_FPS)); sc.render.frame_map_new = FPS   # same seconds at the video's frame rate
 K = SRC_FPS / FPS                                                          # a video frame in source frames
-# loop the clip over the whole video
-for fc in act.fcurves if hasattr(act, 'fcurves') else []:
-    m = fc.modifiers.new('CYCLES'); m.mode_before = m.mode_after = 'REPEAT'
-if not hasattr(act, 'fcurves') or not len(act.fcurves):
-    try:
-        for layer in act.layers:
-            for strip in layer.strips:
-                for bag in strip.channelbags:
-                    for fc in bag.fcurves: m = fc.modifiers.new('CYCLES'); m.mode_before = m.mode_after = 'REPEAT'
-    except Exception as e: print('cycles', e)
-# forward = the way the character faces (glTF +Z = Blender -Y); the rig object carries the travel
-fwd = Vector((0, -1, 0)); base = rig.location.copy()
 rig.animation_data_create()
-mover = bpy.data.objects.new('mover', None); sc.collection.objects.link(mover)
-rig.parent = mover
-mover.location = (0, 0, 0); mover.keyframe_insert('location', frame=1 * K)
-mover.location = fwd * speed * (N - 1) / FPS; mover.keyframe_insert('location', frame=N * K)
-for fc in mover.animation_data.action.fcurves:
+for pb in rig.pose.bones:                              # bones a clip does not key rest (the importer leaves the last clip's pose)
+    pb.location = (0, 0, 0); pb.rotation_quaternion = (1, 0, 0, 0); pb.rotation_euler = (0, 0, 0); pb.scale = (1, 1, 1)
+for tr in rig.animation_data.nla_tracks: tr.mute = True
+speed = float(A['speed']) if 'speed' in A else float(acts[SEQ[0]].get('speed', 0.0) or 0.0)
+fwd = Vector((0, -1, 0))                               # the way the character faces (glTF +Z = Blender -Y)
+mover = bpy.data.objects.new('mover', None); sc.collection.objects.link(mover); rig.parent = mover
+if len(SEQ) == 1:                                      # one clip, looped over the whole video
+    act = acts[SEQ[0]]; rig.animation_data.use_nla = False; rig.animation_data.action = act
+    if hasattr(rig.animation_data, 'action_slot') and getattr(act, 'slots', None): rig.animation_data.action_slot = act.slots[0]
+    LEN = max(1.0, act.frame_range[1] - act.frame_range[0])
+    try: curves = list(act.fcurves) or [fc for layer in act.layers for strip in layer.strips for bag in strip.channelbags for fc in bag.fcurves]
+    except Exception: curves = [fc for layer in act.layers for strip in layer.strips for bag in strip.channelbags for fc in bag.fcurves]
+    for fc in curves: m = fc.modifiers.new('CYCLES'); m.mode_before = m.mode_after = 'REPEAT'
+    mover.location = (0, 0, 0); mover.keyframe_insert('location', frame=1 * K)
+    mover.location = fwd * speed * (N - 1) / FPS; mover.keyframe_insert('location', frame=N * K)
+    travel = speed * SEC
+else:                                                  # a sequence on one NLA track; travel only while walking or running
+    rig.animation_data.action = None; rig.animation_data.use_nla = True
+    at = 1.0 * K; pos = Vector((0, 0, 0)); LEN = 0.0    # one track per clip: exact (fractional) starts never collide
+    mover.location = pos; mover.keyframe_insert('location', frame=at)
+    for _i, name in enumerate(SEQ):
+        _last = _i == len(SEQ) - 1; act = acts[name]; ln = act.frame_range[1] - act.frame_range[0]
+        tr = rig.animation_data.nla_tracks.new(); tr.name = f'review_{len(rig.animation_data.nla_tracks)}'
+        st = tr.strips.new(name, int(math.floor(at)), act); st.frame_start = at; st.frame_end = at + ln; st.blend_in = 0; st.blend_out = 0
+        st.extrapolation = 'HOLD_FORWARD' if _last else 'NOTHING'      # the last pose holds to the end of the video
+        at += ln; LEN += ln
+        if name in ('walk', 'run'): pos = pos + fwd * speed * (ln / SRC_FPS)
+        mover.location = pos; mover.keyframe_insert('location', frame=at)
+    travel = pos.length
+for fc in mover.animation_data.action.fcurves if hasattr(mover.animation_data.action, 'fcurves') else []:
     for kp in fc.keyframe_points: kp.interpolation = 'LINEAR'
 
 # ---- the stage: a 1 m checker floor, sun, soft sky
-bpy.ops.mesh.primitive_plane_add(size=120, location=(0, -speed * SEC / 2, 0)); floor = bpy.context.active_object
+bpy.ops.mesh.primitive_plane_add(size=120, location=(0, -travel / 2, 0)); floor = bpy.context.active_object
 m = bpy.data.materials.new('floor'); m.use_nodes = True; nt = m.node_tree; b = nt.nodes['Principled BSDF']
 ch = nt.nodes.new('ShaderNodeTexChecker'); ch.inputs['Scale'].default_value = 120; ch.inputs['Color1'].default_value = (0.36, 0.38, 0.40, 1); ch.inputs['Color2'].default_value = (0.26, 0.28, 0.30, 1)
 nt.links.new(ch.outputs['Color'], b.inputs['Base Color']); b.inputs['Roughness'].default_value = 0.85; floor.data.materials.append(m)
