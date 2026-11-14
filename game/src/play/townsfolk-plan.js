@@ -24,10 +24,8 @@ export const SIDE_STEP = 0.45;
 export const BODY_RADIUS = 0.35, MIN_GAP = 0.6;
 /** How far ahead a walker looks for bodies, and how wide it leans round a standing one. */
 export const LOOK_AHEAD = 2.2, PASS_STEP = 0.75;
-/** Metres of lean past which a walker keeps leaning to the same side (no left-right flip while passing someone). */
-export const SIDE_KEEP = 0.1;
-/** Seconds a walker keeps waiting after what stopped it has cleared, and seconds it takes to pick up its walk again. */
-export const WAIT_HOLD = 0.4, RESUME_S = 0.35;
+/** Seconds a walker's stop holds at least, and after it the seconds it keeps going past other townsfolk (no stop-go stutter). */
+export const WAIT_HOLD = 0.45, GO_HOLD = 0.8;
 /**
  * The bodies a walker must keep clear of (pure): other townsfolk (ctx.others, a Map of plans), Iris (ctx.iris) and
  * other heroines (ctx.bodies(): [[x, y, z], ...]). Same level only. `oncoming`: walking towards me; `iYield`: of two
@@ -353,7 +351,7 @@ export class PersonPlan {
       // the one that yields (the later key) waits until the other has passed; a standing body: lean wider round it.
       // Hard rule: a step that would bring two centres closer than MIN_GAP (and closer than they were) is not taken.
       const bodies = bodiesAround(this, ctx);
-      let sideWant = 0, wait = false;
+      let sideWant = 0, wait = false, slow = false, irisWait = false;
       for (const b of bodies) {
         const rx = b.x - this.x, rz = b.z - this.z, d = Math.hypot(rx, rz);
         const ahead = rx * p.dx + rz * p.dz, across = rx * p.dz - rz * p.dx; // along my way / to my side (centre to centre)
@@ -361,30 +359,40 @@ export class PersonPlan {
         const lean = b.iris ? SIDE_STEP : b.walking ? SIDE_STEP : PASS_STEP, away = b.oncoming ? -lean : (across > 0 ? -lean : lean); // head-on: both keep to the same hand
         if (Math.abs(sideWant) < lean) sideWant = away;
         const clear = Math.abs(across) >= MIN_GAP + 0.05; // already wide enough to pass
-        if (b.iris) { if (d < YIELD_RADIUS) wait = true; } // Iris: always wait for her (and lean a little)
+        if (b.iris) { if (d < YIELD_RADIUS) { wait = true; irisWait = true; } } // Iris: always wait for her (and lean a little)
         else if (b.oncoming) { if (b.iYield && !clear && d < LOOK_AHEAD * 0.8) wait = true; } // the later key waits; the other passes once wide enough
         else if (b.walking) { if (d < MIN_GAP + 0.35 && !clear) wait = true; } // the same way: keep a step behind
-        else if (!clear && d < MIN_GAP + 0.5) wait = true; // a standing body: lean round it first
+        else if (!clear && d < MIN_GAP + 0.5) slow = true; // a standing body: lean round it at a slow walk (stopping to lean slid her sideways in place)
       }
-      // keep leaning the way already started: the side flipped each time the other body crossed the line, and a walker
-      // waiting for someone slid left and right on the spot (seen at the Exchange on the GPU box, 14.11)
-      if (sideWant && this.side * sideWant < 0 && Math.abs(this.side) > SIDE_KEEP) sideWant = Math.sign(this.side) * Math.abs(sideWant);
-      // stop-and-go (14.11, GPU box): a wait condition hovering at its threshold made a walker step three frames and stand
-      // five; a wait now holds WAIT_HOLD s after its cause clears, and the walk picks up over RESUME_S instead of at once
-      if (wait) this.waitHold = WAIT_HOLD; else if (this.waitHold > 0) { this.waitHold -= dt; wait = true; }
-      this.resume = wait ? 0 : Math.min(RESUME_S, (this.resume ?? RESUME_S) + dt);
-      v *= 0.25 + 0.75 * (this.resume / RESUME_S);
+      // a decision holds for a moment (GPU bench trace 14.11: two walkers meeting at the Exchange door stopped and went
+      // every 0.3 s and slid sideways while stopped): a wait lasts at least WAIT_HOLD; after it, other townsfolk are
+      // passed for GO_HOLD on the lean and the hard MIN_GAP rule below; Iris always stops them
+      if (wait) this.waitUntil = Math.max(this.waitUntil || 0, this.t + WAIT_HOLD);
+      else if (this.t < (this.waitUntil || 0)) wait = true;
+      if (wait && !irisWait && this.t < (this.goUntil || 0)) wait = false;
+      if (!wait && this.wasWaiting) this.goUntil = this.t + GO_HOLD;
+      this.wasWaiting = wait;
       this.yielding = wait;
-      if (wait) v = 0;
+      if (wait) v = 0; else if (slow) v = Math.min(v, top * 0.35);
       if (run || this.len - this.s < 1.5) sideWant = 0; // no lean while running, nor on the last 1.5 m: a walk ends on its own line
       const side0 = this.side;
       this.side += (sideWant - this.side) * Math.min(1, dt * 2.5);
       const ds = Math.min(v * dt, this.len - this.s);
       const s1 = this.s + ds, q = polyAt(st.walk, s1, { x: 0, y: 0, z: 0, dx: 0, dz: 1, corner: 0 });
       const closer = (x1, z1) => bodies.some((b) => { const d1 = Math.hypot(b.x - x1, b.z - z1); return d1 < MIN_GAP && d1 < Math.hypot(b.x - this.x, b.z - this.z) - 1e-6; });
-      let off = easeOffset(this.ox, this.oz, q.dz * this.side, -q.dx * this.side, dt);
-      if (closer(q.x + off[0], q.z + off[1])) off = [this.ox, this.oz]; // the lean may not swing into someone: keep it, try the step alone
-      if (closer(q.x + off[0], q.z + off[1])) { this.side = side0; this.yielding = true; this.waitHold = WAIT_HOLD; this.resume = 0; this.speed = 0; this.clip = 'idle'; return; }
+      let off = wait ? [this.ox, this.oz] : easeOffset(this.ox, this.oz, q.dz * this.side, -q.dx * this.side, dt); // no sideways slide while standing
+      if (closer(q.x + off[0], q.z + off[1])) {
+        // the step with the lean comes too close: first the lean alone, where she stands on the line (a side step, walked:
+        // it shows as a step, never a slide), then the step alone
+        const lean = wait ? null : easeOffset(this.ox, this.oz, p.dz * this.side, -p.dx * this.side, dt);
+        if (lean && (lean[0] !== this.ox || lean[1] !== this.oz) && !closer(p.x + lean[0], p.z + lean[1])) {
+          const m = Math.hypot(lean[0] - this.ox, lean[1] - this.oz);
+          this.ox = lean[0]; this.oz = lean[1]; this.x = p.x + this.ox; this.z = p.z + this.oz;
+          this.speed = dt > 0 ? m / dt : 0; this.gait = 'walk'; this.clip = 'idle'; return;
+        }
+        off = [this.ox, this.oz]; // the lean may not swing into someone: keep it, try the step alone
+      }
+      if (closer(q.x + off[0], q.z + off[1])) { this.side = side0; this.yielding = true; this.speed = 0; this.clip = 'idle'; return; }
       this.s = s1; this.speed = dt > 0 ? ds / dt : 0; this.gait = run ? 'run' : 'walk';
       polyAt(st.walk, this.s, p);
       this.ox = off[0]; this.oz = off[1]; // the lean, eased (a corner turns the side direction: no jump)
