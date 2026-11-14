@@ -50,13 +50,56 @@ export function telegraphMaterial(THREE, { color = 0xff7a3a, axis = 0, inner = 0
   });
 }
 
+const CRACK_VERT = `varying vec3 vP; varying vec3 vW; void main(){ vP = position; vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`;
+const CRACK_FRAG = `uniform float uK, uOp, uTime, uInner, uOuter, uSeed; uniform int uAxis; varying vec3 vP; varying vec3 vW;
+vec2 h2(vec2 p){ p = vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3))); return fract(sin(p) * 43758.5453); }
+float n2(vec2 p){ vec2 i = floor(p), f = fract(p); vec2 u = f * f * (3.0 - 2.0 * f);
+  float a = h2(i).x, b = h2(i + vec2(1.0, 0.0)).x, c = h2(i + vec2(0.0, 1.0)).x, d = h2(i + vec2(1.0, 1.0)).x; return mix(mix(a, b, u.x), mix(c, d, u.x), u.y); }
+float edge(vec2 x){ vec2 n = floor(x), f = fract(x); float F1 = 8.0, F2 = 8.0;
+  for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) { vec2 g = vec2(float(i), float(j)); vec2 r = g + h2(n + g + uSeed) - f; float d = dot(r, r); if (d < F1) { F2 = F1; F1 = d; } else if (d < F2) F2 = d; }
+  return sqrt(F2) - sqrt(F1); }
+void main(){
+  float d = uAxis == 0 ? length(vP.xy) : uAxis == 1 ? length(vP.xz) : vP.z;
+  float t = clamp((d - uInner) / max(uOuter - uInner, 1e-3), 0.0, 1.0);
+  float tt = t + (n2(vW.xz * 0.6 + uSeed) - 0.5) * 0.14;
+  float reveal = 1.0 - smoothstep(uK - 0.05, uK + 0.01, tt);
+  float rim = 1.0 - smoothstep(0.82, 1.0, tt);
+  float e1 = edge(vW.xz * 0.32), e2 = edge(vW.xz * 1.1 + 7.3);
+  float w1 = 0.075 + 0.045 * (1.0 - t), core = 1.0 - smoothstep(0.0, w1 * 0.45, e1), halo = 1.0 - smoothstep(0.0, w1 * 1.7, e1);
+  float fine = (1.0 - smoothstep(0.0, 0.035, e2)) * smoothstep(uK - 0.35, uK, tt);
+  float front = exp(-abs(tt - uK) * 22.0) * step(uK, 0.995);
+  float a = uOp * reveal * rim * clamp(halo * 0.9 + fine * 0.5 + front * halo * 0.6, 0.0, 1.0);
+  vec3 deep = vec3(0.05, 0.16, 0.27), ice = vec3(0.82, 0.97, 1.0);
+  vec3 col = mix(deep, ice, clamp(core + fine * 0.6 + front * 0.7, 0.0, 1.0));
+  gl_FragColor = vec4(col, a);
+}`;
+
+/**
+ * The arena's tells as frost cracks spreading over the mirror (owner 14.11: no flat geometric warnings): the same shapes
+ * as before (axis as telegraphMaterial) but nothing is filled: a web of cracks (Voronoi cell edges in world space) runs out
+ * from the body toward the shape's edge as the blow comes, a ragged bright front with hairline cracks just behind it, and
+ * the field thins out at its edge instead of ending on an outline. A crack is a bright core with a dark lip, so it reads
+ * on the sky-bright and the dark parts of the mirror alike.
+ */
+export function crackMaterial(THREE, { axis = 0, inner = 0, outer = 1, seed = Math.random() * 50 } = {}) {
+  return new THREE.ShaderMaterial({
+    uniforms: { uK: { value: 0 }, uOp: { value: 0 }, uTime: { value: 0 }, uInner: { value: inner }, uOuter: { value: outer }, uAxis: { value: axis }, uSeed: { value: seed } },
+    vertexShader: CRACK_VERT, fragmentShader: CRACK_FRAG, transparent: true, depthWrite: false, side: THREE.DoubleSide,
+  });
+}
+
 /** Drives a tell: progress k (0..1), opacity, the clock. */
 export function setTele(mat, k, op, t) { const u = mat.uniforms; u.uK.value = teleFill(k); u.uOp.value = op; u.uTime.value = t; }
 
 const PTS_VERT = `attribute float aSize; attribute float aAlpha; attribute vec3 aColor; varying float vA; varying vec3 vC; uniform float uScale;
 void main(){ vA = aAlpha; vC = aColor; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_PointSize = aSize * uScale / max(0.5, -mv.z); gl_Position = projectionMatrix * mv; }`;
 const PTS_FRAG = `varying float vA; varying vec3 vC; void main(){ vec2 c = gl_PointCoord - 0.5; float r = dot(c, c) * 4.0; if (r > 1.0) discard; float s = exp(-r * 2.2); gl_FragColor = vec4(vC * (0.95 + 0.35 * s), vA * s * 0.95); }`;
-const WAVE_FRAG = `uniform vec3 uColor; uniform float uA; varying vec2 vUv; void main(){ gl_FragColor = vec4(uColor, uA * smoothstep(0.0, 0.6, vUv.y) * (1.0 - smoothstep(0.85, 1.0, vUv.y))); }`;
+const WAVE_VERT = `varying vec2 vUv; varying vec2 vQ; void main(){ vUv = uv; vQ = position.xy; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
+const WAVE_FRAG = `uniform vec3 uColor; uniform float uA, uSeed; varying vec2 vUv; varying vec2 vQ;
+void main(){ float ang = atan(vQ.y, vQ.x);
+  float broken = clamp(0.3 + 0.9 * sin(ang * 7.0 + uSeed) * sin(ang * 13.0 - uSeed * 1.7) + 0.3 * sin(ang * 23.0 + uSeed * 0.4), 0.0, 1.0);  // a ripple of frost, broken round its circle
+  float lead = vUv.y + 0.12 * sin(ang * 9.0 + uSeed * 2.3);
+  gl_FragColor = vec4(mix(uColor, vec3(1.0), 0.35), uA * broken * smoothstep(0.0, 0.7, lead) * (1.0 - smoothstep(0.8, 1.0, lead))); }`;
 const GEY_FRAG = `uniform vec3 uColor; uniform float uA; varying vec2 vUv; void main(){ float h = vUv.y; gl_FragColor = vec4(uColor * (1.2 - h * 0.5), uA * (1.0 - h) * (0.55 + 0.45 * sin(vUv.x * 37.7))); }`;
 const UV_VERT = `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
 
@@ -91,7 +134,7 @@ export function createSerpentFx({ THREE, parent, mobile = false, rand = Math.ran
   const waveGeo = new THREE.RingGeometry(0.82, 1, 72, 1); // uv.y runs 0 (inner) .. 1 (outer) after the remap below
   { const uv = waveGeo.attributes.uv, p = waveGeo.attributes.position; for (let i = 0; i < uv.count; i++) uv.setY(i, (Math.hypot(p.getX(i), p.getY(i)) - 0.82) / 0.18); }
   const waves = Array.from({ length: F.waves }, () => {
-    const m = new THREE.Mesh(waveGeo, new THREE.ShaderMaterial({ uniforms: { uColor: { value: new THREE.Color() }, uA: { value: 0 } }, vertexShader: UV_VERT, fragmentShader: WAVE_FRAG, transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }));
+    const m = new THREE.Mesh(waveGeo, new THREE.ShaderMaterial({ uniforms: { uColor: { value: new THREE.Color() }, uA: { value: 0 }, uSeed: { value: 0 } }, vertexShader: WAVE_VERT, fragmentShader: WAVE_FRAG, transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }));
     m.rotation.x = -Math.PI / 2; m.visible = false; m.frustumCulled = false; group.add(m);
     return { m, t: 0, life: F.waveLife, r0: 0.5, r1: 5, delay: 0 };
   });
@@ -99,7 +142,7 @@ export function createSerpentFx({ THREE, parent, mobile = false, rand = Math.ran
   /** A ring that grows from r0 to r1 over `lf` seconds, after `delay`. */
   function wave(at, color, r1, { r0 = 0.4, lf = F.waveLife, delay = 0, y = 0.07 } = {}) {
     const w = waves[waveNext]; waveNext = (waveNext + 1) % waves.length;
-    w.m.position.set(at[0], (at[1] || 0) + y, at[2]); w.m.material.uniforms.uColor.value.setHex(color);
+    w.m.position.set(at[0], (at[1] || 0) + y, at[2]); w.m.material.uniforms.uColor.value.setHex(color); w.m.material.uniforms.uSeed.value = rand() * 20;
     w.t = -delay; w.life = lf; w.r0 = r0; w.r1 = r1; w.m.visible = false;
   }
   // ---- the slam's geyser column
@@ -183,6 +226,22 @@ export function createSerpentFx({ THREE, parent, mobile = false, rand = Math.ran
     frostOn(at) {
       for (let i = 0; i < 40; i++) { const a = rand() * Math.PI * 2, s = 2 + rand() * 4; emit(at[0], at[1] + 0.6 + rand() * 1.1, at[2], Math.sin(a) * s, 1 + rand() * 4, Math.cos(a) * s, rand() < 0.5 ? 0xffffff : F.ice, 0.12 + rand() * 0.18, 0.5 + rand() * 0.4, 2.5, 9); }
       wave([at[0], at[1], at[2]], F.ice, 1.8, { lf: 0.4 });
+    },
+    /**
+     * One frame of a tell's front: ice shards and a little mist rising where the cracks are running now. `kind`:
+     * 'ring' {at, r}, 'band' {at, r0, r1}, 'strip' {at, dir, len, width}, 'cone' {at, dir, half, len}; k the tell's progress.
+     */
+    tellFrame(kind, g, k, dt) {
+      const big = kind === 'band' || kind === 'cone' || kind === 'strip', n = Math.max(1, Math.round((mobile ? 26 : 60) * (big ? 2.6 : 1) * dt));
+      for (let i = 0; i < n; i++) {
+        let x = 0, z = 0;
+        if (kind === 'ring') { const a = rand() * 6.283, r = g.r * Math.min(1, k + 0.02) * (0.85 + 0.15 * rand()); x = g.at[0] + Math.sin(a) * r; z = g.at[2] + Math.cos(a) * r; }
+        else if (kind === 'band') { const a = rand() * 6.283, r = g.r0 + (g.r1 - g.r0) * Math.min(1, k + 0.02) * (0.9 + 0.1 * rand()); x = g.at[0] + Math.sin(a) * r; z = g.at[2] + Math.cos(a) * r; }
+        else if (kind === 'strip') { const u = g.len * Math.min(1, k) * (0.85 + 0.15 * rand()), s2 = (rand() - 0.5) * g.width; x = g.at[0] + g.dir[0] * u + g.dir[1] * s2; z = g.at[2] + g.dir[1] * u - g.dir[0] * s2; }
+        else { const a = Math.atan2(g.dir[0], g.dir[1]) + (rand() * 2 - 1) * g.half, u = g.len * Math.min(1, k) * (0.85 + 0.15 * rand()); x = g.at[0] + Math.sin(a) * u; z = g.at[2] + Math.cos(a) * u; }
+        const mist = rand() < 0.2;
+        emit(x, 0.05, z, (rand() - 0.5) * 0.4, mist ? 0.4 + rand() * 0.4 : 1.4 + rand() * 1.8, (rand() - 0.5) * 0.4, mist ? 0xd6eef8 : rand() < 0.4 ? 0xffffff : F.ice, mist ? 1.2 + rand() * 0.8 : 0.16 + rand() * 0.2, mist ? 0.9 : 0.5 + rand() * 0.3, 1.6, mist ? 0 : -0.5, mist ? 0.3 : 0.95);
+      }
     },
     /** A plain ring (her landings, a shockwave). */
     wave(at, color, radius, opts) { wave(at, color, radius, opts); },
