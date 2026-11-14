@@ -32,8 +32,8 @@ test('no template shapes left where a model exists: the lamp becomes the bridge 
   const THREE = await import('three');
   const { dressInPlace, DRESS_HEIGHT } = await import('../../src/render/shoal-dress.js');
   const src = (await import('node:fs')).readFileSync(new URL('../../src/render/shoal-props.js', import.meta.url), 'utf8');
-  assert.match(src, /lamp: 'prop_bridge_torch'/); assert.match(src, /pickups: Object.freeze({ hp: 'prop_memory_vial', stamina: 'shard' })/);
-  assert.match(src, /n += await dressInPlace(A, get, SHOAL_PROPS)/);
+  assert.ok(src.includes("lamp: 'prop_bridge_torch'")); assert.ok(src.includes("pickups: Object.freeze({ hp: 'prop_memory_vial', stamina: 'shard' })"));
+  assert.ok(src.includes('n += await dressInPlace(A, get, SHOAL_PROPS)'));
   const SHOAL_PROPS = { lamp: 'prop_bridge_torch', pickups: { hp: 'prop_memory_vial', stamina: 'shard' } };
   const root = new THREE.Group();
   const lamp = new THREE.Group(); const post = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 4), new THREE.MeshBasicMaterial()); post.name = 'lamp_post_placeholder'; const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.2), new THREE.MeshBasicMaterial()); bulb.name = 'lamp_bulb_placeholder'; lamp.add(post, bulb); root.add(lamp);
