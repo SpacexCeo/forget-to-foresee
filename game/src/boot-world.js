@@ -611,6 +611,7 @@ if (townMode.town) {
     islandReady, // the cover stays until the archipelago's first view is loaded and warmed
     onRegister: () => { if (irisAvatar) irisAvatar.react('register', clock.elapsedTime); }, // she reaches for the ring
     // the Tournament warning (owner 12.11); never on the judge link, whose flow stays as it was
+    preferTalk: () => (townQuests && townQuests.focusGiver) || null,
     tourney: () => tourneyGate(townLedger.stats, { judge: judge || params.get('judge') === '1' }), onTourneyLocked: (g) => toast(ctx.i18n.t('town.altar.lockedToast', { n: g.n, need: g.need })),
     confirmRegister: judge ? null : () => import('./ui/tourney-warn.js').then((m) => m.confirmTournament({ t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage })),
   });
@@ -1093,6 +1094,9 @@ async function startDay1() {
   await q.runOnboarding('name', () => m.runArrival({ t, mint: day1Mint, flyIn, reduced: () => lookdev.reducedMotion, inventoryEl: () => document.querySelector('.ftf-town-profile'), nickname: loadDay1(ctx.storage).nickname || '', signIn: featureFlags.on('accountLogin') ? (nick) => openAccount(nick) : null }));
   refreshCompanions(); // a fresh heroine may already hold a dragon
   const orbit = (base) => (p) => { rig.dist = TOWN_CAMERA.dist + 9 * Math.sin(Math.PI * p); rig.rotate(base); };
+  // First-minutes pass (14.11): the tip tour no longer lands right after the welcome, before the player has walked a step.
+  // It waits for the Elder's welcome to be turned in (the first loop closed) or two minutes of play, whichever comes first.
+  for (let i = 0; i < 240; i++) { const w = townQuests && townQuests.quests && townQuests.quests.quests && townQuests.quests.quests.q_welcome; if (w && w.state === 'done') break; await new Promise((r) => setTimeout(r, 500)); }
   // No Day-1 tips on phones at all (owner 13.11, asked many times): the tracker and the quest log carry the same lines there.
   if (!input.touchControls) await q.runOnboarding('guide', () => m.runHints({ t, steps: [
     ...(input.touchControls ? [] : [{ key: 'day1.hint.skin' }]), // not on phones (owner 12.11: the tip took the screen there)

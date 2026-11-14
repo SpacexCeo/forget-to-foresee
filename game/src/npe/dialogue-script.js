@@ -42,6 +42,13 @@ export const WAKEUP = Object.freeze([
   { id: 'W19', speaker: 'iris', key: 'npe.w19' },
 ]);
 
+/**
+ * The welcome as played on a first visit (first-minutes pass, 14.11): eight of the nineteen lines, so a stranger is walking
+ * within a minute. It keeps who she is to them, the way home ({fee} silk at the Gate-Loom) and the first job (the spiders).
+ */
+export const WELCOME_IDS = Object.freeze(['W1', 'W6', 'W7', 'W11', 'W12', 'W13', 'W14', 'W19']);
+export const WELCOME = Object.freeze(WAKEUP.filter((l) => WELCOME_IDS.includes(l.id)));
+
 export const BARKS = Object.freeze(Array.from({ length: 10 }, (_, i) => `npe.bark.${i + 1}`));
 
 /** Whole silk text: 200, or 12.5 when not whole (rule: at most two decimals, whole numbers when whole). */

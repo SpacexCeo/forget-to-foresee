@@ -9,7 +9,7 @@ export const giverOf = (spot) => (spot && typeof spot.id === 'string' && spot.id
  * @param {{pos: number[], spots: object[], folkAround?: (pos) => Array<{key: string, d: number}>, folkAt?: (key) => number[]|null, folk?: boolean}} o
  * @returns {Array<{id: string, kind: 'spot'|'folk', key: string|null, spot?: object, d: number}>} nearest first
  */
-export function talkCandidates({ pos, spots = [], folkAround = () => [], folkAt = () => null, folk = true }) {
+export function talkCandidates({ pos, spots = [], folkAround = () => [], folkAt = () => null, folk = true, prefer = null }) {
   const out = [], taken = new Set();
   const dist = (p) => (p ? Math.hypot(p[0] - pos[0], p[2] - pos[2]) : Infinity);
   for (const s of spots) {
@@ -19,7 +19,8 @@ export function talkCandidates({ pos, spots = [], folkAround = () => [], folkAt 
     out.push({ id: 'spot:' + s.id, kind: 'spot', key: g, spot: s, d: g ? dist(folkAt(g)) : 1.5 });
   }
   if (folk) for (const f of folkAround(pos) || []) if (!taken.has(f.key)) out.push({ id: 'folk:' + f.key, kind: 'folk', key: f.key, d: f.d });
-  return out.sort((a, b) => a.d - b.d);
+  // the giver the current objective names comes first while in reach (first-minutes pass: E beside the Elder picked the Scribe)
+  return out.sort((a, b) => (prefer ? (b.key === prefer) - (a.key === prefer) : 0) || a.d - b.d);
 }
 
 /** The picked candidate: the one with `pickedId` while it is still in reach, else the nearest; null when none. */
