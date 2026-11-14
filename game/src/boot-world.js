@@ -1091,7 +1091,7 @@ async function startDay1() {
   for (let i = 0; i < 1200 && !(window.__ftfBootMarks && window.__ftfBootMarks.done); i++) await new Promise((r) => setTimeout(r, 150));
   const t = (k, a) => ctx.i18n.t(k, a);
   const [m, q] = await Promise.all([import('./play/day1.js'), import('./ui/onboarding-queue.js')]);   // one onboarding queue: name -> intro -> guide
-  await q.runOnboarding('name', () => m.runArrival({ t, mint: day1Mint, flyIn, reduced: () => lookdev.reducedMotion, inventoryEl: () => document.querySelector('.ftf-town-profile'), nickname: loadDay1(ctx.storage).nickname || '', signIn: featureFlags.on('accountLogin') ? (nick) => openAccount(nick) : null }));
+  await q.runOnboarding('name', () => m.runArrival({ t, mint: day1Mint, flyIn, reduced: () => lookdev.reducedMotion, inventoryEl: () => document.querySelector('.ftf-town-profile'), nickname: loadDay1(ctx.storage).nickname || '', signedIn: !!loadDay1(ctx.storage).login, signIn: featureFlags.on('accountLogin') ? (nick) => openAccount(nick) : null }));
   refreshCompanions(); // a fresh heroine may already hold a dragon
   const orbit = (base) => (p) => { rig.dist = TOWN_CAMERA.dist + 9 * Math.sin(Math.PI * p); rig.rotate(base); };
   // First-minutes pass (14.11): the tip tour no longer lands right after the welcome, before the player has walked a step.

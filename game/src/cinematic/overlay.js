@@ -36,7 +36,8 @@ const CSS = `
 body.cine-clean #ui, body.cine-clean #prompt, body.cine-clean #toast, body.cine-clean #badge, body.cine-clean #scene-controls, body.cine-clean #hud, body.cine-clean .hub-fade { visibility: hidden !important; }
 body.cine-nohub .hub-host, body.cine-nohub #prompt, body.cine-nohub #toast { visibility: hidden !important; }
 body.cine-nodev #badge, body.cine-nodev #hud { visibility: hidden !important; }
-body.cine-on, body.cine-on * { cursor: none !important; }
+body.cine-on, body.cine-on *:not(button, button *, #boot, #boot *) { cursor: none !important; }
+body.cine-on #boot, body.cine-on button { cursor: default; } /* a button or the entry gate always keeps a pointer (owner 14.11) */
 /* The capture reads the 3D frame from the canvas and the UI from a separate screenshot with alpha: nothing opaque behind the UI. */
 html.cine-layers, html.cine-layers body, html.cine-layers #app { background: transparent !important; }
 html.cine-layers #app canvas.cine-hidden { visibility: hidden !important; }

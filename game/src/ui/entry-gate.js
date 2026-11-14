@@ -42,6 +42,7 @@ const CSS = `
 #boot .entry-gate { position: relative; z-index: 3; display: flex; flex-direction: column; align-items: center; gap: 14px; margin-top: 6px; }
 #boot .entry-btn { min-height: 52px; min-width: min(240px, calc(100vw - 32px)); padding: 12px 34px; border-radius: 26px; border: 1px solid #5fd3c6; background: rgba(95, 211, 198, .16); color: #f2fbf9; font: 600 18px/1 system-ui, -apple-system, 'Segoe UI', sans-serif; letter-spacing: .02em; cursor: pointer; box-shadow: 0 0 24px rgba(95, 211, 198, .22); }
 #boot .entry-btn:hover, #boot .entry-btn:focus-visible { background: rgba(95, 211, 198, .3); outline: none; box-shadow: 0 0 0 2px rgba(95, 211, 198, .55), 0 0 28px rgba(95, 211, 198, .35); }
+#boot .entry-hint { margin: -4px 0 0; font: 500 13px/1.3 system-ui, -apple-system, 'Segoe UI', sans-serif; color: rgba(207, 231, 228, .72); letter-spacing: .02em; }
 #boot .entry-title { margin: 0; font: 600 15px/1.3 system-ui, -apple-system, 'Segoe UI', sans-serif; color: #cfe7e4; letter-spacing: .03em; }
 #boot .entry-langs { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; max-width: 640px; }
 #boot .entry-lang { min-height: 46px; min-width: 120px; padding: 10px 18px; border-radius: 23px; border: 1px solid rgba(95, 211, 198, .55); background: rgba(8, 20, 20, .55); color: #eef0ea; font: 500 16px/1 system-ui, -apple-system, 'Segoe UI', sans-serif; cursor: pointer; }
@@ -76,8 +77,12 @@ export async function runEntryGate({ doc = globalThis.document, t, steps, locale
   // 1. the one button
   await new Promise((resolve) => {
     const b = el(doc, 'button', 'entry-btn', t('entry.enter')); b.type = 'button';
-    b.addEventListener('click', resolve, { once: true });
-    box.append(b);
+    // Enter works even when the button lost focus (a click elsewhere, a fullscreen switch): the hint says so (owner 14.11)
+    const on = typeof doc.addEventListener === 'function', off = () => { if (on) doc.removeEventListener('keydown', key, true); };
+    const key = (e) => { if (e.key === 'Enter' && !e.repeat) { off(); resolve(); } };
+    b.addEventListener('click', () => { off(); resolve(); }, { once: true });
+    if (on) doc.addEventListener('keydown', key, true);
+    box.append(b, el(doc, 'p', 'entry-hint', t('entry.enterHint')));
     try { b.focus({ preventScroll: true }); } catch { /* */ }
   });
   box.textContent = '';

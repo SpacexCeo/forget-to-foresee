@@ -645,6 +645,7 @@ const EN = {
   'ledger.view': "View the transaction",
   // ---- entry gate (ui/entry-gate.js): the one button after loading, then the language ----
   'entry.enter': "Enter the world",
+  'entry.enterHint': "or press Enter",
   'entry.lang': "Choose your language",
   'entry.ready': "The town is ready",
   // ---- "Press F11 for fullscreen" (ui/fullscreen-hint.js) ----
