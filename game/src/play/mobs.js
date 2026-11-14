@@ -587,7 +587,7 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
 
   function handle(ev) {
     for (const e of ev) {
-      if (e.kind === 'killed' && e.mob.noLoot) { const v0 = views.get(e.mob); if (v0) v0.fx.die(); continue; } // a shared spider another player won: it dissolves, the kill is theirs
+      if (e.kind === 'killed' && e.mob.noLoot) { const v0 = views.get(e.mob); if (v0) { if (v0.fx.fall) v0.fx.fall(); v0.fx.die(); } continue; } // a shared spider another player won: it dissolves, the kill is theirs
       if (e.kind === 'hit' || e.kind === 'killed') busEmit(e.kind === 'hit' ? 'mob.hit' : 'mob.killed', { type: e.mob.type, id: e.mob.id, dmg: e.amount, crit: !!e.crit }); // sprint bus (A5 seam)
       const v = views.get(e.mob);
       if (e.kind === 'attack' && v) { if (v.actions.attack) { play(v, 'attack', 0.1); v.oneShot = v.actions.attack; } v.ring.visible = !(e.ranged || e.mob.T.ranged); if (onFeedback) onFeedback('attack', e.mob); }
@@ -600,7 +600,7 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
         shots.push({ s, vel: to.clone().sub(from).normalize().multiplyScalar(9), life: 2.2, damage: e.damage || e.mob.T.damage, min: 99, log: { from: from.toArray().map((x) => +x.toFixed(2)), to: to.toArray().map((x) => +x.toFixed(2)) } });
       }
       else if (e.kind === 'hit' && v) {
-        v.fx.hit(); number(e.mob, e.amount, e.crit, e.src); if (onFeedback) onFeedback('hit', e.mob, e);
+        v.fx.hit(e.kill ? 1.8 : e.crit ? 1.5 : 1); number(e.mob, e.amount, e.crit, e.src); if (onFeedback) onFeedback('hit', e.mob, e);
         // the blow's own look where it lands: frost shards, storm arcs, strike sparks (render/hit-fx-core.js); the
         // flash and the fragments stay under reduced motion (they say it hit), the camera stays still
         const imp = impactOf(e.src, { radius: e.mob.T.radius, heavy: !!e.mob.T.heavy, kill: !!e.kill, reduced: reduced() });
@@ -611,7 +611,12 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
         if (e.mob.state === 'stagger' && v.actions.hit) { play(v, 'hit', 0.06); v.oneShot = v.actions.hit; }
         v.ring.visible = v.ring.visible && e.mob.state === 'windup';
       }
-      else if (e.kind === 'death' && v) { v.ring.visible = false; play(v, 'death', 0.1); if (onFeedback) onFeedback('kill', e.mob); }
+      else if (e.kind === 'death' && v) {
+        v.ring.visible = false; if (v.fx.hit) v.fx.hit(1.8);                         // a last white flash as it goes down
+        if (v.actions.death) play(v, 'death', 0.1);
+        else { if (v.fx.fall) v.fx.fall(); v.fallT = 1.2; }                       // no death clip: it collapses, lies a moment, then dissolves
+        if (onFeedback) onFeedback('kill', e.mob);
+      }
       else if (e.kind === 'killed') {
         if (v) v.fx.die();
         if (win) { e.mob.lives = (e.mob.lives || 0) + 1; win.dispatchEvent(new CustomEvent('ftf:mob-killed', { detail: { type: e.mob.type, pos: e.mob.pos.slice(), elite: !!e.mob.T.elite, killId: `${SESSION}:${e.mob.id}#${e.mob.lives}` } })); }   // killId: stable per creature and life (salvage, quests)
@@ -806,6 +811,7 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
         else if (v.current) v.current.timeScale = v.current === v.actions.idle ? v.idleRate : 1;
         v.mixer.update(dt);
       }
+      if (v.fallT > 0 && (v.fallT -= dt) <= 0) { const ev = []; brain.fallen(m, ev); handle(ev); }
       v.fx.update(dt);
       place(m, v);
       // an idle creature glances aside every few seconds (a visual turn on top of the brain's heading)
