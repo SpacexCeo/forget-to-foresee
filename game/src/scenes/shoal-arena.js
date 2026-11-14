@@ -33,6 +33,8 @@ const CSS = `
 .sa-skill.sa-down{transform:scale(.94)}
 @keyframes sa-pulse{50%{box-shadow:0 0 24px rgba(255,190,100,1)}}
 body.ts-touch .sa-skill kbd{display:none}@media (pointer:coarse){.sa-skill kbd{display:none}}
+.sa-exit{position:fixed;left:calc(env(safe-area-inset-left,0px) + 16px);top:calc(env(safe-area-inset-top,0px) + 132px);z-index:14;min-height:40px;padding:6px 14px;border-radius:10px;border:1px solid rgba(246,200,96,.7);background:rgba(18,14,8,.8);color:#f6e2a8;font:600 13px system-ui,sans-serif;cursor:pointer}
+.sa-exit.sa-next{border-color:#ffd27a;color:#fff;background:rgba(80,60,20,.9)}
 .sa-msg{position:fixed;left:50%;top:32%;transform:translateX(-50%);z-index:15;color:#ffe6a6;font:700 22px system-ui,sans-serif;text-shadow:0 2px 6px #000;pointer-events:none;text-align:center;max-width:calc(100vw - 32px)}
 .sa-hint{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);transform:translateX(-50%);z-index:14;color:#f3ead2;font:500 13px/1.3 system-ui,sans-serif;text-shadow:0 1px 3px #000;pointer-events:none;text-align:center;max-width:calc(100vw - 260px);opacity:.9}
 @media (max-width:899px){.sa-boss{left:auto;right:12px;transform:none;width:calc(58vw - 12px)}.sa-me{width:36vw}.sa-skills{grid-template-columns:repeat(3,58px);grid-auto-rows:58px}.sa-hint{display:none}}
@@ -157,6 +159,9 @@ export function createShoalArena(o) {
   const skillsEl = el('div', 'sa-skills'); hud.append(skillsEl);
   const msg = el('div', 'sa-msg'); msg.hidden = true; hud.append(msg);
   const hint = el('div', 'sa-hint'); hint.hidden = true; hud.append(hint);
+  // the way out, always on screen (touch has no E): Leave the Shoal mid-fight; after the win, Open the chest, then Fly home
+  const exitBtn = el('button', 'sa-exit'); exitBtn.type = 'button'; hud.append(exitBtn);
+  exitBtn.addEventListener('click', () => { if (!active) return; if (won && !chestOpen) openChest(); else onHome(); });
   let msgT = 0, hintT = 0;
   const flash = (text, secs = 2.2) => { msg.textContent = text; msg.hidden = false; msgT = secs; };
   let skillBtns = [], liftBtn = null, ultBtn = null;
@@ -294,9 +299,10 @@ export function createShoalArena(o) {
     mesh.position.set(x, y, z); root.add(mesh);
     shots.push({ s, mesh, x, y, z, dx, dz, vy, left: s.range, hitBoss: false, hit: new Set() });
   }
+  function openChest() { chestOpen = true; chest.rotation.x = -0.001; flash(say('shoal.reward', { xp: R.REWARD.xp, title: say('shoal.title.' + R.REWARD.title) }), 4); }
   function interact() {
     if (!won) return false;
-    if (!chestOpen && Math.hypot(me3.x - R.ARENA.chest[0], me3.z - R.ARENA.chest[1]) < 3) { chestOpen = true; chest.rotation.x = -0.001; flash(say('shoal.reward', { xp: R.REWARD.xp, title: say('shoal.title.' + R.REWARD.title) }), 4); return true; }
+    if (!chestOpen && Math.hypot(me3.x - R.ARENA.chest[0], me3.z - R.ARENA.chest[1]) < 3) { openChest(); return true; }
     if (chestOpen || Math.hypot(me3.x - R.ARENA.landing[0], me3.z - R.ARENA.landing[1]) < 4) { onHome(); return true; }
     return false;
   }
@@ -481,6 +487,7 @@ export function createShoalArena(o) {
     if (showAim) { const p = aimPoint(); aimMark.position.set(p[0], 0.06, p[1]); }
     // HUD
     bossHud.hidden = won;
+    { const k = won ? (chestOpen ? 'shoal.prompt.home' : 'shoal.prompt.chest') : 'shoal.leave'; const txt = say(k); if (exitBtn.textContent !== txt) exitBtn.textContent = txt; exitBtn.classList.toggle('sa-next', won); }
     bossName.textContent = say('shoal.boss') + ' · ' + say('shoal.phase', { n: B.phase + 1 });
     bossFill.style.width = (100 * B.hp / R.BOSS.hp).toFixed(1) + '%';
     bars.hp.style.width = H.hp + '%'; bars.stamina.style.width = H.stamina + '%'; bars.mana.style.width = H.mana + '%'; bars.ult.style.width = (100 * (H.ult || 0) / R.ULT.max).toFixed(1) + '%';

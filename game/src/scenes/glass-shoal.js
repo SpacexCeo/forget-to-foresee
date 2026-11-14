@@ -193,7 +193,8 @@ export function createGlassShoal(o) {
     for (const r of [giverRay, bladeRay, stoneRay]) r.material.opacity = pulse;
     blade.visible = active && !save.blade && mode === 'town';
     bladeRay.visible = blade.visible;
-    stoneRay.visible = mode === 'town' && active && (save.step === 'reach_stone' || save.step === 'ride');
+    stoneRay.visible = mode === 'town' && active && R.stoneOpen(save);
+    if (mode === 'town' && R.homeDue(save) && event('home')) toast(say('shoal.home') + ' ' + say('shoal.reward', { xp: R.REWARD.xp, title: say('shoal.title.' + R.REWARD.title) }));
     if (!reduced()) blade.rotation.y += dt * 0.6;
     // the tracker line
     const tk = mode === 'town' ? R.trackerKey(save, lv) : null;
