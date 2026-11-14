@@ -101,7 +101,7 @@ export function setTele(mat, k, op, t) { const u = mat.uniforms; u.uK.value = te
 const PTS_VERT = `attribute float aSize; attribute float aAlpha; attribute vec3 aColor; attribute float aKind; attribute float aK;
 varying float vA; varying vec3 vC; varying float vKind; varying float vK; uniform float uScale;
 void main(){ vA = aAlpha; vC = aColor; vKind = aKind; vK = aK; vec4 mv = modelViewMatrix * vec4(position, 1.0);
-  float px = aSize * uScale / max(0.5, -mv.z); gl_PointSize = aKind >= 1.0 ? clamp(px, 1.5, 24.0) : min(px, 220.0); gl_Position = projectionMatrix * mv; }`;
+  float px = aSize * uScale / max(0.5, -mv.z); gl_PointSize = aKind >= 1.0 ? clamp(px, 1.5, 24.0) : min(px, 140.0); gl_Position = projectionMatrix * mv; }`;
 const PTS_FRAG = `varying float vA; varying vec3 vC; varying float vKind; varying float vK; uniform float uTime;
 float h1(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
 float vn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(h1(i), h1(i + vec2(1.0, 0.0)), f.x), mix(h1(i + vec2(0.0, 1.0)), h1(i + vec2(1.0, 1.0)), f.x), f.y); }
@@ -230,9 +230,9 @@ export function createSerpentFx({ THREE, parent, mobile = false, rand = Math.ran
       const front = Math.min(1, breathT / F.breathRun) * length, ang = Math.atan2(dir[0], dir[1]);
       const m2 = Math.max(1, Math.round((mobile ? 160 : 420) * dt));
       for (let i = 0; i < m2; i++) {
-        const u = Math.max(0.5, front - rand() * 3.5), s2 = (rand() * 2 - 1) * half * 0.95, a2 = ang + s2, mist = rand() < 0.35;
+        const u = Math.max(0.5, front - rand() * 3.5), s2 = (rand() * 2 - 1) * half * 0.95, a2 = ang + s2, mist = rand() < 0.12; // mostly fine shards: a dense mist wall stacked into one white cloud
         emit(origin[0] + Math.sin(a2) * u, 0.15 + rand() * (mist ? 0.6 : 1.4), origin[2] + Math.cos(a2) * u, Math.sin(a2) * 3, 1 + rand() * 2.5, Math.cos(a2) * 3,
-          mist ? 0xb8e2f4 : rand() < 0.4 ? 0xffffff : F.ice, mist ? 2.6 + rand() * 2 : 0.6 + rand() * 0.8, 0.55 + rand() * 0.4, 1.2, mist ? 0 : 5, mist ? 0.4 : 0.9);
+          mist ? 0x9fc8dc : rand() < 0.4 ? 0xffffff : F.ice, mist ? 1.2 + rand() * 1.0 : 0.3 + rand() * 0.5, 0.55 + rand() * 0.4, 1.2, mist ? 0 : 5, mist ? 0.28 : 0.9);
       }
       // the stream from the jaws, layered: a cone of mist puffs that widen as they travel, fine crystalline sparkles and
       // fast frost streaks racing along it
