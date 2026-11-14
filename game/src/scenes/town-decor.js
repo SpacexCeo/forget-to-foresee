@@ -12,7 +12,7 @@ export const BANNERS = Object.freeze(['prop_clan_banner_iris', 'prop_clan_banner
 const ALTAR = Object.freeze([0, 4.5, -11]), STREET = Object.freeze([0, 0, 22]);
 
 export const TOWN_DECOR = Object.freeze([
-  ...[[3, 4.5, -3], [7.5, 4.5, -3.5], [10, 4.5, -12.5], [-10.5, 4.5, -12], [-10, 4.5, -7.5], [-6.5, 4.5, -3]]
+  ...[[3, 4.5, -3], [7.5, 4.5, -3.5], [10, 4.5, -12.5], [-10, 4.5, -14.5], [-10, 4.5, -7.5], [-6.5, 4.5, -3]]
     .map((at, i) => Object.freeze({ id: 'banner_' + i, asset: BANNERS[i], at: Object.freeze(at), face: ALTAR, half: 0.4, height: 3.4, pole: 0.12 })),
   ...[[-8.5, 0, 32.5], [8.5, 0, 32.5], [-9, 0, 28.5], [8.5, 0, 28.5]]
     .map((at, i) => Object.freeze({ id: 'torch_' + i, asset: 'prop_bridge_torch', at: Object.freeze(at), face: STREET, half: 0.2, height: 1.65, pole: 0.14 })),

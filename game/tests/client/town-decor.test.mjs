@@ -6,6 +6,8 @@ import { existsSync, readFileSync } from 'node:fs';
 import { TOWN_DECOR, BANNERS, facing } from '../../src/scenes/town-decor.js';
 import { propFootprints, segDist } from '../../src/scenes/town-footprints.js';
 import { TOWN_DATA } from '../../src/scenes/town-data.js';
+import '../../src/play/townsfolk-plan.js'; // registers the walking lines the path graph is built from
+import { townPaths } from '../../src/play/town-paths.js';
 
 const model = (n) => new URL(`../../public/assets/models/${n}.glb`, import.meta.url);
 
@@ -17,10 +19,10 @@ test('every spot is a shipped model with its light file, the six clans each once
 });
 
 test('no spot stands on a walking line, a post, a door or another prop; walkers keep clear of each', () => {
-  const lines = [TOWN_DATA.route, ...Object.values(TOWN_DATA.npc.routes).map((r) => r.points || r)].filter((l) => Array.isArray(l) && l.length > 1);
+  const g = townPaths(); assert.ok(g.edges.length > 50, 'the walkers path graph');
   const posts = Object.values(TOWN_DATA.npc.points).map((v) => v.position || v);
   for (const d of TOWN_DECOR) {
-    for (const l of lines) for (let i = 0; i + 1 < l.length; i++) if (Math.abs((l[i][1] + l[i + 1][1]) / 2 - d.at[1]) < 1.5) assert.ok(segDist(d.at, l[i], l[i + 1]) >= 1.25, `${d.id} is ${segDist(d.at, l[i], l[i + 1]).toFixed(2)} m from a walking line`);
+    for (const [a, b] of g.edges) { const A = g.nodes[a], B = g.nodes[b]; if (Math.abs((A[1] + B[1]) / 2 - d.at[1]) < 1.5) assert.ok(segDist(d.at, A, B) >= 1.4, `${d.id} is ${segDist(d.at, A, B).toFixed(2)} m from a walking line`); }
     for (const p of posts) if (Math.abs(p[1] - d.at[1]) < 1.5) assert.ok(Math.hypot(p[0] - d.at[0], p[2] - d.at[2]) >= 2.2, `${d.id} near a post`);
     for (const o of TOWN_DECOR) if (o !== d) assert.ok(Math.hypot(o.at[0] - d.at[0], o.at[2] - d.at[2]) >= 3.5, `${d.id} crowds ${o.id}`);
   }
