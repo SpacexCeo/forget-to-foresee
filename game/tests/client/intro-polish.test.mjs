@@ -68,3 +68,16 @@ test('the wake-up crowd stays through the whole first talk and leaves with the i
   assert.match(keep, /onOnboarding\(\(id\) => \{ if \(id !== 'intro'\) stop\(\); \}\)/, 'and when the intro\'s turn ends whatever happened');
   assert.match(keep, /if \(stopped\) return; stopped = true;/, 'stopping twice is harmless');
 });
+
+test('the prologue\'s walk to the device (P7) frames Iris whole from eye level, never from under her arms (QA pass 2 #4)', async () => {
+  const { cameraAt, irisAt, SHOTS } = await import('../../src/cinematic/prologue/shots.js');
+  const p7 = SHOTS.find((s) => s.id === 'P7');
+  assert.ok(p7.p0[1] >= 1.4 && p7.p1[1] >= 1.4, 'eye level, not a low angle');
+  for (let t = p7.t0; t < p7.t1; t += 0.05) {
+    const c = cameraAt(t), i = irisAt(t);
+    const I = [i.x - c.pos[0], 1.1 - c.pos[1], i.z - c.pos[2]], L = c.look.map((v, k) => v - c.pos[k]);
+    assert.ok(Math.hypot(I[0], I[2]) >= 2.5, `at ${t.toFixed(2)} s she is ${Math.hypot(I[0], I[2]).toFixed(2)} m from the lens`);
+    const ang = Math.acos((L[0] * I[0] + L[1] * I[1] + L[2] * I[2]) / Math.hypot(...L) / Math.hypot(...I)) * 180 / Math.PI;
+    assert.ok(ang < 25, `at ${t.toFixed(2)} s she is ${ang.toFixed(1)}° off the centre of the frame`);
+  }
+});
