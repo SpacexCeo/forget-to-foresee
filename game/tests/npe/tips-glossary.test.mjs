@@ -25,7 +25,7 @@ test('tips: the HP rule in the copy matches the game (respawn at the gate, full 
   const mobs = readFileSync(new URL('../../src/play/mobs.js', import.meta.url), 'utf8');
   assert.match(mobs, /if \(respawn\) player\.teleport\(respawn\.slice\(\), player\.heading\); iris\.hp = IRIS_HP;/);
   const boot = readFileSync(new URL('../../src/boot-world.js', import.meta.url), 'utf8');
-  assert.match(boot, /respawn: gate/);
+  assert.match(boot, /respawn: \{ slice: \(\) => \(dropSpawn\(.*gate\)/); // the gate, a short drop above its ground (spawn fix 14.11)
 });
 
 test('tip queue: one at a time, never while busy, 1.5 s after a dismissal, at most three a minute, Skip tips', () => {
