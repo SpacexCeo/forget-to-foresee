@@ -27,7 +27,6 @@ const opt = (k, d) => (args.includes(k) ? args[args.indexOf(k) + 1] : d);
 const GRIP_R = Number(opt('--radius', '0.0125'));   // the hilt's half-width (art/props/shoal/loomblade/parts.json)
 const SKIN_GAP = 0.0012;                             // how far the closed hand stays off the hilt
 const BLEND = 0.006;                                 // half-width of the bend zone at a joint, metres
-const ANGLES = { mcp: 58, pip: 86, dip: 48, thumb: 46, thumbTip: 40 };   // a power grip on a 25 mm handle, degrees, at scale 1
 
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);
 const doc = await io.read(SRC);
@@ -154,83 +153,89 @@ skin.setInverseBindMatrices(doc.createAccessor('grip_ibm').setType('MAT4').setAr
 prim.setAttribute('JOINTS_0', doc.createAccessor('grip_joints').setType('VEC4').setArray(newJ).setBuffer(P.getBuffer()));
 prim.setAttribute('WEIGHTS_0', doc.createAccessor('grip_weights').setType('VEC4').setArray(newW).setBuffer(P.getBuffer()));
 
-// ---- the grip pose: world-space turns about each joint, parents first
+// ---- the grip (owner's reference photo, 14.11): the hilt runs diagonally across the palm, from the base of the index
+// finger to the heel of the hand on the little-finger side; every finger closes round it, joint by joint, until it
+// touches; the thumb lies along the hilt toward the guard.
 const rotAbout = (pivot, axis, deg) => { const m = mat4.create(); mat4.translate(m, m, pivot); mat4.rotate(m, m, (deg * Math.PI) / 180, axis); mat4.translate(m, m, vec3.negate(vec3.create(), pivot)); return m; };
 const allWorld = () => [...WORLD, ...newJoints.map((n) => n.world)];
 const allBind = [...IBM, ...newJoints.map((n) => n.ibm)];
-function posed(angles) {
+const DIAG = Number(opt('--diag', '24'));                 // degrees between the hilt and the knuckle line
+const A = vec3.normalize(vec3.create(), vec3.add(vec3.create(), vec3.scale(vec3.create(), G, Math.cos((DIAG * Math.PI) / 180)), vec3.scale(vec3.create(), F, Math.sin((DIAG * Math.PI) / 180))));
+const want = GRIP_R + SKIN_GAP;
+const groupAxis = (ji) => { const fs = fingers.filter((f) => f.group === ji); const a = vec3.create(); fs.forEach((f) => vec3.add(a, a, f.axis)); return vec3.normalize(a, a); };
+// the thumb: a swing toward the hilt's direction, then a press against its side
+const thumbSwingAxis = vec3.normalize(vec3.create(), vec3.cross(vec3.create(), Td, A));
+const thumbSwingMax = (Math.acos(Math.max(-1, Math.min(1, vec3.dot(Td, A)))) * 180) / Math.PI;
+function posed(a) {
   const world = allWorld().map((m) => mat4.clone(m)), delta = new Map();
-  const groupAxis = (ji) => { const fs = fingers.filter((f) => f.group === ji); const a = vec3.create(); fs.forEach((f) => vec3.add(a, a, f.axis)); return vec3.normalize(a, a); };
-  const set = (ji, parentDelta, pivot, axis, deg) => { const d = mat4.multiply(mat4.create(), parentDelta, rotAbout(pivot, axis, deg)); delta.set(ji, d); mat4.multiply(world[ji], d, world[ji]); return d; };
+  const set = (ji, parentDelta, pivot, axis, deg, extra) => { let r = rotAbout(pivot, axis, deg); if (extra) r = mat4.multiply(mat4.create(), extra, r); const d = mat4.multiply(mat4.create(), parentDelta, r); delta.set(ji, d); mat4.multiply(world[ji], d, world[ji]); return d; };
   const I = mat4.create();
-  for (const g of [iFing, iIdx]) {
-    const dg = set(g, I, posOf(g), groupAxis(g), angles.mcp);
-    for (const fi of fingers.filter((f) => f.group === g)) { const dm = set(fi.iMid, dg, fi.Jmid, fi.axis, angles.pip); set(fi.iTip, dm, fi.Jtip, fi.axis, angles.dip); }
-  }
-  const dt = set(iThumb, I, Bt, thumb.axis, angles.thumb);
-  set(thumb.iTip, dt, thumb.Jtip, thumb.axis, angles.thumbTip);
+  const dg = { [iFing]: set(iFing, I, posOf(iFing), groupAxis(iFing), a.mcp_f), [iIdx]: set(iIdx, I, posOf(iIdx), groupAxis(iIdx), a.mcp_i) };
+  for (const fi of fingers) { const dm = set(fi.iMid, dg[fi.group], fi.Jmid, fi.axis, a['pip_' + fi.name]); set(fi.iTip, dm, fi.Jtip, fi.axis, a['dip_' + fi.name]); }
+  // the thumb turns from its rest direction to lie along the hilt toward the guard, leaning `t_press` degrees in
+  // toward the hilt's axis (0: parallel to the hilt, beside it)
+  const toAxis = (() => { const d = vec3.sub(vec3.create(), Bt, O); const t = vec3.dot(d, A); const foot = vec3.scaleAndAdd(vec3.create(), O, A, t); return vec3.normalize(foot, vec3.sub(foot, foot, Bt)); })();
+  const b = (a.t_press * Math.PI) / 180;
+  const target = vec3.normalize(vec3.create(), vec3.add(vec3.create(), vec3.scale(vec3.create(), A, Math.cos(b)), vec3.scale(vec3.create(), toAxis, Math.sin(b))));
+  const k = Math.min(1, a.t_swing / 100);   // how far along the way from rest to that direction
+  const tAxis = vec3.cross(vec3.create(), Td, target);
+  const tAng = Math.acos(Math.max(-1, Math.min(1, vec3.dot(Td, target)))) * k * 180 / Math.PI;
+  const dt = set(iThumb, I, Bt, vec3.length(tAxis) > 1e-6 ? vec3.normalize(tAxis, tAxis) : thumb.axis, tAng);
+  set(thumb.iTip, dt, thumb.Jtip, thumb.axis, a.t_tip);
   return { world, delta };
 }
-function skinned(world) {
+// the hand's vertices (anything weighted to the hand, the fingers or the thumb); only those are skinned while posing
+const handVerts = []; for (let v = 0; v < NV; v++) if (weightOn(v, iHand) + fingerW(v) + weightOn(v, iThumb) > 0.5) handVerts.push(v);
+const thumbVerts = handVerts.filter((v) => weightOn(v, iThumb) > 0.2);
+const palmVerts = handVerts.filter((v) => fingerW(v) < 0.2 && weightOn(v, iThumb) < 0.2);
+function skinned(world, list = null) {
   const mats = world.map((m, i) => mat4.multiply(mat4.create(), m, allBind[i]));
   const out = new Array(NV);
-  for (let v = 0; v < NV; v++) {
+  for (const v of list || Array.from({ length: NV }, (_, i) => i)) {
     const p = P.getElement(v, []), o = vec3.create();
     for (let k = 0; k < 4; k++) { const w = newW[v * 4 + k]; if (w > 0) vec3.scaleAndAdd(o, o, vec3.transformMat4(vec3.create(), p, mats[newJ[v * 4 + k]]), w); }
     out[v] = o;
   }
   return out;
 }
-// the hand's vertices (anything weighted to the hand, the fingers or the thumb)
-const handVerts = []; for (let v = 0; v < NV; v++) if (weightOn(v, iHand) + fingerW(v) + weightOn(v, iThumb) > 0.5) handVerts.push(v);
-const gAll = fingers.flatMap((f) => f.verts.map((v) => coords(rest[v])[1]));
-const gLo = Math.min(...gAll), gHi = Math.max(...gAll);
-const want = GRIP_R + SKIN_GAP;
-/**
- * Where the grip can sit in a closed hand: its axis runs along G; the circle of radius `want` round it must be free
- * of the hand and enclosed by it on at least 260 degrees (inside the fist, not beside it). Of all such places the
- * one nearest the palm wins. Returns [free radius, f, n] or null.
- */
-function seat(pts) {
-  const fn = handVerts.filter((v) => { const g = coords(pts[v])[1]; return g > gLo - 0.004 && g < gHi + 0.004; }).map((v) => { const c = coords(pts[v]); return [c[0], c[2]]; });
-  let best = null;
-  for (let n = 0.012; n <= 0.062; n += 0.001) {
-    for (let f = 0.035; f <= 0.115; f += 0.001) {
-      let r = 9; const bins = new Uint8Array(18);
-      for (const [pf, pn] of fn) { const d = Math.hypot(pf - f, pn - n); if (d < r) { r = d; if (r < want) break; } if (d < 0.036) bins[Math.floor(((Math.atan2(pn - n, pf - f) + Math.PI) / (2 * Math.PI)) * 18) % 18] = 1; }
-      if (r < want) continue;
-      if (bins.reduce((x, y) => x + y, 0) >= 13 && (!best || r > best[0])) best = [r, f, n];
-    }
-    if (best) return best;   // the first row off the palm that has room
+const distAxis = (p, O) => { const d = vec3.sub(vec3.create(), p, O); const t = vec3.dot(d, A); return Math.hypot(d[0] - A[0] * t, d[1] - A[1] * t, d[2] - A[2] * t); };
+// the seat: the axis through the palm just short of the knuckles, across the middle of the four fingers, lifted off
+// the palm until the palm's skin clears the hilt
+const gMid = (centres[0] + centres[3]) / 2;
+let O = null;
+// start at the palm's skin under the line (a circle inside the hand would also be "clear" of every surface vertex)
+const lineDist = (v) => { const c = coords(rest[v]); const df = c[0] - (fKnuckle - Number(opt('--back', '0.014'))), dg = c[1] - gMid; const ca = Math.cos((DIAG * Math.PI) / 180), sa = Math.sin((DIAG * Math.PI) / 180); return Math.abs(df * ca - dg * sa); };
+const nSkin = Math.max(...palmVerts.filter((v) => lineDist(v) < 0.012).map((v) => coords(rest[v])[2]));
+for (let n = nSkin; n <= nSkin + 0.05; n += 0.0005) {
+  const o = fromCoords(fKnuckle - Number(opt('--back', '0.014')), gMid, n);
+  if (palmVerts.every((v) => distAxis(rest[v], o) >= want)) { O = o; break; }
+}
+if (!O) throw new Error('no seat on the palm');
+const minDist = (pts, list) => { let m = 9; for (const v of list) { const d = distAxis(pts[v], O); if (d < m) m = d; } return m; };
+const fingerList = (name) => fingers.find((f) => f.name === name).verts;
+const KEYS = [
+  ...['pinky', 'ring', 'middle', 'index'].flatMap((n) => [['dip_' + n, 75, [n]], ['pip_' + n, 110, [n]]]),
+  ['mcp_f', 95, ['pinky', 'ring', 'middle']], ['mcp_i', 95, ['index']],
+  ['t_swing', 100, 'thumb'], ['t_press', 60, 'thumb'], ['t_tip', 30, 'thumb'],
+];
+const vertsOf = (who) => (who === 'thumb' ? thumbVerts : who.flatMap(fingerList));
+const ang = Object.fromEntries(KEYS.map(([k]) => [k, 0]));
+const clear = (a, who) => minDist(skinned(posed(a).world, vertsOf(who)), vertsOf(who)) >= want;
+// open anything that starts inside the hilt (the rest pose curls the fingers a little), then close joint by joint
+for (const [k, , who] of KEYS) for (let i = 0; i < 20 && !clear(ang, who); i++) ang[k] -= 3;
+for (let round = 0; round < 80; round++) {
+  let moved = false;
+  for (const [k, lim, who] of KEYS) {
+    if (ang[k] + 2 > lim) continue;
+    ang[k] += 2;
+    if (clear(ang, who)) moved = true; else ang[k] -= 2;
   }
-  return null;
+  if (!moved) break;
 }
-// which closing angles put the grip nearest the palm: the knuckles, the middle and the end joints are tried apart
-let chosen = null;
-for (const mcp of [24, 30, 36, 42, 48, 54]) for (const pip of [40, 48, 56, 64, 72, 80]) for (const dip of [20, 30, 40, 50]) {
-  const angles = { mcp, pip, dip, thumb: ANGLES.thumb, thumbTip: ANGLES.thumbTip };
-  const { world, delta } = posed(angles);
-  const pts = skinned(world);
-  const c = seat(pts);
-  if (!c) continue;
-  const score = c[2] * 1000 - 0.012 * (mcp + pip + dip);   // nearest the palm; of equals, the more closed hand
-  if (process.env.GRIP_DEBUG) console.log('[grip] try', mcp, pip, dip, 'n', (c[2] * 1000).toFixed(0), 'free', (c[0] * 1000).toFixed(1), 'score', score.toFixed(2));
-  if (!chosen || score < chosen.score) chosen = { angles, world, delta, pts, c, score };
-}
-if (!chosen) throw new Error('the hand never leaves room for the grip');
-// the thumb closes round the grip from the other side: as far as it goes without cutting the hilt
-{
-  const thumbVerts = handVerts.filter((v) => weightOn(v, iThumb) > 0.2);
-  const [, fc0, nc0] = chosen.c;
-  for (const [t1, t2] of [[96, 70], [84, 64], [72, 58], [60, 50], [46, 40]]) {
-    const angles = { ...chosen.angles, thumb: t1, thumbTip: t2 };
-    const { world, delta } = posed(angles);
-    const pts = skinned(world);
-    let r = 9; for (const v of thumbVerts) { const q = coords(pts[v]); const d = Math.hypot(q[0] - fc0, q[2] - nc0); if (d < r) r = d; }
-    if (process.env.GRIP_DEBUG) console.log('[grip] thumb', t1, t2, 'free mm', (r * 1000).toFixed(1));
-    if (r >= GRIP_R + 0.0006) { chosen = { ...chosen, angles, world, delta, pts }; break; }
-  }
-}
+const { world: poseWorld, delta: poseDelta } = posed(ang);
+const pts = skinned(poseWorld);
+const gapAll = minDist(pts, handVerts);
+const chosen = { angles: Object.fromEntries(Object.entries(ang).map(([k, v]) => [k, +v.toFixed(1)])), world: poseWorld, delta: poseDelta, pts };
 
 // ---- local quaternions of the pose, the sword's seat
 const parentIndexOf = (ji) => { if (ji >= joints.length) return newJoints[ji - joints.length].parentIndex; const p = joints[ji].getParentNode(); return p ? joints.indexOf(p) : -1; };
@@ -243,18 +248,19 @@ for (const ji of chosen.delta.keys()) {
   const q = mat4.getRotation(quat.create(), local); quat.normalize(q, q);
   pose[ji < joints.length ? joints[ji].getName() : newJoints[ji - joints.length].name] = Array.from(q, (x) => +x.toFixed(6));
 }
-const [rad, fc, nc] = chosen.c;
-const gFistHi = Math.max(...fingers.flatMap((f) => f.verts.map((v) => coords(chosen.pts[v])[1])));
-const gSeat = gFistHi - 0.062;   // the fist sits under the guard: about 2 cm of grip between the index finger and the ferrule
-const O = fromCoords(fc, gSeat, nc);
-const Ys = G, Xs = vec3.normalize(vec3.create(), vec3.scaleAndAdd(vec3.create(), F, G, -vec3.dot(F, G))), Zs = vec3.cross(vec3.create(), Xs, Ys);
-const swordWorld = mat4.fromValues(Xs[0], Xs[1], Xs[2], 0, Ys[0], Ys[1], Ys[2], 0, Zs[0], Zs[1], Zs[2], 0, O[0], O[1], O[2], 1);
+// the fist sits under the guard: the index finger's top edge 8.5 cm up the hilt from the grip centre (the ferrule starts at 8.3)
+const along = (p) => vec3.dot(vec3.sub(vec3.create(), p, O), A);
+const sTop = Math.max(...fingerList('index').map((v) => along(pts[v])));
+const Og = vec3.scaleAndAdd(vec3.create(), O, A, sTop - 0.085);
+const Ys = A, Xs = vec3.normalize(vec3.create(), vec3.scaleAndAdd(vec3.create(), F, A, -vec3.dot(F, A))), Zs = vec3.cross(vec3.create(), Xs, Ys);
+const swordWorld = mat4.fromValues(Xs[0], Xs[1], Xs[2], 0, Ys[0], Ys[1], Ys[2], 0, Zs[0], Zs[1], Zs[2], 0, Og[0], Og[1], Og[2], 1);
 const swordInProp = mat4.multiply(mat4.create(), mat4.invert(mat4.create(), restWorld[iProp]), swordWorld);
+const touching = (list) => list.filter((v) => distAxis(pts[v], O) < want + 0.0025).length;
 const report = {
-  bones_added: newJoints.map((n) => n.name), finger_vertices: touched, angles_deg: chosen.angles,
-  grip_radius_mm: GRIP_R * 1000, free_radius_mm: +(rad * 1000).toFixed(2), gap_mm: +((rad - GRIP_R) * 1000).toFixed(2),
+  bones_added: newJoints.map((n) => n.name), finger_vertices: touched, angles_deg: chosen.angles, diagonal_deg: DIAG,
+  grip_radius_mm: GRIP_R * 1000, gap_mm: +((gapAll - GRIP_R) * 1000).toFixed(2),
+  vertices_near_the_hilt: Object.fromEntries([...fingers.map((f) => [f.name, touching(f.verts)]), ['thumb', touching(thumbVerts)], ['palm', touching(palmVerts)]]),
   finger_lengths_mm: Object.fromEntries(fingers.map((f) => [f.name, +(f.L * 1000).toFixed(1)])), thumb_length_mm: +(Lt * 1000).toFixed(1),
-  seat_in_hand_mm: { along_fingers: +(fc * 1000).toFixed(1), off_palm: +(nc * 1000).toFixed(1), toward_thumb: +(gSeat * 1000).toFixed(1) },
   pose, sword_in_prop_R: Array.from(swordInProp, (x) => +x.toFixed(6)),
 };
 writeFileSync(JSON_OUT, JSON.stringify(report, null, 1));
