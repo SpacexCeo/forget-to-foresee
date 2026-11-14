@@ -1,6 +1,6 @@
 # Forget to Foresee
 
-**A 3D browser action-RPG in a hill town whose economy runs live on NEAR testnet: you play Iris, who pays for prophecy with her own memories, and every season's prophecies are sealed on chain before the first move.**
+**A 3D browser action-RPG in a hill town whose economy runs live on NEAR testnet: you play **Iris**, a doctor-linguist who pays for prophecy with her own memories, and every season's prophecies are sealed on chain before the first move.**
 
 **▶ Play: https://ftf-game.xyz/** (desktop browser with WebGL 2; no install, no wallet, no gas prompt) · judge mode: **https://ftf-game.xyz/?judge=1**
 

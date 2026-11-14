@@ -7,7 +7,7 @@ import { replayCommands, replayLink } from '../src/net/replay.js';
 import { pathToFileURL } from 'node:url';
 
 export const JUDGE_SEED = 'cc161d308faa67539af44205b56b6d4f';
-export const PAGE = 'https://spacexceo.github.io/forget-to-foresee/';
+export const PAGE = 'https://ftf-game.xyz/'; // the game's own domain (14.11)
 
 export function judgeReplay() {
   const api = createApi({ allowClientSeed: true, maxTimeScale: 1000, seasonRandomBytes: () => demoRandomBytes(JUDGE_SEED) });
