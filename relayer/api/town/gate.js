@@ -1,6 +1,8 @@
 // The portal on chain for guests (lib/town-gate.js; docs/town-gate.md):
 //   GET  /api/town/gate?account_id=<guest>      -> {registered, silk, gate_price, gate (gate_paid_of), contract, creditable, credited, day_room}
 //        (creditable: µsilk the verified log allows, null without a log; credited: µsilk credited so far; day_room: today's room)
+//   GET  /api/town/gate?stats=1                 -> the Loom meter: {today: {gates, burned µsilk}, recent: [{at, account, tx}],
+//        total: {gates, burned} from the contract's pulse (null when the RPC fails), gate_price, contract}; cached 10 s
 //   POST /api/town/gate {account_id, public_key, at, gate_id, signature}   signature over "ftf-gate|<account>|<gate_id>|<at>"
 //        -> credits the guest's verified income, then ftf-town pay_gate_for -> {paid, tx_hash, request_hash, gate}
 //   POST /api/town/gate {account_id, public_key, at, signature, credit_only: true}   signature over "ftf-town-credit|<account>|<at>"
@@ -8,12 +10,13 @@
 import { cors, createBucket, envConfig, clientIp, DEFAULTS } from '../../lib/core.js';
 import { createTxClient } from '../../lib/near-tx.js';
 import { createReplayGuard } from '../../lib/chest.js';
-import { townGateEnv, validateRequest, signatureValid, syncCredit, payGateFor, createCreditLedger, queuedClient, creditableMicro } from '../../lib/town-gate.js';
+import { townGateEnv, validateRequest, signatureValid, syncCredit, payGateFor, createCreditLedger, queuedClient, creditableMicro, gateDayStats, readGateLog } from '../../lib/town-gate.js';
 import { loadLog } from '../../lib/pass-eligibility.js';
 import { jsonlLog } from '../../market/index.js';
 import { join } from 'node:path';
 
 const bucket = createBucket({ capacity: 6, refillMs: 60 * 1000 });
+let statsCache = null;
 const replay = createReplayGuard(15 * 60 * 1000);
 const json = (res, status, body) => { res.statusCode = status; res.setHeader('Content-Type', 'application/json'); res.setHeader('Cache-Control', 'no-store'); res.end(JSON.stringify(body)); };
 async function readBody(req) {
@@ -27,6 +30,18 @@ export function townGateHandler(opts = {}) {
     const env = opts.env || process.env, cfg = envConfig(env), gcfg = townGateEnv(env);
     if (cors(req, res, cfg.origins)) return;
     const client = opts.client || queuedClient(createTxClient({ rpcUrls: cfg.rpcUrls.length ? cfg.rpcUrls : DEFAULTS.rpcUrls, fetch: opts.fetch || globalThis.fetch, timeoutMs: 30_000 }));
+    if (req.method === 'GET' && new URL(req.url, 'http://x').searchParams.get('stats') === '1') {
+      const now = opts.now ? opts.now() : Date.now();
+      if (!statsCache || now - statsCache.at > 10_000 || opts.noCache) {
+        const day = gateDayStats((opts.readGateLog || readGateLog)(join(gcfg.dataDir, 'town-gate'), now), now);
+        let total = null, price = null;
+        try { const pulse = await client.view(gcfg.town, 'pulse', {}); total = { gates: Number(pulse.gates_paid) || 0, burned: String(pulse.gate_burned || '0') }; } catch { /* the day still shows */ }
+        try { price = String(await client.view(gcfg.town, 'gate_price', {})); } catch { /* unknown */ }
+        statsCache = { at: now, body: { today: { gates: day.gates, burned: day.burned }, recent: day.recent, total, gate_price: price, contract: gcfg.town } };
+      }
+      res.statusCode = 200; res.setHeader('Content-Type', 'application/json'); res.setHeader('Cache-Control', 'public, max-age=10');
+      return res.end(JSON.stringify(statsCache.body));
+    }
     if (req.method === 'GET') {
       const acc = new URL(req.url, 'http://x').searchParams.get('account_id') || '';
       if (!/^[a-z0-9._-]{2,64}$/.test(acc)) return json(res, 400, { error: 'bad_account' });

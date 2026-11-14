@@ -10,10 +10,11 @@
 // (MODELS: the loaders pick them up by name through render/assets.js).
 import * as R from '../game/shoal-rules.js';
 import { shoalText } from '../locales/shoal.js';
-import { hasModelFile, fetchGltf } from '../render/assets.js';
+import { hasModelFile, fetchGltf, getModelVariant } from '../render/assets.js';
+import { dragonMix, DRAGON_ANIM } from '../game/shoal-dragon-anim.js';
 
 /** Model files the models seat delivers (render/asset-catalog names); placeholders until hasModelFile says yes. */
-export const MODELS = Object.freeze({ dragon: 'shoal_dragon', blade: 'loomblade', boss: 'hollow_tide' });
+export const MODELS = Object.freeze({ dragon: 'shoal_dragon', saddle: 'dragon_saddle', blade: 'loomblade', boss: 'hollow_tide' });
 /** How the Loomblade stands at its marker: metres of blade in the soil, and the grip-to-tip length when the file has no `socket_tip`. */
 export const BLADE_STAND = Object.freeze({ buried: 0.22, tip: 0.944 });
 /** The sword file to load: the light `_m` variant on phones when it ships, the full one otherwise, null when neither does. */
@@ -106,7 +107,11 @@ export function createGlassShoal(o) {
   const placeAll = () => { seated = 0; bladeAt = place(blade, SPOTS.blade).clone(); bladeRay.position.copy(bladeAt); stoneAt = place(stone, SPOTS.stone).clone(); stoneRay.position.copy(stoneAt); };
   placeAll();
   const dragon = makeDragon(THREE); dragon.root.visible = false; scene.add(dragon.root);
-  if (hasModelFile(MODELS.dragon)) fetchGltf(MODELS.dragon).then(({ gltf }) => dragon.useModel(gltf.scene)).catch(() => { /* the placeholder stays */ });
+  const variantOf = (name) => (hasModelFile(name + getModelVariant()) ? name + getModelVariant() : name); // phones and the low tier: `_m`
+  if (hasModelFile(MODELS.dragon)) fetchGltf(variantOf(MODELS.dragon)).then(({ gltf }) => {
+    dragon.useModel(gltf.scene, gltf.animations);
+    if (hasModelFile(MODELS.saddle)) fetchGltf(variantOf(MODELS.saddle)).then((r) => dragon.useSaddle(r.gltf.scene)).catch(() => { /* she rides bareback */ });
+  }).catch(() => { /* the placeholder stays */ });
 
   // ---- DOM: the tracker line, the prompt, the offer card, the ride HUD
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -282,7 +287,8 @@ export function createGlassShoal(o) {
 
 const smooth = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
-/** The great pearl dragon: a placeholder body (until MODELS.dragon) with flapping wings and a saddle point. */
+/** The great pearl dragon: the model `shoal_dragon` (seven clips mixed by game/shoal-dragon-anim.js, a `saddle` bone
+ *  as the rider's socket) once it has loaded; until then a placeholder body with flapping wings and a saddle point. */
 function makeDragon(THREE) {
   const root = new THREE.Group(); root.name = 'shoal-dragon';
   const pearl = new THREE.MeshStandardMaterial({ color: 0xeee8f2, roughness: 0.35, metalness: 0.2, emissive: 0x3a3450, emissiveIntensity: 0.25 });
@@ -294,19 +300,51 @@ function makeDragon(THREE) {
   const wingMat = new THREE.MeshStandardMaterial({ color: 0xd9d2ea, roughness: 0.5, side: THREE.DoubleSide, transparent: true, opacity: 0.92 });
   const wing = (s) => { const pivot = new THREE.Group(); pivot.position.set(1.2 * s, 0.8, 0.6); const m = new THREE.Mesh(new THREE.PlaneGeometry(7, 3.4), wingMat); m.rotation.x = -Math.PI / 2; m.position.x = 3.5 * s; pivot.add(m); body.add(pivot); return pivot; };
   const wl = wing(-1), wr = wing(1);
-  let t = 0, model = null;
+  let t = 0, model = null, mixer = null, actions = null, socket = null, socketRest = null, phase = '', phaseT = 0;
   const saddle = new THREE.Object3D(); saddle.position.set(0, 1.25, 0.6); root.add(saddle);
   const tmp = new THREE.Vector3();
   return {
     root,
-    saddle: () => { root.updateMatrixWorld(true); return saddle.getWorldPosition(tmp); },
-    useModel(scene) { model = scene; body.visible = false; root.add(model); },
+    saddle: () => { root.updateMatrixWorld(true); return (socket || saddle).getWorldPosition(tmp); },
+    useModel(scene, clips = []) {
+      model = scene; body.visible = false; root.add(model);
+      model.traverse((o) => { if (o.isMesh) { o.frustumCulled = false; o.castShadow = true; } if (o.name === 'saddle') socket = o; });
+      if (socket) { // the socket bone's rest frame against the model: what keeps the saddle upright on the bone
+        model.updateMatrixWorld(true);
+        const toBone = new THREE.Matrix4().copy(socket.matrixWorld).invert().multiply(model.matrixWorld);
+        const at = new THREE.Vector3().setFromMatrixPosition(new THREE.Matrix4().copy(model.matrixWorld).invert().multiply(socket.matrixWorld));
+        socketRest = toBone.multiply(new THREE.Matrix4().makeTranslation(at.x, at.y, at.z));
+      }
+      if (clips.length) {
+        mixer = new THREE.AnimationMixer(model); actions = {};
+        for (const c of clips) { const a = mixer.clipAction(c); a.enabled = true; a.setEffectiveWeight(0); a.play(); actions[c.name] = a; }
+        for (const one of ['land', 'takeoff']) if (actions[one]) { actions[one].setLoop(THREE.LoopOnce, 1); actions[one].clampWhenFinished = true; }
+      }
+    },
+    /** The saddle model (its origin is the socket, its axes the dragon's): it rides on the `saddle` bone. */
+    useSaddle(scene) {
+      if (!socket || !socketRest) return;
+      scene.traverse((o) => { if (o.isMesh) { o.frustumCulled = false; o.castShadow = true; } });
+      scene.matrixAutoUpdate = false; scene.matrix.copy(socketRest); socket.add(scene);
+    },
     update(dt, reduced, bank, perched) {
       t += dt;
+      if (model) {
+        const next = perched ? 'land' : 'ride';
+        if (next !== phase) { phase = next; phaseT = 0; }
+        // reduced motion: no descent and no strokes, the settled poses only (perched idle, a still glide)
+        phaseT = reduced ? (perched ? 1e3 : DRAGON_ANIM.takeoff + DRAGON_ANIM.beats + 1) : phaseT + dt;
+        const mix = dragonMix(phase, phaseT, bank);
+        model.position.y = -(DRAGON_ANIM.hover * (1 - mix.lift) + DRAGON_ANIM.bodyHeight * mix.lift);
+        if (mixer) {
+          for (const name in actions) { const a = actions[name]; a.setEffectiveWeight(mix.weights[name] || 0); if (name in mix.times) { a.paused = true; a.time = mix.times[name]; } }
+          mixer.update(reduced ? 0 : dt);
+        }
+        return;
+      }
       const flap = reduced ? 0.15 : (perched ? 0.12 * Math.sin(t * 1.4) : 0.55 * Math.sin(t * 3.2));
       wl.rotation.z = flap; wr.rotation.z = -flap;
       if (!reduced && !perched) body.position.y = 0.25 * Math.sin(t * 3.2 + 0.6);
-      void bank; void model;
     },
   };
 }

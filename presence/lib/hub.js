@@ -125,7 +125,7 @@ export function createHub({ now = () => Date.now(), log = () => {}, limits = LIM
         if (room == null) { client.send(JSON.stringify({ t: 'sys', key: 'full' })); client.close(1013); pl.gone = true; return; }
         pl.id = nextId++; pl.room = room; pl.skin = m.skin; pl.account = m.account; pl.lv = m.lv; pl.name = uniqueName(room, cleanName(m.name, guestN++));
         const r = rooms.get(room);
-        send(pl, { t: 'welcome', id: pl.id, name: pl.name, room, max: limits.roomSize, players: [...r.values()].map(view) });
+        send(pl, { t: 'welcome', id: pl.id, name: pl.name, room, max: limits.roomSize, players: [...r.values()].map(view), kinds: Object.keys(ACT_KINDS) }); // kinds: the acts this server takes (a newer client never sends one it would kick for)
         if (!pl.gone) send(pl, { t: 'hist', ...history.get(room) });
         r.set(pl.id, pl);
         broadcast(room, { t: 'join', player: view(pl) }, pl);

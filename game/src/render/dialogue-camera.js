@@ -15,6 +15,8 @@ export const CUE_SHOTS = Object.freeze({
   iris_badge: { at: 'iris', pull: 1, dist: 4.6, lift: 1.25 }, // the badge on her chest, the closest zoom (never first person)
   elder: { at: 'elder', pull: 0.75, dist: 8, lift: 1.4 },
   shell: { at: 'board', pull: 0.75, dist: 11, lift: 1.4 },
+  // a line with no beat of its own: the camera leans toward whoever speaks it in the wake-up ring, Iris still in frame (QA 14.11 P1-3)
+  speaker: { at: 'speaker', pull: 0.45, dist: 7, lift: 1.45 },
 });
 
 /** Seconds of the critically damped glide (it starts and lands softly; about 1.3 s from Iris to a beat). */

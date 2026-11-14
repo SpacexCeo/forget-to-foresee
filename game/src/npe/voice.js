@@ -9,12 +9,31 @@ export const VOICE_LINES = Object.freeze({
   iris_gasp: { file: 'assets/audio/voice/iris_gasp.ogg', text: 'Ah!' },
   iris_hmm: { file: 'assets/audio/voice/iris_hmm.ogg', text: 'Hmm...' },
 });
+/** A cue's voice key as VOICE_LINES names it (shots may write it with the audio manifest's 'voice_' prefix). */
+export const voiceId = (v) => String(v || '').replace(/^voice_/, '');
 export const FEMALE = /female|zira|samantha|aria|jenny|libby|sonia|google uk english female/i;
 
 /** The voice to use for the fallback: a female English voice if the browser has one, else any English voice, else null. */
 export function pickVoice(voices) {
   const en = (voices || []).filter((v) => /^en(-|_|$)/i.test(v.lang || ''));
   return en.find((v) => FEMALE.test(v.name || '')) || en[0] || null;
+}
+
+/**
+ * The sound settings a voice line follows: the master slider (audio/mix.js; at 0 nothing plays) and the narration
+ * preference (ui/prefs.js; only with it on may the browser's speech stand in for a missing file). Never throws.
+ */
+export function voiceSettings(storage) {
+  let master = 0.8, narration = false;
+  try { master = loadVolumes(storage).master; } catch { /* defaults */ }
+  try { const p = JSON.parse((storage && storage.getItem('ftf.prefs.v1')) || 'null'); narration = !!(p && p.narration === true); } catch { /* defaults */ }
+  return { master, narration };
+}
+
+/** Whether a prologue cue speaks, and how: null (no line, or the sound is off) or {id, speech}. Pure. */
+export function voicePlan(cue, { master = 0.8, narration = false } = {}) {
+  if (!cue || !cue.voice || !VOICE_LINES[voiceId(cue.voice)] || !(master > 0)) return null;
+  return { id: voiceId(cue.voice), speech: !!narration };
 }
 
 /**
@@ -47,11 +66,11 @@ export function createVoice({ base = '/', storage = globalThis.localStorage, Aud
     });
   }
   return {
-    /** Plays a line by id; resolves 'file' | 'speech' | 'silent'. */
-    async play(id) {
-      const line = VOICE_LINES[id]; if (!line) return 'silent';
+    /** Plays a line by id; resolves 'file' | 'speech' | 'silent'. `speech: false` keeps the fallback silent. */
+    async play(id, { speech: allowSpeech = true } = {}) {
+      const line = VOICE_LINES[voiceId(id)]; if (!line) return 'silent';
       if (await viaFile(String(base).replace(/\/?$/, '/') + line.file)) return 'file';
-      return viaSpeech(line.text);
+      return allowSpeech ? viaSpeech(line.text) : 'silent';
     },
   };
 }

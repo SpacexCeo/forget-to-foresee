@@ -44,7 +44,7 @@ after it. The relayer's day counter resets at 00:00 UTC.
 | 2 | README numbers from tonight's run (STATS, trades, guests, chests, dragons), the 1,082 failures stated plainly | this branch | this branch |
 | 3 | Real recent tx links per player action (guest mint, chest opening, dragon mint) | this branch | this branch |
 | 4 | Player moves on chain: a pledge, a gate payment, an item sale | gameplay + the Town works window (`wip/defi-pass`) | pledges and goals in the window; the chain moves come from players |
-| 5 | Turn on `loadRitual` (see the flags below; `damageNumbers` is on) | lead | proposed |
+| 5 | Flags: `damageNumbers`, `loadRitual`, `glassShoal` are on | lead | done |
 | 6 | The jury video and the X post | owner | drafts in this folder |
 
 ## Flags that are off on the live page (`game/public/features.json`)
@@ -54,8 +54,9 @@ New work ships with its flag on (owner, 14 Nov); a flag is only an off switch.
 | Flag | Ready to turn on? | Why |
 | --- | --- | --- |
 | `damageNumbers` | **On** since 14 Nov | Shipped with the night combat pass |
-| `loadRitual` | **Yes**, after the lead's boot check | Wired in `main.js` (loading screen only), `tests/client/load-ritual.test.mjs` |
-| `glassShoal` | Owner's call | Built and tested; placeholder models are being replaced tonight (Fable A/B) |
-| `loomMeter`, `presenceChip`, `tuneOverlay`, `statusBanner`, `register` | No | Defined in `src/features.js`, but nothing in the game reads them: turning them on changes nothing |
+| `loadRitual` | **On** since 14 Nov | Loading screen only, `tests/client/load-ritual.test.mjs` |
+| `glassShoal` | **On** since 14 Nov | Three dead ends fixed (`tests/client/shoal-ready.test.mjs`); the dragon and the boss are placeholder shapes until their models land |
+| `loomMeter`, `presenceChip` | Yes (14.11) | The Loom meter chip in the town: silk fed to the Gate-Loom today (relayer gate log, receipts on the explorer; the contract's all-time counters when the relayer is silent) and how many real players are in the valley; the Gate-Loom glows with the day and flares when anyone pays |
+| `tuneOverlay`, `statusBanner`, `register` | No | Defined in `src/features.js`, but nothing in the game reads them: turning them on changes nothing |
 
 The Town works goals and share (`wip/defi-pass`) have no flag: they are part of the window.

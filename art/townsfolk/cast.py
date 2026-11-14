@@ -27,11 +27,13 @@ PALETTE = {
     "ashwrap": (0.16, 0.145, 0.12), "charred": (0.033, 0.022, 0.014), "ember": (0.31, 0.085, 0.032),
     "moss_c": (0.09, 0.15, 0.049), "linen_c": (0.56, 0.47, 0.29), "brown_c": (0.19, 0.125, 0.065), "copper": (0.36, 0.14, 0.05),
     "coat": (0.36, 0.10, 0.037), "amber_c": (0.64, 0.35, 0.08), "leather_d": (0.10, 0.053, 0.027),
+    "sand": (0.50, 0.40, 0.24), "deep_blue": (0.03, 0.055, 0.19),          # the Wayfarer from Kallima
     "ice": (0.64, 0.74, 0.78), "bluegrey": (0.27, 0.41, 0.51), "slate_c": (0.04, 0.056, 0.078), "silver": (0.56, 0.65, 0.70),
 }
 
 SKIN = {            # base tone (linear RGB), blush strength
     "fair": ((0.62, 0.40, 0.30), 0.5), "warm": ((0.52, 0.31, 0.21), 0.45), "olive": ((0.44, 0.27, 0.17), 0.35),
+    "pearl_lilac": ((0.52, 0.45, 0.62), 0.10),
     "tan": ((0.36, 0.20, 0.12), 0.3), "brown": ((0.22, 0.115, 0.065), 0.2), "deep": ((0.13, 0.07, 0.042), 0.15),
 }
 
@@ -334,3 +336,26 @@ AGENTS = {
     ),
 }
 CAST.update(AGENTS)
+
+# ---------------------------------------------------------------- a visitor (owner, 14.11): the Wayfarer from Kallima
+# A tourist from another world who came "through the glass" like Iris: 1.9 m, slender and long-limbed, pearl-lilac
+# skin, large dark friendly eyes; a sand travel duster over a fitted deep-blue suit with brass seams, belt pouches, a
+# narrow-brim hat, thick boots, a crystal camera in the hand. Lower gravity at home: a light, springy walk.
+# Own clips (tf_anim.EXTRA): an idle that looks around, `take_photo`, `haggle`. Built like the townsfolk; the game
+# places a few of them in town (play/townsfolk-plan.js, flag `wayfarers`).
+CAST["wayfarer"] = dict(
+    sheet="owner brief 14.11", role="Visitor from Kallima", name="a Wayfarer",
+    idea="A tall, curious tourist from another world: everything in the hill town is worth a picture and a bargain.",
+    height=1.90,
+    macros=dict(gender=0.55, age=0.42, muscle=0.30, weight=0.12, height=1.0, proportions=0.85,
+                cupsize=0.5, firmness=0.5, race=race(0.0, 0.5, 0.5)),
+    detail={"head/head-oval": 0.5, "eyes/l-eye-scale-incr": 0.8, "eyes/r-eye-scale-incr": 0.8,
+            "neck/neck-scale-vert-incr": 0.6, "mouth/mouth-angles-up": 0.6, "nose/nose-scale-horiz-decr": 0.4,
+            "chin/chin-height-incr": 0.2},
+    skin="pearl_lilac", hair=("silver", "swept"), brows=0.6,
+    costume=dict(base="shirt_trousers", shirt=("deep_blue", "brass"), sleeves="long", trousers=("deep_blue", "brass"),
+                 over="vest_long", over_col=("sand", "brass"), over_len=0.05, over_open=0.05,
+                 belt=("leather", "brass"), shoes=("boots", "leather_dark"), hat=("felt", "sand", "brass"),
+                 extras=("crystal_camera", "pouch", "pouch_r", "cross_strap")),      # a fitted suit: no baggy trousers
+    style=style(lean=-1, chin=2, tilt=1, swing=1.25, sway=0.8, bounce=1.8, walk=1.35, cycle=34),
+)

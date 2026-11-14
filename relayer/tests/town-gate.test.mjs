@@ -123,3 +123,26 @@ test('gate: credit_only registers an account that is not in the town yet, even w
   const again = await syncCredit('ann.testnet', deps(c, { loadLog: () => null }));
   assert.equal(again.body.registered_now, false); assert.equal(c.calls.length, 1); // registered once
 });
+
+test('the Loom meter: a paid gate is logged with its receipt; the day counts today\'s gates and burned silk; GET ?stats=1 answers it with the chain totals', async () => {
+  const { gateDayStats } = await import('../lib/town-gate.js');
+  const { townGateHandler } = await import('../api/town/gate.js');
+  const c = chain(); const rows = []; const d = deps(c, { log: (e) => rows.push(e) });
+  const r = await payGateFor(await signed(), d);
+  assert.equal(r.status, 200);
+  const gate = rows.find((e) => e.kind === 'gate');
+  assert.deepEqual(gate, { at: NOW, kind: 'gate', account: 'ann.testnet', tx: r.body.tx_hash, price: String(PRICE) });
+  const TX = '7Nb3dCbdbFzQWW1Mvhx8Lr9uKMSPuZZkqBpKV5ktMbvZ';
+  const day = gateDayStats([...rows, { at: NOW - 86_400_000, kind: 'gate', account: 'old.testnet', tx: TX, price: String(PRICE) }, { at: NOW - 1000, kind: 'gate', account: 'bob.testnet', tx: TX, price: String(PRICE) }, { at: NOW, kind: 'gate', account: 'x', tx: 'not a hash' }, { at: NOW, guest: 'ann.testnet', credited: '5' }], NOW);
+  assert.equal(day.gates, 2); assert.equal(day.burned, String(2n * PRICE));
+  assert.deepEqual(day.recent.map((e) => e.account), ['ann.testnet', 'bob.testnet', 'old.testnet'], 'newest first, yesterday too, the bad rows dropped');
+  c.client.view = async (ct, m) => (m === 'pulse' ? { gates_paid: 41, gate_burned: String(41n * PRICE) } : m === 'gate_price' ? String(PRICE) : null);
+  const h = townGateHandler({ env: { FTF_DATA_DIR: '/tmp/none-ftf' }, client: c.client, now: () => NOW, noCache: true, readGateLog: () => rows });
+  const res = { headers: {}, setHeader(k, v) { this.headers[k] = v; }, end(b) { this.body = JSON.parse(b); } };
+  await h({ method: 'GET', headers: {}, url: '/api/town/gate?stats=1' }, res);
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(res.body.today, { gates: 1, burned: String(PRICE) });
+  assert.deepEqual(res.body.total, { gates: 41, burned: String(41n * PRICE) });
+  assert.equal(res.body.recent[0].tx, r.body.tx_hash); assert.equal(res.body.gate_price, String(PRICE));
+  assert.equal(JSON.stringify(res.body).includes('signature'), false, 'no secrets, only public receipts');
+});

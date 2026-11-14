@@ -50,3 +50,24 @@ test('the NFTs tab shows the cards, the owned one marked; a card opens large and
     m.close();
   } finally { delete globalThis.__ftfPet; }
 });
+
+test('the menu actions of the inventory and the NFTs tab have their sound (a card opening clicks, archiving and wearing confirm)', async () => {
+  const { doc } = installDom();
+  const { openGameMenu } = await import('../../src/play/game-menu.js');
+  const sounds = [], had = globalThis.dispatchEvent;
+  globalThis.dispatchEvent = (e) => { if (e && e.type === 'ftf:sound') sounds.push(e.detail); return true; };
+  globalThis.__ftfSkins = () => ({ current: 'iris', owned: { iris: true, elise: true } });
+  try {
+    const storage = memoryStorage(); const i18n = createPlayI18n('en'); const t = (k, a) => i18n.t(k, a);
+    const MANIFEST = JSON.parse(readFileSync(new URL('../../public/assets/items/manifest.json', import.meta.url), 'utf8')).items;
+    const m = openGameMenu({ doc, t, ledger: createTownLedger({ storage }), storage, tab: 'nfts', manifest: Promise.resolve(MANIFEST), onChain: Promise.resolve({ state: 'none', items: [] }), base: '/' });
+    await new Promise((r) => setTimeout(r, 0)); await new Promise((r) => setTimeout(r, 0));
+    m.root.querySelector('.gm-coll-card').click();
+    assert.deepEqual(sounds, ['ui_click']);
+    m.show('inventory'); await new Promise((r) => setTimeout(r, 0)); await new Promise((r) => setTimeout(r, 0));
+    const wearElise = [...m.root.querySelectorAll('.gm-ward-card button')].find((b) => b.textContent === t('skin.wear'));
+    wearElise.click();
+    assert.equal(sounds.at(-1), 'ui_confirm');
+    m.close();
+  } finally { globalThis.dispatchEvent = had; delete globalThis.__ftfSkins; }
+});

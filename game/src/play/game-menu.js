@@ -440,7 +440,7 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
     if (opened.length) {
       const head = el('div', 'gm-hist-head');
       head.append(el('h4', null, t('chest.history', { n: opened.length })));
-      const b = btn(t('chest.archiveAll'), () => { archiveOpened(storage, opened); show('inventory'); }, 'gm-fchip');
+      const b = btn(t('chest.archiveAll'), () => { cue('ui_confirm'); archiveOpened(storage, opened); show('inventory'); }, 'gm-fchip');
       b.title = t('chest.archiveAll.tip'); head.append(b);
       box.append(head, historyList(opened.slice(0, 30), list));
       if (opened.length > 30) box.append(el('p', 'gm-note', t('chest.more', { n: opened.length - 30 })));
@@ -500,7 +500,7 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
     const box = el('section', 'gm-wardrobe'); box.append(el('h3', null, t('inv.wardrobe')));
     const row = el('div', 'gm-ward');
     const ART = { iris: 'iris.webp', elise: 'elise.webp', sheriffchenko: 'sheriffchenko_m.webp' };
-    const wear = (id) => { globalThis.dispatchEvent(new CustomEvent('ftf:skin-wear', { detail: { id } })); setTimeout(() => { if (current === 'inventory') show('inventory'); }, 60); };
+    const wear = (id) => { cue('ui_confirm'); globalThis.dispatchEvent(new CustomEvent('ftf:skin-wear', { detail: { id } })); setTimeout(() => { if (current === 'inventory') show('inventory'); }, 60); };
     for (const w of wardrobe(read.current, read.owned || {})) {
       const c = el('div', 'gm-ward-card' + (w.worn ? ' gm-worn' : '') + (w.owned ? '' : ' gm-locked'));
       const img = el('img'); img.src = base + 'assets/cards/' + ART[w.id]; img.alt = ''; c.append(img, el('b', null, t('day1.skin.' + w.id)));
@@ -529,6 +529,7 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
       card.append(img, el('b', null, t(c.nameKey)), el('small', c.owned ? 'gm-on' : null, c.owned ? t('nft.owned') : t(c.howKey)));
       card.setAttribute('aria-label', t(c.nameKey) + ': ' + (c.owned ? t('nft.owned') : t(c.howKey)));
       card.addEventListener('click', () => {
+        cue('ui_click');
         const big = el('div', 'gm-coll-big'); big.setAttribute('role', 'dialog'); big.setAttribute('aria-label', t(c.nameKey));
         const im = el('img'); im.src = base + 'assets/' + c.art; im.alt = t(c.nameKey); big.append(im);
         const shut = () => { big.remove(); card.focus(); }; big.tabIndex = -1;

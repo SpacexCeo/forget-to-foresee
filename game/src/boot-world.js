@@ -19,6 +19,7 @@ import { lookFor, mixStats } from './render/sky.js';
 import { CameraRig } from './render/camera-rig.js';
 import { cueShot, cueState, stepCue } from './render/dialogue-camera.js';
 import { on as onBus } from './sprint/bus.js';
+import { setIntroHud } from './ui/intro-hud.js';
 import { fixedSteps, rayCast, moveCapsule, MASK_PLAYER } from './physics/collision.js';
 import { PHYSICS_DT, steerTo, clickStuck } from './physics/character.js';
 import { damp } from './physics/motion.js';
@@ -28,7 +29,7 @@ import { navigateGamepadMenu } from './ui/gamepad-menu.js';
 import { mountSceneControls } from './ui/scene-controls.js';
 import { setBindings, loadBindings, bindings } from './ui/keybinds.js';
 import { createMouseAim, aimPoint } from './ui/mouse-aim.js';
-import { menuKeyAction, registerWindow, claimWindow } from './ui/window-toggle.js';
+import { menuKeyAction, registerWindow, claimWindow, closeTopWindow } from './ui/window-toggle.js';
 import { loadSettings, renderOverrides, lookFactors, frameDue } from './ui/settings-store.js';
 import { loadVolumes, saveVolumes } from './audio/mix.js';
 import './ui/styles.css';
@@ -69,7 +70,7 @@ import { createCompanion } from './scenes/companion.js';
 import { COMPANIONS_ENABLED, companionsToShow } from './scenes/companion-rules.js';
 import { createDoorGlow } from './scenes/door-glow.js';
 import { cue, cueAt, MOB_SOUNDS } from './audio/town-audio.js';
-import { expectOnboarding, blocksWindows } from './ui/onboarding-queue.js';
+import { expectOnboarding, blocksWindows, onOnboarding } from './ui/onboarding-queue.js';
 
 /**
  * Builds the renderer, the island, the camera and the frame loop (the heavy chunk: three.js, scenes, render,
@@ -161,6 +162,9 @@ const input = new Input(renderer.domElement);
 installTouchCopy(ctx.i18n, () => !!input.touchControls); // on touch, no keyboard keys in any text (ui/touch-copy.js)
 const hud = new DevHud(document.getElementById('hud'));
 const promptEl = document.getElementById('prompt');
+let npeLocked = false; // set by the intro through the sprint ctx (lockControls)
+// a failed intro never leaves the town locked: the lock ends with the intro's turn in the onboarding queue
+onOnboarding((id) => { if (id !== 'intro' && npeLocked) { npeLocked = false; setIntroHud(document, false); } });
 let lastPromptHtml = null; // the prompt's last written HTML (frame() writes it only on a change)
 // The lobby (title, language, settings, the Foresight Exchange) opens only from the pause menu now: the game starts in
 // the town (ui/loading.js bootPlan). Entering from it returns to the world.
@@ -228,6 +232,26 @@ import('./net/silk-balance.js').then((m) => { const model = m.createSilkModel({ 
 // One game menu at a time (owner 13.11: I, then I or C again, stacked a second layer): a hotkey or a tray button for the
 // open tab closes the menu, for another tab switches to it (ui/window-toggle.js menuKeyAction); other windows close first.
 let gameMenu = null, gameMenuLoading = null;
+// The town map (M and the tray Map; owner 14.11 "redraw the map"): the painted map with live marks (play/town-map-ui.js)
+let townMap = null, townMapLoading = false;
+registerWindow('map', { isOpen: () => !!townMap, close: () => townMap && townMap.close() });
+function toggleTownMap() {
+  if (townMap) { townMap.close(); return; }
+  if (townMapLoading || !inTown || !town) return;
+  townMapLoading = true; claimWindow('map');
+  import('./play/town-map-ui.js').then((m) => {
+    townMapLoading = false; if (!inTown) return;
+    const local = (w) => (w ? [w[0] - TOWN_ORIGIN_W[0], w[1] - TOWN_ORIGIN_W[1], w[2] - TOWN_ORIGIN_W[2]] : null);
+    clearWorldInput();
+    townMap = m.openTownMap({ t: (k, a) => ctx.i18n.t(k, a), base: import.meta.env.BASE_URL, big: !mobileDevice,
+      iris: () => ({ pos: local(player.pos), heading: player.heading }),
+      quests: () => [...(townQuests ? townQuests.markers() : []), ...errandMarkers(), ...(townTales ? townTales.markers() : [])]
+        .map((q) => { const f = town.townsfolk && town.townsfolk.byKey.get(q.giver); return { key: q.giver, sym: q.sym, pos: f ? [f.plan.x, f.plan.y, f.plan.z] : null, name: ctx.i18n.t('folk.name.' + q.giver) }; }), // plan positions are town-local
+      onClose: () => { townMap = null; clearWorldInput(); } });
+    cue('ui_click');
+  }).catch((e) => { townMapLoading = false; console.warn('[map]', e); });
+}
+window.addEventListener('ftf:town-map', toggleTownMap);
 registerWindow('menu', { isOpen: () => !!gameMenu, close: () => gameMenu && gameMenu.close() });
 const openProfileFor = (quest = null, tab = 'profile', toggle = false) => {
   const act = menuKeyAction({ open: !!gameMenu, tab: gameMenu && (gameMenu.tab === 'wheel' ? 'inventory' : gameMenu.tab) }, tab === 'wheel' ? 'inventory' : tab, toggle);
@@ -284,6 +308,7 @@ const townMode = townPlan({ skip: params.get('skip'), town: params.get('town'), 
 let salvageView = null; // story TZ Q2 (?story=1)
 let fogCards = null, doorGlow = null, townShops = null, townProps = null, spotProps = null, townAudio = null, townBarks = null, photo = null, townMonsters = null;
 let splashGround = false; // the rain splashes got the town's ground sampler
+let loomMeter = null, loomTick = 0; // the Loom meter chip (flags loomMeter, presenceChip; ui/loom-meter.js): silk fed to the Gate-Loom today, who is in the valley
 let marketTicker = null, marketScene = null; // the townsfolk market on NEAR testnet (docs/town-economy.md; ?town=1 until ftf-town is live)
 const chestBag = createChestBag({ storage: ctx.storage });
 // Dragon companions (docs/companion-nft-plan.md): only the dragons the heroine token's account holds on chain fly with
@@ -519,6 +544,16 @@ if (townMode.town) {
         onLedger: () => (featureFlags.on('townLedger') ? () => window.dispatchEvent(new CustomEvent('ftf:menu-open', { detail: { tab: 'town' } })) : null) });
     }).catch((e) => console.warn('[town] market', e));
   }
+  if (!loomMeter && (featureFlags.on('loomMeter') || featureFlags.on('presenceChip'))) { // the town's shared hungry object (owner 14.11)
+    loomMeter = { show() {}, update() {} }; // claimed while the modules load
+    Promise.all([import('./net/loom-stats.js'), import('./ui/loom-meter.js')]).then(([net, ui]) => {
+      const live = () => (mp && mp.presence && mp.presence.status === 'online' ? mp.presence : null); // real players only, never the demo bots
+      loomMeter = ui.createLoomMeter({ t: (k, a) => ctx.i18n.t(k, a), poll: () => net.fetchLoomStats(), count: () => (live() ? live().count : 0), acts: () => (live() ? live().chat : []),
+        flags: () => ({ loomMeter: featureFlags.on('loomMeter'), presenceChip: featureFlags.on('presenceChip') }),
+        onFed: (k) => { if (townPortal && !lookdev.reducedMotion) townPortal.flare(k); }, // anyone paid the Gate: the Loom burns white for a moment
+        onHunger: (k) => { if (townPortal && townPortal.setFed) townPortal.setFed(k); } });
+    }).catch((e) => { loomMeter = null; console.warn('[town] loom meter', e); });
+  }
   mountTownAudio();
   import('./audio/haptics.js').then((m) => m.createHaptics({ storage: ctx.storage, reduced: () => lookdev.reducedMotion })).catch(() => {}); // feature 6: the same cues as a short pulse
   const onExchange = () => import('./ui/exchange-terminal.js').then((m) => m.openExchangeTerminal({ i18n: ctx.i18n, storage: ctx.storage, ledger: townLedger, onTownWorks: () => window.dispatchEvent(new CustomEvent('ftf:town-works-open')) })).catch((e) => console.warn('[town] exchange', e));
@@ -552,7 +587,7 @@ if (townMode.town) {
   mountCasting();
   // The player HUD (ui/player-hud.js): portrait frame, level, health, the silk wallet and the toast stack, town only.
   if (!window.__ftfJudgePath && /[?&]judge=1(&|$)/.test(location.search)) window.__ftfJudgePath = import('./ui/judge-path.js').then((m) => import('./sprint/first-seen.js').then((f) => m.mountJudgePath({ t: (k, a) => ctx.i18n.t(k, a), touch: f.isTouch(document) }))).catch(() => null); // ?judge=1: the 90-second guided route (docs: README Judge path)
-  if (!window.__ftfSprint) window.__ftfSprint = mountSprint({ THREE, scene, camera, renderer, player, ledger: townLedger, town, chests: chestBag, t: (k, a) => ctx.i18n.t(k, a), toast: (s) => toast(s), reduced: () => lookdev.reducedMotion, storage: ctx.storage, keys: input, flags: featureFlags, i18n: ctx.i18n, active: () => inTown, mobs: () => townMobs, base: import.meta.env.BASE_URL, floatNumber: numbersHook, stamina, openSettings: (tab) => openSettings(tab), skin: () => (irisAvatar ? irisAvatar.hero.id : startHero.id) }); // sprint seam (src/sprint, docs/sprint/CTX.md)
+  if (!window.__ftfSprint) window.__ftfSprint = mountSprint({ lockControls: (on) => { npeLocked = !!on; setIntroHud(document, npeLocked); if (on) { moveTarget = null; marker.visible = false; } }, THREE, scene, camera, renderer, player, ledger: townLedger, town, chests: chestBag, t: (k, a) => ctx.i18n.t(k, a), toast: (s) => toast(s), reduced: () => lookdev.reducedMotion, storage: ctx.storage, keys: input, flags: featureFlags, i18n: ctx.i18n, active: () => inTown, mobs: () => townMobs, base: import.meta.env.BASE_URL, floatNumber: numbersHook, stamina, openSettings: (tab) => openSettings(tab), skin: () => (irisAvatar ? irisAvatar.hero.id : startHero.id) }); // sprint seam (src/sprint, docs/sprint/CTX.md)
   if (!playerHud) playerHud = createPlayerHud({ t: (k, a) => ctx.i18n.t(k, a), ledger: townLedger, chests: chestBag, base: import.meta.env.BASE_URL,
     nickname: () => loadDay1(ctx.storage).nickname || null, skin: () => (irisAvatar ? irisAvatar.hero.id : startHero.id),
     onSkin: () => toggleSkin(), canSwap: () => { const o = skinsOwned(); return !!(o.elise || o.sheriffchenko); },
@@ -776,6 +811,7 @@ async function leaveTown() {
   if (townMobs) { townMobs.dispose(); townMobs = null; }
   if (townBarks) townBarks.update(player.pos, false); // no bubble left over the archipelago
   if (marketTicker) marketTicker.show(false);
+  if (loomMeter) loomMeter.show(false);
   if (marketScene) marketScene.update(player.pos, false);
   if (photo) { photo.toggle(false); photo.setAvailable(false); }
   if (townAudio) { townAudio.dispose(); townAudio = null; } // the archipelago's play layer has its own audio
@@ -1112,9 +1148,9 @@ const clock = new THREE.Clock();
 const physics = { steps: 0, substeps: 0, colliders: 0, grounded: false };
 // The wake-up dialogue's camera beats (render/dialogue-camera.js, QA pass 2 #2): the intro names each line's cue on
 // the bus; the frame loop leans the town camera toward it and back.
-const dialogueCue = { name: null, st: cueState(), irisFocus: [0, 0, 0] };
-onBus('npe.camera', (p) => { dialogueCue.name = (p && p.target) || null; });
-for (const n of ['npe.completed', 'npe.skipped']) onBus(n, () => { dialogueCue.name = null; });
+const dialogueCue = { name: null, speaker: null, st: cueState(), irisFocus: [0, 0, 0] };
+onBus('npe.camera', (p) => { dialogueCue.name = (p && p.target) || null; dialogueCue.speaker = (p && p.speaker) || null; });
+for (const n of ['npe.completed', 'npe.skipped']) onBus(n, () => { dialogueCue.name = null; dialogueCue.speaker = null; });
 const hudStats = () => ({ info: renderer.info, physics, streaming: streamer.stats(), events: streamer.events, camera: rig, lookdev: lookdev.stats() });
 
 // Camera presets for screenshots / measurements (dev only).
@@ -1189,6 +1225,7 @@ function handleInput(dt) {
   const playOn = play && !inTown; // back in the town after Return to town: the season waits, its keys sleep
   if (!playOn && !townOn) { navigateGamepadMenu(uiRoot, pad); return false; }
   if (townFlow && townFlow.busy) return false; // the registration sequence holds Iris and the camera
+  if (npeLocked) return false; // the intro (prologue, dialogue, "What waits for you") owns the keys: E never reaches the town under it (QA pass 2 #1)
   if (photo && townOn && input.hit('KeyP')) photo.toggle();
   if (photo && photo.on) { // photo mode: Iris holds still, the camera orbits freely, a click saves nothing (the bar's button does)
     if (input.hit('Escape') || pad.hit(PAD.cancel)) photo.toggle(false);
@@ -1199,6 +1236,7 @@ function handleInput(dt) {
   if (input.hit('Escape') || pad.hit(PAD.cancel)) {
     if (townOn && townCasting && townCasting.handleKey('Escape')) return false; // put the armed cast away
     if (townOn && townFlow && townFlow.closePanel()) return false; // close the open talk panel
+    if (closeTopWindow()) return false; // the top-most open window (the sheet, the tree, the journal, the market, the map…) before any menu
     if (inspecting) leaveInspect();
     else if (playOn && play.handleKey('Escape')) clearWorldInput();
     else if (moveTarget || (playOn && play.routeActive) || (townOn && townFlow.routeActive)) stopSteering();
@@ -1396,12 +1434,13 @@ function frame() {
     const a = town.altar.focus, k = townFlow.focusK * townFlow.focusK * (3 - 2 * townFlow.focusK) * 0.7;
     focus.set(focus.x + (a[0] - focus.x) * k, focus.y + (a[1] - focus.y) * k, focus.z + (a[2] - focus.z) * k);
   }
-  if (inTown && (dialogueCue.name || dialogueCue.st.active)) { // a dialogue beat: the camera leans toward what the line is about
-    const at = { iris: [focus.x, focus.y - 1.1, focus.z], portal: townPortal ? townPortal.root.position.toArray() : null, board: townBoard ? townBoard.root.position.toArray() : null, elder: null };
-    const tf = town && town.townsfolk, elder = tf && dialogueCue.name === 'elder' ? tf.people.find((q) => q.key === 'elder' && q.root.visible) : null;
+  const wakeRing = window.__ftfWakeRing || null, speakerAt = wakeRing && dialogueCue.speaker ? wakeRing.at(dialogueCue.speaker) : null; // the wake-up ring's speaker (QA 14.11 P1-3)
+  if (inTown && (dialogueCue.name || speakerAt || dialogueCue.st.active)) { // a dialogue beat: the camera leans toward what the line is about, else toward who speaks it
+    const at = { iris: [focus.x, focus.y - 1.1, focus.z], portal: townPortal ? townPortal.root.position.toArray() : null, board: townBoard ? townBoard.root.position.toArray() : null, elder: wakeRing ? wakeRing.at('elder') : null, speaker: speakerAt };
+    const tf = town && town.townsfolk, elder = !at.elder && tf && dialogueCue.name === 'elder' ? tf.people.find((q) => q.key === 'elder' && q.root.visible) : null;
     if (elder) at.elder = [elder.plan.x + TOWN_ORIGIN_W[0], elder.plan.y + TOWN_ORIGIN_W[1], elder.plan.z + TOWN_ORIGIN_W[2]];
     const st = dialogueCue.st, was = st.active;
-    if (stepCue(st, cueShot(dialogueCue.name, at), focus.toArray(dialogueCue.irisFocus), rig.dist, dt, lookdev.reducedMotion)) { focus.set(st.focus[0], st.focus[1], st.focus[2]); rig.dist = st.dist; }
+    if (stepCue(st, cueShot(dialogueCue.name || (speakerAt ? 'speaker' : null), at), focus.toArray(dialogueCue.irisFocus), rig.dist, dt, lookdev.reducedMotion)) { focus.set(st.focus[0], st.focus[1], st.focus[2]); rig.dist = st.dist; }
     else if (was) rig.dist = st.base; // back on Iris at the player's own zoom
   }
   // Shell hover is visual only; reduced motion holds the Shells at their rest pose.
@@ -1465,12 +1504,13 @@ function frame() {
     if (questMarkers) questMarkers.update(clock.elapsedTime);
     if (townPortal) { if (!townPortal.grounded) { const g = town.groundAt(townPortal.root.position.x, townPortal.root.position.z); if (g != null) { townPortal.root.position.y = g; townPortal.grounded = true; } } townPortal.update(dt, clock.elapsedTime); }
     if (townBoard) { if (!townBoard.grounded) { const g = town.groundAt(townBoard.root.position.x, townBoard.root.position.z); if (g != null) { townBoard.root.position.y = g; townBoard.grounded = true; } } townBoard.update(player.pos, clock.elapsedTime); }
-    if (townBarks) townBarks.update(player.pos, !(photo && photo.on) && !day1Open() && entered && !townFlow.busy && !townFlow.talking && !(townShops && townShops.inside) && !introOn);
+    if (townBarks) townBarks.update(player.pos, !npeLocked && !(photo && photo.on) && !day1Open() && entered && !townFlow.busy && !townFlow.talking && !(townShops && townShops.inside) && !introOn);
     if (marketScene) {
       const free = !(photo && photo.on) && !day1Open() && entered && !(townShops && townShops.inside) && !introOn;
       marketScene.update(player.pos, free && !townFlow.talking);
       marketTicker.show(free);
     }
+    if (loomMeter) { const free = !(photo && photo.on) && !day1Open() && entered && !(townShops && townShops.inside) && !introOn; loomMeter.show(free); if (free && (loomTick += dt) > 1) { loomTick = 0; loomMeter.update(); } }
     if (townAudio) { // footsteps from the distance actually walked; the listener follows the camera
       const d = Math.hypot(player.pos[0] - lastStepPos[0], player.pos[2] - lastStepPos[2]);
       if (d < 3) { // the floor under her: wood in the shops, grass beyond the walls, stone in the streets
