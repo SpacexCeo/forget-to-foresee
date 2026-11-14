@@ -50,3 +50,23 @@ test('menu strings exist in five locales; no "Minted" claim in the menu', () => 
   const src = readFileSync(new URL('../../src/play/game-menu.js', import.meta.url), 'utf8');
   assert.doesNotMatch(src, /['"`]Minted/);
 });
+
+test('inventory wardrobe: three skins, the worn one marked, the Sheriffchenko skin locked with a try-on', async () => {
+  const { doc } = installDom();
+  const { openGameMenu } = await import('../../src/play/game-menu.js');
+  const storage = memoryStorage();
+  globalThis.__ftfSkins = () => ({ current: 'elise', owned: { elise: true, sheriffchenko: false } });
+  try {
+    const ledger = createTownLedger({ storage });
+    const i18n = createPlayI18n('en'); const t = (k, a) => i18n.t(k, a);
+    const m = openGameMenu({ doc, t, ledger, storage, tab: 'inventory', manifest: Promise.resolve(MANIFEST), onChain: Promise.resolve({ state: 'none', items: [] }), base: '/' });
+    await new Promise((r) => setTimeout(r, 0)); await new Promise((r) => setTimeout(r, 0));
+    const cards = m.root.querySelectorAll('.gm-ward-card');
+    assert.equal(cards.length, 3);
+    assert.ok(cards[1].className.includes('gm-worn'), 'Elise is worn');
+    assert.ok(cards[2].className.includes('gm-locked'));
+    assert.ok(cards[2].textContent.includes(t('skin.try', { n: 30 })));
+    assert.ok(cards[2].querySelector('img').src.endsWith('assets/cards/sheriffchenko_m.webp'));
+    m.close();
+  } finally { delete globalThis.__ftfSkins; }
+});

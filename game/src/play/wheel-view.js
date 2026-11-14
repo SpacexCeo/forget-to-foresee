@@ -6,6 +6,7 @@
 // (persisted) and come back on the next visit. The rules, odds and seeds are game/wheel.js; this is presentation.
 // Placeholder visuals until GPT's WHEEL-001 frames arrive (restyle here, the mechanics stay).
 import { SEGMENTS, SKIN_CAP, odds, claimPrize } from '../game/wheel.js';
+import { TRY_ON_SECONDS } from './skins.js';
 
 export const RARITY_COLORS = Object.freeze({
   common: ['#5b6b66', '#3d4a46'], uncommon: ['#3f8f5e', '#2a6342'], rare: ['#3f73c4', '#2a4f8c'],
@@ -118,7 +119,20 @@ export function renderWheel({ doc = document, t, wheel, items = [], base = '/', 
   });
   // sprint 6.8: what the wheel is, before anything else; the odds come from SEGMENTS, so the table cannot drift
   const odd = el('details', 'wv-odds'); odd.append(el('summary', null, t('wheel.seeOdds')), table);
-  side.append(el('p', 'wv-head', t('wheel.header')), status, row, seedP, card, el('h3', null, t('wheel.odds')), odd, el('p', 'gm-note', t('wheel.rules')));
+  // the grand prize as itself (night 14.11): the painted Sheriffchenko in the mythic frame, the chance, and a try-on in
+  // the town (boot-world.js 'ftf:skin-wear': worn for good when the chain says it is hers, else for TRY_ON_SECONDS)
+  const gp = el('div', 'wv-gp');
+  { const gseg = SEGMENTS.find((s) => s.grand), gart = el('div', 'wv-gp-art'), img = el('img'); img.src = base + 'assets/cards/sheriffchenko_m.webp'; img.alt = ''; gart.append(img);
+    const txt = el('div'); const p = gseg ? (odds().find((o) => o.id === gseg.id) || { p: 0 }).p : 0;
+    txt.append(el('small', 'wv-meta', t('wheel.grand')), el('b', 'wv-name', t('day1.skin.sheriffchenko')), el('p', 'gm-note', t('wheel.skinNft') + ' · ' + (p * 100).toFixed(1) + ' %'));
+    const skins = typeof globalThis.__ftfSkins === 'function' ? globalThis.__ftfSkins() : null;
+    if (skins) {
+      const owned = !!(skins.owned && skins.owned.sheriffchenko), worn = skins.current === 'sheriffchenko';
+      const tb = btn(worn ? t('skin.worn') : owned ? t('skin.wear') : t('skin.try', { n: TRY_ON_SECONDS }), (b) => { b.disabled = true; globalThis.dispatchEvent(new CustomEvent('ftf:skin-wear', { detail: { id: 'sheriffchenko' } })); }, 'gm-fchip wv-try');
+      tb.disabled = worn; txt.append(tb);
+    }
+    gp.append(gart, txt); }
+  side.append(el('p', 'wv-head', t('wheel.header')), status, row, seedP, card, gp, el('h3', null, t('wheel.odds')), odd, el('p', 'gm-note', t('wheel.rules')));
   root.append(box, side);
 
   let angle = 0, spinning = false, destroyed = false;
@@ -141,7 +155,8 @@ export function renderWheel({ doc = document, t, wheel, items = [], base = '/', 
     card.className = 'wv-card wv-r-' + seg.rarity;
     const art = el('div', 'wv-art');
     const href = p.item ? itemIcon(p.item) : null;
-    if (href) { const img = el('img'); img.src = href; img.alt = ''; art.append(img); }
+    if (seg.kind === 'skin') { const img = el('img', 'wv-skin'); img.src = base + 'assets/cards/sheriffchenko_m.webp'; img.alt = ''; art.append(img); } // the painted skin (night 14.11)
+    else if (href) { const img = el('img'); img.src = href; img.alt = ''; art.append(img); }
     else { const s = svg('svg', { viewBox: '-16 -16 32 32', width: 72, height: 72, 'aria-hidden': 'true' }); s.innerHTML = GLYPH[seg.kind] || GLYPH.part; art.append(s); }
     const name = el('b', 'wv-name', nameOf(p, seg));
     const meta = el('span', 'wv-meta', t('wheel.rarity.' + seg.rarity) + (seg.kind === 'silk' || seg.kind === 'xp' ? ' · ' + sectorLabel(seg, t) : ''));
@@ -239,6 +254,11 @@ export const WHEEL_CSS = `
 .wv-card { margin: 10px 0; padding: 14px; border-radius: 14px; border: 2px solid var(--wv-frame, #d9b26a); background: radial-gradient(circle at 50% 0, rgba(255,255,255,.08), rgba(0,0,0,.25)); box-shadow: 0 0 22px color-mix(in srgb, var(--wv-frame, #d9b26a) 45%, transparent); display: grid; justify-items: center; gap: 6px; text-align: center; animation: wv-pop .35s cubic-bezier(.2,1.4,.4,1); }
 @keyframes wv-pop { from { transform: scale(.7); opacity: 0; } }
 .wv-art img, .wv-art svg { width: 84px; height: 84px; display: block; }
+.wv-art img.wv-skin { width: auto; height: 150px; filter: drop-shadow(0 6px 12px rgba(0,0,0,.5)); }
+.wv-gp { display: grid; grid-template-columns: 76px 1fr; gap: 12px; align-items: center; margin: 12px 0 4px; padding: 10px 12px; border-radius: 14px; border: 1px solid rgba(255,215,106,.55); background: radial-gradient(circle at 20% 30%, rgba(255,215,106,.18), rgba(0,0,0,.3)); }
+.wv-gp-art { height: 112px; display: grid; place-items: end center; border-radius: 10px; background: radial-gradient(circle at 50% 70%, rgba(255,231,168,.35), transparent 70%); overflow: hidden; }
+.wv-gp-art img { height: 108px; width: auto; filter: drop-shadow(0 4px 8px rgba(0,0,0,.5)); }
+.wv-gp .wv-name { display: block; margin: 2px 0; } .wv-gp .gm-note { margin: 2px 0 6px; } .wv-try { min-height: 36px; }
 .wv-name { font: 700 17px/1.2 system-ui; color: #f3ead8; }
 .wv-meta { font: 600 12px/1 system-ui; letter-spacing: .08em; text-transform: uppercase; color: var(--wv-frame, #d9b26a); }
 .wv-r-mythic { background: radial-gradient(circle at 50% 0, rgba(255,215,106,.22), rgba(0,0,0,.4)); }

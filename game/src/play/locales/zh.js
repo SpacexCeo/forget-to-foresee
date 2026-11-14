@@ -1970,5 +1970,14 @@ export default {
   "quest.log.progress": "进度 {n} / {count}",
   "quest.track.offer": "{giver}有任务给你",
   "quest.track.near": "{m} 米",
+  "inv.wardrobe": "衣橱",
+  "skin.wear": "穿上",
+  "skin.worn": "穿着中",
+  "skin.try": "试穿（{n} 秒）",
+  "skin.trying": "试穿{name} {n} 秒。关闭菜单即可查看。",
+  "skin.tryOver": "{name}回到了转盘。赢下它才能保留。",
+  "skin.locked": "转盘大奖",
+  "skin.lockedElise": "第一天之后",
+  "wheel.grand": "大奖",
   ...quests, // last: the journal, the tracker and the starter guide (en-quests.js keys) replace older copies above
 };

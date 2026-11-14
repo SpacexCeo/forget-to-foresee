@@ -19,6 +19,7 @@ import { createFriends } from './friends.js';
 import { createChestClient } from '../net/chest-client.js';
 import { cue } from '../audio/town-audio.js';
 import { formatSilkC } from '../net/silk-core.js';
+import { wardrobe, TRY_ON_SECONDS } from './skins.js';
 
 /** UI-004 tab icons (line art, currentColor). */
 const TAB_ICON = Object.freeze({
@@ -101,6 +102,12 @@ const CSS = `
 .gm-nft img { width: 100%; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 10px; }
 .gm-chip { display: inline-block; margin: 4px 4px 0 0; padding: 3px 9px; border-radius: 10px; font: 700 11px/1.5 system-ui; background: #0b100f; color: var(--ftf-text, #eef0ea); border: 1px solid rgba(214, 226, 214, .16); text-decoration: none; }
 .gm-chip.gm-near { background: transparent; border-color: rgba(47, 196, 178, .5); color: #2fc4b2; }
+.gm-ward { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 8px; }
+.gm-ward-card { display: grid; justify-items: center; gap: 4px; padding: 8px 6px 10px; border-radius: 14px; text-align: center; background: var(--ftf-panel-solid, #101f1a); border: 1px solid rgba(214, 226, 214, .12); }
+.gm-ward-card img { height: 96px; width: 100%; object-fit: contain; object-position: center bottom; }
+.gm-ward-card b { font: 600 13px/1.2 system-ui; } .gm-ward-card small { color: rgba(233, 230, 220, .55); font-size: 11px; }
+.gm-ward-card.gm-worn { border-color: rgba(197, 164, 105, .8); background: linear-gradient(160deg, #2a2716, #1a211b); }
+.gm-ward-card.gm-locked img { filter: saturate(.55) brightness(.8); }
 .gm-agent { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 12px 14px; border-radius: 16px; background: var(--ftf-panel-solid, #101f1a); border: 1px solid rgba(214, 226, 214, .1); margin-bottom: 10px; }
 .gm-agent b { font-size: 15px; }
 .gm-wheelwrap { display: grid; grid-template-columns: minmax(240px, 340px) 1fr; gap: 18px; align-items: start; }
@@ -283,7 +290,7 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
         }
         const sum = el('div', 'gm-row');
         sum.append(el('span', 'gm-chip', t('inv.townSilk') + ': ' + formatSilkC(ledger.silk)), btn(t('menu.openWheel'), () => show('wheel')));
-        return [el('p', 'gm-note', t('inv.offchain.note')), sum, chestSection(list), chips, g, detail];
+        return [el('p', 'gm-note', t('inv.offchain.note')), sum, wardrobeSection(), chestSection(list), chips, g, detail];
       });
     },
     wheel() {
@@ -406,6 +413,29 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
     if (o.kind === 'silk') ledger.grant({ silk: (o.amount || 0) * 100 }); // the service counts whole silk, the ledger cents
     if (o.kind === 'xp') ledger.grant({ xp: o.amount || 0 });
     bag.settle(chest.id, { index: op.index, outcome: o, tx: op.tx, nft: op.nft, verified: !!verified });
+  }
+  /**
+   * The wardrobe (night 14.11): who she can be, from boot-world.js (window.__ftfSkins: the skin worn now and the ones the
+   * chain confirms). Owned skins are worn with one click; the Sheriffchenko skin is tried on for a while until won.
+   */
+  function wardrobeSection() {
+    const read = typeof globalThis.__ftfSkins === 'function' ? globalThis.__ftfSkins() : null;
+    if (!read) return el('div');
+    const box = el('section', 'gm-wardrobe'); box.append(el('h3', null, t('inv.wardrobe')));
+    const row = el('div', 'gm-ward');
+    const ART = { iris: 'iris.webp', elise: 'elise.webp', sheriffchenko: 'sheriffchenko_m.webp' };
+    const wear = (id) => { globalThis.dispatchEvent(new CustomEvent('ftf:skin-wear', { detail: { id } })); setTimeout(() => { if (current === 'inventory') show('inventory'); }, 60); };
+    for (const w of wardrobe(read.current, read.owned || {})) {
+      const c = el('div', 'gm-ward-card' + (w.worn ? ' gm-worn' : '') + (w.owned ? '' : ' gm-locked'));
+      const img = el('img'); img.src = base + 'assets/cards/' + ART[w.id]; img.alt = ''; c.append(img, el('b', null, t('day1.skin.' + w.id)));
+      if (w.worn) c.append(el('small', null, t('skin.worn')));
+      else if (w.owned) c.append(btn(t('skin.wear'), () => wear(w.id), 'gm-fchip'));
+      else if (w.id === 'sheriffchenko') c.append(el('small', null, t('skin.locked')), btn(t('skin.try', { n: TRY_ON_SECONDS }), () => wear(w.id), 'gm-fchip'));
+      else c.append(el('small', null, t('skin.lockedElise')));
+      row.append(c);
+    }
+    box.append(row);
+    return box;
   }
   /** No guest yet: one line and the Day-1 free account button (the same mint the arrival runs, play/day1-mint.js). */
   function guestBanner() {

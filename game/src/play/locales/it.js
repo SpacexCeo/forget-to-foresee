@@ -1971,5 +1971,14 @@ export default {
   "quest.log.progress": "Avanzamento {n} / {count}",
   "quest.track.offer": "{giver} ha una missione per te",
   "quest.track.near": "a {m} m",
+  "inv.wardrobe": "Guardaroba",
+  "skin.wear": "Indossa",
+  "skin.worn": "Indossato",
+  "skin.try": "Prova ({n} s)",
+  "skin.trying": "Provi {name} per {n} secondi. Chiudi il menu per vederlo.",
+  "skin.tryOver": "{name} torna alla ruota. Vincilo per tenerlo.",
+  "skin.locked": "Il primo premio della ruota",
+  "skin.lockedElise": "Dopo il primo giorno",
+  "wheel.grand": "Primo premio",
   ...quests, // last: the journal, the tracker and the starter guide (en-quests.js keys) replace older copies above
 };

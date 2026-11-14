@@ -1970,5 +1970,14 @@ export default {
   "quest.log.progress": "Прогрес {n} / {count}",
   "quest.track.offer": "Для тебе є квест: {giver}",
   "quest.track.near": "{m} м",
+  "inv.wardrobe": "Гардероб",
+  "skin.wear": "Вдягнути",
+  "skin.worn": "Вдягнено",
+  "skin.try": "Приміряти ({n} с)",
+  "skin.trying": "Приміряємо {name} на {n} секунд. Закрий меню, щоб подивитися.",
+  "skin.tryOver": "{name} повертається на колесо. Виграй, щоб залишити.",
+  "skin.locked": "Головний приз колеса",
+  "skin.lockedElise": "Після першого дня",
+  "wheel.grand": "Головний приз",
   ...quests, // last: the journal, the tracker and the starter guide (en-quests.js keys) replace older copies above
 };

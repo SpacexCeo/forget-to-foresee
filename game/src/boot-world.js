@@ -48,7 +48,7 @@ import { createTownLedger } from './game/town-economy.js';
 import { features as featureFlags } from './features.js';
 import { mountSprint } from './sprint/index.js';
 import { createDay1Mint, loadDay1 } from './play/day1-mint.js';
-import { nextSkin } from './play/skins.js';
+import { nextSkin, wearPlan } from './play/skins.js';
 import { TALK_RADIUS } from './scenes/town-quest.js';
 import { PROGRAMS, TOWNSFOLK } from './play/townsfolk-plan.js';
 import { createTownCasting, CAST_KEYS } from './scenes/town-casting.js';
@@ -786,6 +786,27 @@ function toggleSkin() {
   if (irisAvatar) irisAvatar.setHero(avatar, heroById(next)).catch((e) => console.warn('[skin]', e));
   toast(ctx.i18n.t('day1.skin.' + next));
 }
+// Wearing a skin from the menu (night 14.11): the wardrobe in the inventory and the wheel's grand-prize preview send
+// 'ftf:skin-wear' {id}. An owned skin is worn and remembered; the Sheriffchenko skin without its NFT is tried on for
+// TRY_ON_SECONDS and then put back (play/skins.js wearPlan). The chain read decides "owned", never the menu.
+let tryOn = null; // {timer, back}
+window.addEventListener('ftf:skin-wear', (e) => {
+  const id = e && e.detail && e.detail.id; if (!irisAvatar) return;
+  const current = irisAvatar.hero.id, plan = wearPlan(tryOn ? tryOn.back : current, id, skinsOwned());
+  if (!plan) return;
+  if (tryOn) { clearTimeout(tryOn.timer); tryOn = null; }
+  if (plan.remember) day1Mint.setRecord({ skin: plan.wear });
+  if (plan.wear !== current) irisAvatar.setHero(avatar, heroById(plan.wear)).catch((err) => console.warn('[skin]', err));
+  if (plan.seconds) {
+    tryOn = { back: plan.revertTo, timer: setTimeout(() => {
+      const back = tryOn && tryOn.back; tryOn = null;
+      if (back && irisAvatar && irisAvatar.hero.id === plan.wear) { irisAvatar.setHero(avatar, heroById(back)).catch(() => {}); toast(ctx.i18n.t('skin.tryOver', { name: ctx.i18n.t('day1.skin.' + plan.wear) })); }
+    }, plan.seconds * 1000) };
+    toast(ctx.i18n.t('skin.trying', { name: ctx.i18n.t('day1.skin.' + plan.wear), n: plan.seconds }));
+  } else toast(ctx.i18n.t('day1.skin.' + plan.wear));
+});
+/** What the menu's wardrobe shows: the skin worn now and the ones this player has (window.__ftfSkins, read by play/game-menu.js). */
+window.__ftfSkins = () => ({ current: irisAvatar ? irisAvatar.hero.id : startHero.id, owned: skinsOwned(), trying: !!tryOn });
 /** Above the altar: when the next Tournament round starts ("Open now" in this build: rounds are always open). */
 let altarTimer = null;
 /** The new-player intro's crowd lines (play/locales/en-npe.js, sprint 7.3), in the barks rotation when the intro is on. */

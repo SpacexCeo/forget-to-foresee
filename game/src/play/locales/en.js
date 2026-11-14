@@ -1977,6 +1977,15 @@ const EN = {
   "quest.log.progress": "Progress {n} / {count}",
   "quest.track.offer": "{giver} has a quest for you",
   "quest.track.near": "{m} m",
+  "inv.wardrobe": "Wardrobe",
+  "skin.wear": "Wear",
+  "skin.worn": "Wearing",
+  "skin.try": "Try on ({n} s)",
+  "skin.trying": "Trying on {name} for {n} seconds. Close the menu to see.",
+  "skin.tryOver": "{name} goes back to the wheel. Win it to keep it.",
+  "skin.locked": "The wheel's grand prize",
+  "skin.lockedElise": "After Day 1",
+  "wheel.grand": "Grand prize",
 };
 // sprint 5h seams (A5): each area's English strings live in its own file; other locales fall back to English
 export default Object.assign(EN, quests, hud, market, npe, tips, video, account, judge);
