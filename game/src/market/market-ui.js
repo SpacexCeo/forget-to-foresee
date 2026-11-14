@@ -302,8 +302,19 @@ export function createMarketUi({ t, client, dice = null, storage = null, doc = g
       silkEl.title = games ? t('silk.tip.play', { n: formatSilkC(v.playC) }) : t('silk.tip.gate', { n: formatSilkC(v.gateC) }); };
     unSilk = subscribeSilk(paintSilk); paintSilk();
     root.addEventListener('keydown', (e) => { e.stopPropagation(); onKey(e); }); // focus stays inside the window (the close button first)
+    // Esc closes the market even when focus left the window (P0: the market could not be closed while its server hung)
+    onDocKey = (e) => { if (e.key === 'Escape' && root) { e.preventDefault(); e.stopPropagation(); close(); } };
+    try { doc.addEventListener('keydown', onDocKey, true); } catch { onDocKey = null; }
     show(first); x.focus && x.focus();
   }
-  function close() { if (!root) return; root.remove(); root = null; if (unSilk) unSilk(); }
+  let onDocKey = null;
+  // Close is synchronous and never waits on the network. It also removes any other market window left in the page
+  // (a second module instance or a stale mount stacked an identical window under this one, so X looked dead).
+  function close() {
+    if (onDocKey) { try { doc.removeEventListener('keydown', onDocKey, true); } catch { /* */ } onDocKey = null; }
+    if (root) { root.remove(); root = null; }
+    try { for (const w of (doc.querySelectorAll ? doc.querySelectorAll('.mk2-wrap') : [])) w.remove(); } catch { /* */ }
+    if (unSilk) { const u = unSilk; unSilk = null; try { u(); } catch { /* */ } }
+  }
   return { open, close, get isOpen() { return !!root; } };
 }
