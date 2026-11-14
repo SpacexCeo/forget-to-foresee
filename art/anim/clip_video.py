@@ -77,24 +77,26 @@ sc.view_settings.view_transform = 'Filmic' if 'Filmic' in [v.name for v in bpy.t
 sc.render.image_settings.file_format = 'FFMPEG'; sc.render.ffmpeg.format = 'MPEG4'; sc.render.ffmpeg.codec = 'H264'; sc.render.ffmpeg.constant_rate_factor = 'HIGH'; sc.render.ffmpeg.gopsize = FPS
 sc.render.filepath = A['out']
 
-# ---- numbers: how far a planted foot drifts over the floor
-toes = [bn for bn in ('toe_L', 'toe_R', 'foot_L', 'foot_R') if bn in rig.pose.bones][:2] or [b.name for b in rig.pose.bones if 'toe' in b.name.lower()][:2]
+# ---- numbers: how far a planted foot drifts over the floor. The BALL of the foot (the toe bone's head) is the point
+# that stays put from foot-flat to toe-off; the heel pivots at the strike and the toe tip rolls, so neither is used.
+toes = [bn for bn in ('toe_L', 'toe_R') if bn in rig.pose.bones] or [b.name for b in rig.pose.bones if 'toe' in b.name.lower()][:2]
 track = {t: [] for t in toes}; hips = []
 for f in range(1, N + 1):
     sc.frame_set(f)
-    for t in toes: track[t].append(np.array(rig.matrix_world @ rig.pose.bones[t].tail))
+    for t in toes: track[t].append(np.array(rig.matrix_world @ rig.pose.bones[t].head))
     hb = rig.pose.bones.get('pelvis') or rig.pose.bones[0]; hips.append(float((rig.matrix_world @ hb.head).z))
 rep = dict(step='clip_video', clip=A['clip'], frames=N, clip_frames=round(LEN, 1), speed_mps=round(speed, 3), hips_bob_m=round(float(np.ptp(hips)), 4), feet={})
 for t in toes:
-    P = np.array(track[t]); low = P[:, 2].min(); on = P[:, 2] < low + 0.03; worst = 0.0; runs = 0; i = 0
+    P = np.array(track[t]); low = P[:, 2].min(); on = P[:, 2] < low + 0.012; worst = 0.0; runs = 0; i = 0; longest = 0
     while i < N:
         if on[i]:
             j = i
             while j + 1 < N and on[j + 1]: j += 1
-            if j - i >= 3: worst = max(worst, float(np.linalg.norm(P[i:j + 1, :2] - P[i, :2], axis=1).max())); runs += 1
+            if j - i >= 3: worst = max(worst, float(np.linalg.norm(P[i:j + 1, :2] - P[i, :2], axis=1).max())); runs += 1; longest = max(longest, j - i + 1)
             i = j + 1
         else: i += 1
-    rep['feet'][t] = dict(lowest_m=round(float(low), 4), planted_runs=runs, worst_drift_m=round(worst, 4))
+    rep['feet'][t] = dict(ball_lowest_m=round(float(low), 4), planted_runs=runs, longest_run_frames=longest, worst_drift_m=round(worst, 4))
 print('REPORT', json.dumps(rep))
+if str(A.get('render', '1')) == '0': sys.exit(0)
 bpy.ops.render.render(animation=True)
 print('REPORT', json.dumps(dict(step='clip_video', out=A['out'], status='PASS')))
