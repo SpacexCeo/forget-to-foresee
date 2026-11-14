@@ -23,6 +23,11 @@ export function sidecarEnabled(search = typeof location !== 'undefined' ? locati
 
 let loader = null;
 const cache = new Map();
+// Clip file URLs carry ?v=<bytes> like the models' (render/asset-catalog.js versionedModelUrl): a phone that cached an
+// old clip file must never pair it with a new model (owner 14.11: the new heroines did not move on phones). render/assets.js
+// hands over the build's sizes (virtual:model-list ANIM_FILES, render/assets.js puts them on globalThis.__ftfAnimFiles);
+// without them the plain URL is used.
+export function animUrl(name, base = '/', files = globalThis.__ftfAnimFiles || {}) { const n = files[name]; return `${base}assets/anim/${name}.glb` + (n > 0 ? '?v=' + n : ''); }
 const baseUrl = () => (import.meta.env && import.meta.env.BASE_URL) || '/';
 
 /**
@@ -65,7 +70,7 @@ function loadFile(name, base) {
   const key = base + name;
   if (!cache.has(key)) {
     loader ||= new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
-    cache.set(key, loader.loadAsync(`${base}assets/anim/${name}.glb`).then((g) => {
+    cache.set(key, loader.loadAsync(animUrl(name, base)).then((g) => {
       const extras = (g.parser.json.animations || []).map((a) => a.extras || {});
       g.animations.forEach((c, i) => { c.userData = { ...extras[i] }; });
       const k = timeScaleFor(name);

@@ -64,3 +64,26 @@ test('the run: one stride of flee_01 (a jog, not the pack sprint), foot contacts
     assert.ok(walk.extras.speed > 1 && walk.extras.speed < 1.4, id + ' walk ' + walk.extras.speed);
   }
 });
+
+test('phones: every hero model and its _m variant has every bone its clip file animates (agent rig for the retargeted one)', () => {
+  const tracked = (f) => { const { json } = glb('anim/' + f + '.glb'); return new Set(json.animations.flatMap((a) => a.channels.map((c) => json.nodes[c.target.node].name))); };
+  const bonesOf = (f) => { const m = glb('models/' + f).json; return new Set(m.skins[0].joints.map((j) => m.nodes[j].name)); };
+  for (const [model, clip] of [['agent_iris', 'iris'], ['agent_elise', 'elise']]) {
+    const want = tracked(clip);
+    for (const f of [model + '.glb', model + '_m.glb']) { const has = bonesOf(f); const miss = [...want].filter((n) => !has.has(n)); assert.deepEqual(miss, [], f + ' lacks bones ' + miss.slice(0, 5)); }
+  }
+  // Sheriffchenko is retargeted at load from iris_agent.glb: his body needs the agent rig's core bones
+  for (const f of ['agent_sheriffchenko.glb', 'agent_sheriffchenko_m.glb']) { const has = bonesOf(f); for (const n of ['pelvis', 'spine', 'chest', 'head', 'thigh_L', 'shin_L', 'foot_L', 'thigh_R', 'shin_R', 'foot_R', 'upperarm_L', 'forearm_L', 'upperarm_R', 'forearm_R']) assert.ok(has.has(n), f + ' has ' + n); }
+});
+
+test('phones: clip file URLs are versioned like the models (a cached old clip file never meets a new model)', async () => {
+  const { scanAnims, modelListSource } = await import('../../build/model-list.js');
+  const anims = scanAnims(new URL('../../public/assets/anim', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'));
+  assert.ok(anims.iris > 0 && anims.elise > 0 && anims.townsfolk_pack > 0);
+  assert.match(modelListSource(new URL('../../public/assets/models', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), /export const ANIM_FILES = \{.*"iris":\d+/);
+  const lib = readFileSync(new URL('../../src/play/anim-library.js', import.meta.url), 'utf8'), assets = readFileSync(new URL('../../src/render/assets.js', import.meta.url), 'utf8');
+  assert.match(lib, /loader\.loadAsync\(animUrl\(name, base\)\)/); assert.match(lib, /'\?v=' \+ n/);
+  assert.match(assets, /globalThis\.__ftfAnimFiles = MODEL_LIST\.ANIM_FILES/);
+  assert.doesNotMatch(assets, /from '\.\.\/play\//, 'no play/ import in the client core');
+  assert.match(lib, /animUrl\(name, base = '\/', files = globalThis\.__ftfAnimFiles/);
+});

@@ -6,8 +6,8 @@ bpy.ops.import_scene.gltf(filepath=argv[0])
 arm = max((o for o in bpy.data.objects if o.type == 'ARMATURE'), key=lambda o: len(o.data.bones))
 fps = bpy.context.scene.render.fps
 names = {b.name: b.name for b in arm.pose.bones}
-pick = lambda *ks: next(n for k in ks for n in names if n.endswith(k))  # Mixamo or Tripo names
-eff = {'hand_R': pick('RightHand', 'R_Hand', 'hand_R'), 'hand_L': pick('LeftHand', 'L_Hand', 'hand_L'), 'foot_R': pick('RightFoot', 'R_Foot', 'foot_R'), 'foot_L': pick('LeftFoot', 'L_Foot', 'foot_L')}
+pick = lambda k: next(n for n in names if n.endswith(k))
+eff = {'hand_R': pick('RightHand'), 'hand_L': pick('LeftHand'), 'foot_R': pick('RightFoot'), 'foot_L': pick('LeftFoot')}
 arm.animation_data_create()
 out = {}
 for clip in argv[1].split(','):
