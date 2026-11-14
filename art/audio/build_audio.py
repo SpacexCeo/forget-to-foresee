@@ -1074,6 +1074,19 @@ def gale_hit(r, i):
     return fades(to_stereo(slice_) + body, 0.0005, 0.06)
 
 
+@asset("strike_charge", "sfx", target=(-22, "short"))
+def strike_charge(r):
+    """The super strike gathering (F held): a low hum that rises and tightens, a little grit of power at the top."""
+    D = 0.55
+    n = ns(D)
+    t = taxis(n)
+    rise = (t / D) ** 1.3
+    hum = np.sin(phase_of(70 + 110 * rise)) * 0.6 + np.sin(phase_of(140 + 220 * rise)) * 0.25
+    grit = bandpass(noise(n, r), 900, 4000) * (rise ** 2) * 0.35
+    y = (hum + grit) * (0.2 + 0.8 * rise)
+    return fades(reverb(to_stereo(y), make_ir(0.5, rng=r), wet=0.15)[:, :n], 0.02, 0.03)
+
+
 @asset("cast_charge_storm", "sfx", target=(-22, "short"))
 def cast_charge_storm(r):
     D = 0.42  # the wind-up: the release frame comes 0.42 s after the click (claude/iris-anim)

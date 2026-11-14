@@ -578,6 +578,8 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
     get shake() { return reduced() ? 0 : shake; },
     /** The camera kick of the blows this frame (render/hit-fx.js): add it to the camera after the rig. Zero under reduced motion. */
     get kick() { return hitFx.kick; },
+    /** The pooled impact effects (render/hit-fx.js), for the casts' wind-up motes at her hand. */
+    get fx() { return hitFx; },
     get actions() { return { strikeCd: act.strikeCd, dashCd: act.dashCd, combo: act.combo, iframes: iris.iframes }; },
     get charging() { return act.charge ? act.charge.t : null; },
     /** Which source turned the last strike: 'lock' | 'cursor' | 'move' | 'facing' (QA). */

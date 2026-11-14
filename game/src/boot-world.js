@@ -640,7 +640,7 @@ function mountCasting() {
   townCasting = createTownCasting({ scene, camera, town, player, i18n: ctx.i18n, coarse: mobileDevice, storage: ctx.storage,
     // her cast clip (art/anim/iris_actions.py): a wind-up, then the release frame on which the cast leaves her hand; the
     // effect, the sound and the hits wait for that frame. Without the clip (?anim=v1) her hand goes up and it leaves at once.
-    onCastStart: (id) => { interruptMove(0); cue(id === 'snare' ? 'cast_charge_storm' : 'cast_charge_frost'); /* the build through the wind-up */ const c = irisAvatar && irisAvatar.cast('cast_' + id); if (!c && irisAvatar) irisAvatar.react('greet', clock.elapsedTime); return c ? quickRelease(c) : 0; },
+    onCastStart: (id) => { interruptMove(0); castWindup = { id, t: 0 }; cue(id === 'snare' ? 'cast_charge_storm' : 'cast_charge_frost'); /* the build through the wind-up */ const c = irisAvatar && irisAvatar.cast('cast_' + id); if (!c && irisAvatar) irisAvatar.react('greet', clock.elapsedTime); return c ? quickRelease(c) : 0; },
     onCast: (id, shot) => { for (const c of companions) c.flourish(lookdev.reducedMotion); if (townMonsters) townMonsters.cast(id, shot); cue(id === 'snare' ? 'cast_release_storm' : 'cast_release_frost'); }, // on the release frame
     handPos: () => { const m = irisAvatar && irisAvatar.irisModel, h = m && m.model.getObjectByName('hand_R'); if (!h) return null; const v = h.getWorldPosition(new THREE.Vector3()); return [v.x, v.y, v.z]; },
     onFire: (c) => { if (townMobs) townMobs.cast(c); },
@@ -656,6 +656,8 @@ function mountCasting() {
  * attack and hurt sound from where it stands, the death dissolve, Iris getting hit. Through audio/town-audio.js.
  */
 let heavyUntil = 0;
+const _windHand = new THREE.Vector3();
+let castWindup = null; // {id, t}: the cast between its click and the release frame (motes at her hand)
 /** Touch: the HUD's attack button calls attackPress(true) on pointerdown and attackPress(false) on pointerup/cancel. */
 let touchAttackHeld = false;
 function attackPress(down) {
@@ -675,7 +677,8 @@ function combatSound(k, mob, ev) {
   else if (k === 'hit' && ev && ev.src === 'lance') { cueAt('hit_frost', at); cueAt(S.hurt, at, 0.8); }
   else if (k === 'hit' && ev && ev.src === 'snare') { cueAt('hit_storm', at); cueAt(S.hurt, at, 0.8); }
   else if (k === 'hit') { cueAt(performance.now() < heavyUntil || (ev && ev.crit) ? 'strike_heavy' : 'strike_impact', at); cueAt(S.hurt, at, 0.8); }
-  else if (k === 'super_release') cue('dash_whoosh'); // the gathered blow leaves with a rush of air; strike_heavy lands with it
+  else if (k === 'super_release') cue('dash_whoosh');
+  else if (k === 'charge') cue('strike_charge'); // the super strike gathering (F held): a rising hum // the gathered blow leaves with a rush of air; strike_heavy lands with it
   else if (k === 'attack') cueAt(S.attack, at);
   else if (k === 'kill') cueAt('mob_death', at);
   else if (k === 'hurt') cue('iris_hurt');
@@ -1469,6 +1472,13 @@ function frame() {
   }
   rig.update(dt, focus, lookdev.reducedMotion ? null : player.vel); // no camera look-ahead under reduced motion
   if (townMobs && townMobs.shake > 0) { const k = townMobs.shake * 0.08; camera.position.x += (Math.random() - 0.5) * k; camera.position.y += (Math.random() - 0.5) * k; } // heavy hits (off with reduced motion)
+  // the cast's wind-up (night 14.11): motes of its element gather at her hand until the release frame
+  if (castWindup) {
+    castWindup.t += dt;
+    const hm = townMobs && townMobs.fx && irisAvatar && irisAvatar.irisModel, hb = hm && hm.model.getObjectByName('hand_R'), h = hb ? hb.getWorldPosition(_windHand).toArray() : null;
+    if (castWindup.t > 0.5 || !h) castWindup = null;
+    else if (!lookdev.reducedMotion) { castWindup.acc = (castWindup.acc || 0) + dt; while (castWindup.acc > 0.02) { castWindup.acc -= 0.02; townMobs.fx.trail(h, castWindup.id === 'snare' ? 0xc9a8ff : 0xa8e4ff, 0.22, 0.28 * (1 - castWindup.t * 1.6)); } }
+  }
   if (townMobs && townMobs.kick) camera.position.add(townMobs.kick); // the blows' camera kick along their direction (render/hit-fx.js; still under reduced motion)
   if (glassShoal && glassShoal.owns() && glassShoal.shakeCamera) glassShoal.shakeCamera(camera, dt); // the Shoal's ultimate (scaled down under reduced motion)
   streamer.update(dt, focus);

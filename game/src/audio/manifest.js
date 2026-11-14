@@ -811,6 +811,13 @@ export const AUDIO_MANIFEST = {
       "channels": 2,
       "ref": 12
     },
+    "strike_charge": {
+      "file": "strike_charge.ogg",
+      "kind": "sfx",
+      "dur": 0.55,
+      "samples": 26400,
+      "channels": 2
+    },
     "strike_heavy_1": {
       "file": "strike_heavy_1.ogg",
       "kind": "sfx",
