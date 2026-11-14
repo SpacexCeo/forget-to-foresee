@@ -108,6 +108,8 @@ export function pickLock(mobs, from, fwd, range = ACTIONS.lock, front = ACTIONS.
   return best;
 }
 
+/** The heavy-hit hold: ~4 frames at 60 fps where her pose freezes on impact (a crit holds 1.4x longer). */
+export const HIT_STOP = Object.freeze({ hold: 0.065 });
 export const REGEN = Object.freeze({ delay: 4, perSecond: 8 });   // her health comes back out of combat
 const LANCE_SPEED = 20;             // the fracture front of the Frost Lance (m/s): a monster far along the line is hit later
 const SNARE_DELAY = 0.35;           // the leash reaches the point, the ring snaps open
@@ -452,7 +454,7 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
   const views = new Map(), templates = {};
   const iris = { pos: player.pos, alive: true, outside: false, hp: IRIS_HP, hurtT: 0, calm: 0, iframes: 0 };
   const act = { lunge: null, strikeCd: 0, combo: 0, comboT: 0, dashCd: 0, dash: null, twist: 0, twistDir: 1, charge: null, superCd: 0, superAt: null, flinch: 0, flinchMax: 1, flinchAmp: 0, blows: [] };
-  let shake = 0;
+  let shake = 0, stopT = 0;   // stopT: the world hit-stop of a heavy blow or a crit (her pose holds a few frames)
   const numbers = [];
   const shots = [], shotLog = [];   // shotLog: the last seeds (QA: where from, where to, closest pass)
   // impact effects and the camera kick (render/hit-fx.js): one pooled set for the whole hillside
@@ -604,7 +606,8 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
         const imp = impactOf(e.src, { radius: e.mob.T.radius, heavy: !!e.mob.T.heavy, kill: !!e.kill, reduced: reduced() });
         const at = hitPoint(e.mob), dx = e.mob.pos[0] - player.pos[0], dz = e.mob.pos[2] - player.pos[2], l = Math.hypot(dx, dz) || 1;
         hitFx.impact(at, [dx / l, dz / l], imp, e.mob.pos[1]);
-        shake = Math.max(shake, imp.shake);
+        shake = Math.max(shake, imp.shake * (e.crit ? 1.6 : 1) * (e.kill ? 1.3 : 1));   // the weight of the blow: crits and finishers shake more
+        if (!reduced() && (e.crit || e.kill || imp.stop >= 0.08)) stopT = Math.max(stopT, HIT_STOP.hold * (e.crit ? 1.4 : 1));
         if (e.mob.state === 'stagger' && v.actions.hit) { play(v, 'hit', 0.06); v.oneShot = v.actions.hit; }
         v.ring.visible = v.ring.visible && e.mob.state === 'windup';
       }
@@ -626,6 +629,8 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
     /** Iris's cast (scenes/town-casting.js onFire). */
     cast(c) { brain.cast(c); },
     get shake() { return reduced() ? 0 : shake; },
+    /** Seconds left of the hit-stop (a heavy blow or a crit): her animation holds while it runs. Zero under reduced motion. */
+    get hitStop() { return reduced() ? 0 : stopT; },
     /** The camera kick of the blows this frame (render/hit-fx.js): add it to the camera after the rig. Zero under reduced motion. */
     get kick() { return hitFx.kick; },
     /** The pooled impact effects (render/hit-fx.js), for the casts' wind-up motes at her hand. */
@@ -747,7 +752,7 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
           if (onFeedback) onFeedback('super', null, { hits: ev.filter((e) => e.kind === 'super').length, charge: S.k });
         }
       }
-      iris.iframes = Math.max(0, iris.iframes - dt); shake = Math.max(0, shake - dt * 2.5);
+      iris.iframes = Math.max(0, iris.iframes - dt); shake = Math.max(0, shake - dt * 2.5); stopT = Math.max(0, stopT - dt);
       iris.calm += dt;
       if (iris.alive && iris.calm > REGEN.delay && iris.hp < IRIS_HP) { iris.hp = Math.min(IRIS_HP, iris.hp + REGEN.perSecond * dt); if (hpFill) hpFill.style.width = (100 * iris.hp / IRIS_HP).toFixed(1) + '%'; }
       if (act.dash && moveIris) {

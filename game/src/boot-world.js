@@ -1679,7 +1679,7 @@ function frame() {
     }
   }
   rig.update(dt, focus, lookdev.reducedMotion ? null : player.vel); // no camera look-ahead under reduced motion
-  if (townMobs && townMobs.shake > 0) { const k = townMobs.shake * 0.08; camera.position.x += (Math.random() - 0.5) * k; camera.position.y += (Math.random() - 0.5) * k; } // heavy hits (off with reduced motion)
+  if (townMobs && townMobs.shake > 0) { const k = townMobs.shake * townMobs.shake * 0.16 + townMobs.shake * 0.04; camera.position.x += (Math.random() - 0.5) * k; camera.position.y += (Math.random() - 0.5) * k; } // heavy hits (off with reduced motion)
   // the cast's wind-up (night 14.11): motes of its element gather at her hand until the release frame
   if (castWindup) {
     castWindup.t += dt;
@@ -1702,7 +1702,7 @@ function frame() {
   movingState = movingState ? speed > 0.08 : speed > 0.25;
   void moving;
   if (play && !inTown) play.update(dt, { focus, moving: movingState, speed, running: player.run && movingState });
-  else if (irisAvatar) irisAvatar.update(dt, movingState, avatar, clock.elapsedTime, speed, player.run && movingState, lookdev.reducedMotion, null); // the town: her gait before the season
+  else if (irisAvatar) irisAvatar.update(townMobs && townMobs.hitStop > 0 ? dt * 0.05 : dt, movingState, avatar, clock.elapsedTime, speed, player.run && movingState, lookdev.reducedMotion, null); // the town: her gait before the season
   // the sword in her hand: after the mixer, so the closed fist sits on top of every clip
   if (heldBlade) heldBlade.update(dt, lookdev.reducedMotion);
   strikeTrail.update(dt, lookdev.reducedMotion); // after the mixer and the grip: the trail follows the pose drawn this frame
