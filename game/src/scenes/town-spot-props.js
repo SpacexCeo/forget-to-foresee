@@ -54,7 +54,7 @@ export function buildNoticeBoard() {
  * @param {{scene: THREE.Scene, town: {groundAt?: Function}, near?: (id: string) => boolean}} o
  *   near(id): whether Iris stands within the prompt of that spot (the glow follows it)
  */
-export function createSpotProps({ scene, town, near = () => false }) {
+export function createSpotProps({ scene, town, near = () => false, fetchGltf = null, hasModelFile = () => false, mobile = false }) {
   const group = new THREE.Group(); group.name = 'town_spot_props'; scene.add(group);
   const items = [];
   // the mirror is off for now (owner 12.11): only the notice board stands; buildMirror is kept for later
@@ -62,6 +62,22 @@ export function createSpotProps({ scene, town, near = () => false }) {
     const spec = SPOT_PROPS[id], obj = build(), w = townToWorld(spec.position);
     obj.position.set(w[0], w[1], w[2]); obj.rotation.y = spec.heading;
     group.add(obj); items.push({ id, obj, w, grounded: false, glow: 0 });
+  }
+  // the notice board's model (art/town/build_notice_board.py, owner 14.11): it replaces the procedural stand-in once
+  // loaded; its gold trim (material `gold_trim`) takes over the prompt's glow
+  const boardItem = items.find((it) => it.id === 'board');
+  const file = mobile && hasModelFile('notice_board_m') ? 'notice_board_m' : 'notice_board';
+  if (boardItem && fetchGltf && hasModelFile(file)) {
+    fetchGltf(file).then(({ gltf }) => {
+      const m = gltf.scene.clone(true), glow = [];
+      m.traverse((o) => {
+        if (!o.isMesh) return; o.castShadow = true; o.receiveShadow = true;
+        if (o.material && /gold_trim/.test(o.material.name || '')) { o.material = o.material.clone(); o.material.emissive.setHex(0x6b4a12); o.material.emissiveIntensity = 0; glow.push(o.material); }
+      });
+      for (const c of [...boardItem.obj.children]) c.visible = false;
+      boardItem.obj.add(m);
+      if (glow.length) boardItem.obj.userData.glow = glow;
+    }).catch(() => { /* the procedural board stays */ });
   }
   return {
     group, items,
