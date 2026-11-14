@@ -266,3 +266,20 @@ export function besideDoor(door, out, side) {
 }
 export const BOARD_SPOT = Object.freeze({ shop: 'exchange', out: 0.9, side: 2.1 });
 export const WHEEL_SPOT = Object.freeze({ shop: 'inn', out: 1.0, side: -2.2, reach: 1.8 });
+
+/** Metres above the ground a placed spawn starts: she drops a short way and lands (owner 14.11), never inside terrain. */
+export const SPAWN_DROP = 0.6;
+
+/**
+ * A spawn on walkable ground (owner 14.11: "Return home" from the Glass Shoal put her 3 m behind the cliff stone at
+ * the stone's height, inside the hillside, and she fell through the town for ever: a teleport also makes that point
+ * the safe one a fall respawns at). The ground is cast from a little above the given point (never from the sky, which
+ * lands on roofs and wall tops) and she starts SPAWN_DROP above it. Null while no ground answers there (not streamed in
+ * yet): the caller keeps its own fallback. Pure: `groundAt(x, z, fromY)` returns a height or null.
+ * @param {(x:number, z:number, fromY?:number) => (number|null)} groundAt @param {number[]} pos world [x, y, z]
+ */
+export function dropSpawn(groundAt, pos, { lift = SPAWN_DROP, above = 3 } = {}) {
+  if (typeof groundAt !== 'function' || !pos) return null;
+  const g = groundAt(pos[0], pos[2], pos[1] + above);
+  return g == null || !Number.isFinite(g) ? null : [pos[0], g + lift, pos[2]];
+}
