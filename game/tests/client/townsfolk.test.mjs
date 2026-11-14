@@ -134,3 +134,27 @@ test('townsfolk: animation level of detail', () => {
   assert.equal(animStride(5, { visible: false }), 0);
   assert.ok(animStride(20, { phone: true }) > animStride(20));
 });
+
+// GPU bench trace 14.11: the Shardkeeper leaving her door just as the Shrinekeeper walked by stopped and went every
+// 0.3 s for two seconds while the other slid sideways standing still. A stop now holds, the passing keeps going on the
+// lean and the hard MIN_GAP rule, and nobody slides while stopped.
+test('two townsfolk meeting: no stop-go stutter, no sliding in place, never closer than MIN_GAP, both arrive', async () => {
+  const { MIN_GAP } = await import('../../src/play/townsfolk-plan.js');
+  const def = (k) => TOWNSFOLK.find((p) => p.key === k), stay = (s, clip) => ({ stay: s, clip });
+  for (const [standS, bz] of [[4.6, 0.3], [5.0, 0.5], [5.4, 0.2], [4.2, 0.6], [5.2, -0.3]]) {
+    const A = new PersonPlan(def('shardkeeper'), { home: [0, 0, 0], heading: 0, steps: [stay(standS, 'idle'), { walk: [[0, 0, 0], [-1, 0, 0.6], [-6, 0, 1.5]] }, stay(60, 'idle')] });
+    const B = new PersonPlan(def('shrinekeeper'), { home: [-6, 0, bz], heading: 0, steps: [{ walk: [[-6, 0, bz], [6, 0, bz]] }, stay(60, 'idle')] });
+    const ctx = { iris: null, reduced: false, others: new Map([['shardkeeper', A], ['shrinekeeper', B]]) };
+    let toggles = 0, slide = 0, minD = 9; const last = new Map([[A, [A.x, A.z, 0]], [B, [B.x, B.z, 0]]]);
+    for (let i = 0; i < 20 * 60; i++) {
+      A.step(1 / 60, ctx); B.step(1 / 60, ctx);
+      for (const P of [A, B]) { const l = last.get(P), moving = P.speed > 0.01 ? 1 : 0; if (i > 0 && moving !== l[2] && P.current.walk) toggles++; if (!moving && Math.hypot(P.x - l[0], P.z - l[1]) > 0.0015) slide++; last.set(P, [P.x, P.z, moving]); }
+      minD = Math.min(minD, Math.hypot(A.x - B.x, A.z - B.z));
+    }
+    const tag = `stand ${standS} s, lane ${bz}`;
+    assert.ok(toggles <= 4, `${tag}: ${toggles} stop-go toggles`);
+    assert.equal(slide, 0, `${tag}: slid while stopped`);
+    assert.ok(minD >= MIN_GAP - 0.01, `${tag}: ${minD.toFixed(2)} m apart`);
+    assert.ok(Math.hypot(A.x + 6, A.z - 1.5) < 0.2 && Math.hypot(B.x - 6, B.z - bz) < 0.2, `${tag}: both arrive`);
+  }
+});
