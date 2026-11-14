@@ -33,7 +33,7 @@ export function warmth(p) { const k = Math.max(0, Math.min(1, Number(p) || 0)); 
 const CSS = `
 .boot--ritual .bd-hub, .boot--ritual .boot-bodies { transition: opacity .4s; opacity: calc(.25 + var(--boot-p, 0) * .75);
   filter: drop-shadow(0 0 calc(var(--boot-p, 0) * var(--boot-p, 0) * 18px) rgba(246, 216, 146, .75)); }
-.boot--ritual .boot-bar { border-radius: 999px; padding: 3px 10px; border: 1px solid rgba(233, 200, 140, .35); background: rgba(10, 18, 18, .35); }
+.boot--ritual .boot-bar { padding: 3px 0; }   /* no frame round the bar (owner 14.11): the same plain line on every screen */
 .boot--ritual .boot-tip { margin: 10px auto 0; max-width: min(520px, 90vw); text-align: center; font: italic 17px/1.35 'Cormorant Garamond', Georgia, serif; color: rgba(236, 226, 205, .82); transition: opacity .6s; min-height: 2.6em; }
 .boot--ritual .boot-tip.fade { opacity: 0; }
 @media (max-width: 420px) { .boot--ritual .boot-tip { font-size: 15px; } }
