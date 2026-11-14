@@ -71,7 +71,7 @@ export const TOWNSFOLK = Object.freeze([
   { key: 'sweeper', height: 1.62, walk: 1.20 },
   { key: 'lamplighter', height: 1.70, walk: 1.30 },
   { key: 'courier', height: 1.68, walk: 1.55 },
-  { key: 'child_a', height: 1.32, walk: 1.10, run: 2.6 },
+  { key: 'child_a', height: 1.28, walk: 1.10, run: 2.6 }, // the owner's Tripo girl (14.11, art/townsfolk/tripo_person.py on the agent rig names)
   { key: 'child_b', height: 1.22, walk: 1.20, run: 2.6 },
 ].map((p) => Object.freeze({ ...p, asset: (QUEST_GIVERS.has(p.key) ? 'npc_' : 'townsfolk_') + p.key })));
 

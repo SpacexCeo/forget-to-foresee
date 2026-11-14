@@ -40,3 +40,16 @@ for (const id of ['elise', 'iris']) test(id + ': the clip file has the game name
     assert.ok(tris <= 50000, file + ' has ' + tris + ' triangles');
   }
 });
+
+test('the rider: every heroine\'s clip file has `ride` (astride, a loop) with the hip joint to seat her on the saddle', () => {
+  for (const f of ['iris', 'elise', 'iris_agent']) {
+    const { json } = glb('anim/' + f + '.glb'), a = json.animations.find((x) => x.name === 'ride');
+    assert.ok(a, f + ' has ride');
+    assert.equal(a.extras.loop, true); assert.equal(a.extras.speed, 0);
+    const p = a.extras.pelvis; assert.ok(Array.isArray(p) && p[1] > 0.5 && p[1] < 0.8 && Math.abs(p[0]) < 0.05, f + ' hip joint ' + p + ' (seated: lower than standing)');
+  }
+  const boot = readFileSync(new URL('../../src/boot-world.js', import.meta.url), 'utf8'), shoal = readFileSync(new URL('../../src/scenes/glass-shoal.js', import.meta.url), 'utf8');
+  assert.match(shoal, /riding: \(\) => mode === 'ride'/);
+  assert.match(boot, /if \(shoalSpeed != null && glassShoal\.riding && glassShoal\.riding\(\)\) seatRider\(avatar\);/);
+  assert.match(boot, /irisAvatar\.react\('ride', clock\.elapsedTime\)/);
+});

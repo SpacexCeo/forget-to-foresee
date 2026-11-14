@@ -702,6 +702,20 @@ function mountCasting() {
  */
 let heavyUntil = 0;
 const _windHand = new THREE.Vector3();
+// On the dragon (owner 14.11: she stood on its back): the heroine plays her `ride` clip (art/heroes/ride_clip.py: the
+// pack's seated loop, astride) and her hips, not her feet, go on the saddle socket. The clip's `pelvis` extra is the hip
+// joint in the model's space; a retargeted body (Sheriffchenko) has its own pelvis height and scale from the retarget.
+const RIDE_SEAT_ABOVE = 0.1, _seat = new THREE.Vector3();
+function seatRider(avatar) {
+  const m = irisAvatar && irisAvatar.irisModel;
+  if (!m) return;
+  irisAvatar.react('ride', clock.elapsedTime);
+  const c = m.clips.find((x) => x.name === 'ride'), u = (c && c.userData) || {};
+  if (!u.pelvis) return;
+  const k = u.scale || 1;
+  _seat.set(u.pelvis[0] * k, (u.pelvis_y ?? u.pelvis[1]) - RIDE_SEAT_ABOVE, u.pelvis[2] * k).applyEuler(avatar.rotation);
+  avatar.position.sub(_seat);
+}
 let castWindup = null; // {id, t}: the cast between its click and the release frame (motes at her hand)
 /** Touch: the HUD's attack button calls attackPress(true) on pointerdown and attackPress(false) on pointerup/cancel. */
 let touchAttackHeld = false;
@@ -1442,6 +1456,7 @@ function frame() {
   }
   if (shoalArt) shoalArt.sync(shoalArena);
   const shoalSpeed = glassShoal && glassShoal.owns() ? glassShoal.applyAvatar(avatar, focus) : null; // on the dragon or on the Shoal
+  if (shoalSpeed != null && glassShoal.riding && glassShoal.riding()) seatRider(avatar);
   if (inTown && townFlow.focusK > 0) { // registering: the camera leaves Iris for the altar while its core flares
     const a = town.altar.focus, k = townFlow.focusK * townFlow.focusK * (3 - 2 * townFlow.focusK) * 0.7;
     focus.set(focus.x + (a[0] - focus.x) * k, focus.y + (a[1] - focus.y) * k, focus.z + (a[2] - focus.z) * k);

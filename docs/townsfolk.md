@@ -28,7 +28,7 @@ behaviour in the client.
 | `lamplighter` | 07 | Lamplighter, M 40 | 1.86 | indigo work coat over rolled linen sleeves, tool belt and cross strap, lantern |
 | `guard` | 08 | Gate guard, F 30 | 1.92 | quilted moss coat, leather cuirass and pauldrons, terracotta sash, sheathed sidearm |
 | `elder` | 09 | Elder, M 76 | 1.65 | ochre shawl over an indigo vest, cane, white hair and beard, gentle stoop |
-| `child_a` | 10 | Child, F 10 | 1.32 | moss pinafore over a linen shirt, two braids |
+| `child_a` | 10 | Child, F 10 | 1.28 | the owner's Tripo girl (14.11): built by art/townsfolk/tripo_person.py on the agent rig names |
 | `child_b` | 11 | Child, M 8 | 1.22 | ochre tunic, terracotta shorts, wool socks, mop of curls |
 | `musician` | 12 | Street musician, NB 25 | 1.74 | long terracotta vest, indigo trousers, lute on a strap |
 | `courier` | 13 | Courier, F 22 | 1.68 | moss shirt with rolled sleeves, full indigo trousers, satchel, high ponytail |

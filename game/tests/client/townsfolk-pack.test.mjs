@@ -70,3 +70,12 @@ test('townsfolk pack: a goodbye wave when Iris walks off, a cheer for her win, a
   for (let i = 0; i < 60 * 30; i++) { guard.step(1 / 30, { iris: null, reduced: false, others }); danced.add(guard.clip); }
   assert.ok(danced.has('dance'), 'dances: ' + [...danced]);
 });
+
+test('the girl (child_a, the owner\'s Tripo model): her bones carry the agent rig names the shared clips retarget onto', () => {
+  for (const f of ['townsfolk_child_a.glb', 'townsfolk_child_a_m.glb']) {
+    const { b, json } = glbJson(new URL('../../public/assets/models/' + f, import.meta.url));
+    assert.ok(b.length <= 3e6, f + ' is ' + b.length + ' bytes');
+    const bones = new Set(json.skins[0].joints.map((j) => json.nodes[j].name));
+    for (const n of ['pelvis', 'spine', 'chest', 'neck', 'head', 'thigh_L', 'shin_L', 'foot_L', 'thigh_R', 'shin_R', 'foot_R', 'upperarm_L', 'forearm_L', 'hand_L', 'upperarm_R', 'forearm_R', 'hand_R']) assert.ok(bones.has(n), f + ' has ' + n);
+  }
+});
