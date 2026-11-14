@@ -12,7 +12,7 @@ const MAX = 40;
 
 const store = () => { try { return globalThis.localStorage || null; } catch { return null; } };
 /** The explorer link of a transaction (this build's network). */
-export const txLink = (hash) => `${String(NEAR_DEPLOYMENT.explorer || 'https://testnet.nearblocks.io').replace(/\/$/, '')}/txns/${hash}`;
+export const txLink = (hash) => `${String(NEAR_DEPLOYMENT.explorer).replace(/\/$/, '')}/txns/${hash}`;
 
 /** The receipts, newest first: [{kind, hash, url, at, note}]. */
 export function loadReceipts(storage = store()) {

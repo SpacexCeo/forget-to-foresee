@@ -30,7 +30,7 @@ const read = (storage, key) => { try { return JSON.parse((storage && storage.get
 
 /** The block's data: {account, accountUrl, linked, receipts: [{kind, hash, url, at}], contracts: [{id, url}]}. Pure but for storage. */
 export function chainModel(storage) {
-  const explorer = String(NEAR_DEPLOYMENT.explorer || 'https://testnet.nearblocks.io').replace(/\/$/, '');
+  const explorer = String(NEAR_DEPLOYMENT.explorer).replace(/\/$/, '');
   const day1 = read(storage, DAY1_KEY) || {};
   const account = (day1.guest && day1.guest.account_id) || null;
   const receipts = loadReceipts(storage);
