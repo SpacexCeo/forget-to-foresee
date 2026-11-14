@@ -15,7 +15,8 @@ export async function dressInPlace(A, get, SHOAL_PROPS) {
   let n = 0;
   const fit = (src, ph, height, centred) => {
     const o = src.clone(true);
-    o.traverse((x) => { if (x.isMesh) { x.castShadow = true; x.frustumCulled = false; } });
+    const cols = []; o.traverse((x) => { if (x.isMesh) { x.castShadow = true; x.frustumCulled = false; if (/_col(_|[0-9]|$)/.test(x.name || '')) cols.push(x); } });
+    for (const c of cols) c.removeFromParent(); // collision meshes never draw, nor count in the bounds
     // scale to the height wanted from the model's own bounds; stand it on (or centre it at) the placeholder's origin
     o.updateMatrixWorld(true); const box = new Box3().setFromObject(o), h = Math.max(1e-3, box.max.y - box.min.y), k = height / h;
     o.scale.setScalar(k); o.position.set(-(box.min.x + box.max.x) / 2 * k, centred ? -(box.min.y + box.max.y) / 2 * k : -box.min.y * k, -(box.min.z + box.max.z) / 2 * k);

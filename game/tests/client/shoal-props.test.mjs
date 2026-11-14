@@ -56,3 +56,13 @@ test('no template shapes left where a model exists: the lamp becomes the bridge 
   }
   assert.notEqual(hp.material, st.material);
 });
+
+test('a dressed prop never draws its collision mesh', async () => {
+  const THREE = await import('three');
+  const { dressInPlace } = await import('../../src/render/shoal-dress.js');
+  const lamp = new THREE.Group(), root = new THREE.Group(); root.add(lamp);
+  const model = () => { const g = new THREE.Group(); const b = new THREE.Mesh(new THREE.BoxGeometry(0.4, 3, 0.4), new THREE.MeshStandardMaterial()); b.name = 'prop_bridge_torch'; const c = new THREE.Mesh(new THREE.BoxGeometry(2, 1, 2), new THREE.MeshStandardMaterial()); c.name = 'prop_bridge_torch_col'; g.add(b, c); return g; };
+  await dressInPlace({ lamp, pickups: [] }, async () => model(), { lamp: 'prop_bridge_torch', pickups: {} });
+  let col = 0; lamp.traverse((o) => { if (/_col/.test(o.name)) col++; });
+  assert.equal(col, 0);
+});
