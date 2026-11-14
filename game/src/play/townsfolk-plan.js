@@ -17,6 +17,8 @@ const shop = (id) => TOWN_DATA.shops.find((s) => s.id === id);
 
 /** Iris this close is looked at (head and eyes). */
 export const LOOK_RADIUS = 6;
+/** Metres: Iris this close to a standing townsperson who greets her is talking to them, and they turn to face her. */
+export const TALK_FACE = 2.8;
 /** Iris this close and in the way stops a walker (it waits and steps a little aside instead of walking through her). */
 export const YIELD_RADIUS = 1.3;
 export const SIDE_STEP = 0.45;
@@ -439,6 +441,8 @@ export class PersonPlan {
       if (this.clock < this.reactUntil && !st.sit && this.t >= this.greetUntil) { this.clip = this.reactClip; if (iris) face = iris; } // Iris's win nearby
       if (this.key === 'guard' && dIris < 5 && !this.saluted) { this.saluted = true; this.greetUntil = this.t + 2.4; this._salute = true; }
       if (this.key === 'guard') { if (dIris > 9) this.saluted = false; if (this.t < this.greetUntil && this._salute) this.clip = 'salute'; else this._salute = false; }
+      // Iris stops to talk (the talk spot is within TALK_FACE): a standing townsperson who greets turns to face her
+      if (!face && iris && st.greet && !st.sit && dIris < TALK_FACE) face = iris;
       if (this.t >= this.until && this.t >= this.greetUntil) this.next();
     }
     if (face) this.yaw = turnTo(this.yaw, Math.atan2(face[0] - this.x, face[2] - this.z), dt * 3);

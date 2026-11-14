@@ -46,6 +46,7 @@ class Person {
     this.bones = { head: null, neck: null, eyes: [] };
     this.look = { yaw: 0, pitch: 0, w: 0 };
     this.smooth = smoothState(); // the shown position (townsfolk-smooth.js)
+    this.rate = 0.9 + Math.random() * 0.2; // each person's idle loops at their own pace, so no two breathe in step
     this.state = 'absent'; this.file = null; this.acc = 0; this.frame = 0; this.groundY = null; this.groundAtXZ = [1e9, 1e9];
   }
 
@@ -128,6 +129,8 @@ class Person {
     if (!name || this.current === name) return;
     const a = this.action(name), once = ONE_SHOT.has(name);
     a.reset(); a.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity); a.clampWhenFinished = once;
+    a.timeScale = this.rate;
+    if (!once) a.time = Math.random() * a.getClip().duration; // a loop starts at a random phase: people who start together never move in sync
     a.setEffectiveWeight(1); a.fadeIn(FADE).play();
     const prev = this.current && this.actions.get(this.current);
     if (prev) prev.fadeOut(FADE);
@@ -266,7 +269,8 @@ export function createTownsfolk({ scene, library, groundAt = null, visitors = ()
       p.root.visible = onScreen && dist < reach && !(p.def.visitor && (p.gone || !visitors()));
       const stride = animStride(dist, { phone: isPhone, visible: p.root.visible });
       p.acc += dt;
-      if (!stride || (frame + i) % stride !== 0) { if (!stride) p.acc = 0; continue; }
+      // a body with no clip yet animates this frame whatever its stride: never one frame in its T-pose
+      if (!stride || ((frame + i) % stride !== 0 && p.current)) { if (!stride) p.acc = 0; continue; }
       const step = Math.min(p.acc, 0.25); p.acc = 0;
       p.play(plan.sit && !canSit ? 'idle' : plan.clip);
       p.gait(step, plan.speed, plan.gait);
