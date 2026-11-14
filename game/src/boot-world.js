@@ -1166,7 +1166,7 @@ function handleInput(dt) {
     townCasting.setPointer(input.hover ? input.hover.x : null, input.hover ? input.hover.y : null);
     townCasting.setAimPoint(mouseAim.locked ? aimPoint(player.pos, rig.yaw) : null);
   }
-  if (playOn && (input.hit('KeyI') || pad.hit(PAD.inspect))) handleInspect();
+  if (playOn && !inTown && (input.hit('KeyI') || pad.hit(PAD.inspect))) handleInspect(); // in town I opens the bag only
   if (playOn && !inspecting) {
     for (const k of PLAY_KEYS) if (k !== 'Escape' && input.hit(k)) play.handleKey(k);
     if (play.ui.panel) {
@@ -1461,7 +1461,7 @@ function frame() {
   const near = inspecting || !play || play.zone === 'shell' ? null : nearestInteractable();
   promptEl.innerHTML = inspecting
     ? `Inspecting <b>${inspecting.label}</b> · drag or arrows to orbit · wheel to zoom · <kbd>I</kbd>/<kbd>Esc</kbd> to leave`
-    : near && near.inspect ? `<kbd>I</kbd> inspect <b>${near.label}</b> up close` : '';
+    : ''; // no "I inspect … up close" hint (owner 14.11: unclear, and I is the bag key)
   promptEl.hidden = !promptEl.innerHTML || !!inspecting;
   if (toastTimer > 0 && (toastTimer -= dt) <= 0) toastEl.hidden = true;
 
