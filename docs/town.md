@@ -100,7 +100,7 @@ the client (`SHOP_LIGHT` in `scenes/town-layout.js`), so all their light is bake
   `<source>_LM_<room>` (`M_Town_Timber_LM_inn`): the `M_Town_` / `M_Shop_` prefixes the client keys on are kept.
 - **Vertex colour** keeps the tint and the hue of the light; small props (under 0.6 m) stay fully per-vertex.
 - **If a room reads too dark or too bright in the game**, change `SHOP_LIGHT.exposure` (stops) first; the bake's own
-  knobs are `TOWN_BAKE_MID` (where the median lit texel lands, default 0.36) and `TOWN_BAKE_GAMMA` (contrast, 1.7).
+  knobs are `TOWN_BAKE_MID` (where the median lit texel lands, default 0.41) and `TOWN_BAKE_GAMMA` (contrast, 1.7).
 - **Closed rooms.** A dark inward-facing shell sits 6 cm behind every wall, the ceiling and the floor.
 - **The hidden grotto** is part of the Exchange's file: an arch in the rear wall (`GROTTO_ARCH`), a rock passage, a
   cave with shard growths. Sockets `grotto_center`, `socket_lamp_grotto`.

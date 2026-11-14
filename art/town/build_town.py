@@ -364,7 +364,7 @@ BAKE_EMIT = {"lamp": ((1.0, 0.62, 0.26), 0.6), "fire": ((1.0, 0.40, 0.08), 1.5),
 BAKE_SKIP = ("lamp", "fire", "window_day", "case_glass", "glass_lit", "glass")   # keep their authored colour
 BAKE_EDGE = float(os.environ.get("TOWN_BAKE_EDGE", "0.34"))       # longest edge after tessellation, metres
 BAKE_SAMPLES = int(os.environ.get("TOWN_BAKE_SAMPLES", "768"))
-BAKE_MID = float(os.environ.get("TOWN_BAKE_MID", "0.36"))         # where the median lit surface lands (0..1)
+BAKE_MID = float(os.environ.get("TOWN_BAKE_MID", "0.41"))         # where the median lit surface lands (0..1)
 # Lightmap (14.11): every large surface of an interior (floor, walls, beams, furniture) also carries a second UV set
 # and one shared light texture per room, shipped as the material's occlusion map on TEXCOORD_1. The client lights
 # interiors with a plain ambient light, and three.js multiplies ambient light by the occlusion map, so the map is a
@@ -646,8 +646,11 @@ def bake_interior(sc, piece, grp, tb, all_objects, exposure=1.0):
     if lm_light is not None:
         # the texture sets the exposure of the whole room: per-vertex samples of the big concave shell sit in
         # corners and read several times darker, so the small per-vertex props use the texture's scale too
-        cov = lm_light.max(axis=2) > 0
-        med_lm = float(np.median(lm_light.max(axis=2)[cov]))
+        # (the median is taken over lit texels only: the closing shell and a cave's dark shell are in the atlas too)
+        peak = lm_light.max(axis=2)
+        cov = peak > 0
+        lit_t = peak > 0.02 * float(np.percentile(peak[cov], 95))
+        med_lm = float(np.median(peak[lit_t]))
         k = k_lm = mid / (1.0 - mid) / max(med_lm, 1e-6) * exposure
     for o in lit:
         n = len(o.data.loops)

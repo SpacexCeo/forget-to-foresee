@@ -118,11 +118,17 @@ def counter(tb, x, z, length, rot=0.0, top_col=TIMBER_LIGHT):
     """A shop counter; the keeper stands on its local -Z side."""
     with tb.at(T(x, 0, z), RY(rot)):
         tb.box("timber", (0, 0.5, 0), (length, 1.0, 0.7), tint(TIMBER, 1.1), skip="y", uv_dir=(1, 0, 0))
+        tb.box("timber", (0, 0.07, 0.02), (length + 0.08, 0.14, 0.78), tint(TIMBER, 0.75), skip="y", uv_dir=(1, 0, 0))     # plinth
         tb.box("timber", (0, 1.04, 0.03), (length + 0.14, 0.08, 0.86), top_col, uv_dir=(1, 0, 0))
+        tb.box("timber", (0, 0.985, 0.37), (length + 0.06, 0.035, 0.05), TIMBER, uv_dir=(1, 0, 0))                          # moulding under the top
         n = max(2, int(length / 0.9))
         for i in range(n):
             px = -length / 2 + length * (i + 0.5) / n
-            tb.box("timber", (px, 0.5, 0.36), (length / n - 0.14, 0.76, 0.03), tint(TIMBER_LIGHT, 0.75), skip="z", uv_dir=(0, 1, 0))
+            pw = length / n - 0.14
+            # a framed panel: the raised field, a recessed border round it
+            tb.box("timber", (px, 0.55, 0.36), (pw, 0.7, 0.03), tint(TIMBER_LIGHT, 0.75), skip="z", uv_dir=(0, 1, 0))
+            tb.box("timber", (px, 0.55, 0.378), (pw - 0.16, 0.54, 0.014), tint(TIMBER_LIGHT, 0.92), skip="z", uv_dir=(0, 1, 0))
+            tb.box("timber", (px, 0.55, 0.386), (pw - 0.3, 0.4, 0.008), tint(TIMBER_LIGHT, 0.7), skip="z", uv_dir=(0, 1, 0))
         tb.col_box((0, 0.55, 0), (length, 1.1, 0.75))
 
 
@@ -142,16 +148,39 @@ def shelf(tb, x, z, w, rot=0.0, h=2.3, goods="jars", seed=0):
                 if rr.random() < 0.22:
                     continue
                 gx = -w / 2 + 0.16 + i * (w - 0.3) / max(1, nx - 1)
-                if goods == "jars":
-                    c = rr.choice([(0.5, 0.36, 0.22), (0.42, 0.5, 0.42), (0.6, 0.5, 0.3), (0.3, 0.34, 0.44)])
-                    tb.cyl("plaster", (gx, yy + 0.03, 0.02), 0.085, 0.07, rr.uniform(0.16, 0.3), 8, c, cap_top=True)
+                if goods == "jars":   # glazed crocks with lids, corked bottles, canisters, a stack of bowls now and then
+                    c = rr.choice([(0.50, 0.30, 0.18), (0.30, 0.40, 0.36), (0.62, 0.50, 0.30), (0.24, 0.28, 0.40), (0.70, 0.66, 0.56)])
+                    base, pick, sc = (gx, yy + 0.025, 0.02), rr.random(), rr.uniform(0.85, 1.15)
+                    if pick < 0.38:
+                        tb.lathe("ceramic", base, [(0.06 * sc, 0.0), (0.086 * sc, 0.04 * sc), (0.09 * sc, 0.14 * sc), (0.068 * sc, 0.2 * sc), (0.05 * sc, 0.215 * sc)], 8, c, cap_bot=True)
+                        tb.cyl("ceramic", (gx, yy + 0.025 + 0.215 * sc, 0.02), 0.058 * sc, 0.05 * sc, 0.022, 8, tint(c, 0.8), cap_top=True)
+                        tb.cyl("ceramic", (gx, yy + 0.047 + 0.215 * sc, 0.02), 0.016, 0.012, 0.02, 6, tint(c, 0.7), cap_top=True)
+                    elif pick < 0.66:
+                        g = rr.choice([(0.16, 0.26, 0.16), (0.36, 0.22, 0.10), (0.20, 0.24, 0.30)])
+                        tb.lathe("ceramic", base, [(0.042 * sc, 0.0), (0.05 * sc, 0.02), (0.05 * sc, 0.13 * sc), (0.02 * sc, 0.2 * sc), (0.018 * sc, 0.27 * sc), (0.024 * sc, 0.28 * sc)], 8, g, cap_bot=True)
+                        tb.cyl("timber", (gx, yy + 0.025 + 0.275 * sc, 0.02), 0.014, 0.012, 0.03, 6, TIMBER_LIGHT, cap_top=True)
+                    elif pick < 0.86:
+                        tb.cyl("ceramic", base, 0.07 * sc, 0.07 * sc, 0.17 * sc, 8, c, cap_top=True)
+                        tb.cyl("bronze", (gx, yy + 0.025 + 0.17 * sc, 0.02), 0.074 * sc, 0.074 * sc, 0.018, 8, cap_top=True)
+                        tb.cyl("bronze", (gx, yy + 0.043 + 0.17 * sc, 0.02), 0.014, 0.01, 0.018, 6, cap_top=True)
+                    else:
+                        for q in range(3):
+                            tb.lathe("ceramic", (gx, yy + 0.025 + q * 0.028, 0.02), [(0.04, 0.0), (0.085 - q * 0.004, 0.03), (0.09 - q * 0.004, 0.036)], 8, tint((0.86, 0.80, 0.70), 1.0 - 0.08 * q), cap_bot=True)
                 elif goods == "scrolls":
                     with tb.at(T(gx, yy + 0.1, 0.0), RX(90)):
                         tb.cyl("cloth", (0, -0.17, 0), 0.06, 0.06, 0.34, 7, tint((1, 0.95, 0.82), rr.uniform(0.8, 1.0)), cap_top=True, cap_bot=True)
-                else:   # books and boxes
-                    hh = rr.uniform(0.2, 0.32)
-                    c = rr.choice([(0.45, 0.2, 0.16), (0.2, 0.3, 0.36), (0.5, 0.4, 0.22), (0.24, 0.32, 0.2)])
-                    tb.box("cloth", (gx, yy + 0.03 + hh / 2, 0.0), (0.09, hh, 0.26), c, skip="y")
+                else:   # books: a few volumes side by side, uneven heights, the last one sometimes leaning
+                    bx = gx - 0.11
+                    nbk = rr.randint(2, 4)
+                    for q in range(nbk):
+                        th, hh, dp = rr.uniform(0.035, 0.065), rr.uniform(0.2, 0.31), rr.uniform(0.2, 0.26)
+                        c = rr.choice([(0.42, 0.16, 0.12), (0.16, 0.26, 0.32), (0.46, 0.34, 0.16), (0.20, 0.28, 0.16), (0.30, 0.18, 0.30), (0.50, 0.44, 0.34)])
+                        lean = rr.uniform(8, 14) if (q == nbk - 1 and rr.random() < 0.3) else 0.0
+                        with tb.at(T(bx + th / 2, yy + 0.025, 0.0), RZ(-lean)):
+                            tb.box("cloth", (0, hh / 2, 0.0), (th, hh, dp), c, skip="y")
+                            tb.box("paper", (0, hh / 2 + 0.004, -0.008), (th * 0.72, hh * 0.96, dp), skip="xzy")   # the page block shows on top only
+                            tb.box("bronze", (0, hh * 0.78, dp / 2 + 0.001), (th * 0.7, 0.012, 0.002))
+                        bx += th + 0.004 + (0.03 if lean else 0.0)
         tb.col_box((0, h / 2, 0), (w, h, 0.4))
 
 
@@ -405,9 +434,9 @@ def build_exchange(tb):
     runner(tb, -d / 2 + 3.0, d / 2 - 0.2, 1.5, (0.36, 0.28, 0.48))
     # the counter (3 m, right of centre) with the keeper's stand behind it, unchanged in place
     counter(tb, 0.6, -d / 2 + 2.5, 3.0)
-    tb.box("cloth", (0.6, 0.7, -d / 2 + 2.88), (0.5, 0.62, 0.012), (0.30, 0.24, 0.44))
-    tb.poly("cloth", [(0.35, 0.39, -d / 2 + 2.888), (0.6, 0.22, -d / 2 + 2.888), (0.85, 0.39, -d / 2 + 2.888)], (0.30, 0.24, 0.44))
-    tb.ring("bronze", (0.6, 0.74, -d / 2 + 2.89), 0.12, 0.09, 0.01, 14)
+    tb.box("cloth", (0.6, 0.7, -d / 2 + 2.9), (0.5, 0.62, 0.012), (0.30, 0.24, 0.44))
+    tb.poly("cloth", [(0.35, 0.39, -d / 2 + 2.908), (0.6, 0.22, -d / 2 + 2.908), (0.85, 0.39, -d / 2 + 2.908)], (0.30, 0.24, 0.44))
+    tb.ring("bronze", (0.6, 0.74, -d / 2 + 2.912), 0.12, 0.09, 0.01, 14)
     tb.socket("shopkeeper_stand", (0, 0, -d / 2 + 1.5), 0.0)
     tb.socket("shop_counter", (0, 0, -d / 2 + 3.5), 180.0)
     scales(tb, 1.75, 1.08, -d / 2 + 2.5, 0.9)
