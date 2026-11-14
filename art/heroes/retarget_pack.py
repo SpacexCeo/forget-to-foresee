@@ -1,6 +1,8 @@
-"""One animation pack onto every wearable heroine: retarget, rename, index (the owner's Tripo heroes, 14.11).
+"""One animation pack onto every character of the rig: retarget, rename, tag, index (the owner's Tripo heroes and
+townsfolk, 14.11).
   blender -b --python art/heroes/retarget_pack.py -- --pack <rigged model with the clips .glb> \
-      --targets iris=<model.glb>,elise=<model.glb>,sheriffchenko=<model.glb> --out <dir> [--names art/heroes/clip_names.json] [--fps 30]
+      --targets iris=<model.glb>,elise=<model.glb>,... | --targets_dir <folder of .glb, id = file name>
+      --out <dir> [--names art/heroes/clip_names.json] [--fps 30]
 For every target it writes <out>/<id>_clips.glb (a side-car: the target's own skeleton, no mesh, every clip of the pack),
 and once for all <out>/hero_clips.json: the index every hero shares (clip name, the pack's name, seconds, loop or
 one-shot, the root motion taken out of the clip, the walking speed of a loop).
@@ -13,7 +15,12 @@ How (no Blender constraints, no add-on; works for any two skeletons of a human s
  - the hips move by the source's hips motion scaled by the ratio of the two hips heights; the horizontal part of it
    is taken out (the game moves the character) and written to the index (`root_motion_m`; a loop's `speed_mps`);
  - names: --names maps the pack's clip names to the game's (`idle`, `walk`, `run`, ...; play/anim-library.js and
-   render/asset-catalog.js); clips not in the map keep a clean snake_case form of their own name.
+   render/asset-catalog.js), as "pack name": "game name" or {"name": ..., "tag": ...}; clips not in the map keep a
+   clean snake_case form of their own name;
+ - tags: every clip is tagged combat / locomotion / social / idle (from its name, or the map's `tag`), so the
+   combat work and the townsfolk's conversations each pick from the same index;
+ - <out>/<id>_bones.json: the canonical name -> that model's bone (hips, hand_R, the finger joints index_1_R ...):
+   what the grip rig (art/agents/grip.sh: hand_R, fingers_R, index_R, thumb_R, prop_R) needs to know.
 Report: <out>/retarget_report.json (matched bones per target, clips, loop seam per clip)."""
 import bpy, json, math, os, re, sys
 from mathutils import Matrix, Quaternion, Vector
@@ -31,7 +38,10 @@ CANON = [  # (canonical, regex on a normalised name without side)
     ('shoulder', r'^(shoulder|clavicle|collar)$'), ('upperarm', r'^(upper_?arm|arm|uparm)$'), ('forearm', r'^(fore_?arm|lower_?arm|elbow)$'),
     ('hand', r'^(hand|wrist)$'), ('thigh', r'^(thigh|up_?leg|upper_?leg)$'), ('shin', r'^(shin|leg|calf|lower_?leg|knee)$'),
     ('foot', r'^(foot|ankle)$'), ('toe', r'^(toe|toe_?base|toes|ball)$'),
+    ('thumb', r'^(hand_?)?thumb'), ('index', r'^(hand_?)?(index|pointer)'), ('middle', r'^(hand_?)?(middle|fingers)'),
+    ('ring', r'^(hand_?)?ring'), ('pinky', r'^(hand_?)?(pinky|little|small)'), ('prop', r'^prop$'),
 ]
+FINGERS = ('thumb', 'index', 'middle', 'ring', 'pinky')
 
 
 def canon(name):
@@ -44,8 +54,25 @@ def canon(name):
         m = re.match(r'^(.+?)_(l|r|left|right)$', n)
         if m: side, n = SIDE[m.group(2)], m.group(1)
     for c, rx in CANON:
-        if re.match(rx, n): return c + ('_' + side if side else '')
+        if re.match(rx, n):
+            if c in FINGERS:
+                d = re.findall(r'(\d+)', n); seg = int(d[-1]) if d else 1
+                if seg == 0: seg = 1
+                c = f'{c}_{seg}'
+            return c + ('_' + side if side else '')
     return None
+
+
+TAGS = [('combat', r'(attack|strike|slash|punch|kick|combo|cast|spell|block|parry|dodge|roll|dash|hit|hurt|damage|death|die|defeat|sword|weapon|shoot|throw|charge|super|jump_attack|stab|skill|power)'),
+        ('locomotion', r'(walk|run|jog|sprint|strafe|turn|jump|land|fall|climb|crouch|sneak|skid|step|move|fly|hover|swim)'),
+        ('social', r'(talk|wave|greet|nod|shake|point|laugh|cry|angry|happy|sad|clap|cheer|celebrat|bow|shrug|think|gesture|argu|agree|disagree|surpris|scare|fear|excite|dance|offer|understand|listen|salute|yes|no_|emot|react|register)'),
+        ('idle', r'(idle|stand|breath|wait|rest|look)')]
+
+
+def tag_of(name):
+    for t, rx in TAGS:
+        if re.search(rx, name): return t
+    return 'other'
 
 
 def load(path):
@@ -149,23 +176,32 @@ src, src_objs, src_acts = load(A['pack'])
 if not src_acts and src.animation_data: src_acts = [s.action for t in src.animation_data.nla_tracks for s in t.strips if s.action]
 print('PACK', len(src_acts), 'clips,', len(src.data.bones), 'bones')
 index = {}; report = dict(step='retarget_pack', pack=A['pack'], clips=len(src_acts), targets={})
-targets = dict(t.split('=', 1) for t in A['targets'].split(','))
+if A.get('targets_dir'):
+    D = A['targets_dir']; targets = {os.path.splitext(f)[0]: os.path.join(D, f) for f in sorted(os.listdir(D)) if f.lower().endswith('.glb')}
+else:
+    targets = dict(t.split('=', 1) for t in A['targets'].split(','))
 for tid, path in targets.items():
     tgt, objs, own = load(path)
     for a in own: a.use_fake_user = False
     if tgt.animation_data:
         for tr in list(tgt.animation_data.nla_tracks): tgt.animation_data.nla_tracks.remove(tr)
     bmap = match(src, tgt)
+    bones = {}
+    for b in tgt.data.bones:
+        c = canon(b.name)
+        if c and c not in bones: bones[c] = b.name
+    json.dump(dict(model=path, bones=bones, all=[b.name for b in tgt.data.bones]), open(os.path.join(OUT, f'{tid}_bones.json'), 'w'), indent=1)
     scale = round(tgt.data.bones[hips_of(tgt)].head_local.z / max(1e-6, src.data.bones[hips_of(src)].head_local.z), 4)
     report['targets'][tid] = dict(bones=len(tgt.data.bones), matched=len(bmap), hips_scale=scale, unmatched=[b.name for b in tgt.data.bones if b.name not in bmap][:60])
     used = set()
     for sa in src_acts:
-        base = NAMES.get(sa.name.split('|')[-1]) or clean(sa.name); name = base; j = 2
+        m_ = NAMES.get(sa.name.split('|')[-1]); m_ = {'name': m_} if isinstance(m_, str) else (m_ or {})
+        base = m_.get('name') or clean(sa.name); name = base; j = 2
         while name in used: name = f'{base}_{j}'; j += 1
         used.add(name)
         act, secs, rm, seam = retarget(src, sa, tgt, bmap, name)
         loop = seam < 3.0
-        e = index.setdefault(name, dict(name=name, pack_name=sa.name.split('|')[-1], seconds=secs, loop=loop, root_motion_m=rm,
+        e = index.setdefault(name, dict(name=name, pack_name=sa.name.split('|')[-1], tag=m_.get('tag') or tag_of(name + ' ' + clean(sa.name)), seconds=secs, loop=loop, root_motion_m=rm,
                                         speed_mps=round(rm / secs, 3) if loop and secs > 0 and rm > 0.2 else 0.0, seam_deg={}))
         e['seam_deg'][tid] = seam
     # the side-car: the skeleton and the clips, no mesh
@@ -184,7 +220,7 @@ for tid, path in targets.items():
         except ReferenceError: pass
     print('TARGET', tid, json.dumps(report['targets'][tid])[:400])
 json.dump(dict(fps=FPS, hips_scale={k: v['hips_scale'] for k, v in report['targets'].items()},
-               _='speed_mps and root_motion_m are the pack's; a hero moves them times her hips_scale (her stride is that much longer)',
+               _='speed_mps and root_motion_m are measured on the pack; a character moves them times its hips_scale (its stride is that much longer)',
                clips=sorted(index.values(), key=lambda e: e['name'])), open(os.path.join(OUT, 'hero_clips.json'), 'w'), indent=1)
 json.dump(report, open(os.path.join(OUT, 'retarget_report.json'), 'w'), indent=1)
 print('REPORT', json.dumps(dict(clips=len(index), targets={k: (v['matched'], v['bones']) for k, v in report['targets'].items()})))
