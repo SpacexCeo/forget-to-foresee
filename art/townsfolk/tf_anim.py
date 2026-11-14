@@ -5,6 +5,8 @@ Bodies are animated at the rig's eye line (1.64 m) and scaled on export, so a cl
 in real metres per second and divided by the export scale here.   Clip names are the game contract
 (game/src/play/townsfolk.js); `CLIP_SPEED` in build.json tells the client how fast each loop walks.
 """
+import math
+
 import agent_anim as A
 
 V = A.V
@@ -22,7 +24,32 @@ def clip_wayfarer_idle(key, S, u):
     yaw = A.keys(u, [(0.0, 0), (0.10, 0), (0.22, 34), (0.40, 34), (0.52, -6), (0.62, -38), (0.80, -38), (0.92, 0), (1.0, 0)])
     up = A.env(u, 0.16, 0.26, 0.40, 0.50)
     P.r("head", -10 * up, 0, yaw * 0.62).r("neck", -3 * up, 0, yaw * 0.25).r("chest", 0, 0, yaw * 0.14)
+    return alive(P, S, u)
+
+
+def alive(P, S, u, shift=1.4):
+    """Life on top of a standing clip (review W4): the weight drifts from foot to foot (hips 2-3 cm across, a 1 cm dip),
+    the chest breathes about 1.5 degrees, the head follows a little."""
+    A.weight_shift(P, u, S, shift)
+    P.hips.z -= 0.005 * (1 - math.cos(A.TAU * u * 2))
+    b = A.wave(u, 2); P.r("chest", -1.5 * b).r("spine", -0.5 * b).r("head", 1.2 * A.wave(u, 1, 0.3), 0, 2.5 * A.wave(u, 1, 0.6))
     return P
+
+
+def clip_wayfarer_walk(key, S, u):
+    """The shared walk with a softer toe-off: the Wayfarer's thick boot soles would dip into the ground at the shared
+    36-degree peel-off (review W3), so the foot rolls up to 22 degrees only."""
+    orig = A.gait_foot
+    def soft(ph, side, speed, T, stance, lift, sp, op, width, **kw): return orig(ph, side, speed, T, stance, lift, sp, op * 0.6, width, **kw)
+    A.gait_foot = soft
+    try: return A.clip_locomotion(key, S, u, run=False)
+    finally: A.gait_foot = orig
+
+
+def clip_wayfarer_talk(key, S, u): return alive(A.clip_talk(key, S, u), S, u, 1.0)
+
+
+def clip_wayfarer_think(key, S, u): return alive(A.clip_think(key, S, u), S, u, 1.2)
 
 
 def clip_take_photo(key, S, u):
@@ -53,7 +80,7 @@ def clip_haggle(key, S, u):
 
 
 # per person: clip name -> ((frames, loop, air speed) or None to keep the shared spec, pose function)
-EXTRA = {"wayfarer": {"idle": (None, clip_wayfarer_idle), "take_photo": ((90, False, 0.0), clip_take_photo),
+EXTRA = {"wayfarer": {"idle": (None, clip_wayfarer_idle), "walk": (None, clip_wayfarer_walk), "talk": (None, clip_wayfarer_talk), "think": (None, clip_wayfarer_think), "take_photo": ((90, False, 0.0), clip_take_photo),
                       "haggle": ((105, False, 0.0), clip_haggle)}}
 
 
