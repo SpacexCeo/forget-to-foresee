@@ -178,7 +178,8 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     if (quest) {
       meta.hidden = !(state.ready && (quest.active || quest.purse > 0));
       purseEl.textContent = quest.purse > 0 || quest.step === 'deliver' ? i18n.t('quest.purse', { n: quest.purse }) : '';
-      skipBtn.textContent = i18n.t('quest.skip'); skipBtn.hidden = !quest.active;
+      // owner 14.11: the town quest's Skip button is gone from the screen
+      skipBtn.textContent = i18n.t('quest.skip'); skipBtn.hidden = true;
       renderTalk();
     }
     cap.textContent = state.device === 'gamepad' ? 'A' : actionKey('interact');

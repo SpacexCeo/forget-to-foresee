@@ -35,11 +35,13 @@ export const ASSETS = Object.freeze([
  * are retargeted onto it at load (anim-library.js townsfolkClips). `gate: 'skin'`: the wheel's skin NFT (play/skins.js).
  * `gate: 'nft'` marks a heroine meant for holders; the gate itself is not wired yet. `?hero=<id>` picks her, else the
  * Day 1 skin the player chose (K, boot-world.js).
+ * Iris and Elise are the owner's Tripo models (14.11) with their own pack clips cut to the game's names
+ * (art/heroes/*_game_clips.json); Sheriffchenko, on the shared agent rig, keeps the old agent-rig Iris clips (iris_agent).
  */
 export const HEROES = Object.freeze([
   Object.freeze({ id: 'iris', label: 'Iris', model: 'agent_iris', sidecar: 'iris', toon: false, gate: null }),
   Object.freeze({ id: 'elise', label: 'Elise', model: 'agent_elise', sidecar: 'elise', toon: true, gate: 'nft' }),
-  Object.freeze({ id: 'sheriffchenko', label: 'Sheriffchenko', model: 'agent_sheriffchenko', sidecar: 'iris', retarget: true, toon: true, gate: 'skin' }),
+  Object.freeze({ id: 'sheriffchenko', label: 'Sheriffchenko', model: 'agent_sheriffchenko', sidecar: 'iris_agent', retarget: true, toon: true, gate: 'skin' }),
 ]);
 
 /** A heroine by id (Iris when unknown). */

@@ -1,0 +1,170 @@
+{
+ "_": "The Tripo townsfolk pack (townsfolk_anim_pack.glb) retargeted onto the three heroes (art/heroes/retarget_pack.py), combat clips only: for 3D B's combos. Side-cars bind by bone name on the hero's own model (play/anim-library.js SIDECAR); the files live on the GPU box (/root/w/fable-a/heroes/hpc/<hero>_combat.glb: combat tag, resampled, meshopt) and are not shipped in the game yet. seconds at 30 fps; root_motion_m is the horizontal travel the retarget stripped (times hips_scale on the hero).",
+ "pack": "townsfolk_anim_pack.glb",
+ "fps": 30,
+ "heroes": {
+  "elise": {
+   "hips_scale": 1.6167,
+   "bones": 90,
+   "matched": 27,
+   "combat_file_bytes": 1667992
+  },
+  "iris": {
+   "hips_scale": 1.6019,
+   "bones": 57,
+   "matched": 36,
+   "combat_file_bytes": 1252056
+  },
+  "sheriffchenko": {
+   "hips_scale": 1.6453,
+   "bones": 28,
+   "matched": 27,
+   "combat_file_bytes": 899724
+  }
+ },
+ "grip_bones": {
+  "note": "agent rig names on all three; Iris also has finger segments matched",
+  "hand": "hand_R",
+  "fingers": [
+   "thumb_R",
+   "index_R",
+   "fingers_R"
+  ],
+  "prop": "prop_R (Iris, Elise); Sheriffchenko has none"
+ },
+ "clips": [
+  {
+   "name": "box_01",
+   "pack_name": "box_01.001",
+   "seconds": 2.208,
+   "loop": true,
+   "root_motion_m": 0
+  },
+  {
+   "name": "box_02",
+   "pack_name": "box_02.001",
+   "seconds": 2.792,
+   "loop": false,
+   "root_motion_m": 0.127
+  },
+  {
+   "name": "box_03",
+   "pack_name": "box_03.001",
+   "seconds": 2.542,
+   "loop": true,
+   "root_motion_m": 0
+  },
+  {
+   "name": "cast_a_spell",
+   "pack_name": "cast_a_spell.001",
+   "seconds": 5.375,
+   "loop": true,
+   "root_motion_m": 0
+  },
+  {
+   "name": "defeat_02",
+   "pack_name": "defeat_02.001",
+   "seconds": 8.458,
+   "loop": true,
+   "root_motion_m": 0
+  },
+  {
+   "name": "defeat_03",
+   "pack_name": "defeat_03.001",
+   "seconds": 5.542,
+   "loop": false,
+   "root_motion_m": 0.321
+  },
+  {
+   "name": "dive",
+   "pack_name": "dive.001",
+   "seconds": 2.708,
+   "loop": true,
+   "root_motion_m": 2.967
+  },
+  {
+   "name": "fall",
+   "pack_name": "fall.001",
+   "seconds": 3,
+   "loop": false,
+   "root_motion_m": 1.325
+  },
+  {
+   "name": "fire",
+   "pack_name": "fire.001",
+   "seconds": 1.5,
+   "loop": true,
+   "root_motion_m": 0
+  },
+  {
+   "name": "flip",
+   "pack_name": "flip.001",
+   "seconds": 4.458,
+   "loop": true,
+   "root_motion_m": 3.018
+  },
+  {
+   "name": "front_kick_01",
+   "pack_name": "front_kick_01.001",
+   "seconds": 2.5,
+   "loop": false,
+   "root_motion_m": 0.283
+  },
+  {
+   "name": "front_kick_02",
+   "pack_name": "front_kick_02.001",
+   "seconds": 1.375,
+   "loop": false,
+   "root_motion_m": 0.009
+  },
+  {
+   "name": "hit_to_body_01",
+   "pack_name": "hit_to_body_01.001",
+   "seconds": 1.292,
+   "loop": true,
+   "root_motion_m": 0
+  },
+  {
+   "name": "hit_to_body_02",
+   "pack_name": "hit_to_body_02.001",
+   "seconds": 1.708,
+   "loop": true,
+   "root_motion_m": 0
+  },
+  {
+   "name": "hit_to_head",
+   "pack_name": "hit_to_head.001",
+   "seconds": 1.833,
+   "loop": true,
+   "root_motion_m": 0
+  },
+  {
+   "name": "hit_to_side",
+   "pack_name": "hit_to_side.001",
+   "seconds": 1.25,
+   "loop": true,
+   "root_motion_m": 0
+  },
+  {
+   "name": "hit_to_stomach",
+   "pack_name": "hit_to_stomach.001",
+   "seconds": 1.542,
+   "loop": true,
+   "root_motion_m": 0
+  },
+  {
+   "name": "shoot",
+   "pack_name": "shoot.001",
+   "seconds": 9.042,
+   "loop": false,
+   "root_motion_m": 4.554
+  },
+  {
+   "name": "slash",
+   "pack_name": "slash.001",
+   "seconds": 6.583,
+   "loop": true,
+   "root_motion_m": 0
+  }
+ ]
+}

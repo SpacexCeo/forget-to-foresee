@@ -10,7 +10,10 @@ import { canHold, heldBladeFile, glowBand, BLADE_GLOW } from '../../src/play/hel
 const DIR = new URL('../../public/assets/models/', import.meta.url);
 const gltf = (f) => { const b = readFileSync(new URL(f, DIR)); return JSON.parse(b.subarray(20, 20 + b.readUInt32LE(12)).toString()); };
 
-test('grip: both Iris files carry the finger joints, skinned, under the bones that were there', () => {
+// The grip pose was solved on the old agent-rig Iris; the new Iris (owner 14.11, Tripo rig: R_Hand, R_Index1..3) has no
+// prop_R or index_mid_R yet, so the held blade does not attach to her (canHold) until her own grip is solved (3D B).
+const agentRigIris = gltf('agent_iris.glb').nodes.some((n) => n.name === 'prop_R');
+test('grip: both Iris files carry the finger joints, skinned, under the bones that were there', { skip: !agentRigIris && 'the new Iris waits for a grip on her own fingers (3D B)' }, () => {
   for (const f of ['agent_iris.glb', 'agent_iris_m.glb']) {
     const j = gltf(f);
     const idx = (n) => j.nodes.findIndex((x) => x.name === n);

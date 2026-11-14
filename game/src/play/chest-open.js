@@ -117,6 +117,8 @@ export function openChestReveal({ doc = document, t, chest, client, guest, items
   doc.body.append(root);
   let done = false, resolveP;
   const result = new Promise((r) => { resolveP = r; });
+  // settled: the service answered (opened and paid, or refused); the page-wide open lock waits on this, not on the close
+  let settledP; const settled = new Promise((r) => { settledP = r; });
   let outcomeResult = { ok: false, error: 'closed' };
   function close() { root.remove(); resolveP(outcomeResult); }
   const closeBtn = () => { const b = el('button', 'co-btn', t('chest.close')); b.type = 'button'; b.addEventListener('click', close); btns.replaceChildren(b); b.focus && b.focus(); done = true; };
@@ -146,10 +148,16 @@ export function openChestReveal({ doc = document, t, chest, client, guest, items
         outcomeResult = { ok: false, error: r.error };
         cue('ui_error');
         info.replaceChildren(el('p', null, t('chest.err.' + (ERR_KEYS.includes(r.error) ? r.error : 'bad'))), el('p', 'co-note', t('chest.stillSealed')));
-        closeBtn();
+        closeBtn(); settledP(outcomeResult);
         return;
       }
       const op = r.opening;
+      // pay and settle at once, before any animation: closing or reloading during the reveal loses nothing and never
+      // leaves a chest sealed that the chain already opened (it could be opened a second time)
+      const verification0 = op.verification || { verified: false, leafOk: false, proofOk: false, randomOk: false, chainOk: null };
+      outcomeResult = { ok: true, opening: op, verification: verification0 };
+      try { onSettled(op, verification0); } catch (e) { console.warn('[chest] settle', e); }
+      settledP(outcomeResult);
       // the landing tile and the card name the real item: wait a little more for the manifest here
       const full = await Promise.race([Promise.resolve(items), new Promise((r) => setTimeout(() => r(list), 3000))]).catch(() => list);
       const verification = op.verification || { verified: false, leafOk: false, proofOk: false, randomOk: false, chainOk: null };
@@ -189,8 +197,6 @@ export function openChestReveal({ doc = document, t, chest, client, guest, items
       reel.hidden = true; // the card takes the reel's place (short screens)
       setTimeout(() => card.classList.add('co-in'), 30);
       cue('gift_chime');
-      outcomeResult = { ok: true, opening: op, verification };
-      try { onSettled(op, verification); } catch (e) { console.warn('[chest] settle', e); }
       // the verification line (a ?chestpreview fixture says so and links nothing)
       if (op.preview) { info.replaceChildren(el('div', 'co-ver co-no', null)); info.firstChild.append(el('b', null, t('chest.preview'))); closeBtn(); return; }
       const ver = el('div', 'co-ver' + (verification.verified ? '' : ' co-no'));
@@ -205,6 +211,6 @@ export function openChestReveal({ doc = document, t, chest, client, guest, items
       info.replaceChildren(ver, det, links);
       closeBtn();
     });
-  }).catch((e) => { console.warn('[chest] reveal', e); info.replaceChildren(el('p', null, t('chest.err.bad'))); closeBtn(); });
-  return { root, result, close };
+  }).catch((e) => { console.warn('[chest] reveal', e); info.replaceChildren(el('p', null, t('chest.err.bad'))); closeBtn(); settledP(outcomeResult); });
+  return { root, result, settled, close };
 }

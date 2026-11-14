@@ -56,7 +56,7 @@ import { createDay1Mint, loadDay1 } from './play/day1-mint.js';
 import { nextSkin, wearPlan } from './play/skins.js';
 import { TALK_RADIUS } from './scenes/town-quest.js';
 import { PROGRAMS, TOWNSFOLK } from './play/townsfolk-plan.js';
-import { createTownCasting, CAST_KEYS } from './scenes/town-casting.js';
+import { createTownCasting, CAST_KEYS, assistPoint } from './scenes/town-casting.js';
 import { townToWorld, TOWN_SHOPS, shopDoorAt, TOWN_SPOTS, TOWN_ORIGIN as TOWN_ORIGIN_W, TOWN_SPAWN, TOWN_ALTAR, TOWN_ALTAR_SPAWN, TOWN_ALTAR_ASSET, TOWN_KILL_Y, TOWN_CAMERA, TOWN_ATMOSPHERE, TOWN_ROUTE } from './scenes/town-layout.js';
 import { createFogCards } from './render/fog-cards.js';
 import { createTownShops } from './scenes/town-shops.js';
@@ -70,7 +70,7 @@ import { createCompanion } from './scenes/companion.js';
 import { COMPANIONS_ENABLED, companionsToShow } from './scenes/companion-rules.js';
 import { createDoorGlow } from './scenes/door-glow.js';
 import { cue, cueAt, MOB_SOUNDS } from './audio/town-audio.js';
-import { expectOnboarding, blocksWindows, onOnboarding } from './ui/onboarding-queue.js';
+import { expectOnboarding, blocksWindows, onOnboarding, setOnboardingHold } from './ui/onboarding-queue.js';
 
 /**
  * Builds the renderer, the island, the camera and the frame loop (the heavy chunk: three.js, scenes, render,
@@ -681,6 +681,8 @@ const ISLAND_FIRST_VIEW = ASSETS.filter((a) => a.kind !== 'interior').map((a) =>
 function mountCasting() {
   if (townCasting || !town) return;
   townCasting = createTownCasting({ scene, camera, town, player, i18n: ctx.i18n, coarse: mobileDevice, storage: ctx.storage,
+    // phones: a skill tap fires at once at the targeted creature, else the soft lock, else the nearest in range (owner 14.11)
+    assist: (id, range) => assistPoint(player.pos, range, { target: typeof window.__ftfTarget === 'function' ? window.__ftfTarget() : null, locked: townMobs ? townMobs.locked : null, mobs: townMobs && townMobs.brain ? townMobs.brain.mobs : [] }),
     // her cast clip (art/anim/iris_actions.py): a wind-up, then the release frame on which the cast leaves her hand; the
     // effect, the sound and the hits wait for that frame. Without the clip (?anim=v1) her hand goes up and it leaves at once.
     onCastStart: (id) => { interruptMove(0); castWindup = { id, t: 0 }; cue(id === 'snare' ? 'cast_charge_storm' : 'cast_charge_frost'); /* the build through the wind-up */ const c = irisAvatar && irisAvatar.cast('cast_' + id); if (!c && irisAvatar) irisAvatar.react('greet', clock.elapsedTime); return c ? quickRelease(c) : 0; },
@@ -872,6 +874,11 @@ const day1On = () => {
   if (q === '1') return true;
   return !judge && !loadDay1(ctx.storage).claimed;
 };
+// No first-time card over the Glass Shoal (jury path 14.11: on a fresh profile the name card covered the boss fight opened
+// from the README link): while the ride or the fight owns the screen the queue waits; a ?shoal= link holds it until the
+// fight has begun and ended (at most a minute if the Shoal never starts).
+{ let seen = false; const t0 = Date.now();
+  setOnboardingHold(() => { const owns = !!(glassShoal && glassShoal.owns && glassShoal.owns()); if (owns) seen = true; return owns || (!!params.get('shoal') && !seen && Date.now() - t0 < 60_000); }); }
 if (day1On()) expectOnboarding('name');   // the Day-1 name comes first: the intro and the card wait for it (ui/onboarding-queue.js)
 // The skin is the heroine herself: Elise wears her own model, clips and cel shading (play/iris-avatar.js setHero).
 // The wheel's skin NFT is read from the chain for the guest account (play/skins.js), never assumed. A function
@@ -956,7 +963,7 @@ function introFly(ms = 6500) {
     try { if (ctx.storage) ctx.storage.setItem(INTRO_KEY, '1'); } catch { /* memory only */ }
     let t0 = 0; const turn = (2 * Math.PI) / 3, startYaw = rig.yaw; // t0: the first frame (a slow first frame must not eat the flight)
     const skip = document.createElement('button'); skip.type = 'button'; skip.className = 'ftf-town-prompt'; skip.textContent = ctx.i18n.t('intro.skip');
-    skip.style.cssText = 'position:fixed;right:16px;bottom:16px;left:auto;transform:none;z-index:31';
+    skip.style.cssText = 'position:fixed;right:16px;bottom:76px;left:auto;transform:none;z-index:31'; // above the HUD tray (it covered the Settings button)
     document.body.append(skip);
     let done = false, last = 0; introOn = true;
     const end = () => {
@@ -1227,6 +1234,7 @@ function handleInput(dt) {
   if (!playOn && !townOn) { navigateGamepadMenu(uiRoot, pad); return false; }
   if (townFlow && townFlow.busy) return false; // the registration sequence holds Iris and the camera
   if (npeLocked) return false; // the intro (prologue, dialogue, "What waits for you") owns the keys: E never reaches the town under it (QA pass 2 #1)
+  if (day1Open() || blocksWindows()) return false; // and the Day-1 cards (jury path)
   if (photo && townOn && input.hit('KeyP')) photo.toggle();
   if (photo && photo.on) { // photo mode: Iris holds still, the camera orbits freely, a click saves nothing (the bar's button does)
     if (input.hit('Escape') || pad.hit(PAD.cancel)) photo.toggle(false);

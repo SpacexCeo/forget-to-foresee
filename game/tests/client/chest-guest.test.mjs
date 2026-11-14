@@ -11,7 +11,7 @@ import { PLAY_MESSAGES, createPlayI18n } from '../../src/play/i18n.js';
 const tick = () => new Promise((r) => setTimeout(r, 0));
 const texts = (root, sel) => root.querySelectorAll(sel).map((e) => e.textContent);
 
-test('chest bag: no guest -> one banner + create button, Open disabled; after create -> Open enabled, Open 5 / all', async () => {
+test('chest bag: no guest -> one banner + create button, Open disabled; after create -> Open enabled, Open 7 (the service opens up to 10 at once)', async () => {
   const { doc } = installDom();
   const { openGameMenu } = await import('../../src/play/game-menu.js');
   const storage = memoryStorage();
@@ -30,7 +30,7 @@ test('chest bag: no guest -> one banner + create button, Open disabled; after cr
   assert.equal(opens().length, 7);
   assert.ok(opens().every((b) => b.disabled), 'Open greyed without a guest');
   assert.ok(!texts(box(), '.gm-card small').some((s) => /Day-1/.test(s)), 'no per-card guest text');
-  assert.ok(!texts(box(), 'button').some((s) => /Open 5/.test(s)), 'no batch row yet');
+  assert.ok(!texts(box(), 'button').some((s) => /Open 7/.test(s)), 'no batch row yet');
   const create = box().querySelector('.gm-guest button');
   assert.equal(create.textContent, PLAY_MESSAGES.en['chest.guest.create']);
   create.click(); await tick(); await tick();
@@ -38,8 +38,8 @@ test('chest bag: no guest -> one banner + create button, Open disabled; after cr
   assert.equal(m.tab, 'inventory');
   assert.equal(box().querySelectorAll('.gm-guest').length, 0, 'banner gone');
   assert.ok(opens().every((b) => !b.disabled), 'Open enabled');
-  assert.ok(texts(box(), 'button').some((s) => s === t('chest.batch.open', { n: 5 })), 'Open 5');
-  assert.ok(texts(box(), 'button').some((s) => s === t('chest.batch.all', { n: 7 })), 'Open all');
+  assert.ok(texts(box(), 'button').some((s) => s === t('chest.batch.open', { n: 7 })), 'Open 7');
+  assert.ok(!texts(box(), 'button').some((s) => s === t('chest.batch.all', { n: 7 })), 'no Open all for ten or fewer');
 });
 
 test('chest bag: a failed create keeps the banner and says so; not_configured says free accounts are off', async () => {

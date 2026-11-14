@@ -21,7 +21,16 @@ const CSS = `.ftf-loom { position: fixed; left: calc(12px + env(safe-area-inset-
 .ftf-loom ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .ftf-loom a { color: var(--ftf-gold, #c5a469); text-underline-offset: 2px; }
 @media (max-width: 640px) { .ftf-loom { bottom: calc(150px + env(safe-area-inset-bottom, 0px)); font-size: 12px; } .ftf-loom > button { min-height: 30px; padding: 4px 10px 4px 8px; } }
-@media (prefers-reduced-motion: reduce) { .ftf-loom.fed svg { animation: none; } .ftf-loom > button { transition: none; } }`;
+@media (prefers-reduced-motion: reduce) { .ftf-loom.fed svg { animation: none; } .ftf-loom > button { transition: none; } }
+.ftf-loom > button { white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+/* the game HUD's bottom-left band (rpg/hud-style.js): one plain line above the room chip, never on top of it (jury path 14.11) */
+@media (min-width: 900px) {
+  html.rpg-on .ftf-loom { left: calc(var(--rpg-k, 1px) * 40) !important; bottom: calc(var(--rpg-k, 1px) * 144 + 34px) !important; max-width: min(620px, 48vw); }
+  html.rpg-on .ftf-loom > button { min-height: 0; padding: 2px 0; border: 0; border-radius: 0; background: none; font-weight: 500; text-shadow: 0 1px 2px rgba(0,0,0,.9), 0 0 6px rgba(0,0,0,.5); }
+  html.rpg-on .ftf-loom.fed > button { box-shadow: none; color: #ffe2a3; }
+}
+/* phones: the band is full already; the Loom's own glow tells the story there */
+@media (max-width: 899px) { html.rpg-on .ftf-loom { display: none !important; } }`;
 const FLAME = '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8.4 1.2c.3 2.1-.8 3.2-1.8 4.3C5.5 6.7 4.5 7.9 4.5 9.9A3.6 3.6 0 0 0 8 13.6a3.6 3.6 0 0 0 3.5-3.7c0-1.3-.5-2.4-1.1-3.3-.1.9-.5 1.6-1.2 2 .3-2.6-.2-5.2-.8-7.4z"/></svg>';
 
 /**

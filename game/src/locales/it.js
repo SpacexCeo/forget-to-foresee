@@ -12,8 +12,8 @@ export default {
   'app.title.line2': 'TO FORESEE',
   'app.title.full': 'Forget to Foresee',
   'app.tagline': 'IL FUTURO COSTA UN RICORDO',
-  'premise.line': 'Paga la profezia con i tuoi ricordi. Ogni profezia è sigillata su NEAR testnet prima di giocare.',
-  'premise.hint': 'Sali le scale fino all\'altare per iniziare.',
+  'premise.line': "Iris è caduta dal 2048 in una città sulle colline. Guadagna 200 seta su NEAR testnet per aprire il Telaio-Porta e tornare a casa.",
+  'premise.hint': "I primi passi sono nella guida iniziale a destra.",
 
   // ---- common ----
   'common.close': 'Chiudi',
