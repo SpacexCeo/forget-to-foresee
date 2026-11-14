@@ -58,3 +58,13 @@ test('touch copy: a written <key>.touch variant wins on touch', () => {
   touch = false; assert.equal(i18n.t('a'), 'Press E here');
   assert.ok(en['quest.obj.read.touch'].length < en['quest.obj.read'].length, 'the phone quest line is shorter');
 });
+
+test('phone layout for moving (owner 14.11): thumb zone free, market line hidden, chips moved off the stick, barks never over a prompt', async () => {
+  const { readFileSync } = await import('node:fs');
+  const src = readFileSync(new URL('../../src/scenes/touch-sticks.js', import.meta.url), 'utf8');
+  assert.match(src, /body\.ts-on \.ts-zone \{ width: 52vw; height: 58vh; \}/);
+  assert.match(src, /body\.ts-on \.ftf-mk \{ display: none !important; \}/);
+  assert.match(src, /html body\.ts-on \.ftf-chat \{ left: auto !important;[^}]*top: calc\(140px/);
+  assert.match(src, /html body\.ts-on \.ftf-town-prompt \{ left: auto !important; right:/);
+  assert.match(src, /:has\(\.ftf-town-prompt:not\(\[hidden\]\)\) \.ftf-bark/);
+});
