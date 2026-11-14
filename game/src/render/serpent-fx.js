@@ -55,7 +55,7 @@ export function setTele(mat, k, op, t) { const u = mat.uniforms; u.uK.value = te
 
 const PTS_VERT = `attribute float aSize; attribute float aAlpha; attribute vec3 aColor; varying float vA; varying vec3 vC; uniform float uScale;
 void main(){ vA = aAlpha; vC = aColor; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_PointSize = aSize * uScale / max(0.5, -mv.z); gl_Position = projectionMatrix * mv; }`;
-const PTS_FRAG = `varying float vA; varying vec3 vC; void main(){ vec2 c = gl_PointCoord - 0.5; float r = dot(c, c) * 4.0; if (r > 1.0) discard; float s = exp(-r * 1.6); gl_FragColor = vec4(vC * (0.9 + 0.8 * s), vA * s); }`;
+const PTS_FRAG = `varying float vA; varying vec3 vC; void main(){ vec2 c = gl_PointCoord - 0.5; float r = dot(c, c) * 4.0; if (r > 1.0) discard; float s = exp(-r * 2.2); gl_FragColor = vec4(vC * (0.95 + 0.35 * s), vA * s * 0.95); }`;
 const WAVE_FRAG = `uniform vec3 uColor; uniform float uA; varying vec2 vUv; void main(){ gl_FragColor = vec4(uColor, uA * smoothstep(0.0, 0.6, vUv.y) * (1.0 - smoothstep(0.85, 1.0, vUv.y))); }`;
 const GEY_FRAG = `uniform vec3 uColor; uniform float uA; varying vec2 vUv; void main(){ float h = vUv.y; gl_FragColor = vec4(uColor * (1.2 - h * 0.5), uA * (1.0 - h) * (0.55 + 0.45 * sin(vUv.x * 37.7))); }`;
 const UV_VERT = `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
@@ -65,26 +65,27 @@ export function createSerpentFx({ THREE, parent, mobile = false, rand = Math.ran
   const F = SERPENT_FX, cap = mobile ? F.frostPhone : F.frost;
   const group = new THREE.Group(); group.name = 'serpent_fx'; parent.add(group);
   // ---- frost points: a ring buffer of particles
-  const pos = new Float32Array(cap * 3), vel = new Float32Array(cap * 3), col = new Float32Array(cap * 3), size = new Float32Array(cap), alpha = new Float32Array(cap), life = new Float32Array(cap), age = new Float32Array(cap), drag = new Float32Array(cap), grav = new Float32Array(cap), size0 = new Float32Array(cap);
+  const pos = new Float32Array(cap * 3), vel = new Float32Array(cap * 3), col = new Float32Array(cap * 3), size = new Float32Array(cap), alpha = new Float32Array(cap), life = new Float32Array(cap), age = new Float32Array(cap), drag = new Float32Array(cap), grav = new Float32Array(cap), size0 = new Float32Array(cap), amax = new Float32Array(cap);
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3).setUsage(THREE.DynamicDrawUsage));
   geo.setAttribute('aColor', new THREE.BufferAttribute(col, 3).setUsage(THREE.DynamicDrawUsage));
   geo.setAttribute('aSize', new THREE.BufferAttribute(size, 1).setUsage(THREE.DynamicDrawUsage));
   geo.setAttribute('aAlpha', new THREE.BufferAttribute(alpha, 1).setUsage(THREE.DynamicDrawUsage));
   geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e5);
-  const pts = new THREE.Points(geo, new THREE.ShaderMaterial({ uniforms: { uScale: { value: 1000 } }, vertexShader: PTS_VERT, fragmentShader: PTS_FRAG, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+  // normal blending: additive frost vanished on the bright mirror (the sky's reflection); the ice reads on light and dark
+  const pts = new THREE.Points(geo, new THREE.ShaderMaterial({ uniforms: { uScale: { value: 1000 } }, vertexShader: PTS_VERT, fragmentShader: PTS_FRAG, transparent: true, depthWrite: false }));
   pts.frustumCulled = false; group.add(pts);
   const _sz = new THREE.Vector2();
   pts.onBeforeRender = (renderer, scene, camera) => { if (camera && camera.isPerspectiveCamera) { renderer.getDrawingBufferSize(_sz); pts.material.uniforms.uScale.value = _sz.y / (2 * Math.tan(camera.fov * Math.PI / 360)); } };
   let head = 0, live = 0, reducedNow = false;
   const tmpC = new THREE.Color();
   /** One particle (no allocation): position, velocity, colour, size (metres across; uScale ~ pixels per metre at 1 m), life (s), drag (1/s), gravity (m/s²). */
-  function emit(x, y, z, vx, vy, vz, color, sz, lf, dr = 1.5, gr = 0) {
+  function emit(x, y, z, vx, vy, vz, color, sz, lf, dr = 1.5, gr = 0, op = 1) {
     if (reducedNow && rand() > 0.34) return;
     const i = head; head = (head + 1) % cap;
     pos[i * 3] = x; pos[i * 3 + 1] = y; pos[i * 3 + 2] = z; vel[i * 3] = vx; vel[i * 3 + 1] = vy; vel[i * 3 + 2] = vz;
     tmpC.setHex(color); col[i * 3] = tmpC.r; col[i * 3 + 1] = tmpC.g; col[i * 3 + 2] = tmpC.b;
-    size0[i] = sz; size[i] = sz; life[i] = lf; age[i] = 0; drag[i] = dr; grav[i] = gr; alpha[i] = 1;
+    size0[i] = sz; size[i] = sz; life[i] = lf; age[i] = 0; drag[i] = dr; grav[i] = gr; alpha[i] = 0; amax[i] = op;
   }
   // ---- waves: expanding rings on the mirror
   const waveGeo = new THREE.RingGeometry(0.82, 1, 72, 1); // uv.y runs 0 (inner) .. 1 (outer) after the remap below
@@ -139,15 +140,15 @@ export function createSerpentFx({ THREE, parent, mobile = false, rand = Math.ran
       for (let i = 0; i < m2; i++) {
         const u = Math.max(0.5, front - rand() * 3.5), s2 = (rand() * 2 - 1) * half * 0.95, a2 = ang + s2, mist = rand() < 0.35;
         emit(origin[0] + Math.sin(a2) * u, 0.15 + rand() * (mist ? 0.6 : 1.4), origin[2] + Math.cos(a2) * u, Math.sin(a2) * 3, 1 + rand() * 2.5, Math.cos(a2) * 3,
-          mist ? 0x5c9cc0 : rand() < 0.4 ? 0xffffff : F.ice, mist ? 2.6 + rand() * 2 : 0.6 + rand() * 0.8, 0.55 + rand() * 0.4, 1.2, mist ? 0 : 5);
+          mist ? 0xb8e2f4 : rand() < 0.4 ? 0xffffff : F.ice, mist ? 2.6 + rand() * 2 : 0.6 + rand() * 0.8, 0.55 + rand() * 0.4, 1.2, mist ? 0 : 5, mist ? 0.4 : 0.9);
       }
       const n = Math.max(1, Math.round((mobile ? 160 : 420) * dt));
       for (let i = 0; i < n; i++) {
         const s = (rand() * 2 - 1) * half, a = Math.atan2(dir[0], dir[1]) + s, sp = 16 + rand() * 10;
-        const mist = rand() < 0.3, c = mist ? 0x2f6a8a : rand() < 0.3 ? 0xffffff : rand() < 0.6 ? F.ice : 0x6cc8ff, sz = mist ? 1.6 + rand() * 1.8 : 0.45 + rand() * 0.55; // a third is soft mist
+        const mist = rand() < 0.3, c = mist ? 0xb8e2f4 : rand() < 0.3 ? 0xffffff : rand() < 0.6 ? F.ice : 0x6cc8ff, sz = mist ? 1.6 + rand() * 1.8 : 0.45 + rand() * 0.55; // a third is soft mist
         emit(mouth[0] + (rand() - 0.5) * 0.4, mouth[1] + (rand() - 0.5) * 0.4, mouth[2] + (rand() - 0.5) * 0.4,
           Math.sin(a) * sp, -mouth[1] / (length / sp) * (0.8 + rand() * 0.4), Math.cos(a) * sp,
-          c, sz, length / sp * (0.9 + rand() * 0.3), 0.6, 0);
+          c, sz, length / sp * (0.9 + rand() * 0.3), 0.6, 0, mist ? 0.35 : 0.9);
       }
       const c = crustFor(half, length); c.position.set(origin[0], 0.04, origin[2]); c.rotation.y = ang; c.scale.setScalar(Math.max(0.03, front / length)); crustT = 0; // the crust grows with the front
     },
@@ -200,7 +201,7 @@ export function createSerpentFx({ THREE, parent, mobile = false, rand = Math.ran
         age[i] += dt; const k = age[i] / life[i], d = Math.exp(-drag[i] * dt);
         vel[i * 3] *= d; vel[i * 3 + 1] = vel[i * 3 + 1] * d - grav[i] * dt; vel[i * 3 + 2] *= d;
         pos[i * 3] += vel[i * 3] * dt; pos[i * 3 + 1] = Math.max(0.03, pos[i * 3 + 1] + vel[i * 3 + 1] * dt); pos[i * 3 + 2] += vel[i * 3 + 2] * dt;
-        alpha[i] = k < 0.15 ? k / 0.15 : 1 - (k - 0.15) / 0.85; size[i] = size0[i] * (0.7 + 0.6 * k);
+        alpha[i] = amax[i] * (k < 0.15 ? k / 0.15 : 1 - (k - 0.15) / 0.85); size[i] = size0[i] * (0.7 + 0.6 * k);
       }
       geo.attributes.position.needsUpdate = true; geo.attributes.aAlpha.needsUpdate = true; geo.attributes.aSize.needsUpdate = true; geo.attributes.aColor.needsUpdate = true;
       for (const w of waves) {
