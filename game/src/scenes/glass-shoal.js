@@ -257,6 +257,8 @@ export function createGlassShoal(o) {
     /** Whether she has taken the Loomblade (play/held-blade.js puts it in her hand). */
     hasBlade: () => !!save.blade,
     owns: () => mode === 'ride' || mode === 'arena' || mode === 'arena-wait',
+    /** On the dragon's back (boot-world seats her: the `ride` clip, hips on the saddle). */
+    riding: () => mode === 'ride',
     update, interact,
     /** Input while owned (keys from boot-world's Input). */
     input(input) {
