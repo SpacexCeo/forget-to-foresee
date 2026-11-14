@@ -21,7 +21,7 @@ import { groupChests, loadArchive, archiveOpened, outcomeOf, verifyHref, nftImag
 import { cue } from '../audio/town-audio.js';
 import { formatSilkC } from '../net/silk-core.js';
 import { wardrobe, TRY_ON_SECONDS } from './skins.js';
-import { collectionView } from './nft-collection.js';
+import { collectionView, shardCard, dragonCardArt } from './nft-collection.js';
 
 /** UI-004 tab icons (line art, currentColor). */
 const TAB_ICON = Object.freeze({
@@ -102,6 +102,9 @@ const CSS = `
 .gm-medal[data-done="true"] { background: linear-gradient(160deg, #2a2716, #1a211b); border-color: rgba(197, 164, 105, .4); }
 .gm-nft { position: relative; border-radius: 16px; overflow: hidden; background: var(--ftf-panel-solid, #101f1a); border: 1px solid rgba(214, 226, 214, .12); box-shadow: 0 6px 18px rgba(0, 0, 0, .3); padding: 10px; }
 .gm-nft img { width: 100%; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 10px; }
+.gm-shard { border-color: color-mix(in srgb, var(--rc) 55%, transparent); }
+.gm-shard .gm-shard-art { aspect-ratio: 2 / 3; }
+.gm-shard .gm-shard-art img { width: 78%; height: 78%; aspect-ratio: auto; object-fit: contain; border-radius: 0; }
 .gm-loot { border-color: color-mix(in srgb, var(--rc) 55%, transparent); }
 .gm-loot .gm-loot-art { display: grid; place-items: center; aspect-ratio: 1; margin-bottom: 8px; border-radius: 12px; background: radial-gradient(circle, color-mix(in srgb, var(--rc) 35%, transparent) 0%, transparent 70%), #0b100f; box-shadow: inset 0 0 0 2px var(--rc); }
 .gm-loot .gm-loot-art img { width: 72%; height: 72%; aspect-ratio: auto; object-fit: contain; border-radius: 0; filter: drop-shadow(0 6px 10px rgba(0,0,0,.5)); }
@@ -248,8 +251,11 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
         const mine = r.items.filter((x) => x.mine), others = r.items.filter((x) => !x.mine);
         for (const it of [...mine, ...others]) {
           const c = el('div', 'gm-nft');
+          const sh = shardCard(it); // owner 14.11: every token card has its picture, like Elise's
           if (it.kind === 'heroine') { const img = el('img'); img.src = base + 'assets/cards/elise.webp'; img.alt = ''; c.append(img); }
-          c.append(el('b', null, it.mine ? t('inv.elise') : it.label || it.tokenId));
+          else if (sh) { c.classList.add('gm-shard'); c.style.setProperty('--rc', sh.color); const art = el('div', 'gm-loot-art gm-shard-art'); const img = el('img'); img.src = base + 'assets/items/' + sh.art; img.alt = ''; art.append(img); c.append(art); }
+          c.append(el('b', null, it.mine ? t('inv.elise') : sh ? t('shard.nft.card', { kind: t('shard.nft.kind.' + sh.kind) }) : it.label || it.tokenId));
+          if (sh && sh.clan) c.append(el('span', 'gm-loot-rar', sh.clan));
           const chip = el('span', 'gm-chip gm-near', 'NEAR testnet'); c.append(el('br'), chip);
           if (it.href) { const a = el('a', 'gm-chip', t('menu.viewToken')); a.href = it.href; a.target = '_blank'; a.rel = 'noopener noreferrer'; c.append(a); }
           c.append(el('p', 'gm-note', it.mine ? t('menu.ownedByYou') : t('inv.owner', { owner: it.owner || '—' })));
@@ -266,6 +272,7 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
           const g2 = el('div', 'gm-grid'); g2.style.gridTemplateColumns = 'repeat(auto-fill, minmax(160px, 1fr))';
           for (const d of r.dragons) {
             const c = el('div', 'gm-nft');
+            const dart = dragonCardArt(d.kind); if (dart) { const img = el('img'); img.src = base + 'assets/' + dart; img.alt = ''; c.append(img); } // the painted dragon card
             c.append(el('b', null, d.title), el('br'), el('span', 'gm-chip gm-near', t('companion.owned')));
             const a = el('a', 'gm-chip', t('menu.viewToken')); a.href = d.href; a.target = '_blank'; a.rel = 'noopener noreferrer'; c.append(a);
             c.append(el('p', 'gm-note', t('companion.account', { account: r.account })));

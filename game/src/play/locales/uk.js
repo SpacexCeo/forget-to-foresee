@@ -2,9 +2,11 @@
 // Same vocabulary as src/locales/uk.js: Мушля, шовк, тик, якір, Сувій; clans Ірис, Сіль, Попіл, Мох, Бурштин, Іній.
 import quests from './uk-quests.js';
 import hud from './uk-hud.js';
+import npe from './uk-npe.js';
 import account from './uk-account.js';
 export default {
   ...hud, // first: the RPG HUD (en-hud.js keys); this file's own copies below win
+  ...npe, // the new-player dialogue, barks, card, glossary, Cup, tips and judge panel (en-npe.js, en-tips.js, en-judge.js keys)
   ...account, // the account panel (en-account.js keys)
   // ---- badge, help ----
   'play.badge': 'Локальне демо · правила працюють у вашому браузері через ту саму кімнату, що й API агентів',
@@ -1254,6 +1256,7 @@ export default {
   'shard.nft.kind.promise': "обіцянка",
   'shard.nft.kind.insight': "осяяння",
   'shard.nft.kind.lie': "брехня",
+  'shard.nft.card': "Уламок пам’яті · {kind}",
 
   // ---- agent card NFT (src/ui/world-hud/agent-card.js) ----
   'agentcard.title': "{agent} · картка агента",
