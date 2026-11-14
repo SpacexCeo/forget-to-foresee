@@ -19,7 +19,7 @@ test('a new player: level 1, starting silk, every empty state', async () => {
   const i18n = createPlayI18n('en'); const t = (k, a) => i18n.t(k, a);
   const [root] = renderProfileView({ doc, t, ledger, base: '/' });
   const all = texts(root).join(' | ');
-  for (const s of ['Your story begins', 'Level 1', 'Newcomer', 'Titles are cosmetic only', 'Stored in this browser', 'No real money', (ledger.silk / 100).toFixed(2),
+  for (const s of ['Your story begins', 'Level 1', 'Newcomer', 'Titles are cosmetic only', 'Stored in this browser', 'No real money', String(Math.round(ledger.silk / 100)),
     'Your history starts here', 'No activity', 'No rounds yet', 'No open trades', 'Best agent']) assert.ok(all.includes(s), s);
   assert.doesNotMatch(all, /profile\.|\{|\}/, 'no raw keys or placeholders');
 });

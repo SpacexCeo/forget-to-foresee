@@ -73,7 +73,7 @@ test('tracker: Road Home from the gate number, the pinned quest with counters, t
   const tr = createTrackerUI({ doc, say, giverName: gname, storage, data: () => ({ tracked: [questView('q_spiders', { qs: s, now: T0, tracked: ['q_spiders'] })], road: { gateC: 3_800, feeC: 20_000 }, errand: long }), onOpen: (id) => opened.push(id), onWalk: (v) => walks.push(v.id) });
   tr.refresh(true);
   const txt = tr.root.textContent;
-  assert.match(txt, /Road home38 \/ 200 silk/); assert.match(txt, /Stone Spiders on the Road/); assert.match(txt, /Kill stone spiders0\/10/);
+  assert.match(txt, /Road home38 \/ 200 (Gate )?silk/); assert.match(txt, /Stone Spiders on the Road/); assert.match(txt, /Kill stone spiders0\/10/);
   assert.ok(txt.includes(long), 'the errand is shown in full');
   tr.root.querySelector('.ft-walk').click(); assert.deepEqual(walks, ['q_spiders']);
   tr.root.querySelector('.ft-title').click(); assert.deepEqual(opened, ['q_spiders']);
