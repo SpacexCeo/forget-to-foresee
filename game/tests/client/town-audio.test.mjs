@@ -14,7 +14,7 @@ test('a step every 0.62 m walking, 0.9 m running', () => {
   assert.ok(STEP_EVERY.run > STEP_EVERY.walk);
 });
 
-test('cues play through the engine, unknown names are ignored; steps on stone outside, wood inside', () => {
+test('cues play through the engine, unknown names are ignored; steps on stone outside, wood inside', async () => {
   const played = [];
   const fake = () => ({ setZone() {}, play: (n, o) => played.push(n), unlock: async () => true, dispose() {}, setListener() {} });
   const listeners = {};
@@ -24,7 +24,9 @@ test('cues play through the engine, unknown names are ignored; steps on stone ou
   cue('gift_chime', win); cue('not_a_sound', win);
   ta.step(0.7, false, false); ta.step(0.7, false, true);
   assert.deepEqual(played, ['gift_chime', 'step_stone', 'step_wood']);
-  for (const c of TOWN_CUES) assert.ok(AUDIO_MANIFEST.sounds[c] || (AUDIO_MANIFEST.groups && AUDIO_MANIFEST.groups[c]), c);
+  const { withSamples, withMusic } = await import('../../src/audio/audio.js');
+  const M = withSamples(withMusic(AUDIO_MANIFEST)); // what the game plays: synthesized + recorded (CC0) sounds
+  for (const c of TOWN_CUES) assert.ok(M.sounds[c] || (M.groups && M.groups[c]), c);
 });
 
 test('intro fly-through: once per browser, skippable, never on the jury path, ?skip=intro or reduced motion', async () => {
@@ -40,7 +42,9 @@ test('intro fly-through: once per browser, skippable, never on the jury path, ?s
 test('combat and footstep sounds (owner, 12.11): every cue has its synthesized variations in the manifest', async () => {
   const { TOWN_CUES, MOB_SOUNDS, STEP_SURFACES, cueName } = await import('../../src/audio/town-audio.js');
   const { AUDIO_MANIFEST } = await import('../../src/audio/manifest.js');
-  const has = (n) => !!(AUDIO_MANIFEST.sounds[n] || AUDIO_MANIFEST.groups[n]);
+  const { withSamples, withMusic } = await import('../../src/audio/audio.js');
+  const M = withSamples(withMusic(AUDIO_MANIFEST));
+  const has = (n) => !!(M.sounds[n] || M.groups[n]);
   for (const c of TOWN_CUES) assert.ok(has(c), c);
   for (const t of Object.values(MOB_SOUNDS)) { assert.ok(has(t.attack), t.attack); assert.ok(has(t.hurt), t.hurt); }
   for (const s of STEP_SURFACES) assert.ok((AUDIO_MANIFEST.groups['step_' + s] || []).length >= 6, 'six ' + s + ' steps');

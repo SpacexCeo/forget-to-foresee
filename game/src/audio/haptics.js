@@ -7,6 +7,8 @@ export const HAPTICS_KEY = 'ftf.haptics';
 export const PATTERNS = Object.freeze({
   bid_tick: Object.freeze([[6], 0.15, 25]),
   gift_chime: Object.freeze([[30, 40, 60], 0.6, 160]),
+  level_up: Object.freeze([[30, 40, 60], 0.6, 160]), nft_reveal: Object.freeze([[30, 40, 60], 0.6, 160]), chest_open: Object.freeze([[18], 0.3, 60]),
+  boss_roar: Object.freeze([[40, 30, 40], 0.8, 200]), boss_breath: Object.freeze([[30], 0.5, 120]), boss_stagger: Object.freeze([[25], 0.5, 90]),
   ui_confirm: Object.freeze([[18], 0.3, 60]),
   vision_whoosh: Object.freeze([[25], 0.45, 90]),
   storm_crack: Object.freeze([[40, 30, 25], 0.8, 180]),

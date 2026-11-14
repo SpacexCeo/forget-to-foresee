@@ -155,7 +155,7 @@ export function createTownQuests({ scene = null, hudToast = null, storage, townL
   const ledger = createExpeditionLedger({ storage, now, town: townLedger });
   // the shared town's action feed (play/multiplayer.js 'ftf:feat'): a quest handed in is told to the room, never its text
   let featSeq = ledger.log.length;
-  ledger.subscribe((l) => { const log = l.log; for (const e of log.slice(featSeq)) if (e.kind === 'quest_turned_in') { try { win.dispatchEvent(new CustomEvent('ftf:feat', { detail: { k: 'quest' } })); } catch { /* no window */ } } featSeq = log.length; });
+  ledger.subscribe((l) => { const log = l.log; for (const e of log.slice(featSeq)) if (e.kind === 'quest_turned_in') { try { win.dispatchEvent(new CustomEvent('ftf:feat', { detail: { k: 'quest' } })); } catch { /* no window */ } } else if (e.kind === 'quest_accepted') { try { win.dispatchEvent(new CustomEvent('ftf:sound', { detail: 'quest_accept' })); } catch { /* no window */ } } featSeq = log.length; });
   const save = () => { try { storage.setItem(STORY_KEY, JSON.stringify(story)); storage.setItem(QUESTS_KEY, JSON.stringify(qs)); } catch { /* memory only */ } };
   const listeners = new Set();
   const changed = () => { save(); renderObjective(); for (const f of [...listeners]) f(); };

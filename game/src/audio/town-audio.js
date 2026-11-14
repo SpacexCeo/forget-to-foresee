@@ -16,7 +16,15 @@ export const TOWN_CUES = Object.freeze(['ui_click', 'ui_confirm', 'ui_notify', '
   'mob_skitter_attack', 'mob_hulker_slam', 'mob_veilbell_seed', 'mob_crownrift_blade', 'mob_hurt_small', 'mob_hurt_big', 'mob_death',
   'iris_hurt', 'iris_down',
   // night 14.11: the casts land with their element; Elise's Ember Palms and Gale Discs in the Glass Shoal
-  'hit_frost', 'hit_storm', 'ember_cast', 'ember_hit', 'gale_cast', 'gale_hit', 'strike_charge']);
+  'hit_frost', 'hit_storm', 'ember_cast', 'ember_hit', 'gale_cast', 'gale_hit', 'strike_charge',
+  // trailer pass 14.11 (CC0 recordings, art/audio/samples_polish.py): the ice serpent, loot, quests, the level-up
+  'boss_roar', 'boss_inhale', 'boss_breath', 'boss_stagger', 'mob_death_bug', 'chest_open', 'nft_reveal',
+  'quest_accept', 'quest_complete', 'level_up', 'ui_hover']);
+/** Monster types whose death adds a creature cry over the dissolve (the skitters are the spiders). */
+export const DEATH_CRY = Object.freeze({ skitter: 'mob_death_bug' });
+/** A button the pointer enters gets a soft tick (mouse only, at most one per HOVER_GAP ms, never twice for one button). */
+export const HOVER_GAP = 70;
+export const HOVER_SELECTOR = 'button:not([disabled]), [role="button"], [role="tab"], a[href]';
 /** Footstep surfaces (six soft variations each). */
 export const STEP_SURFACES = Object.freeze(['stone', 'wood', 'grass']);
 /** The monsters' sounds by type (play/mobs.js types): attack / telegraph, hurt, death. */
@@ -76,6 +84,20 @@ export function createTownAudio({ createAudio, win = globalThis, rand = Math.ran
     audio.play(name, o);
   };
   const unlock = () => { audio.unlock().catch(() => {}); };
+  // the game's own events that carry a sound without a cue of their own
+  const onKilled = (e) => { const d = e.detail || {}, cry = DEATH_CRY[d.type]; if (cry) audio.play(cry, { pos: d.pos || undefined, gain: 0.9 }); };
+  const onFeat = (e) => { if (e.detail && e.detail.k === 'quest') audio.play('quest_complete'); };
+  let hoverEl = null, hoverAt = -1e9;
+  const onHover = (e) => {
+    if (e.pointerType && e.pointerType !== 'mouse') return;
+    const el = e.target && e.target.closest ? e.target.closest(HOVER_SELECTOR) : null;
+    if (!el || el === hoverEl) { if (!el) hoverEl = null; return; }
+    hoverEl = el; const t = now(); if (t - hoverAt < HOVER_GAP) return; hoverAt = t;
+    audio.play('ui_hover', { gain: 0.45 });
+  };
+  win.addEventListener('ftf:mob-killed', onKilled);
+  win.addEventListener('ftf:feat', onFeat);
+  win.addEventListener('pointerover', onHover, { passive: true });
   // Foot contacts from the locomotion (window event 'ftf:foot' {running?, surface?} on each contact frame): while they
   // arrive the distance pacing below stays quiet, so a step is heard exactly when a foot lands
   let surface = 'stone', lastContact = -1e9;
@@ -138,7 +160,7 @@ export function createTownAudio({ createAudio, win = globalThis, rand = Math.ran
     get weather() { return { bed: rain?.bedName ?? null, wet }; },
     /** The audio runtime itself (the settings popup's volume sliders). */
     get audio() { return audio; },
-    dispose() { rain?.stop(0.3); win.removeEventListener('ftf:weather', onWeather); win.removeEventListener('ftf:foot', onFoot); win.removeEventListener('ftf:sound', onCue); win.removeEventListener('keydown', unlock); win.removeEventListener('pointerdown', unlock); audio.dispose(); },
+    dispose() { rain?.stop(0.3); win.removeEventListener('ftf:weather', onWeather); win.removeEventListener('ftf:foot', onFoot); win.removeEventListener('ftf:sound', onCue); win.removeEventListener('ftf:mob-killed', onKilled); win.removeEventListener('ftf:feat', onFeat); win.removeEventListener('pointerover', onHover); win.removeEventListener('keydown', unlock); win.removeEventListener('pointerdown', unlock); audio.dispose(); },
   };
   return api;
 }

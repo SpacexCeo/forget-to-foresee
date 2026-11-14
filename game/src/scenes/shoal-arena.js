@@ -269,7 +269,7 @@ export function createShoalArena(o) {
     const r = R.hitBoss(B, amount, R.BOSS, opts); B = r.boss;
     if (!opts.noCharge) charge(r.dealt, 0);
     if (r.dealt > 0) bossFlashT = 0.12;
-    if (r.phaseUp) { flash(say(B.phase === 1 ? 'shoal.phase2' : 'shoal.phase3')); cue('storm_crack'); shakeT = 0.3; shakeAmp = reduced() ? 0 : 0.3; sfx.roar([boss.position.x, 0, boss.position.z]); } // the roar
+    if (r.phaseUp) { flash(say(B.phase === 1 ? 'shoal.phase2' : 'shoal.phase3')); cue('storm_crack'); cue('boss_roar'); shakeT = 0.3; shakeAmp = reduced() ? 0 : 0.3; sfx.roar([boss.position.x, 0, boss.position.z]); } // the roar
     if (B.dead && !won) { won = true; boss.visible = !!bossModel; /* the model falls and sinks first (draw hides it) */ chest.visible = true; addsView.clear(); B = { ...B, adds: [] }; flash(say('shoal.victory'), 3.5); onWin(); }
     return r.dealt;
   };
@@ -385,13 +385,13 @@ export function createShoalArena(o) {
     const A = R.BOSS.attacks[atk.kind];
     // no flat shock rings (owner 14.11): the landing is the serpent's own effect below (geyser, frost ripple, shards)
     if (A && atk.kind === 'dive' && atk.at) { shakeT = 0.22; shakeAmp = reduced() ? 0 : 0.25; } // the dive still shakes; its look is sfx.strike
-    cue(atk.kind === 'breath' ? 'cast_release_frost' : atk.kind === 'claw' ? 'strike_heavy' : 'mob_hulker_slam');
+    cue(atk.kind === 'breath' ? 'boss_breath' : atk.kind === 'claw' ? 'strike_heavy' : 'mob_hulker_slam');
     sfx.strike(atk.kind, { at: atk.at || R.ARENA.boss, dir: atk.dir, A, boss: [boss.position.x, boss.position.z] });
     if (!R.inDanger(atk, me3.x, me3.z, R.BOSS, me3.lift)) return;
     const real = H.dodge > 0; // a dodge's frames open the crest; the Tempest's do not
     const r = hurt(damage);
     if (r.taken > 0) sfx.frostOn([me3.x, me3.lift, me3.z]); // frost bursts off her
-    if (r.dodged && real) { B = R.exposeBoss(B); flash(say('shoal.weak'), 1.4); }
+    if (r.dodged && real) { B = R.exposeBoss(B); cue('boss_stagger'); flash(say('shoal.weak'), 1.4); }
   }
 
   function update(dt) {
@@ -444,7 +444,7 @@ export function createShoalArena(o) {
         for (const e of r.events) {
           if (e.type === 'strike') strikeLands(e.attack, e.damage);
           else if (e.type === 'takeoff') { flash(say('shoal.takeoff'), 1.8); cue('dash_whoosh'); }
-          else if (e.type === 'telegraph' && e.attack.kind === 'breath') { cue('cast_charge_frost'); sfx.inhale(mouth(e.attack.dir), R.BOSS.phases[B.phase].telegraph); } // the inhale
+          else if (e.type === 'telegraph' && e.attack.kind === 'breath') { cue('boss_inhale'); sfx.inhale(mouth(e.attack.dir), R.BOSS.phases[B.phase].telegraph); } // the inhale
         }
         const a = R.addsStep(B.adds, sdt, [me3.x, me3.z], R.BOSS, me3.lift); B = { ...B, adds: a.adds };
         if (a.damage) hurt(a.damage);
