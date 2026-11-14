@@ -188,11 +188,22 @@ export function detectProfile(env = {}) {
  * Frame-time governor for the automatic tier: after a warm-up it watches a rolling window and
  * steps the tier down once when the 75th-percentile frame time stays above budget (the tier never goes up); it stops
  * judging after `windowEnd` seconds. Pure: feed it frame times.
- * Climbing (desktop, `upScales`): on the top tier ('ultra'), while a window keeps the budget, it raises the render
+ * Climbing (desktop, `upScales`): on the top tier ('ultra'), while a window keeps the budget and the last few seconds had
+ * (almost) no frame over it (SPIKES: a 75th percentile hides the 2 % of 30 ms frames that 2x supersampling caused even on
+ * an RTX 5090, a visible stutter on a 60 Hz screen), it raises the render
  * resolution one supersampling step, so a strong GPU is used to the full. The first window over budget takes back one
- * step and locks the climb (no oscillation). Once it has climbed it keeps watching past `windowEnd`, only ever stepping
+ * step and locks the climb (no oscillation); so does a run of spikes while supersampled. Once it has climbed it keeps watching past `windowEnd`, only ever stepping
  * the supersampling back down, so a heavy fight later still gets its frames back.
  */
+/**
+ * Frames over budget (x1.12) the supersampling tolerates among the last `window` frames: it climbs only with at most
+ * `climb` of them and steps back at `down` (2 %: about one dropped frame a second at 60 Hz).
+ */
+export const SPIKES = Object.freeze({ window: 300, climb: 1, down: 6 });
+
+/** Frame times in `ms` over `budgetMs` x1.12. Pure. */
+export function spikeCount(ms, budgetMs) { let n = 0; for (const v of ms) if (v > budgetMs * 1.12) n++; return n; }
+
 export class TierGovernor {
   /**
    * @param {{budgetMs?:number, warmup?:number, window?:number, windowEnd?:number, cooldown?:number,
@@ -204,6 +215,7 @@ export class TierGovernor {
     Object.assign(this, { budgetMs, warmup, windowSize: window, windowEnd, cooldown, pixelScales: [...pixelScales], upScales: [...upScales], floor });
     this.t = 0; this.samples = []; this.lastChange = -Infinity; this.done = false;
     this.pixelScale = 1; this.pixelStep = 0; this.upStep = 0; this.upLocked = false;
+    this.recent = []; // the last SPIKES.window frame times since the last change (the spike count)
   }
 
   /**
@@ -219,24 +231,26 @@ export class TierGovernor {
     if (this.t < this.warmup || this.t - this.lastChange < this.cooldown) return null;
     this.samples.push(ms);
     if (this.samples.length > this.windowSize) this.samples.shift();
+    this.recent.push(ms); if (this.recent.length > SPIKES.window) this.recent.shift();
     if (this.samples.length < this.windowSize) return null;
     const sorted = [...this.samples].sort((a, b) => a - b);
     const p75 = sorted[Math.floor(sorted.length * 0.75)];
-    const over = p75 > this.budgetMs * 1.12;
+    const spikes = spikeCount(this.recent, this.budgetMs);
+    const over = p75 > this.budgetMs * 1.12 || (this.upStep > 0 && spikes >= SPIKES.down);
     if (over && this.upStep > 0) {
-      this.upStep--; this.upLocked = true; this.lastChange = this.t; this.samples = [];
+      this.upStep--; this.upLocked = true; this.lastChange = this.t; this.samples = []; this.recent = [];
       this.pixelScale = this.upStep > 0 ? this.upScales[this.upStep - 1] : 1;
       return { pixelScale: this.pixelScale };
     }
     if (this.done) return null;
     if (!over) {
-      if (p75 > this.budgetMs || tier !== 'ultra' || this.upLocked || this.upStep >= this.upScales.length) return null;
-      this.pixelScale = this.upScales[this.upStep++]; this.lastChange = this.t; this.samples = [];
+      if (p75 > this.budgetMs || spikes > SPIKES.climb || tier !== 'ultra' || this.upLocked || this.upStep >= this.upScales.length) return null;
+      this.pixelScale = this.upScales[this.upStep++]; this.lastChange = this.t; this.samples = []; this.recent = [];
       return { pixelScale: this.pixelScale };
     }
     this.upLocked = true;
     const next = tier === this.floor ? null : lowerTier(tier);
-    this.lastChange = this.t; this.samples = [];
+    this.lastChange = this.t; this.samples = []; this.recent = [];
     if (next) return { tier: next };
     if (this.pixelStep < this.pixelScales.length) { this.pixelScale = this.pixelScales[this.pixelStep++]; return { pixelScale: this.pixelScale }; }
     this.done = true;
