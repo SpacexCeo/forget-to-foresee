@@ -101,6 +101,23 @@ export function buildLab() {
   }); trash.push(sky);
   const skyMat = new THREE.MeshBasicMaterial({ map: sky, color: 0xd8d8d8, toneMapped: false }); trash.push(skyMat);
   const win = new THREE.Mesh(new THREE.PlaneGeometry(5.4, 2.45), skyMat); win.rotation.y = -Math.PI / 2; win.position.set(5.2, 1.775, -0.7); root.add(win); trash.push(win.geometry);
+  // the real view (owner, 14.11): a locked-off sunset over a city, a 33 s ping-pong loop from Pixabay clip 231405
+  // (Pixabay Content License), cropped to the window. The painted city stays until the video plays, and if it never does.
+  let video = null;
+  if (typeof document !== 'undefined') {
+    try {
+      const base = (import.meta.env && import.meta.env.BASE_URL) || '/';
+      video = Object.assign(document.createElement('video'), { muted: true, loop: true, playsInline: true, crossOrigin: 'anonymous', preload: 'auto' });
+      video.setAttribute('playsinline', ''); video.setAttribute('muted', '');
+      video.src = base + 'assets/video/' + (video.canPlayType('video/webm; codecs="vp9"') ? 'lab_window.webm' : 'lab_window.mp4');
+      video.addEventListener('playing', () => {
+        if (!video) return;
+        const vt = new THREE.VideoTexture(video); vt.colorSpace = THREE.SRGBColorSpace; trash.push(vt);
+        skyMat.map = vt; skyMat.color.setScalar(0.95); skyMat.needsUpdate = true;
+      }, { once: true });
+      const p = video.play(); if (p && p.catch) p.catch(() => { /* the painted city stays */ });
+    } catch { video = null; }
+  }
   // the door (slides west)
   const door = box(1.1, 2.2, 0.06, mat({ color: 0x8d96a3, roughness: 0.4, metalness: 0.3 }), -3, 1.1, 4.02);
   // the computer desk: two monitors (a pulsing waveform), a keyboard, the red glass key
@@ -178,7 +195,7 @@ export function buildLab() {
     root, device, attachModels, floorAt,
     lights: { hemi, sun, lamp, ceil, stripMat },
     props: { door, key, keyMat, papers, mug, coat, drawScreen },
-    dispose() { for (const t of trash) t.dispose(); device.dispose(); for (const r of models) root.remove(r); },
+    dispose() { if (video) { video.pause(); video.removeAttribute('src'); video.load(); video = null; } for (const t of trash) t.dispose(); device.dispose(); for (const r of models) root.remove(r); },
   };
 }
 
