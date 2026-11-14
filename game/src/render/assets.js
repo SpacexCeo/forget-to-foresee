@@ -11,7 +11,9 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js';
-import { MODEL_FILES, MODEL_DIRS } from 'virtual:model-list';
+import { MODEL_FILES, MODEL_DIRS, ANIM_FILES } from 'virtual:model-list';
+import { setAnimVersions } from '../play/anim-library.js';
+setAnimVersions(ANIM_FILES); // clip files versioned like the models (play/anim-library.js animUrl)
 import { ALL_ASSETS, LOAD_DISTANCE, assetByName, classifyPath, isValidModelName, modelUrl, versionedModelUrl, socketRole } from './asset-catalog.js';
 import { instancePriority, assetPriority, pinnedPriority, heroLast, shouldRetry, planStreaming, planUpgrade, LruCache, createPrefetch } from './streaming.js';
 import { buildGreybox } from './greybox.js';
