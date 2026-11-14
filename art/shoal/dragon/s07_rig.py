@@ -125,6 +125,8 @@ for r_ in np.unique(roots):
     idx = np.where(roots == r_)[0]; ext = float(np.ptp(P[idx], axis=0).max())
     if len(idx) < int(A.get('island', 900)) and ext < float(A.get('island_m', 0.9)) and not soles[idx].any():
         bw[idx] = bw[idx].mean(0); islands.append((len(idx), round(ext, 2)))
+    elif len(idx) < 0.4 * len(P) and ext < 2.0 and not soles[idx].any():          # larger shells (throat and chest plates, the frill): stiffened, not rigid
+        k_ = float(A.get('stiff', 0.6)); bw[idx] = (1 - k_) * bw[idx] + k_ * bw[idx].mean(0); islands.append((len(idx), round(ext, 2)))
 print('ISLANDS', len(np.unique(roots)), 'rigid', len(islands), sorted(islands)[-12:])
 # at most 4 bones, normalised
 order = np.argsort(-bw, axis=1); keep = np.zeros_like(bw, bool); np.put_along_axis(keep, order[:, :4], True, axis=1); bw[~keep] = 0
@@ -154,7 +156,7 @@ rest_len = np.linalg.norm(co[ed[:, 0]] - co[ed[:, 1]], axis=1)
 from mathutils import Quaternion
 def worldq(pb, axis, deg):
     R = pb.bone.matrix_local.to_3x3().to_quaternion(); return R.inverted() @ Quaternion(axis, math.radians(deg)) @ R
-TEST = {'neck_forward': [('neck1', 'X', 22), ('neck2', 'X', 16), ('neck3', 'X', 8), ('head', 'X', -40)],
+TEST = {'neck_forward': [('neck1', 'X', 17), ('neck2', 'X', 12), ('neck3', 'X', 7), ('head', 'X', -32)],   # the flight pose of s08_clips.fly_body
         'wings_up': [('wing_arm.L', 'Y', -40), ('wing_arm.R', 'Y', 40), ('wing_fore.L', 'Y', -15), ('wing_fore.R', 'Y', 15)],
         # the flight pose of s08_clips.legs_tucked: hind legs trailing back, forelegs folded under the chest
         'legs_tucked': [(b + sd, 'X', a) for sd in ('.L', '.R') for b, a in (('leg_h_upper', -28), ('leg_h_lower', 18), ('leg_h_foot', 38), ('leg_h_paw', 15),

@@ -64,7 +64,7 @@ def legs_tucked(p, k=1.0):
 
 
 def fly_body(p, k=1.0):
-    for n, a in (('neck1', 22), ('neck2', 16), ('neck3', 8), ('head', -40)): p[n] = q(x=a * k)
+    for n, a in (('neck1', 17), ('neck2', 12), ('neck3', 7), ('head', -32)): p[n] = q(x=a * k)
     for i, a in enumerate(TAIL_FLY): p[f'tail{i + 1}'] = q(x=a * k)
     return legs_tucked(p, k)
 
