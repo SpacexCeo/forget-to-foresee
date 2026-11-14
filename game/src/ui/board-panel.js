@@ -32,7 +32,7 @@ export const shortRoot = (root) => (typeof root === 'string' && root ? root.slic
  * @param {string} [o.account] @param {'human'|'scripted'} [o.tab] @param {() => void} o.onClose
  * @param {(text: string) => Promise|void} [o.copy] clipboard writer
  */
-export function renderBoardPanel({ doc, i18n, snapshot, local, account = null, tab = 'human', onClose, copy = null }) {
+export function renderBoardPanel({ doc, i18n, snapshot, local, account = null, tab = 'human', onClose, copy = null, status = null }) {
   const t = (k, a) => i18n.t(k, a);
   const el = (tag, css, text) => { const e = doc.createElement(tag); if (css) e.style.cssText = css; if (text != null) e.textContent = text; return e; };
   const panel = el('div', 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:60;width:min(460px,calc(100vw - 32px));max-height:min(78vh,640px);overflow:auto;'
@@ -52,12 +52,15 @@ export function renderBoardPanel({ doc, i18n, snapshot, local, account = null, t
     body.replaceChildren();
     if (which === 'scripted') body.append(el('p', 'margin:0 0 8px;color:#b9c7c4;font-size:12px', t('lb.scriptedNote')));
     const rows = tabRows(snapshot, which);
-    if (!rows.length && (snapshot || !local || which === 'scripted')) body.append(el('p', 'margin:6px 0;color:#b9c7c4', t(snapshot ? 'lb.empty' : 'lb.preview'))); // the local preview is labelled once, in her row
+    const state = !snapshot && (status === 'loading' || status === 'offline') ? status : null; // reading, or the board unreachable: her own row still follows
+    if (state) body.append(el('p', 'margin:6px 0;color:' + (state === 'offline' ? '#ffc861' : '#b9c7c4'), t('lb.' + state)));
+    else if (!rows.length && (snapshot || !local || which === 'scripted')) body.append(el('p', 'margin:6px 0;color:#b9c7c4', t(snapshot ? 'lb.empty' : 'lb.preview'))); // the local preview is labelled once, in her row
     else {
       const list = el('ol', 'list-style:none;margin:0;padding:0'); list.className = 'ftf-board-rows';
       for (const r of rows) {
         const li = el('li', 'display:flex;gap:10px;align-items:baseline;padding:5px 0;border-bottom:1px solid rgba(243,234,216,.08)');
         li.dataset.actor = r.actor;
+        if (account && r.account === account) { li.dataset.you = '1'; li.style.background = 'rgba(217,178,106,.16)'; li.style.fontWeight = '600'; } // her own row stands out
         li.append(el('span', 'width:2.2em;text-align:right;color:#8fe2d6;font-weight:600', String(r.rank)), el('span', 'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap', r.account),
           el('span', 'font-variant-numeric:tabular-nums;font-weight:600', String(r.score)));
         if (r.flags && r.flags.length) li.append(el('span', 'font-size:11px;color:#ffc861', t('lb.flagged')));

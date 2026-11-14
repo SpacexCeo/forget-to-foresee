@@ -246,6 +246,9 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
       panelShell(t('end.title'),
         el('p', { class: 'pl-strong', text: L.outcome }),
         el('p', { class: 'pl-muted', 'data-bio': 'season', text: L.season }),
+        // what the result means (owner 14.11): score, rank, rewards and what NEAR recorded, in plain words
+        el('section', { class: 'pl-results', 'data-results': '' }, el('h3', { text: t('res.title') }),
+          el('ul', { class: 'pl-list' }, el('li', { 'data-res': 'score', text: t('res.score', { silk: Number((obs.iris && obs.iris.silk) || 0) }) }), el('li', { 'data-res': 'rank', text: t('res.rank') }), el('li', { 'data-res': 'rewards', text: t('res.rewards') }), el('li', { 'data-res': 'chain', text: t('res.chain') }))),
         // what you achieved and what the agents did, before the memories (owner brief 14.11: the end must make sense)
         L.you.length ? el('h3', { text: t('bio.you') }) : null,
         L.you.length ? el('ul', { class: 'pl-list', 'data-bio': 'you' }, L.you.map((x) => el('li', { text: x }))) : null,

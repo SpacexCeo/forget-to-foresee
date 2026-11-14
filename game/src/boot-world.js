@@ -480,7 +480,7 @@ if (townMode.town) {
       // the Shell monument (K2): the latest board snapshot and her own row from the local log
       const relayer = (() => { try { return tee.relayerUrl(); } catch { return null; } })();
       townBoard = bm.createTownBoard({ scene, position: townToWorld(bm.BOARD_TOWN), facing: Math.PI / 2, i18n: ctx.i18n, log: () => townQuests.ledger.log,
-        load: () => bm.loadSnapshot({ base: import.meta.env.BASE_URL, relayer }) });
+        load: (report) => bm.loadSnapshot({ base: import.meta.env.BASE_URL, relayer, report }) });
       spots.push(...townQuests.spots, townPortal.spot, townBoard.spot);
       questMarkers = mm.createQuestMarkers({ scene, markers: () => [...townQuests.markers(), ...errandMarkers(), ...(townTales ? townTales.markers() : [])], folkAt, reducedMotion: lookdev.reducedMotion }); // gold ! and ? over the givers
       // the log goes up to the relayer for the endgame pass (Q4): signed by the Day 1 guest key; quiet without a guest or relayer
@@ -974,6 +974,7 @@ window.__ftfSkins = () => ({ current: irisAvatar ? irisAvatar.hero.id : startHer
 installTxToast({ t: (k, a) => ctx.i18n.t(k, a) });
 /** Above the altar: when the next Tournament round starts ("Open now" in this build: rounds are always open). */
 let altarTimer = null;
+let tourneyProgress = null; // ui/tourney-progress.js once loaded (1 while loading)
 /** The new-player intro's crowd lines (play/locales/en-npe.js, sprint 7.3), in the barks rotation when the intro is on. */
 const NPE_BARKS = Object.freeze(Array.from({ length: 10 }, (_, i) => `npe.bark.${i + 1}`));
 const _altarP = new THREE.Vector3();
@@ -1727,6 +1728,9 @@ function frame() {
   if (playerHud) playerHud.update({ visible: !!(inTown && townFlow && townFlow.phase === 'town'), hp: townMobs ? townMobs.hp : 100, maxHp: 100, stamina });
   if (townFlow && !townFlow.registered) { flowFrame.device = input.device === 'gamepad' ? 'gamepad' : 'keyboard'; townFlow.update(dt, flowFrame); }
   updateAltarTimer();
+  // the Tournament gate made visible (ui/tourney-progress.js): the spider chip until ten stone spiders, then the open banner
+  if (!tourneyProgress && townLedger) { tourneyProgress = 1; import('./ui/tourney-progress.js').then((m) => { tourneyProgress = m.createTourneyProgress({ t: (k, a2) => ctx.i18n.t(k, a2), base: import.meta.env.BASE_URL }); }).catch(() => { tourneyProgress = null; }); }
+  if (tourneyProgress && tourneyProgress.update) tourneyProgress.update({ visible: !!(inTown && townFlow && townFlow.phase === 'town' && !document.querySelector('dialog[open], .d1-panel, .d1-card')), gate: tourneyGate(townLedger.stats, { judge: judge || params.get('judge') === '1' }), reduced: lookdev.reducedMotion });
 
   controls.update(input.device, null, inspecting);
   const near = inspecting || !play || play.zone === 'shell' ? null : nearestInteractable();
