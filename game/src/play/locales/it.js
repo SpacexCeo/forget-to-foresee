@@ -645,6 +645,10 @@ export default {
   'entry.enter': "Entra nel mondo",
   'entry.lang': "Scegli la lingua",
   'entry.ready': "La città è pronta",
+  // ---- "Press F11 for fullscreen" (ui/fullscreen-hint.js) ----
+  'fs.hint': "Premi F11 per lo schermo intero",
+  'fs.hint.click': "Clicca per lo schermo intero",
+  'fs.hint.close': "Nascondi fino alla prossima visita",
   'intro.skip': "Salta",
   'spot.wheel': "Gira la ruota",
   'item.prop_wheel_of_fortune': "Ruota della fortuna",

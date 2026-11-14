@@ -644,6 +644,10 @@ export default {
   'entry.enter': "Увійти у світ",
   'entry.lang': "Оберіть мову",
   'entry.ready': "Місто готове",
+  // ---- "Press F11 for fullscreen" (ui/fullscreen-hint.js) ----
+  'fs.hint': "Натисніть F11 для повного екрана",
+  'fs.hint.click': "Натисніть, щоб відкрити на весь екран",
+  'fs.hint.close': "Сховати до наступного заходу",
   'intro.skip': "Пропустити",
   'spot.wheel': "Крутити колесо",
   'item.prop_wheel_of_fortune': "Колесо фортуни",

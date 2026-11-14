@@ -976,7 +976,10 @@ function updateAltarTimer() {
   // kept below the top-right chips (Controls, Profile) and inside the screen: on a phone the altar projects right under them
   const minTop = innerWidth < 700 || innerHeight < 500 ? (document.body.classList.contains('ph-on') ? 236 : 150) : 118, half = Math.min(altarTimer.offsetWidth / 2 || 110, innerWidth / 2 - 8);
   altarTimer.style.left = Math.max(half + 8, Math.min(innerWidth - half - 8, (_altarP.x + 1) / 2 * innerWidth)).toFixed(0) + 'px';
-  altarTimer.style.top = Math.max(minTop, (1 - _altarP.y) / 2 * innerHeight).toFixed(0) + 'px';
+  // and never under the quest tracker (tablet audit 14.11: the label sat in the tracker's lines and could not be tapped)
+  const x = Math.max(half + 8, Math.min(innerWidth - half - 8, (_altarP.x + 1) / 2 * innerWidth)), ft = document.querySelector('.ft:not([hidden])'), fr = ft && ft.getBoundingClientRect();
+  const under = fr && fr.height > 0 && x + half > fr.left && x - half < fr.right ? fr.bottom + (altarTimer.offsetHeight || 26) + 6 : 0;
+  altarTimer.style.top = Math.max(minTop, under, (1 - _altarP.y) / 2 * innerHeight).toFixed(0) + 'px';
 }
 
 /**
@@ -1180,6 +1183,14 @@ const mouseAim = createMouseAim({ target: renderer.domElement, input,
   onAction: mouseKey,
   // the browser took Esc to free the pointer: the page gets the Esc it never saw (the cast is put away, a panel closes, else the menu)
   onEscape: () => { for (const type of ['keydown', 'keyup']) document.body.dispatchEvent(new KeyboardEvent(type, { code: 'Escape', key: 'Escape', bubbles: true })); } });
+/**
+ * The game cursor over the scene (ui/game-cursor.js; owner 14.11): grab while the camera turns, attack on a locked target,
+ * else the plain pointer (a click on the ground walks there). The talk / interact cursors belong to the prompt button.
+ */
+function cursorScene() {
+  if (input.dragPointer != null) return 'grab';
+  return townMobs && townMobs.locked ? 'attack' : null;
+}
 function strikeNow() { if (townMobs && townMobs.strike(strikeAimInput())) interruptMove(STRIKE_ROOT); }
 let inspecting = null;
 let accumulator = 0;
@@ -1673,7 +1684,7 @@ window.__ftf = {
   } : null,
 };
 requestAnimationFrame(frame);
-return { enterWorld, signIn: () => openAccount(), world3d, player, rig, lookdev, renderer, streamer, get play() { return play; }, town, townMode, 
+return { enterWorld, signIn: () => openAccount(), cursorScene, world3d, player, rig, lookdev, renderer, streamer, get play() { return play; }, town, townMode, 
   /** The first town view is complete: ground under Iris, every street piece real and warmed, her own model in (main.js gates the loading screen on it). */
   get townReady() { return !town || !inTown || (town.shown && townGrounded && (!irisLoad.hasModel || irisLoad.loaded || (irisLoad.failed && import.meta.env.DEV))); } };
 }

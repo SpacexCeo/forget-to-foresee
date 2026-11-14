@@ -25,6 +25,7 @@
     "firstSeenTips": true,
     "accountLogin": true,
     "entryGate": true,
+    "gameCursor": true,
     "glassShoal": true,
     "townLedger": true,
     "tales": true,

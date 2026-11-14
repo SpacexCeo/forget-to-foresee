@@ -12,7 +12,7 @@ export const PREMISE_MS = 5000;
  */
 export function premisePolicy(params, { reducedMotion = false, shown = false } = {}) {
   const off = shown
-    || params.has('films') || params.has('cinematic') || params.has('capture') || params.has('replay')
+    || params.has('films') || params.has('cinematic') || params.has('capture') || params.has('replay') || params.has('shoal') // a ?shoal= link opens on the fight: the card covered its Leave button (mobile audit 14.11)
     || params.get('premise') === '0';
   return { show: !off, animate: !off && !reducedMotion };
 }
