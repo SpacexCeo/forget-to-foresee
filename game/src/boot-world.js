@@ -1053,7 +1053,7 @@ function introFly() {
       if (!t0) t0 = performance.now();
       const t = (performance.now() - t0) / 1000;
       // 1) the flight: fast off the altar, easing in over her
-      const f = smooth(t / S.fly); drone.lerpVectors(altar, focus, f);
+      const x = Math.min(1, t / S.fly), f = 1 - Math.pow(1 - x, 3); drone.lerpVectors(altar, focus, f); // off at speed, braking over her
       // 2) the swing: round behind her, down to the play distance and pitch
       const w = smooth((t - S.fly * 0.75) / S.swing);
       const yawNow = flyYaw + angTo(flyYaw, playYaw) * w; rig.yaw = rig.baseYaw; rig.rotate(yawNow - rig.baseYaw);
