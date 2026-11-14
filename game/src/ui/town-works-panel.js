@@ -228,7 +228,7 @@ export function createTournamentEntry({ t, storage = null, client = null, flush 
           go.addEventListener('click', async () => {
             go.disabled = true; st.textContent = t('works.sending');
             const a = await api.act('enter_tournament', { season_id: season.id });
-            if (a.ok) rememberSeason(season.id); // the Hatchkeeper checks it once the season settles (net/pet.js)
+            if (a.ok) { rememberSeason(season.id); try { globalThis.dispatchEvent(new CustomEvent('ftf:quest-event', { detail: { event: 'enter_tournament' } })); } catch { /* the journal's t_enter */ } } // the Hatchkeeper checks it once the season settles (net/pet.js)
             render(a.ok ? t('tourn.done') : t('works.err.' + a.reason), a.ok ? a.hash : null);
           });
           kids.push(el('div', 'tw-ctl')); kids[kids.length - 1].append(go);

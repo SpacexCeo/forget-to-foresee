@@ -29,6 +29,7 @@ import { portraitPath } from '../quests/portraits.js';
 import { registerWindow, claimWindow } from '../ui/window-toggle.js';
 import { CHEST_EVENT } from '../game/chests.js';
 import { getTownNav } from '../physics/nav-grid.js';
+import { on as onBus } from '../sprint/bus.js';
 
 /** A sprint flag: features.json (sprint §3.6), or ?ff=questJournal,questTracker,autoWalk for a local check. */
 export function flagOn(name, search = (globalThis.location && globalThis.location.search) || '') {
@@ -312,9 +313,15 @@ export function createTownQuests({ scene = null, hudToast = null, storage, townL
   // ---- kills (play/mobs.js window event): quest progress and kill silk
   let killN = 0;
   const onKill = (e) => { const d = (e && e.detail) || {}; if (!d.type) return;
-    if (storyDrops && inventory && typeof d.killId === 'string') for (const x of rollDrops(d.killId, d.type)) inventory.add(x.id, x.n, 'drop'); // until the combat stream's drops land
+    if (storyDrops && inventory && typeof d.killId === 'string') { let got = 0; for (const x of rollDrops(d.killId, d.type)) { inventory.add(x.id, x.n, 'drop'); got += x.n; } if (got) questDo({ type: 'EVENT', event: 'gather', n: got }); } // until the combat stream's drops land; d_gather counts them
     questDo({ type: 'KILL', mob: d.type, at: Array.isArray(d.pos) ? [d.pos[0] - TOWN_ORIGIN[0], d.pos[1] - TOWN_ORIGIN[1], d.pos[2] - TOWN_ORIGIN[2]] : null, killId: typeof d.killId === 'string' && d.killId ? d.killId : d.type + ':' + now() + ':' + killN }); /* play/mobs.js: stable per creature and life */ killN++; };
   win.addEventListener('ftf:mob-killed', onKill);
+  // the journal's counted events (side, daily, tournament quests): a trade (market, stalls), a wheel spin, a tournament
+  // entry, a learned skill, an agent entered; each was a dead end before (quests-flow audit 14.11)
+  const onFeat = (e) => { if (e && e.detail && e.detail.k === 'trade') questDo({ type: 'EVENT', event: 'trade' }); };
+  const onQuestEvent = (e) => { const ev = e && e.detail && e.detail.event; if (['wheel', 'enter_tournament', 'trade', 'learn_skill', 'enter_agent'].includes(ev)) questDo({ type: 'EVENT', event: ev }); };
+  win.addEventListener('ftf:feat', onFeat); win.addEventListener('ftf:quest-event', onQuestEvent);
+  const offBus = [onBus('skill.learned', () => questDo({ type: 'EVENT', event: 'learn_skill' })), onBus('tournament.agent_entered', () => questDo({ type: 'EVENT', event: 'enter_agent' }))];
   win.addEventListener('ftf:journal-toggle', toggleLog); // the rpg HUD's J button, via sprint/window-router.js
 
   // ---- the guide's 'moved' step: walking a few metres from where she arrived
@@ -475,7 +482,7 @@ export function createTownQuests({ scene = null, hudToast = null, storage, townL
     openLog, closeLog, toggleLog, get logOpen() { return !!logPanel || !!(journal && journal.isOpen); },
     get guide() { return guide; }, feedGuide, publishMarkers,
     get journal() { return journal; }, get tracker() { return tracker; }, get walker() { return walker; }, walkTo, get tracked() { return tracked.slice(); },
-    dispose() { if (offChests) offChests(); offWindow(); unSilk(); setMarkers('quests', []); if (trail) trail.dispose(); if (waypoint) waypoint.dispose(); if (journal) journal.close(); if (tracker) tracker.dispose(); if (walker) { walker.dispose(); setAutoWalker(null); } if (doc.body && doc.body.classList) doc.body.classList.remove('ftf-tracker-on'); closeTalk(); closeLog(); logBtn.remove(); line.remove(); win.removeEventListener('ftf:mob-killed', onKill); win.removeEventListener('ftf:journal-toggle', toggleLog); win.removeEventListener('keydown', onKey); win.removeEventListener('keydown', onGuideKey); win.removeEventListener('ftf:window-open', onWindow); win.removeEventListener('pointermove', onDrag); win.removeEventListener('ftf:portal-near', onPortal); win.removeEventListener('ftf:mob-killed', onHit); win.removeEventListener('ftf:mob-hit', onHit); },
+    dispose() { for (const f of offBus) f(); win.removeEventListener('ftf:feat', onFeat); win.removeEventListener('ftf:quest-event', onQuestEvent); if (offChests) offChests(); offWindow(); unSilk(); setMarkers('quests', []); if (trail) trail.dispose(); if (waypoint) waypoint.dispose(); if (journal) journal.close(); if (tracker) tracker.dispose(); if (walker) { walker.dispose(); setAutoWalker(null); } if (doc.body && doc.body.classList) doc.body.classList.remove('ftf-tracker-on'); closeTalk(); closeLog(); logBtn.remove(); line.remove(); win.removeEventListener('ftf:mob-killed', onKill); win.removeEventListener('ftf:journal-toggle', toggleLog); win.removeEventListener('keydown', onKey); win.removeEventListener('keydown', onGuideKey); win.removeEventListener('ftf:window-open', onWindow); win.removeEventListener('pointermove', onDrag); win.removeEventListener('ftf:portal-near', onPortal); win.removeEventListener('ftf:mob-killed', onHit); win.removeEventListener('ftf:mob-hit', onHit); },
   };
 }
 
