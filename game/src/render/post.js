@@ -219,8 +219,8 @@ export class PostStack {
       const s = cfg.aoScale || 1, aoK = () => aoScaleFor(s, this.superScale);
       ao = new GTAOPass(this.scene, this.camera, Math.max(1, Math.round(size.x * aoK())), Math.max(1, Math.round(size.y * aoK())));
       ao.output = GTAOPass.OUTPUT.Default;
-      ao.blendIntensity = 0.8;
-      ao.updateGtaoMaterial({ radius: 0.55, distanceExponent: 1.4, thickness: 0.5, scale: 1.0, samples: cfg.aoSlices * 3 || 12, distanceFallOff: 1.0, screenSpaceRadius: false });
+      ao.blendIntensity = cfg.aoScale >= 1 ? 0.92 : 0.8; // ultra: a wider, deeper contact shadow (same sample count)
+      ao.updateGtaoMaterial({ radius: cfg.aoScale >= 1 ? 0.85 : 0.55, distanceExponent: 1.4, thickness: 0.5, scale: 1.0, samples: cfg.aoSlices * 3 || 12, distanceFallOff: 1.0, screenSpaceRadius: false });
       ao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 4, radiusExponent: 1, rings: 2, samples: 12 });
       // The g-buffer pass must not see camera-facing overlay quads (labels, mist, markers) nor any
       // sprite or transparent mesh (nameplates, holograms, glass): rendered with the normal override

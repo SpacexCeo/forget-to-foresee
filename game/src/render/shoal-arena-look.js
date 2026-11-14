@@ -9,6 +9,11 @@ import { createShoalLook } from './shoal-look.js';
 import { lookFromQuery } from './shoal-look-data.js';
 import { createShoalPanel } from './shoal-panel.js';
 import { dressShoalProps } from './shoal-props.js';
+import { FOG_UNIFORMS } from './fog.js';
+
+/** The town's shared fog lobe glows warm toward its sun; on the ice it is a faint cold glint (icy air, owner 14.11). */
+const ICE_LOBE = Object.freeze([0.5, 0.62, 0.75, 0.25]);
+function icyLobe() { FOG_UNIFORMS.ftfFogSunTint.value.set(ICE_LOBE); }
 
 /**
  * @param {object} o
@@ -40,6 +45,7 @@ export function createArenaLook({ renderer, scene, camera, lookdev, arena, tier 
       fog: scene.fog, background: scene.background, environment: scene.environment,
       toneMapping: renderer.toneMapping, exposure: renderer.toneMappingExposure, fov: camera.fov,
       hidden: [...townBits(), ...townLights()].filter((o) => o.visible),
+      lobe: Float32Array.from(FOG_UNIFORMS.ftfFogSunTint.value),
       spires: A.spires && A.spires[0] ? { m: A.spires[0].material, k: A.spires[0].material.emissiveIntensity, op: A.spires[0].material.opacity } : null,
     };
     for (const o of saved.hidden) o.visible = false;
@@ -57,6 +63,7 @@ export function createArenaLook({ renderer, scene, camera, lookdev, arena, tier 
     for (const o of saved.hidden) o.visible = true;
     scene.fog = saved.fog; scene.background = saved.background; scene.environment = saved.environment;
     renderer.toneMapping = saved.toneMapping; renderer.toneMappingExposure = saved.exposure;
+    FOG_UNIFORMS.ftfFogSunTint.value.set(saved.lobe);
     camera.fov = saved.fov; camera.updateProjectionMatrix();
     if (saved.spires) { saved.spires.m.emissiveIntensity = saved.spires.k; saved.spires.m.opacity = saved.spires.op; saved.spires.m.transparent = true; saved.spires.m.needsUpdate = true; }
     if (panel) { panel.dispose && panel.dispose(); panel = null; }
@@ -76,7 +83,7 @@ export function createArenaLook({ renderer, scene, camera, lookdev, arena, tier 
       if ((attachT -= dt) <= 0) { attachT = 1; look.attach(arena.root); } // adds and new meshes get the cascaded shadows too
       look.update(dt, focus);
     },
-    render() { look.render(); },
+    render() { if (active) icyLobe(); look.render(); }, // after the town's look update, which rewrites the lobe
     dispose() { leave(); globalThis.removeEventListener && globalThis.removeEventListener('resize', onResize); look.dispose(); },
   };
 }
