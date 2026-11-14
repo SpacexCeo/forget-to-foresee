@@ -77,8 +77,12 @@ export class CommandBus {
     if (!ok) this.rejections++;
     const out = { ok, status: r.status, type, args, actionId, body, reason, replayed: !!body.replayed, source: body.error ? body.error.source || null : null, silent };
     // A walk replay must arrive before the next command is processed (proximity, not_in_transit).
+    // A timer may fire before the room's clock has moved that far (Node schedules from the loop's cached time, so after
+    // a long synchronous turn it fires early by that turn's length): wait on the room's own clock, not on the timer.
     if (ok && type === 'move' && body.result && body.result.seconds > 0 && this.transport.realDelayMs) {
-      await this.sleep(this.transport.realDelayMs(body.result.seconds) + 2);
+      const ms = this.transport.realDelayMs(body.result.seconds) + 2, now = this.transport.now || Date.now, until = now() + ms;
+      await this.sleep(ms);
+      for (let i = 0; i < 100 && now() < until; i++) await this.sleep(Math.max(1, Math.ceil(until - now())));
     }
     for (const fn of [...this.listeners]) { try { fn(out); } catch (e) { console.warn('[play] result listener failed', e); } }
     return out;
