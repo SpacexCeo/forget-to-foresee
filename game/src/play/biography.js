@@ -6,6 +6,7 @@
 import { parseFate, localizeMemoryText, localizeFate, AGENT_IDS } from '../ui/i18n/engine-adapter.js';
 import { explorerLinks } from '../net/near.js';
 import { NEAR_DEPLOYMENT } from '../net/near-deployment.js';
+import { knownCount } from './reasons.js';
 
 export const BIOGRAPHY_FORMAT = 'ftf-biography/1';
 
@@ -59,6 +60,17 @@ export function biographyModel({ obs, nearStatus = null, shards = null, deployme
     shards: shardList,
     chain: { ...chainOf(nearStatus, s.seasonId, deployment), merkleRoot: s.merkleRoot || null },
     local: true, // the season itself ran in this browser tab
+    // the end screen's 'Your season' and 'What the clans did' (presentation only, read from the observation)
+    you: {
+      stakes: (iris.anchors || []).length,
+      revealed: (obs.chronicle || []).length,
+      verified: (obs.proofs || []).filter((x) => x.verified).length,
+      words: knownCount(obs),
+      silk: iris.silk ?? null,
+    },
+    clans: ((obs.relationships && obs.relationships.clans) || []).map((c) => ({
+      clan: c.clan, trust: c.trustInIris, silk: c.silk, state: c.isolated ? 'isolated' : c.linkBroken ? 'broken' : 'ok',
+    })),
   };
 }
 
@@ -80,6 +92,13 @@ export function biographyLines(b, t, i18n) {
     shards: b.shards.map((x) => ({ text: t('bio.shard', { token: x.tokenId, owner: x.owner || '—' }), href: x.url })),
     chain: { text: t(chainKey(b.chain.state)), href: b.chain.href, recorded: b.chain.recordedHref ? { text: t('bio.chain.recorded'), href: b.chain.recordedHref } : null },
     note: t('season.local.note'),
+    you: b.you ? [
+      t('bio.you.stakes', { count: b.you.stakes }),
+      t('bio.you.signs', { revealed: b.you.revealed, verified: b.you.verified }),
+      t('bio.you.words', { count: b.you.words }),
+      b.you.silk != null ? t('bio.you.silk', { silk: b.you.silk }) : null,
+    ].filter(Boolean) : [],
+    clans: (b.clans || []).map((c) => t('bio.clan', { who: { $agentId: c.clan }, state: c.state, trust: c.trust, silk: c.silk })),
   };
 }
 
