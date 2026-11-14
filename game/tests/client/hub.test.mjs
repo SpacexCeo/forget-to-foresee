@@ -114,6 +114,10 @@ test('hub goals and strings: every hub key exists in all five languages', async 
   const inQuiet = hubGoal({ ...s.obs, you: { ...s.obs.you, zone: 'shell', shell: quiet } }, s.flags);
   assert.equal(inQuiet.id, 'fly');
   assert.notEqual(inQuiet.target, 'shell:' + quiet);
+  // a blank first trial (no sign anywhere yet): wait outside, leave inside, never "fly into a quiet Shell"
+  const blank = { ...s.obs, prophecies: [] };
+  assert.equal(hubGoal(blank, s.flags).id, 'wait');
+  assert.equal(hubGoal({ ...blank, you: { ...s.obs.you, zone: 'shell', shell: 1 } }, s.flags).id, 'leave');
   const keys = Object.keys(PLAY_MESSAGES.en).filter((k) => k.startsWith('hub.'));
   assert.ok(keys.length > 60);
   for (const loc of ['en', 'uk', 'ru', 'it', 'zh']) {

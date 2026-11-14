@@ -138,6 +138,11 @@ export function hubGoal(obs, flags = {}) {
   if (!flags.skipOnboarding && s.phase === 'play') {
     const step = (id) => ({ step: ONBOARDING_HUB.indexOf(id) + 1, steps: ONBOARDING_HUB.length, onboarding: true });
     const staked = (iris.anchors || []).length > 0 || !!flags.anchored;
+    // No sign anywhere yet (the Tournament can open on a blank glass): never send the player to a quiet
+    // Shell I; say plainly that time has to pass first (critic 14.11 #3).
+    if (!wait && !staked && s.tick === 1 && !(inShell && signForShell(obs, obs.you.shell))) {
+      return inShell ? g('leave', {}, null, {}, step('leave')) : g('wait', { tick: s.tick, ticks: s.ticks }, null, {}, step('fly'));
+    }
     if (!inShell && !staked && s.tick === 1) return g('fly', { shell: ROMAN[(wait || 1) - 1] }, 'shell:' + (wait || 1), {}, step('fly'));
     if (inShell && !staked && s.tick === 1) {
       // Simple mode (or a lucky prior): Iris's own reading already lands on trial 3, so there is nothing to change.
@@ -152,6 +157,8 @@ export function hubGoal(obs, flags = {}) {
       return g('stake', { tick: FIRST_GIFT_TICK }, null, { confidence: pct(meanConfidence(sign)) }, { ...step('stake'), hintKey: ready ? 'hub.goal.stake.hintReady' : 'hub.goal.stake.hint' });
     }
     if (inShell && s.tick === 1) return g('leave', {}, null, {}, step('leave'));
+    // a sign arrived after a blank first trial and nothing is staked yet: fly to it before watching the reveal
+    if (!inShell && !staked && wait && s.tick < FIRST_GIFT_TICK && iris.attention > 0) return g('fly_next', { shell: ROMAN[wait - 1] }, 'shell:' + wait);
     if (!inShell && s.tick <= FIRST_GIFT_TICK && !firstProof(obs)) return g('verified', { tick: FIRST_GIFT_TICK }, null, {}, step('verified'));
   }
   if (inShell) return g('inside', { shell: ROMAN[(obs.you.shell || 1) - 1] });
