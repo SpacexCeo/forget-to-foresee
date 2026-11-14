@@ -67,6 +67,7 @@ export function createMarketUi({ t, client, dice = null, storage = null, doc = g
   const silk = (c) => t('p2p.silk', { n: formatSilkC(c) });
   const errText = (r) => t('p2p.err.' + (['outside_band', 'not_enough_items', 'not_enough_silk', 'listing_gone', 'limit_listings', 'daily_cap', 'self_trade', 'paused', 'rate_limited', 'network', 'need_guest', 'too_small', 'not_configured', 'market_not_live'].includes(r.error) ? r.error : 'other'),
     { min: formatSilkC(r.minC || 0), max: formatSilkC(r.maxC || 0), need: formatSilkC(r.needC || 0), have: formatSilkC(r.haveC || 0), qty: r.have ?? '' });
+  let paintSilk = () => {}; // the header balance, repainted on every silk change and every tab switch
   let root = null, body = null, chip = null, silkEl = null, tab = 'buy', item = TRADABLE[0], unSilk = null, settlement = 'chain';
   const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); close(); } else if (['1', '2', '3', '4'].includes(e.key) && !(e.target && e.target.tagName === 'INPUT')) show(['buy', 'sell', 'mine', 'games'][Number(e.key) - 1]); };
 
@@ -224,7 +225,7 @@ export function createMarketUi({ t, client, dice = null, storage = null, doc = g
       rollEl.textContent = String(r.roll);
       out.replaceChildren(el('p', r.win ? 'mk2-win' : 'mk2-lose', r.win ? t('games.win', { x: formatSilkC(r.payoutC - r.stakeC) }) : t('games.lose', { x: formatSilkC(r.stakeC) })));
       fair.replaceChildren(t('games.fair', { k: r.k, seed: r.seed.slice(0, 16) + '…' }) + ' ', btn(t('games.verify'), () => { const v = rollOf(dice.state().wheelId, r.k); fair.append(' ' + t(v.roll === r.roll ? 'games.verified' : 'games.mismatch', { roll: v.roll })); }, 'mk2-act mk2-ghost'));
-      refreshSilk(false).catch(() => {}); paint();
+      paintSilk(); refreshSilk(false).catch(() => {}); paint();
     }
     const play = el('p', 'mk2-note');
     g.append(el('p', 'mk2-note', t('games.rule')), bets, stakes, summary, go, hint, rollEl, out, fair, counters, play, odds, el('p', 'mk2-note', t('games.footer')));
@@ -232,7 +233,7 @@ export function createMarketUi({ t, client, dice = null, storage = null, doc = g
   }
 
   function show(next) {
-    tab = next;
+    tab = next; paintSilk();
     for (const b of root.querySelectorAll('.mk2-tabs button')) b.setAttribute('aria-selected', String(b.dataset.tab === tab));
     Promise.resolve((tab === 'buy' ? buyTab : tab === 'sell' ? sellTab : tab === 'games' ? gamesTab : mineTab)()).catch(() => body.replaceChildren(el('p', 'mk2-state err', t('p2p.err.network'))));
   }
@@ -247,7 +248,11 @@ export function createMarketUi({ t, client, dice = null, storage = null, doc = g
     for (const k of ['buy', 'sell', 'mine', 'games']) { const b = btn(t(k === 'games' ? 'games.tab' : 'p2p.tab.' + k), () => show(k), ''); b.setAttribute('role', 'tab'); b.dataset.tab = k; tabs.append(b); }
     chip = el('div', 'mk2-chip'); chip.hidden = true; body = el('div', 'mk2-body');
     box.append(head, tabs, chip, body); root.append(box); doc.body.append(root);
-    const paintSilk = () => { const v = silkView(); silkEl.textContent = v.chainOk ? silk(v.gateC) : ''; silkEl.title = t('silk.tip.gate', { n: formatSilkC(v.gateC) }); };
+    // the header shows the balance this tab spends: play silk in Games (the dice change it on every roll; owner 14.11 saw the
+    // chain balance stand still while the rolls won and lost), the silk on NEAR elsewhere. One source: the shared silk view.
+    paintSilk = () => { if (!silkEl) return; const v = silkView(), games = tab === 'games';
+      silkEl.textContent = games ? t('games.play', { n: formatSilkC(v.playC) }) : v.chainOk ? silk(v.gateC) : '';
+      silkEl.title = games ? t('silk.tip.play', { n: formatSilkC(v.playC) }) : t('silk.tip.gate', { n: formatSilkC(v.gateC) }); };
     unSilk = subscribeSilk(paintSilk); paintSilk();
     root.addEventListener('keydown', (e) => { e.stopPropagation(); onKey(e); }); // focus stays inside the window (the close button first)
     show(first); x.focus && x.focus();
