@@ -539,18 +539,21 @@ export class SkyDome {
    * low tier, for presets without a baked HDR, and until the HDR has streamed in.
    */
   bakeEnvironment(renderer) {
-    const pmrem = new THREE.PMREMGenerator(renderer);
-    const sc = new THREE.Scene();
-    const m = new THREE.Mesh(this.mesh.geometry, this.material);
-    m.scale.setScalar(450);
-    sc.add(m);
+    // One generator and one bake scene for the dome's lifetime: the day cycle re-bakes every few seconds, and a fresh
+    // PMREMGenerator per bake compiled its blur shader and allocated its ping-pong target again each time (a hitch).
+    if (!this.pmrem || this.pmrem.renderer !== renderer) {
+      if (this.pmrem) this.pmrem.gen.dispose();
+      const sc = new THREE.Scene(), m = new THREE.Mesh(this.mesh.geometry, this.material);
+      m.scale.setScalar(450); sc.add(m);
+      this.pmrem = { renderer, gen: new THREE.PMREMGenerator(renderer), scene: sc };
+    }
     const disc = this.material.uniforms.uDiscOn.value;
     this.material.uniforms.uDiscOn.value = 0;
-    const rt = pmrem.fromScene(sc, 0, 0.1, 1000);
+    const rt = this.pmrem.gen.fromScene(this.pmrem.scene, 0, 0.1, 1000);
     this.material.uniforms.uDiscOn.value = disc;
-    pmrem.dispose();
+    this.envBakes = (this.envBakes || 0) + 1;
     return rt;
   }
 
-  dispose() { this.lut.dispose(); this.lutMat.dispose(); this.lutQuad.dispose(); this.material.dispose(); this.mesh.geometry.dispose(); }
+  dispose() { this.lut.dispose(); this.lutMat.dispose(); this.lutQuad.dispose(); this.material.dispose(); this.mesh.geometry.dispose(); if (this.pmrem) { this.pmrem.gen.dispose(); this.pmrem = null; } }
 }

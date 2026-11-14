@@ -202,7 +202,7 @@ export class LookDev {
     // Moonlight (`moonFill`, the town's night): the fill turns blue-silver and the bounce from the paving goes cold, so
     // the streets read moonlit and only the lamps' pools stay warm.
     if (P.moonFill) { this.hemi.color.lerp(_c.setRGB(0.55, 0.66, 0.95), Math.min(1, P.moonFill)); this.hemi.groundColor.lerp(_c.setRGB(0.09, 0.11, 0.17), Math.min(1, P.moonFill)); }
-    this.baseHemi = this.hemi.color.clone();
+    this.baseHemi = (this.baseHemi || new THREE.Color()).copy(this.hemi.color); // reused: the day cycle runs this every frame
     this.clouds.setLighting({ sun: atm.sun, sunRadiance: atm.sunRadiance, zenith: atm.zenith, fogColor: atm.fogColor, cover: P.cloudCover });
     this.foliage.setSun(this.sunDir, atm.sunColor);
     this.motes.setSun(this.sunDir, atm.sunColor);
@@ -235,7 +235,7 @@ export class LookDev {
     // Haze: thicker and greyer under cloud, the sun's glow in it goes with the sun.
     const grey = _c.setScalar((atm.fogColor.r * 0.2126 + atm.fogColor.g * 0.7152 + atm.fogColor.b * 0.0722));
     // Under a lid the haze is the lid's own grey, a little darker than the sky above it.
-    this.baseFog = atm.fogColor.clone().lerp(_c2.copy(atm.zenith).multiplyScalar(0.85), P.fog.cool || 0).lerp(grey.multiplyScalar(0.8), lid * 0.75);
+    this.baseFog = (this.baseFog || new THREE.Color()).copy(atm.fogColor).lerp(_c2.copy(atm.zenith).multiplyScalar(0.85), P.fog.cool || 0).lerp(grey.multiplyScalar(0.8), lid * 0.75);
     if (P.moonFill) this.baseFog.lerp(_c2.setRGB(0.2, 0.25, 0.36), 0.6 * Math.min(1, P.moonFill)); // the ground mist catches the moon
     // Weather haze is cool and a little darker than the sky's own horizon (owner 12.11: a flat beige milk): the veil
     // reads as air, not as paint, and never out-shines what stands in it.

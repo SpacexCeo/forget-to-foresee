@@ -53,3 +53,12 @@ test('the frame loop writes the prompt only when its text changes and passes the
   assert.match(src, /hud\.update\(dt, hudStats\)/);
   assert.doesNotMatch(src, /hud\.update\(dt, \{/);
 });
+
+test('the sky bakes the ambient light with one PMREM generator for its lifetime (no shader recompile per bake)', () => {
+  const src = readFileSync(new URL('../../src/render/sky.js', import.meta.url), 'utf8');
+  const body = src.slice(src.indexOf('  bakeEnvironment(renderer) {'), src.indexOf('  dispose() {'));
+  assert.equal((body.match(/new THREE\.PMREMGenerator/g) || []).length, 1);
+  assert.match(body, /if \(!this\.pmrem \|\| this\.pmrem\.renderer !== renderer\)/, 'created once per renderer');
+  assert.match(body, /this\.pmrem\.gen\.fromScene\(this\.pmrem\.scene/);
+  assert.doesNotMatch(body.slice(body.indexOf('fromScene')), /\.dispose\(\)/, 'nothing is disposed after a bake');
+});
