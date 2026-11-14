@@ -37,7 +37,7 @@ signs for a guest after checking the guest's own signature, so the signer is the
 | Elise heroine NFT, owned by that guest | 56 (`heroine.ftf-coordinator.testnet` `nft_total_supply`) | minted in the same Day 1 flow |
 | Chest opened from a monster drop | see [docs/proof/tx-2026-11-13.md](docs/proof/tx-2026-11-13.md) (`open_chest`) | [`open_chest`, 13 Nov 22:35 UTC](https://testnet.nearblocks.io/txns/Hxd7txauoaaqrpDpowHZnuCwmrL1CEwQtqi3tnqCAYVd) |
 | Dragon NFT owned by a heroine NFT's account | 6 (`companions.ftf-coordinator.testnet` `nft_total_supply`) | [`nft_mint`, 13 Nov 09:26 UTC](https://testnet.nearblocks.io/txns/EZ91ghdTvPisEgFSYCxG1xNW4NSUHXQ6ZPgcofLKZ25F) |
-| Gate-Loom paid on chain, pledges to the town works, tournament entries, items minted | 0 so far (`ftf-town.testnet` `pulse`: `gates_paid`, `invest`, `entry`; `items.ftf-town.testnet` supply) | none yet: the routes are live, no player has used them on chain |
+| Gate-Loom paid on chain, stall pledges, tournament entries, items minted | 0 so far (`ftf-town.testnet` `pulse`: `gates_paid`, the stall and `entry` counters; `items.ftf-town.testnet` supply) | none yet: the routes are live, no player has used them on chain |
 
 Failed sends, stated plainly: on 13 Nov the relayer counted 1,082 failed trader sends, all before the 12:08 UTC switch
 to the FastNear + archival RPC pair, and none after it (`failures_today` in `/api/market/stats`; the day counter resets
