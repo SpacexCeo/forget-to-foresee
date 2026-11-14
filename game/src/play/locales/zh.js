@@ -674,6 +674,11 @@ export default {
   'set.ctl.mode.classic.1': "左键：移动到该点",
   'set.ctl.mode.classic.2': "按住右键拖动：转动视角",
   'set.ctl.mode.foot': "CTRL — 光标 • ESC — 菜单",
+  // ---- the installable game (ui/pwa.js) ----
+  'pwa.install.line': "像应用一样玩",
+  'pwa.install': "安装",
+  'pwa.ios': "像应用一样玩：点“分享”，再选“添加到主屏幕”",
+  'pwa.close': "隐藏",
   'intro.skip': "跳过",
   'spot.wheel': "转动转盘",
   'item.prop_wheel_of_fortune': "幸运转盘",

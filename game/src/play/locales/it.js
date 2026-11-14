@@ -675,6 +675,11 @@ export default {
   'set.ctl.mode.classic.1': "Tasto sinistro: vai al punto",
   'set.ctl.mode.classic.2': "Tieni premuto il destro e trascina: ruota la visuale",
   'set.ctl.mode.foot': "CTRL — cursore • ESC — menu",
+  // ---- the installable game (ui/pwa.js) ----
+  'pwa.install.line': "Gioca come un'app",
+  'pwa.install': "Installa",
+  'pwa.ios': "Come un'app: Condividi, poi Aggiungi alla schermata Home",
+  'pwa.close': "Nascondi",
   'intro.skip': "Salta",
   'spot.wheel': "Gira la ruota",
   'item.prop_wheel_of_fortune': "Ruota della fortuna",

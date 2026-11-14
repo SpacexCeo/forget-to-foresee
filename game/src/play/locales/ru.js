@@ -672,6 +672,11 @@ export default {
   'set.ctl.mode.classic.1': "ЛКМ: идти в точку",
   'set.ctl.mode.classic.2': "Зажать ПКМ и тянуть: вращать камеру",
   'set.ctl.mode.foot': "CTRL — курсор • ESC — меню",
+  // ---- the installable game (ui/pwa.js) ----
+  'pwa.install.line': "Играйте как в приложении",
+  'pwa.install': "Установить",
+  'pwa.ios': "Как приложение: «Поделиться», затем «На экран „Домой“»",
+  'pwa.close': "Скрыть",
   'intro.skip': "Пропустить",
   'spot.wheel': "Крутить колесо",
   'item.prop_wheel_of_fortune': "Колесо фортуны",
