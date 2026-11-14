@@ -23,9 +23,7 @@ function mountOnce(ctx) {
   const win = ctx.win || globalThis;
   // Loom Dice plays with play silk only (silk on this device that can never be recorded on NEAR)
   let wheelId = null; try { wheelId = ctx.storage.getItem('ftf.dice.id'); if (!wheelId) { wheelId = 'd' + Math.random().toString(36).slice(2, 12); ctx.storage.setItem('ftf.dice.id', wheelId); } } catch { wheelId = 'session'; }
-  // Loom Dice (a roll-under game on play silk, market/dice.js) stays out of the live market: a dice game with a house
-  // edge reads as gambling to a reviewer whatever the money (jury pass 15.11); its code and tests stay for a later decision
-  const dice = ctx.dice === true && ctx.ledger ? createDice({ storage: ctx.storage, ledger: ctx.ledger, play: () => silkView().playC, wheelId }) : null;
+  const dice = ctx.ledger ? createDice({ storage: ctx.storage, ledger: ctx.ledger, play: () => silkView().playC, wheelId }) : null;
   const ui = createMarketUi({ t: ctx.t, client: createMarketClient({ storage: ctx.storage }), dice, storage: ctx.storage, doc: ctx.doc || globalThis.document });
   const onOpen = (e) => { claimWindow('market'); ui.open((e && e.detail && e.detail.tab) || 'buy'); };
   const offWindow = registerWindow('market', { isOpen: () => ui.isOpen, close: () => ui.close() }); // one window at a time

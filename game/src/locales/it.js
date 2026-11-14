@@ -828,7 +828,7 @@ export default {
   'item.part_crank': 'Manovella',
   'item.part_rivet_plate': 'Piastra rivettata',
   'item.part_spindle': 'Fuso',
-  'item.prop_wheel_of_fortune': 'Ruota della seta',
+  'item.prop_wheel_of_fortune': 'Ruota della fortuna',
   'item.trading_board': 'Tabellone degli scambi',
   "mk.title": "Mercato cittadino",
   "mk.today": "{n, plural, one {# scambio oggi} other {# scambi oggi}}",

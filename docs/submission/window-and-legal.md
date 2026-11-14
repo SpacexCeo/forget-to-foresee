@@ -6,6 +6,10 @@
   hackathon: no template, no earlier code. Commits a day (13.11): 7 Nov 121, 8 Nov 369, 9 Nov 258, 10 Nov 109,
   11 Nov 284, 12 Nov 659, 13 Nov 190 (`git log --format=%ad --date=short origin/main | sort | uniq -c`).
 - **Testnet only.** All contracts and accounts are on NEAR testnet. Nothing in the game has real-world value.
-- **Silk.** In-game only. Play silk (the free daily wheel) cannot be bought, cannot be cashed out and cannot open the
-  Gate-Loom. The live build has no game of chance with stakes (the dice tab is off since 15.11).
+- **Silk.** In-game only. Loom Dice and the Wheel of Fortune are mini-games on play silk: no money in or out. Play
+  silk cannot be bought, cannot be withdrawn and cannot open the Gate-Loom. Each dice roll shows its seed hash before
+  the roll and the seed after; the daily limits (net win 40, net loss 60, 200 rolls) are on the tab.
+- **Under 18** (in-game wording on the play-silk games): "These games use play silk. It has no real value, cannot be
+  bought, and cannot be cashed out or used to open the Gate-Loom. The odds are shown on every game. If you are under
+  18, please skip this tab."
 - **AI.** Which characters are a model and which are scripted: README "What is AI, what is scripted".

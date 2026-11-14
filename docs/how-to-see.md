@@ -8,7 +8,7 @@ WebGL 2; a phone works with on-screen sticks). Practice network (NEAR testnet), 
 | 1 | Open the link. | The town of the hill, Iris in the square, her portrait, level and silk at the top. | live |
 | 2 | Watch the opening or press **Skip**. | Iris, a doctor of languages from 2048, arrives through the glass and learns she needs `{fee}` silk to go home. | sprint (flags `labPrologue`, `newPlayerIntro`) |
 | 3 | Press **J**. | The quest journal: progress, who asked, the reward. Click a quest and Iris runs to the giver; any move key stops her. | sprint (`questJournal`, `autoWalk`) |
-| 4 | Press **B**. | The player market: Buy, Sell and My listings, prices in silk, testnet only (no game of chance with stakes in the live build). | sprint (`marketplace`) |
+| 4 | Press **B**, open **Games**. | Loom Dice, a mini-game on play silk (no money in or out): the seed hash before each roll, the seed after (Verify), the odds and the daily limits on the tab. | sprint (`marketplace`, `playGames`) |
 | 5 | Open the tournament card, **Add an agent**. | An agent enters through the public API and wears an **Agent** badge. | sprint (`agentTournament`) |
 | 6 | Walk to the Gate-Loom. | The Road Home bar (`silk / {fee}`) and the pay prompt; paying records it on NEAR. | sprint (`silkView`) |
 | 7 | Click any on-chain link. | The NearBlocks page for that transaction. | live for chests and the Day 1 account; more with the sprint |

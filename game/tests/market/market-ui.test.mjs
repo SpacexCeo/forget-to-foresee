@@ -89,7 +89,9 @@ test('games tab: the legal frame first, once; the allowance; a roll moves play s
   [...doc.body.querySelectorAll('button')].find((b) => b.textContent === 'Roll').click(); await tick();
   assert.match(text(), /You (win \+0\.92|lose −1) play silk/);
   [...doc.body.querySelectorAll('button')].find((b) => b.textContent === 'Verify').click();
-  assert.match(text(), /Checked: the seed gives \d+\./);
+  assert.match(text(), /Checked: the seed matches the hash shown before the roll and gives \d+\./, 'provably fair: the hash before, the seed after');
+  assert.match(text(), /A mini-game on play silk: no money in or out\./, 'the play-silk note on the tab (jury pass 15.11)');
+  assert.match(text(), /Next roll #2: seed hash [0-9a-f]{16}…/);
   ui.close(); ui.open('games'); await tick();
   assert.doesNotMatch(text(), /I understand/); // shown once
   ui.close();

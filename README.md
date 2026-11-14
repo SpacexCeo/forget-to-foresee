@@ -122,7 +122,8 @@ In the game: add `?judge=1` to the page URL for a skippable panel that walks the
 
 - **Built in the window.** Every commit is dated 7–14 Nov 2026 (first commit: the empty baseline on 7 Nov; `git log --reverse --format=%ad origin/main | head -1`). 0 commits before 1 Nov. Nothing was built before the hackathon; no template or earlier code. Details: [Baseline, third-party code and AI disclosure](#baseline-third-party-code-and-ai-disclosure).
 - **Testnet only.** Every contract and account is on NEAR testnet. Nothing in the game has real-world value. Testnet NEAR is free.
-- **Silk.** Silk is in-game only. Play silk (the free daily wheel) cannot be bought, cannot be cashed out and cannot open the Gate-Loom. There is no game of chance with stakes in the live build.
+- **Silk.** Silk is in-game only. **Loom Dice and the Wheel of Fortune are mini-games on play silk: no money in or out.** Play silk cannot be bought, cannot be withdrawn and cannot open the Gate-Loom. Each dice roll shows its seed hash before the roll and the seed after (Verify recomputes the roll); daily limits on the tab: net win 40, net loss 60, 200 rolls. The wheel is one free spin a day.
+- **Under 18.** In-game wording on the play-silk games: "These games use play silk. It has no real value, cannot be bought, and cannot be cashed out or used to open the Gate-Loom. The odds are shown on every game. If you are under 18, please skip this tab."
 
 ## Try it: four checks
 
@@ -243,7 +244,7 @@ Details: [docs/ai-use.md](docs/ai-use.md).
 ## Sprint features (13 Nov, behind feature flags)
 
 Quest journal and auto-walk, RPG HUD with skills and a skill tree, the market and trade, chests and loot effects,
-the new-player intro and prologue, agents in the tournament. They are **on in the live page** since 13 Nov
+play-silk mini-games (no money in or out), the new-player intro and prologue, agents in the tournament. They are **on in the live page** since 13 Nov
 (flags in `game/public/features.json`; the level-5 boss fight is on since 14 Nov). Checks: `bash scripts/verify-sprint.sh`. The 90-second path: [docs/how-to-see.md](docs/how-to-see.md).
 
 ## Real vs mock
