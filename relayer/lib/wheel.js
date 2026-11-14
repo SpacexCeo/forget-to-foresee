@@ -4,6 +4,7 @@
 // the request is signed by a key of that account, and only then mints the skin (contracts/skin-nft: cap, one each).
 import { createHash } from 'node:crypto';
 import { appendFileSync, mkdirSync, readFileSync } from 'node:fs';
+import { activeDb, dbClaimLog } from './storage.js';
 import { join } from 'node:path';
 import { b58decode, createTxClient, importSecretKey } from './near-tx.js';
 import { NET, netOf } from './network.js';
@@ -75,6 +76,7 @@ export async function checkClaim(b, now = Date.now(), maxSkewMs = WHEEL_DEFAULTS
  * so `node scripts/mint-pending.mjs` can mint them once FTF_SKIN_KEY exists. The browser keeps the prize pending too.
  */
 export function createClaimLog(dir) {
+  const db = activeDb(); if (db) return dbClaimLog(db); // FTF_DB: receipts of kind 'wheel'
   return {
     record(c) { try { mkdirSync(dir, { recursive: true }); appendFileSync(join(dir, 'wheel-claims.jsonl'), JSON.stringify(c) + '\n', { mode: 0o600 }); return true; } catch { return false; } },
     list() { try { return readFileSync(join(dir, 'wheel-claims.jsonl'), 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)); } catch { return []; } },

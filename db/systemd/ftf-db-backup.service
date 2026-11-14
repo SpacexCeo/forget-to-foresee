@@ -1,0 +1,9 @@
+# Nightly copy of the project's database (db/backup.mjs). Install: see docs/database.md.
+[Unit]
+Description=Forget to Foresee database backup
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/bin/env node /opt/ftf/db/backup.mjs --db /var/lib/ftf-db/ftf.sqlite --dir /var/lib/ftf-db/backups --keep 14
+Nice=10

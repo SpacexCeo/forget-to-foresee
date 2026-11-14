@@ -1,0 +1,11 @@
+# Every night at 03:17 UTC (a quiet hour for the town), and once after a boot that missed it.
+[Unit]
+Description=Nightly Forget to Foresee database backup
+
+[Timer]
+OnCalendar=*-*-* 03:17:00 UTC
+Persistent=true
+RandomizedDelaySec=120
+
+[Install]
+WantedBy=timers.target

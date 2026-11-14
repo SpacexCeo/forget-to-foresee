@@ -12,6 +12,7 @@
 import { createPublicKey, randomBytes, verify as edVerify, createHash, verify as cryptoVerify } from 'node:crypto';
 import { allowOrigin } from './core.js';
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { activeDb, dbIdentityStore } from './storage.js';
 import { dirname, join } from 'node:path';
 import { recoverPersonal } from './tee-crypto.js';
 import { b58decode } from './near-tx.js';
@@ -173,6 +174,8 @@ export function createNonces({ ttlMs = AUTH.nonceTtlMs, now = () => Date.now(), 
  * Written atomically (tmp + rename), mode 600. Holds only public data.
  */
 export function createIdentityStore(file) {
+  const db = file ? activeDb() : null; // with FTF_DB the identities live in the database (lib/storage.js); a store with no file stays in memory
+  if (db) return dbIdentityStore(db);
   let data = { identities: {} };
   try { if (file && existsSync(file)) data = JSON.parse(readFileSync(file, 'utf8')); } catch { data = { identities: {} }; }
   if (!data.identities) data.identities = {};

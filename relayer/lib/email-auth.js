@@ -12,6 +12,7 @@
 // Testnet only: the key holds testnet NEAR and game items with no real value; that custody is stated in the docs.
 import { createHash, createCipheriv, createDecipheriv, randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
 import { verifyGuest } from './auth.js';
+import { activeDb } from './storage.js';
 import { NET } from './network.js';
 
 export const EMAIL = Object.freeze({ codeTtlMs: 10 * 60 * 1000, maxTries: 5, perEmailPerHour: 5, proofTtlMs: 5 * 60 * 1000, maxCodes: 20000 });
@@ -43,7 +44,9 @@ export function unseal(box, key) {
 export const proofMessage = (action, accountId, detail, at) => `Forget to Foresee account\nAction: ${action}\nAccount: ${accountId}\nDetail: ${detail}\nAt: ${at}\nThis proves you control this game account on NEAR ${NET.network}. It sends no transaction.`;
 
 /** One-time codes in memory: issue(email, purpose, bind) -> code | {error}; take(email, code, purpose) -> {ok, bind} | {ok:false, error}. */
-export function createCodes({ now = () => Date.now(), rand = () => randomInt(0, 1_000_000), salt = randomBytes(16) } = {}) {
+export function createCodes({ now = () => Date.now(), rand = () => randomInt(0, 1_000_000), salt = randomBytes(16), db = undefined } = {}) {
+  const d = db === undefined ? activeDb() : db;
+  if (d) return dbCodes(d, { now, rand });
   const codes = new Map(), sent = new Map(); // email -> {hash, purpose, bind, exp, tries}; email -> [times]
   const hash = (email, code) => createHash('sha256').update(salt).update(email + '|' + code).digest();
   return {
@@ -63,6 +66,38 @@ export function createCodes({ now = () => Date.now(), rand = () => randomInt(0, 
       if (++c.tries > EMAIL.maxTries) { codes.delete(email); return { ok: false, error: 'too_many_tries' }; }
       if (!timingSafeEqual(c.hash, hash(email, String(code)))) return { ok: false, error: 'wrong_code' };
       codes.delete(email);
+      return { ok: true, bind: c.bind };
+    },
+  };
+}
+
+/**
+ * The same codes kept in the database (FTF_DB): they outlive a relayer restart. The key is the email's hash id (the
+ * address is never stored), the code is a salted hash, the salt is made once and kept in the kv table.
+ */
+function dbCodes(d, { now, rand }) {
+  let s = d.kv.get('email-code-salt');
+  if (typeof s !== 'string' || !/^[0-9a-f]{32}$/.test(s)) { s = randomBytes(16).toString('hex'); d.kv.set('email-code-salt', s); }
+  const salt = Buffer.from(s, 'hex');
+  const hash = (email, code) => createHash('sha256').update(salt).update(email + '|' + code).digest();
+  return {
+    issue(email, purpose, bind = null) {
+      const t = now(), id = emailId(email);
+      d.codes.prune(t);
+      if (d.codes.sentSince(id, t - 3600_000) >= EMAIL.perEmailPerHour) return { error: 'too_many_codes' };
+      d.codes.sent(id, t);
+      const code = String(rand()).padStart(6, '0');
+      d.codes.set(id, { hash: hash(email, code), purpose, bind, exp: t + EMAIL.codeTtlMs, tries: 0 });
+      return { code };
+    },
+    take(email, code, purpose) {
+      const id = emailId(email), c = d.codes.get(id);
+      if (!c || c.exp <= now() || c.purpose !== purpose) return { ok: false, error: 'code_expired' };
+      if (!/^\d{6}$/.test(String(code))) return { ok: false, error: 'bad_code' };
+      if (c.tries + 1 > EMAIL.maxTries) { d.codes.delete(id); return { ok: false, error: 'too_many_tries' }; }
+      d.codes.tries(id, c.tries + 1);
+      if (!timingSafeEqual(c.hash, hash(email, String(code)))) return { ok: false, error: 'wrong_code' };
+      d.codes.delete(id);
       return { ok: true, bind: c.bind };
     },
   };

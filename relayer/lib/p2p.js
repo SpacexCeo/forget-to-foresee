@@ -8,6 +8,7 @@
 // One operation at a time (a queue), so two buyers of the last item get one winner. The book is a JSON file.
 import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { activeDb } from './storage.js';
 import { dirname } from 'node:path';
 import { MARKET, TRADABLE, checkListing, checkBuy, applyFill, isOpen, dayOf } from './market-rules.js';
 import { NET } from './network.js';
@@ -16,8 +17,8 @@ const MICRO_PER_CENT = 10_000n;
 const AGENT_RE = new RegExp('\\.' + NET.town.replace(/\./g, '\\.') + '$'); // the town's NPC wallets: <name>.<town>
 const empty = () => ({ v: 1, seq: 0, listings: {}, volume: {}, trades: [] });
 
-export function loadBook(file) { try { const b = JSON.parse(readFileSync(file, 'utf8')); return b && b.v === 1 ? b : empty(); } catch { return empty(); } }
-function saveBook(file, book) { if (!file) return; mkdirSync(dirname(file), { recursive: true }); writeFileSync(file + '.tmp', JSON.stringify(book)); renameSync(file + '.tmp', file); }
+export function loadBook(file) { const db = activeDb(); if (db) { const b = db.kv.get('p2p-book'); return b && b.v === 1 ? b : empty(); } try { const b = JSON.parse(readFileSync(file, 'utf8')); return b && b.v === 1 ? b : empty(); } catch { return empty(); } }
+function saveBook(file, book) { if (!file) return; const db = activeDb(); if (db) { db.kv.set('p2p-book', book); return; } mkdirSync(dirname(file), { recursive: true }); writeFileSync(file + '.tmp', JSON.stringify(book)); renameSync(file + '.tmp', file); }
 
 /**
  * @param {object} o

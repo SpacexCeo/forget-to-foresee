@@ -1,12 +1,15 @@
 // Presence service: the shared sky town for up to 15 players per room (docs/multiplayer.md). Plain Node, no deps.
 //   node server.js   (env: PER_IP (local tests only; default 3), PORT=8788, HOST=0.0.0.0, FTF_ALLOWED_ORIGINS or ALLOWED_ORIGIN (comma list added to the Pages origin; localhost always allowed), TRUST_PROXY=1 behind Caddy,
+//                     FTF_DB: the project's SQLite database (the rooms' chat and actions as rows; wins over PRESENCE_DATA_DIR);
 //                     PRESENCE_DATA_DIR: the folder of chat-history.json, the rooms' last lines and actions; unset keeps them in memory only)
 // GET /health -> counts only. WebSocket on /presence (or /).
 import http from 'node:http';
+import { pathToFileURL } from 'node:url';
 import { createHash } from 'node:crypto';
 import { handshake, wrapSocket } from './lib/ws.js';
 import { createHub, LIMITS } from './lib/hub.js';
 import { createHistory } from './lib/history.js';
+import { createDbHistory } from './lib/history-db.js';
 
 export const NET = Object.freeze({ perIp: 3, newPerIpPerMin: 10, maxSockets: LIMITS.roomSize * LIMITS.maxRooms, maxPayload: 1024, pingMs: 15000 });
 const DEFAULT_ORIGINS = ['https://spacexceo.github.io'];
@@ -32,7 +35,9 @@ export function createPresence({ env = process.env, now = () => Date.now(), log 
   const net = Number(env.PER_IP) > 0 ? { ...base, perIp: Number(env.PER_IP), newPerIpPerMin: Math.max(base.newPerIpPerMin, 2 * Number(env.PER_IP)) } : base;
   const origins = originList(env.FTF_ALLOWED_ORIGINS || env.ALLOWED_ORIGIN);
   const trustProxy = env.TRUST_PROXY === '1';
-  const history = createHistory({ dir: env.PRESENCE_DATA_DIR || null, now, log });
+  // FTF_DB: the rooms' memory lives in the project's database (db/index.js); it throws when the file cannot be opened,
+  // and the service then refuses to start (below) instead of quietly keeping the chat in memory only
+  const history = env.FTF_DB ? createDbHistory({ path: env.FTF_DB, now, log }) : createHistory({ dir: env.PRESENCE_DATA_DIR || null, now, log });
   const hub = createHub({ now, log, history });
   const perIp = new Map(), recent = new Map(); // ip hash -> open sockets / timestamps of new connections
   const sockets = new Set();
@@ -82,10 +87,14 @@ export function createPresence({ env = process.env, now = () => Date.now(), log 
   return { server, hub, sockets, history };
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) { // also true on Windows
   const port = Number(process.env.PORT) || 8788, host = process.env.HOST || '0.0.0.0';
-  const { server, history } = createPresence();
+  let made;
+  try { made = createPresence(); }
+  catch (e) { console.error(`FATAL: the database (FTF_DB=${process.env.FTF_DB}) cannot be opened: ${e && e.message}. Presence refuses to start so that no chat history is lost or split; fix the file or its permissions, or unset FTF_DB to run on chat-history.json.`); process.exit(1); }
+  const { server, history } = made;
+  console.log(process.env.FTF_DB ? `storage: database ${process.env.FTF_DB}` : `storage: ${process.env.PRESENCE_DATA_DIR ? 'chat-history.json in ' + process.env.PRESENCE_DATA_DIR : 'memory only'}`);
   // a restart keeps the last lines: the pending write goes out before the process ends
-  for (const sig of ['SIGTERM', 'SIGINT']) process.on(sig, () => { history.save(); process.exit(0); });
+  for (const sig of ['SIGTERM', 'SIGINT']) process.on(sig, () => { history.save(); if (history.close) history.close(); process.exit(0); });
   server.listen(port, host, () => console.log(`presence on ${host}:${port}`));
 }

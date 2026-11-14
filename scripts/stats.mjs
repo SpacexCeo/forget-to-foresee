@@ -47,7 +47,7 @@ function dirSize(p) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const rows = [run('game', 'game', 'npm', ['test']), run('server', 'server', 'npm', ['test']), run('relayer', 'relayer', 'npm', ['test']), run('presence', 'presence', 'npm', ['test'])];
+  const rows = [run('game', 'game', 'npm', ['test']), run('server', 'server', 'npm', ['test']), run('relayer', 'relayer', 'npm', ['test']), run('presence', 'presence', 'npm', ['test']), run('database', 'db', 'npm', ['test'])];
   if (!args.has('--skip-rust')) for (const c of CONTRACTS) rows.push(run(`contract ${c}`, `contracts/${c}`, 'cargo', ['test', '--lib']));
   else rows.push(...carriedContracts(join(ROOT, 'docs/stats.json')));
   const dist = dirSize(join(ROOT, 'game/dist'));

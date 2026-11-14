@@ -13,6 +13,7 @@
 // sending (claims keep queueing). The default network is testnet.
 import { createHash } from 'node:crypto';
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { activeDb, dbPassStore } from './storage.js';
 import { join } from 'node:path';
 import { b58decode, b58encode, createTxClient, findFailure, importSecretKey, serializeFunctionCallTx, sha256, signedTxBytes } from './near-tx.js';
 import { createBucket } from './core.js';
@@ -139,6 +140,7 @@ export async function checkBudget(client, cfg, minterPublicKey) {
 // ---------------------------------------------------------------- the store: append-only JSONL, the last line per claim wins
 
 export function createPassStore(dir) {
+  const db = activeDb(); if (db) return dbPassStore(db); // FTF_DB: receipts of kind 'pass'
   const file = join(dir, 'pass-claims.jsonl');
   const byClaim = new Map();
   try { for (const l of readFileSync(file, 'utf8').split('\n')) { if (!l) continue; try { const r = JSON.parse(l); byClaim.set(r.claim_id, r); } catch { /* a torn line */ } } } catch { /* first run */ }
