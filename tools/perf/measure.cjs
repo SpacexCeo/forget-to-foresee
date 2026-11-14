@@ -1,5 +1,5 @@
 // Performance probe for the town (night brief 2): boot marks, bytes fetched before the town is playable, draw calls,
-// triangles, GPU memory counts and frame time at the spawn and at a few fixed views. Run by the merge lead on the
+// triangles, GPU memory counts, a CPU profile of the boot (self time per function and script, long tasks) and frame time at the spawn and at a few fixed views. Run by the merge lead on the
 // server against a built `dist` (one browser at a time):
 //
 //   cd game && FTF_BASE=/forget-to-foresee/ npx vite build
@@ -29,6 +29,26 @@ const VIEWS = [
   { name: 'street-close', at: [-22, 0, 4.6], yaw: 0, dist: 8 },
 ];
 
+/** Self time per function and per script from a CDP CPU profile: the top 25 functions and the scripts' totals (ms). */
+function summarizeProfile(profile) {
+  if (!profile || !profile.nodes) return null;
+  const byId = new Map(profile.nodes.map((n) => [n.id, n]));
+  const self = new Map();
+  const dt = profile.timeDeltas || [];
+  for (let i = 0; i < (profile.samples || []).length; i++) self.set(profile.samples[i], (self.get(profile.samples[i]) || 0) + (dt[i] || 0) / 1000);
+  const fn = new Map(), file = new Map(); let total = 0, idle = 0, gc = 0;
+  for (const [id, ms] of self) {
+    const cf = byId.get(id).callFrame; total += ms;
+    if (cf.functionName === '(idle)') { idle += ms; continue; }
+    if (cf.functionName === '(garbage collector)') gc += ms;
+    const url = (cf.url || '').replace(BASE, '').replace(/^.*\/assets\//, 'assets/');
+    const key = `${cf.functionName || '(anonymous)'} ${url}:${cf.lineNumber + 1}`;
+    fn.set(key, (fn.get(key) || 0) + ms); file.set(url || cf.functionName, (file.get(url || cf.functionName) || 0) + ms);
+  }
+  const top = (m, n) => [...m].sort((a, b) => b[1] - a[1]).slice(0, n).map(([k, v]) => [k.slice(0, 110), Math.round(v)]);
+  return { totalMs: Math.round(total), busyMs: Math.round(total - idle), gcMs: Math.round(gc), topFunctions: top(fn, 25), topScripts: top(file, 12) };
+}
+
 (async () => {
   setTimeout(() => { console.error('PERF HARD TIMEOUT'); process.exit(2); }, 14 * 60 * 1000).unref();
   const browser = await chromium.launch({ args: [`--use-gl=${process.env.PERF_GL || 'swiftshader'}`, '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
@@ -45,12 +65,19 @@ const VIEWS = [
         if (!bytes) { try { bytes = (await r.body()).length; } catch { bytes = 0; } }
         net.push({ url: r.url().replace(BASE, ''), bytes, t, type: r.request().resourceType() });
       });
+      // CPU profile of the boot (main thread JS only): where the client spends its time before the town is playable.
+      const cdp = await ctx.newCDPSession(page);
+      await cdp.send('Profiler.enable'); await cdp.send('Profiler.setSamplingInterval', { interval: 1000 }); await cdp.send('Profiler.start');
+      await ctx.addInitScript(() => { window.__perfLong = []; try { new PerformanceObserver((l) => { for (const e of l.getEntries()) window.__perfLong.push([Math.round(e.startTime), Math.round(e.duration)]); }).observe({ type: 'longtask', buffered: true }); } catch {} });
       const t0 = Date.now();
       await page.goto(BASE + q);
       let done = false;
       for (let i = 0; i < 600; i++) { await page.waitForTimeout(1000); if (await page.evaluate(() => !!(window.__ftfBootMarks && window.__ftfBootMarks.done))) { done = true; break; } }
       doneAt = Date.now();
       const marks = await page.evaluate(() => window.__ftfBootMarks || null);
+      const { profile } = await cdp.send('Profiler.stop');
+      const longTasks = await page.evaluate(() => window.__perfLong || []);
+      const cpu = summarizeProfile(profile);
       const sample = async () => page.evaluate(async (secs) => {
         const F = window.__ftf; const r = F.renderer;
         await new Promise((res) => setTimeout(res, 1500)); // settle: streaming and shader warm-up
@@ -87,6 +114,7 @@ const VIEWS = [
       const mb = (b) => +(b / 1048576).toFixed(2);
       console.log(JSON.stringify({
         q, size: [W, H], done, bootSecs: Math.round((doneAt - t0) / 1000), marks, errs,
+        cpuBoot: cpu, longTasksBeforeDone: { count: longTasks.length, totalMs: longTasks.reduce((a, t) => a + t[1], 0), worst: [...longTasks].sort((a, b) => b[1] - a[1]).slice(0, 8) },
         bytesBeforeDoneMB: mb(before.reduce((a, n) => a + n.bytes, 0)), requestsBeforeDone: before.length,
         bytesAfterDoneMB: mb(after.reduce((a, n) => a + n.bytes, 0)), requestsAfterDone: after.length,
         byTypeMB: Object.fromEntries(Object.entries(byType).map(([k, v]) => [k, mb(v)])),
