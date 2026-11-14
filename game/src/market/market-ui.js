@@ -101,7 +101,7 @@ export function createMarketUi({ t, client, dice = null, storage = null, doc = g
     { min: formatSilkC(r.minC || 0), max: formatSilkC(r.maxC || 0), need: formatSilkC(r.needC || 0), have: formatSilkC(r.haveC || 0), qty: r.have ?? '' });
   let paintSilk = () => {}; // the header balance, repainted on every silk change and every tab switch
   let root = null, body = null, chip = null, silkEl = null, tab = 'buy', item = TRADABLE[0], unSilk = null, settlement = 'chain';
-  const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); close(); } else if (['1', '2', '3', '4'].includes(e.key) && !(e.target && e.target.tagName === 'INPUT')) show(['buy', 'sell', 'mine', 'games'][Number(e.key) - 1]); };
+  const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); close(); } else if (['1', '2', '3', '4'].includes(e.key) && !(e.target && e.target.tagName === 'INPUT')) show(['buy', 'sell', 'mine', ...(dice ? ['games'] : [])][Number(e.key) - 1] || tab); };
 
   let live = null;
   function setChip(isLive) {
@@ -287,7 +287,7 @@ export function createMarketUi({ t, client, dice = null, storage = null, doc = g
     const x = btn('', close, 'mk2-x'); x.setAttribute('aria-label', t('p2p.close'));
     head.append(el('h3', null, t('p2p.title')), silkEl, x);
     const tabs = el('div', 'mk2-tabs'); tabs.setAttribute('role', 'tablist');
-    for (const k of ['buy', 'sell', 'mine', 'games']) { const b = btn(t(k === 'games' ? 'games.tab' : 'p2p.tab.' + k), () => show(k), ''); b.setAttribute('role', 'tab'); b.dataset.tab = k; tabs.append(b); }
+    for (const k of ['buy', 'sell', 'mine', ...(dice ? ['games'] : [])]) { const b = btn(t(k === 'games' ? 'games.tab' : 'p2p.tab.' + k), () => show(k), ''); b.setAttribute('role', 'tab'); b.dataset.tab = k; tabs.append(b); }
     chip = el('div', 'mk2-chip'); chip.hidden = true; body = el('div', 'mk2-body');
     box.append(head, tabs, chip, body); root.append(box); doc.body.append(root);
     // the header shows the balance this tab spends: play silk in Games (the dice change it on every roll; owner 14.11 saw the

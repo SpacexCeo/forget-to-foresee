@@ -795,7 +795,7 @@ export default {
   'item.part_crank': 'Рукоять',
   'item.part_rivet_plate': 'Клёпаная пластина',
   'item.part_spindle': 'Веретено',
-  'item.prop_wheel_of_fortune': 'Колесо фортуны',
+  'item.prop_wheel_of_fortune': 'Шёлковое колесо',
   'item.trading_board': 'Торговое табло',
   "mk.title": "Городской рынок",
   "mk.today": "{n, plural, one {# сделка сегодня} few {# сделки сегодня} many {# сделок сегодня} other {# сделки сегодня}}",

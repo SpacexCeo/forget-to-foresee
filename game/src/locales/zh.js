@@ -828,7 +828,7 @@ export default {
   'item.part_crank': '曲柄',
   'item.part_rivet_plate': '铆钉板',
   'item.part_spindle': '纺锤',
-  'item.prop_wheel_of_fortune': '幸运之轮',
+  'item.prop_wheel_of_fortune': '丝轮',
   'item.trading_board': '交易板',
   "mk.title": "城镇集市",
   "mk.today": "今日 {n} 笔交易",
