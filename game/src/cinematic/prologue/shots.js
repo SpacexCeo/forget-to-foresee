@@ -28,7 +28,7 @@ export const CUES = Object.freeze([
   { id: 'check', t: 10.4, speaker: 'Iris', text: 'One more check on the signal...', durMs: 2800 },
   { id: 'key_press', t: 14.0 },
   { id: 'device_on', t: 15.8 },
-  { id: 'oh_no', t: 24.3, speaker: 'Iris', text: 'Oh no...', durMs: 1400, voice: 'voice_iris_oh_no' },
+  { id: 'oh_no', t: 24.3, speaker: 'Iris', text: 'Oh no...', durMs: 1400, voice: 'iris_oh_no' },
   { id: 'vortex_start', t: 26.5 },
   { id: 'tunnel', t: 31.0 },
   { id: 'whiteout', t: 34.6 },

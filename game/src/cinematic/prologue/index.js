@@ -13,6 +13,8 @@ import { cameraAt, irisAt, PROLOGUE_S, WAKE_CUES } from './shots.js';
 
 const ss = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const DEVICE = new THREE.Vector3(3.2, 1.5, 0.4);
+/** The wake-up crowd stays through the whole first talk; this is only the safety net if the intro never reports its end. */
+export const RING_SAFETY_MS = 15 * 60 * 1000;
 const el = (tag, css, text = '') => { const e = document.createElement(tag); e.style.cssText = css; if (text) e.textContent = text; return e; };
 
 /** Iris for the lab: her own model and clips, loaded through the game's loaders; null when anything fails. */
@@ -169,11 +171,15 @@ export function createPrologue(ctx = {}) {
   /** The people stay around her through the first talk (controls are locked till then) and leave when the intro ends. */
   function keepRing(ring) {
     let raf = 0, last = performance.now(), offs = [];
-    const stop = () => { cancelAnimationFrame(raf); clearTimeout(timer); for (const off of offs) { try { if (typeof off === 'function') off(); } catch { /* */ } } ring.dispose(); };
-    const timer = setTimeout(stop, 120000);
+    let stopped = false;
+    const stop = () => { if (stopped) return; stopped = true; cancelAnimationFrame(raf); clearTimeout(timer); for (const off of offs) { try { if (typeof off === 'function') off(); } catch { /* */ } } ring.dispose(); };
+    // only a safety net: the 19 lines easily take a reader more than two minutes, and the old 120 s timer took the crowd away mid-talk
+    // (QA pass 2 #3); the people leave with the intro (npe.completed / npe.skipped) or with the intro's turn in the onboarding queue
+    const timer = setTimeout(stop, RING_SAFETY_MS);
     const loop = (now) => { ring.update(Math.min(0.1, (now - last) / 1000)); last = now; raf = requestAnimationFrame(loop); };
     raf = requestAnimationFrame(loop);
     if (ctx.bus && ctx.bus.on) offs = ['npe.completed', 'npe.skipped'].map((n) => ctx.bus.on(n, stop));
+    import('../../ui/onboarding-queue.js').then((q) => { offs.push(q.onOnboarding((id) => { if (id !== 'intro') stop(); })); }).catch(() => { /* the bus and the timer still end it */ });
   }
 
   async function playWakeUp({ reduced = false } = {}) {
