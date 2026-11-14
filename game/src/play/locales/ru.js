@@ -2087,6 +2087,12 @@ export default {
   "skin.locked": "Главный приз колеса",
   "skin.lockedElise": "После первого дня",
   "wheel.grand": "Главный приз",
+  "nft.collection": "Карты, которые можно заработать",
+  "nft.owned": "Ваша",
+  "nft.card.pass": "Пропуск в вайтлист",
+  "nft.how.wheel": "Главный приз Колеса удачи",
+  "nft.how.hatch": "Хранитель гнёзд решает, кто готов",
+  "nft.how.pass": "Даётся в конце сезона",
   // ---- account login (en-account.js) ----
   "acct.title": "Вход / Создать аккаунт",
   "acct.open": "Вход / Создать аккаунт",

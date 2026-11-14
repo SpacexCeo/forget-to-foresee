@@ -2093,6 +2093,12 @@ const EN = {
   "skin.locked": "The wheel's grand prize",
   "skin.lockedElise": "After Day 1",
   "wheel.grand": "Grand prize",
+  "nft.collection": "Cards to earn",
+  "nft.owned": "Yours",
+  "nft.card.pass": "Whitelist pass",
+  "nft.how.wheel": "The grand prize of the Wheel of Fortune",
+  "nft.how.hatch": "The Hatchkeeper decides who is ready",
+  "nft.how.pass": "Earned at the end of a season",
 };
 // sprint 5h seams (A5): each area's English strings live in its own file; other locales fall back to English
 export default Object.assign(EN, quests, hud, market, npe, tips, video, account, judge);

@@ -63,7 +63,7 @@ test('an NFT picture: the item icon from its deck position, else the rarity fram
   assert.equal(p.item, 'part_spindle'); assert.equal(p.rarity, 'uncommon'); assert.equal(p.exact, true);
   assert.equal(p.src, 'icons/nft_part_spindle_256.webp'); assert.equal(p.nameKey, 'item.part_spindle');
   const q = nftImage({ title: 'Chest loot #9 (rare)' }, manifest);
-  assert.deepEqual(q, { src: null, item: null, nameKey: null, rarity: 'rare', exact: false });
+  assert.deepEqual(q, { src: 'icons/nft_seal_256.webp', item: null, nameKey: null, rarity: 'rare', exact: false }, 'an unknown item shows the seal');
   // every NFT item has an icon in the manifest
   for (const t of NFT_DECK) for (const id of t.items) assert.ok(nftImage({ item: id }, manifest).exact, id);
 });
@@ -84,4 +84,16 @@ test('painted art: every NFT item, chest tier and deck silk/XP pile has its webp
   assert.equal(rewardArt({ kind: 'xp', amount: 3 }), 'icons/reward_xp_10_128.webp', 'the smallest pile below the first step');
   assert.equal(rewardArt({ kind: 'item', id: 'part_gear' }), null, 'items keep their own icon');
   assert.equal(rewardArt(null), null);
+});
+
+test('the item manifest: every icon it names is on disk; shards and parts are the painted webp in three sizes; the seal for unknown NFTs', async () => {
+  const at = (rel) => existsSync(new URL('../../public/assets/items/' + rel, import.meta.url));
+  const { readFileSync } = await import('node:fs');
+  const m = JSON.parse(readFileSync(new URL('../../public/assets/items/manifest.json', import.meta.url), 'utf8'));
+  for (const it of m.items) for (const k of ['icon', 'icon128', 'icon64']) if (it[k]) assert.ok(at(it[k]), `${it.id} ${k}`);
+  const painted = m.items.filter((it) => /^(shard|part)_/.test(it.id));
+  assert.equal(painted.length, 18);
+  for (const it of painted) assert.deepEqual([it.icon, it.icon128, it.icon64], [256, 128, 64].map((s) => `icons/${it.id}_${s}.webp`), it.id);
+  for (const s of [256, 128, 64]) assert.ok(at(`icons/nft_seal_${s}.webp`), 'seal ' + s);
+  assert.equal(rewardArt({ kind: 'nft' }, 128), 'icons/nft_seal_128.webp', 'an NFT outcome with no item shows the seal');
 });
