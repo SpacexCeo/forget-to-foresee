@@ -3,6 +3,7 @@
 // methods (each with Unlink) and Link an email; a browser with no account sees Sign in with email. The flow is
 // net/account-email.js (`mail`); this file only draws it. Plain DOM, no play/ imports (a ui -> play edge is a boot cycle).
 
+const OPEN_ICONS = ((import.meta.env && import.meta.env.BASE_URL) || '/') + 'assets/ui/icons/open/'; // art/ui/build_open_icons.py
 const CSS = `
 .acct-sec { margin: 14px 0 6px; padding-top: 12px; border-top: 1px solid rgba(214, 226, 214, .14); }
 .acct-sec h3 { margin: 0 0 8px; font: 600 15px/1.3 var(--font-ui, system-ui); }
@@ -15,6 +16,11 @@ const CSS = `
 .acct-list button { min-height: 36px; padding: 6px 10px; font-size: 13px; background: transparent; color: inherit; border: 1px solid rgba(214, 226, 214, .3); }
 .acct-msg { min-height: 1.3em; margin: 6px 0; font-size: 13.5px; }
 .acct-hint { margin: 6px 0; color: rgba(233, 230, 220, .65); font-size: 12.5px; }
+.acct-sec [data-ic]::before { content: ''; display: inline-block; width: 1.3em; height: 1.3em; margin-right: 6px; vertical-align: -.3em; background: center / contain no-repeat; }
+.acct-sec [data-ic=email]::before { background-image: url("${OPEN_ICONS}account_email_glyph_48.webp"); }
+.acct-sec [data-ic=wallet]::before { background-image: url("${OPEN_ICONS}account_wallet_glyph_48.webp"); }
+.acct-sec [data-ic=link]::before { background-image: url("${OPEN_ICONS}account_link_glyph_48.webp"); }
+.acct-sec [data-ic=unlink]::before { background-image: url("${OPEN_ICONS}account_unlink_glyph_48.webp"); width: 1.1em; height: 1.1em; margin-right: 4px; }
 `;
 
 /**
@@ -25,6 +31,7 @@ const CSS = `
 export function mountAccountMethods({ doc = globalThis.document, t, mail, onSignedIn = null, say = null }) {
   if (doc.head && !doc.head.querySelector('style[data-acct-methods]')) { const s = doc.createElement('style'); s.setAttribute('data-acct-methods', ''); s.textContent = CSS; doc.head.append(s); }
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  const ic = (e, name) => { e.dataset.ic = name; return e; }; // the open icon set (CSS above)
   const sec = el('div', 'acct-sec');
   const msg = el('p', 'acct-msg'); msg.setAttribute('role', 'status'); msg.setAttribute('aria-live', 'polite');
   const tell = say || ((text) => { msg.textContent = text; });
@@ -41,22 +48,22 @@ export function mountAccountMethods({ doc = globalThis.document, t, mail, onSign
 
   if (mail.canLink) {
     const list = el('ul', 'acct-list');
-    sec.append(el('h3', null, t('acct.methods')), list);
+    sec.append(ic(el('h3', null, t('acct.methods')), 'link'), list);
     const refresh = async () => {
       const m = await mail.methods();
       list.replaceChildren();
       if (m.status !== 'ok') { list.append(el('li', null, errText(m))); return; }
       if (!m.methods.length) list.append(el('li', null, t('acct.methods.none')));
       for (const x of m.methods) {
-        const li = el('li'); li.append(el('span', null, t('acct.kind.' + x.kind) + ' · ' + x.hint));
-        const u = el('button', null, t('acct.unlink')); u.type = 'button';
+        const li = el('li'); li.append(ic(el('span', null, t('acct.kind.' + x.kind) + ' · ' + x.hint), x.kind === 'email' ? 'email' : 'wallet'));
+        const u = ic(el('button', null, t('acct.unlink')), 'unlink'); u.type = 'button';
         u.addEventListener('click', async () => { u.disabled = true; const r = await mail.unlink(x.id); tell(r.status === 'unlinked' ? t('acct.unlinked') : errText(r)); refresh(); });
         li.append(u); list.append(li);
       }
     };
     refresh();
     const step = el('div');
-    sec.append(el('h3', null, t('acct.email.link')), el('p', 'acct-hint', t('acct.email.note')), step);
+    sec.append(ic(el('h3', null, t('acct.email.link')), 'email'), el('p', 'acct-hint', t('acct.email.note')), step);
     step.append(form(t('acct.email.place'), 'email', t('acct.email.send'), async (v) => {
       const r = await mail.linkStart(v);
       if (r.status !== 'sent') { tell(errText(r)); return; }
@@ -66,10 +73,10 @@ export function mountAccountMethods({ doc = globalThis.document, t, mail, onSign
         if (l.status === 'linked') { tell(t('acct.email.linked', { hint: l.hint })); refresh(); } else tell(errText(l));
       }));
     }));
-    sec.append(el('p', 'acct-hint', t('acct.wallet.link')));
+    sec.append(ic(el('p', 'acct-hint', t('acct.wallet.link')), 'wallet'));
   } else {
     const step = el('div');
-    sec.append(el('h3', null, t('acct.email.title')), el('p', 'acct-hint', t('acct.email.note')), step);
+    sec.append(ic(el('h3', null, t('acct.email.title')), 'email'), el('p', 'acct-hint', t('acct.email.note')), step);
     step.append(form(t('acct.email.place'), 'email', t('acct.email.send'), async (v) => {
       const r = await mail.loginStart(v);
       if (r.status !== 'sent') { tell(errText(r)); return; }

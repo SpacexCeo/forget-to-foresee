@@ -9,6 +9,7 @@
 import { isAction } from './keybinds.js';
 import { registerWindow } from './window-toggle.js';
 
+const OPEN_ICONS = ((import.meta.env && import.meta.env.BASE_URL) || '/') + 'assets/ui/icons/open/'; // art/ui/build_open_icons.py
 const CSS = `.ftf-chat { position: fixed; left: calc(12px + env(safe-area-inset-left, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); z-index: 12;
   width: min(340px, calc(100vw - 24px)); font: 14px/1.4 system-ui, sans-serif; color: #f3ead6; pointer-events: none; }
 .ftf-chat > * { pointer-events: auto; }
@@ -26,6 +27,9 @@ const CSS = `.ftf-chat { position: fixed; left: calc(12px + env(safe-area-inset-
 .ftf-chat-log li.sys { color: #b9b2a2; font-size: 12px; }
 .ftf-chat-log time { color: #8f9a96; font-size: 11px; margin-right: 5px; font-variant-numeric: tabular-nums; }
 .ftf-chat-log li.act b { font-weight: 600; }
+.ftf-chat-log li[data-act=joined]::before, .ftf-chat-log li[data-act=left]::before { content: ''; display: inline-block; width: 16px; height: 16px; margin-right: 5px; vertical-align: -3px; background: var(--ic) center / contain no-repeat; }
+.ftf-chat-log li[data-act=joined] { --ic: url("${OPEN_ICONS}party_join_glyph_48.webp"); }
+.ftf-chat-log li[data-act=left] { --ic: url("${OPEN_ICONS}party_leave_glyph_48.webp"); }
 .ftf-chat-log li.friend button, .ftf-chat-log li.friend b { color: #9fd49a; }
 .ftf-chat-log li.act.friend { color: #d9e8d2; }
 .ftf-chat-log li.friend button::before, .ftf-chat-log li.friend b::before { content: '★ '; font-size: 11px; }
@@ -125,7 +129,7 @@ export function createChatPanel({ doc = globalThis.document, t, presence, phone 
       const key = actKey(m); if (!key) return null;
       // the sentence comes from our own locale file; only the name is the other player's, and it is set as text
       const [before, after = ''] = String(t(key, { name: NAME_SLOT, n: m.v })).split(NAME_SLOT);
-      li.classList.add('sys', 'act'); li.append(doc.createTextNode(before), el('b', null, m.name), doc.createTextNode(after));
+      li.classList.add('sys', 'act'); li.dataset.act = m.k; li.append(doc.createTextNode(before), el('b', null, m.name), doc.createTextNode(after));
       return li;
     }
     const who = el('button', null, m.name); who.type = 'button';

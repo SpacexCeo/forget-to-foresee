@@ -28,29 +28,34 @@ function modelFileFor(skin) {
   return MODEL_FILES[file] ? file : null;
 }
 
+/** The other-player badge before the name (the open icon set: art/ui/build_open_icons.py); null outside a browser build. */
+const OTHER_ICON = (() => { const base = import.meta.env && import.meta.env.BASE_URL; if (!base || typeof Image !== 'function') return null; const im = new Image(); im.src = `${base}assets/ui/icons/open/player_other_glyph_48.webp`; return im; })();
+
 /** A name tag; `badge` (the localized "AI") is drawn as a small teal pill after the name. */
 function nameTag(text, badge = '') {
+  const IC = OTHER_ICON ? 30 : 0; // room for the badge icon
   const c = document.createElement('canvas'); c.width = 256; c.height = 64;
   let g = c.getContext('2d');
   // a long name with a badge gets a wider tag (same pixels per metre) instead of a clipped badge
   g.font = '700 20px system-ui, sans-serif'; const bw0 = badge ? g.measureText(badge).width + 14 : 0;
-  g.font = '600 22px system-ui, sans-serif'; if (g.measureText(text).width + 28 + (badge ? bw0 + 8 : 0) > 248) { c.width = 384; g = c.getContext('2d'); }
+  g.font = '600 22px system-ui, sans-serif'; if (g.measureText(text).width + 28 + IC + (badge ? bw0 + 8 : 0) > 248) { c.width = 384; g = c.getContext('2d'); }
   const CW = c.width;
   g.textBaseline = 'middle';
   g.font = '700 20px system-ui, sans-serif'; const bw = badge ? g.measureText(badge).width + 14 : 0;
   // the name's size shrinks until name and badge fit the tag (long names such as "Sheriffchenko (demo player)")
   let size = 30; g.font = `600 ${size}px system-ui, sans-serif`; let nw = g.measureText(text).width;
-  while (size > 14 && nw + 28 + (badge ? bw + 8 : 0) > CW - 8) { size -= 2; g.font = `600 ${size}px system-ui, sans-serif`; nw = g.measureText(text).width; }
-  const w = Math.min(CW - 8, nw + 28 + (badge ? bw + 8 : 0)), x0 = (CW - w) / 2;
+  while (size > 14 && nw + 28 + IC + (badge ? bw + 8 : 0) > CW - 8) { size -= 2; g.font = `600 ${size}px system-ui, sans-serif`; nw = g.measureText(text).width; }
+  const w = Math.min(CW - 8, nw + 28 + IC + (badge ? bw + 8 : 0)), x0 = (CW - w) / 2;
   g.fillStyle = 'rgba(16,22,24,.72)'; g.beginPath(); g.roundRect(x0, 10, w, 44, 12); g.fill();
   g.strokeStyle = 'rgba(233,180,76,.7)'; g.lineWidth = 2; g.stroke();
-  g.fillStyle = '#f3ead6'; g.textAlign = 'left'; g.font = `600 ${size}px system-ui, sans-serif`; g.fillText(text, x0 + 14, 33);
+  g.fillStyle = '#f3ead6'; g.textAlign = 'left'; g.font = `600 ${size}px system-ui, sans-serif`; g.fillText(text, x0 + 14 + IC, 33);
   if (badge) {
-    const bx = x0 + 14 + nw + 8;
+    const bx = x0 + 14 + IC + nw + 8;
     g.fillStyle = 'rgba(95,180,170,.9)'; g.beginPath(); g.roundRect(bx, 20, bw, 26, 8); g.fill();
     g.fillStyle = '#0f1a1a'; g.font = '700 20px system-ui, sans-serif'; g.fillText(badge, bx + 7, 34);
   }
   const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+  if (OTHER_ICON) { const draw = () => { g.drawImage(OTHER_ICON, x0 + 10, 18, 28, 28); tex.needsUpdate = true; }; if (OTHER_ICON.complete && OTHER_ICON.naturalWidth) draw(); else OTHER_ICON.addEventListener('load', draw, { once: true }); }
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthWrite: false, transparent: true }));
   s.scale.set(1.6 * (CW / 256), 0.4, 1); s.position.y = 2.15; s.renderOrder = 10;
   return s;
