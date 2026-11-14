@@ -10,6 +10,7 @@ import * as R from '../game/shoal-rules.js';
 import { shoalSkillsFor, shoalExtrasFor, comboStep } from '../rpg/shoal-skills.js';
 import { hasModelFile, fetchGltf, getModelVariant } from '../render/assets.js';
 import { bossAnimStep, freshBossAnim, fadeWeights, BOSS_ANIM } from '../game/shoal-boss-anim.js';
+import { createAddsView } from './shoal-adds-view.js';
 import { createHitFx } from '../render/hit-fx.js';
 import { impactOf, IMPACT } from '../render/hit-fx-core.js';
 import { cue, cueAt } from '../audio/town-audio.js';
@@ -111,8 +112,7 @@ export function createShoalArena(o) {
   // pickups, adds, projectiles, the chest
   const orbMat = { hp: new THREE.MeshBasicMaterial({ color: 0x6aff9a }), stamina: new THREE.MeshBasicMaterial({ color: 0xffe066 }) };
   const orbs = new Map(R.ARENA.pickups.map((p) => { const m = new THREE.Mesh(new THREE.SphereGeometry(0.45, 14, 10), orbMat[p.kind]); m.position.set(p.at[0], 1, p.at[1]); root.add(m); return [p.id, m]; }));
-  const addMat = new THREE.MeshStandardMaterial({ color: 0x6a8aa8, emissive: 0x1a3a6a, emissiveIntensity: 0.6, roughness: 0.4 });
-  const addMeshes = new Map();
+  const addsView = createAddsView(root); // the Hollow Tide's spawn: the model `shoal_tideling`, one clone per add (scenes/shoal-adds-view.js)
   const shots = [];
   const chest = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.9, 0.9), new THREE.MeshStandardMaterial({ color: 0xd8b25a, metalness: 0.8, roughness: 0.3, emissive: 0x6a4a10, emissiveIntensity: 0.5 }));
   chest.position.set(R.ARENA.chest[0], 0.45, R.ARENA.chest[1]); chest.visible = false; root.add(chest);
@@ -241,7 +241,7 @@ export function createShoalArena(o) {
     if (!opts.noCharge) charge(r.dealt, 0);
     if (r.dealt > 0) bossFlashT = 0.12;
     if (r.phaseUp) { flash(say(B.phase === 1 ? 'shoal.phase2' : 'shoal.phase3')); }
-    if (B.dead && !won) { won = true; boss.visible = !!bossModel; /* the model falls and sinks first (draw hides it) */ chest.visible = true; for (const m of addMeshes.values()) m.removeFromParent(); addMeshes.clear(); B = { ...B, adds: [] }; flash(say('shoal.victory'), 3.5); onWin(); }
+    if (B.dead && !won) { won = true; boss.visible = !!bossModel; /* the model falls and sinks first (draw hides it) */ chest.visible = true; addsView.clear(); B = { ...B, adds: [] }; flash(say('shoal.victory'), 3.5); onWin(); }
     return r.dealt;
   };
   const hurt = (amount) => { const r = R.hitHero(H, amount); H = r.hero; if (r.taken) { charge(0, r.taken); cue('iris_hurt'); } return r; };
@@ -370,7 +370,7 @@ export function createShoalArena(o) {
     let drain = 0;
     if (comboT > 0) comboT -= sdt;
     if (heavyT > 0 && (heavyT -= sdt) <= 0) { const s = shoalSkillsFor('iris')[1]; melee(s.range, s.damage, true); }
-    if (deadT > 0) { if ((deadT -= dt) <= 0) { const r = R.respawnAfterDeath(B); B = r.boss; H = r.hero; FL = R.freshFlight(); me3.lift = 0; landing = false; me3.x = r.at[0]; me3.z = r.at[1]; for (const m of addMeshes.values()) m.removeFromParent(); addMeshes.clear(); } }
+    if (deadT > 0) { if ((deadT -= dt) <= 0) { const r = R.respawnAfterDeath(B); B = r.boss; H = r.hero; FL = R.freshFlight(); me3.lift = 0; landing = false; me3.x = r.at[0]; me3.z = r.at[1]; addsView.clear(); } }
     else {
       // movement: running on the mirror, or flying
       const ax = axes(); const { fwd, right } = rig.groundAxes();
@@ -483,14 +483,7 @@ export function createShoalArena(o) {
       if (a.kind === 'lunge') { line.visible = true; line.position.set(a.at[0], 0.05, a.at[1]); line.rotation.y = Math.atan2(a.dir[0], a.dir[1]); line.material.opacity = op; }
     }
     // adds
-    const live = new Set();
-    for (const a of B.adds) {
-      live.add(a.id);
-      let m = addMeshes.get(a.id);
-      if (!m) { m = new THREE.Mesh(new THREE.IcosahedronGeometry(0.7, 0), addMat); root.add(m); addMeshes.set(a.id, m); }
-      m.position.set(a.x, 0.8 + (red ? 0 : Math.abs(Math.sin(tt * 6 + a.id)) * 0.3), a.z); if (!red) m.rotation.y += sdt * 3;
-    }
-    for (const [id, m] of addMeshes) if (!live.has(id)) { m.removeFromParent(); addMeshes.delete(id); }
+    addsView.sync(B.adds, sdt, [me3.x, me3.z], red, tt);
     for (const [id, m] of orbs) { m.visible = !(id in timers); if (!red) m.position.y = 1 + Math.sin(tt * 2 + m.position.x) * 0.15; }
     if (chestOpen) chest.rotation.x = Math.max(-0.9, chest.rotation.x - dt * 2);
     // the Tempest: orbs and blades spiral out from her, a ring bursts on the mirror at each blow

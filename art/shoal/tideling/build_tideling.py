@@ -4,7 +4,7 @@ A shard crawler about 0.9 m long and 1.8 m across the legs: a glowing cyan core 
 a stone head with two glass mandibles and slit eyes, glass crystals along the back, four jointed stone legs that end
 in glass points. Faces -Y, Z up, feet on z = 0, origin under the body.
 Rig: root, body, jaw, four legs (upper, lower, tip). Rigid weights (stone does not bend).
-Clips (30 fps): idle (2 s loop), walk (0.8 s loop, in place, 1.04 m/s, diagonal pairs, feet held by IK), bite (0.5 s),
+Clips (30 fps): idle (2 s loop), walk (0.5 s loop, in place, 3.6 m/s = the adds' speed in the rules, diagonal pairs, feet held by IK), bite (0.5 s),
 spawn (0.7 s, up through the mirror), death (0.9 s, the legs give way and it sinks).
 Output: work/tideling.blend (model, rig, one NLA track per clip), out/tex/*, report/tideling.json, renders/tideling_*.jpg."""
 import bpy, bmesh, os, sys
@@ -126,7 +126,7 @@ K = Baker(rig, tide, skip=()); sk = Skel(rig)
 sm = lambda a, b, x: float(smooth(a, b, x))
 HOME = {n: sk.head[f'leg_{n}_tip'].copy() for n in LEGS}
 PHASE = {'fl': 0.0, 'rr': 0.0, 'fr': 0.5, 'rl': 0.5}
-STRIDE, LIFT, DUTY, T_WALK = 0.5, 0.17, 0.6, 0.8
+STRIDE, LIFT, DUTY, T_WALK = 0.9, 0.20, 0.5, 0.5      # 3.6 m/s: the speed the rules move an add at (game/shoal-rules.js BOSS.add.speed)
 
 
 def stand(p, feet=None, k=1.0):
