@@ -17,6 +17,7 @@ import { renderProfileView } from './profile-view.js';
 import { createChestBag } from '../game/chests.js';
 import { createFriends } from './friends.js';
 import { createChestClient } from '../net/chest-client.js';
+import { groupChests, loadArchive, archiveOpened, outcomeOf, verifyHref, nftImage, rewardArt, chestArt } from './chest-history.js';
 import { cue } from '../audio/town-audio.js';
 import { formatSilkC } from '../net/silk-core.js';
 import { wardrobe, TRY_ON_SECONDS } from './skins.js';
@@ -100,6 +101,24 @@ const CSS = `
 .gm-medal[data-done="true"] { background: linear-gradient(160deg, #2a2716, #1a211b); border-color: rgba(197, 164, 105, .4); }
 .gm-nft { position: relative; border-radius: 16px; overflow: hidden; background: var(--ftf-panel-solid, #101f1a); border: 1px solid rgba(214, 226, 214, .12); box-shadow: 0 6px 18px rgba(0, 0, 0, .3); padding: 10px; }
 .gm-nft img { width: 100%; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 10px; }
+.gm-loot { border-color: color-mix(in srgb, var(--rc) 55%, transparent); }
+.gm-loot .gm-loot-art { display: grid; place-items: center; aspect-ratio: 1; margin-bottom: 8px; border-radius: 12px; background: radial-gradient(circle, color-mix(in srgb, var(--rc) 35%, transparent) 0%, transparent 70%), #0b100f; box-shadow: inset 0 0 0 2px var(--rc); }
+.gm-loot .gm-loot-art img { width: 72%; height: 72%; aspect-ratio: auto; object-fit: contain; border-radius: 0; filter: drop-shadow(0 6px 10px rgba(0,0,0,.5)); }
+.gm-loot .gm-loot-art span { font: 600 46px/1 "Cormorant Garamond", Georgia, serif; color: var(--rc); }
+.gm-loot b { display: block; } .gm-loot-rar { display: block; font: 700 11px/1.6 system-ui; letter-spacing: .12em; text-transform: uppercase; color: var(--rc); }
+.gm-loot small.gm-note { display: block; margin: 2px 0 4px; font-size: 11px; }
+.gm-chests h4 { margin: 0; font: 600 14px/1.2 system-ui; color: rgba(233, 230, 220, .8); }
+.gm-hist-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 16px 0 6px; }
+.gm-hist { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.gm-hist li { display: grid; grid-template-columns: 32px 1fr auto; gap: 10px; align-items: center; padding: 4px 10px 4px 4px; border-radius: 10px; background: rgba(233, 230, 220, .03); }
+.gm-hist-ico { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rc) 60%, transparent); font: 600 18px/1 "Cormorant Garamond", Georgia, serif; color: var(--rc); }
+.gm-hist-ico img { width: 30px; height: 30px; object-fit: contain; }
+.gm-hist-txt { min-width: 0; } .gm-hist-txt b { font: 600 13px/1.3 system-ui; margin-right: 6px; } .gm-hist-txt small { display: block; color: rgba(233, 230, 220, .5); font-size: 11px; }
+.gm-hist-rar { font: 700 10px/1 system-ui; letter-spacing: .08em; text-transform: uppercase; color: var(--rc); }
+.gm-dust { display: inline-block; padding: 1px 6px; border-radius: 6px; font: 600 10px/1.4 system-ui; color: rgba(233, 230, 220, .55); border: 1px dashed rgba(233, 230, 220, .3); }
+.gm-hist-ver { font-size: 11px; color: rgba(233, 230, 220, .5); white-space: nowrap; } a.gm-hist-ver { color: #2fc4b2; text-decoration: none; }
+.gm-archive { margin-top: 12px; } .gm-archive summary { cursor: pointer; min-height: 32px; display: flex; align-items: center; color: rgba(233, 230, 220, .62); font-size: 13px; }
+.gm-archive .gm-hist { opacity: .75; }
 .gm-chip { display: inline-block; margin: 4px 4px 0 0; padding: 3px 9px; border-radius: 10px; font: 700 11px/1.5 system-ui; background: #0b100f; color: var(--ftf-text, #eef0ea); border: 1px solid rgba(214, 226, 214, .16); text-decoration: none; }
 .gm-chip.gm-near { background: transparent; border-color: rgba(47, 196, 178, .5); color: #2fc4b2; }
 .gm-ward { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 8px; }
@@ -147,7 +166,7 @@ function spark(doc, values, w = 220, h = 44, color = '#2fc4b2') {
  * @param {{doc?: Document, t: Function, ledger: object, storage?: object, tab?: string, owner?: string|null, createGuest?: (() => Promise<{account?: string, error?: string}>)|null, exportKey?: Function|null,
  *   nickname?: string|null, eliseMinted?: boolean, onChain?: Promise, base?: string, manifest?: Promise}} o
  */
-export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 'profile', owner: ownerIn = null, createGuest = null, exportKey = null, nickname = null, eliseMinted = false, onChain = null, base = (import.meta.env && import.meta.env.BASE_URL) || '/', manifest = null, chests = null, chestClient = null, heroineToken = null, companionsRead = null, now = () => Date.now(), account = null, townLedger = false }) {
+export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 'profile', owner: ownerIn = null, createGuest = null, exportKey = null, nickname = null, eliseMinted = false, onChain = null, base = (import.meta.env && import.meta.env.BASE_URL) || '/', manifest = null, chests = null, chestClient = null, heroineToken = null, companionsRead = null, now = () => Date.now(), account = null, townLedger = false, onClose = null }) {
   const tabList = townLedger ? [TABS[0], TOWN_TAB, ...TABS.slice(1)] : TABS;
   let ledgerView = null; // the open Town Ledger (it polls the relayer while it is shown)
   if (!(doc.getElementById && doc.getElementById('gm-style'))) { const st = doc.createElement('style'); st.id = 'gm-style'; st.textContent = CSS + WHEEL_CSS; doc.head.append(st); }
@@ -181,7 +200,8 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
   root.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Escape') close(); });
   doc.body.append(root);
   let current = null;
-  function close() { if (wheelView) wheelView.destroy(); if (ledgerView) ledgerView.destroy(); inv.dispose(); root.remove(); }
+  let closed = false;
+  function close() { if (closed) return; closed = true; if (wheelView) wheelView.destroy(); if (ledgerView) ledgerView.destroy(); inv.dispose(); root.remove(); if (onClose) onClose(); }
 
   const views = {
     profile() {
@@ -245,12 +265,17 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
       // loot NFTs from chests (chests.ftf-coordinator.testnet), only what the chain read confirms for this guest
       const loot = el('div');
       if (owner) {
-        import('../net/chest-client.js').then((m) => m.readLootNfts({ owner })).then((r) => {
+        Promise.all([import('../net/chest-client.js').then((m) => m.readLootNfts({ owner })), items]).then(([r, list]) => {
           if (!r || r.state !== 'loaded' || !r.items.length) return;
           const g3 = el('div', 'gm-grid'); g3.style.gridTemplateColumns = 'repeat(auto-fill, minmax(160px, 1fr))';
           for (const it of r.items) {
-            const c = el('div', 'gm-nft');
-            c.append(el('b', null, it.title), el('br'), el('span', 'gm-chip gm-near', 'NEAR testnet'));
+            // owner 13.11: a picture per NFT, the item its deck position holds, in its rarity frame (the frame alone when unknown)
+            const pic = nftImage(it, list);
+            const c = el('div', 'gm-nft gm-loot'); c.style.setProperty('--rc', RARITY_COLOR[pic.rarity] || RARITY_COLOR.common);
+            const art = el('div', 'gm-loot-art');
+            if (pic.src) { const img = el('img'); img.src = base + 'assets/items/' + pic.src; img.alt = ''; art.append(img); } else art.append(el('span', null, '✧'));
+            const r2 = el('span', 'gm-loot-rar', t('rarity.' + pic.rarity));
+            c.append(art, el('b', null, pic.nameKey && pic.exact ? t(pic.nameKey) : t('chest.out.nft')), r2, el('small', 'gm-note', it.title), el('span', 'gm-chip gm-near', 'NEAR testnet'));
             const a = el('a', 'gm-chip', t('menu.viewToken')); a.href = it.href; a.target = '_blank'; a.rel = 'noopener noreferrer'; c.append(a);
             g3.append(c);
           }
@@ -364,13 +389,18 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
     chain = readOnChain({ owner });
   }
 
-  /** Chests from monsters (game/chests.js): sealed ones open through the chest service (play/chest-open.js). */
+  /**
+   * Chests from monsters (game/chests.js), owner 13.11: sealed chests on top with Open buttons; opened ones are a
+   * compact read-only history (what came out, its icon, the verify link small) that one button moves to a collapsed
+   * archive kept in this browser (play/chest-history.js).
+   */
   function chestSection(list) {
     const all = bag.list();
+    const { sealed: sealedNow, opened, archive } = groupChests(all, loadArchive(storage));
     const box = el('section', 'gm-chests');
-    box.append(el('h3', null, t('chest.heading', { n: bag.sealed().length })));
+    box.append(el('h3', null, t('chest.heading', { n: sealedNow.length })));
     if (!all.length) { box.append(el('p', 'gm-note', t('chest.none'))); return box; }
-    const sealedNow = bag.sealed();
+    if (!sealedNow.length) box.append(el('p', 'gm-note', t('chest.noneSealed')));
     if (!owner && sealedNow.length) box.append(guestBanner()); // one line for the whole grid, not one per card (owner, 12.11)
     if (sealedNow.length >= 2 && owner && chestApi.available && chestApi.openMany) { // batch opening (owner, 12.11): one transaction for up to 10
       const row = el('div', 'gm-row'); row.style.display = 'flex'; row.style.gap = '8px'; row.style.flexWrap = 'wrap'; row.style.margin = '6px 0 10px';
@@ -380,31 +410,65 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
       }
       box.append(row);
     }
-    const g = el('div', 'gm-grid');
-    for (const c of all.slice(0, 24)) {
-      const card = el('div', 'gm-card'); card.dataset.rarity = c.tier === 'legendary' ? 'legendary' : c.tier === 'rare' ? 'rare' : 'common';
-      card.style.setProperty('--rc', RARITY_COLOR[c.tier === 'legendary' ? 'legendary' : c.tier === 'rare' ? 'uncommon' : 'common']);
-      card.append(el('b', null, t('chest.tier.' + c.tier)));
-      if (c.state === 'sealed') {
-        card.append(el('small', null, t('chest.sealed')));
+    if (sealedNow.length) {
+      const g = el('div', 'gm-grid');
+      for (const c of sealedNow.slice(0, 24)) {
+        const card = el('div', 'gm-card'); card.dataset.rarity = c.tier === 'legendary' ? 'legendary' : c.tier === 'rare' ? 'rare' : 'common';
+        card.style.setProperty('--rc', RARITY_COLOR[c.tier === 'legendary' ? 'legendary' : c.tier === 'rare' ? 'uncommon' : 'common']);
+        const box = el('img'); box.src = base + 'assets/items/' + chestArt(c.tier); box.alt = '';
+        card.append(box, el('b', null, t('chest.tier.' + c.tier)), el('small', null, t('chest.sealed')));
         const b = btn(t('chest.open'), () => openOne(c, list), 'gm-btn'); b.style.marginTop = '8px'; b.style.minHeight = '40px'; b.style.padding = '8px 14px';
         b.disabled = !chestApi.available || !owner;
         card.append(b);
         if (owner && !chestApi.available) card.append(el('small', null, t('chest.err.off')));
-      } else {
-        const o = c.opening && c.opening.outcome;
-        const ok = c.opening && c.opening.verified, tx = c.opening && c.opening.tx;
-        const mark = el('small', null);
-        if (ok && tx && /^[1-9A-HJ-NP-Za-km-z]{32,64}$/.test(String(tx))) { // the opening's own transaction on the explorer (owner, 12.11)
-          const a = el('a', null, t('chest.verified')); a.href = `https://testnet.nearblocks.io/txns/${tx}`; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.title = t('chest.viewTx');
-          mark.append(a);
-        } else mark.textContent = ok ? t('chest.verified') : t('chest.unverified');
-        card.append(el('small', null, o ? t('chest.got.' + o.kind) : t('chest.opened')), mark);
+        g.append(card);
       }
-      g.append(card);
+      box.append(g);
     }
-    box.append(g);
+    if (opened.length) {
+      const head = el('div', 'gm-hist-head');
+      head.append(el('h4', null, t('chest.history', { n: opened.length })));
+      const b = btn(t('chest.archiveAll'), () => { archiveOpened(storage, opened); show('inventory'); }, 'gm-fchip');
+      b.title = t('chest.archiveAll.tip'); head.append(b);
+      box.append(head, historyList(opened.slice(0, 30), list));
+      if (opened.length > 30) box.append(el('p', 'gm-note', t('chest.more', { n: opened.length - 30 })));
+    }
+    if (archive.length) {
+      const d = el('details', 'gm-archive');
+      d.append(el('summary', null, t('chest.archive', { n: archive.length })), historyList(archive.slice(0, 100), list));
+      box.append(d);
+    }
     return box;
+  }
+  /** Read-only rows for opened chests: icon, what came out (or "dust"), the box, and a small verify link. */
+  function historyList(chests, list) {
+    const ul = el('ul', 'gm-hist');
+    for (const c of chests) {
+      const o = outcomeOf(c);
+      const li = el('li'); li.style.setProperty('--rc', RARITY_COLOR[(o && o.rarity) || 'common'] || RARITY_COLOR.common);
+      const it = o && o.id ? list.find((x) => x.id === o.id) : null;
+      const ico = el('span', 'gm-hist-ico');
+      const art = rewardArt(o, 128) || (it ? it.icon128 || it.icon : null);
+      if (art) { const img = el('img'); img.src = base + 'assets/items/' + art; img.alt = ''; ico.append(img); }
+      else ico.textContent = !o ? '·' : o.kind === 'silk' ? '◈' : o.kind === 'xp' ? '✦' : o.kind === 'title' ? '❦' : o.kind === 'nft' ? '✧' : '?';
+      const what = !o ? t('chest.opened')
+        : o.kind === 'item' ? (it ? t(it.nameKey) : o.id || '?')
+        : o.kind === 'nft' ? (it ? t('chest.out.nftOf', { item: t(it.nameKey) }) : t('chest.out.nft'))
+        : o.kind === 'silk' ? t('chest.out.silk', { n: o.amount })
+        : o.kind === 'xp' ? t('chest.out.xp', { n: o.amount })
+        : o.kind === 'title' ? t('chest.out.title', { title: t('wheel.title.' + o.id) }) : '?';
+      const txt = el('span', 'gm-hist-txt');
+      txt.append(el('b', null, what));
+      if (o && o.dust) { const d = el('span', 'gm-dust', t('chest.dust')); d.title = t('chest.dust.tip'); txt.append(d); }
+      else if (o && o.kind !== 'title') txt.append(el('span', 'gm-hist-rar', t('rarity.' + o.rarity)));
+      txt.append(el('small', null, t('chest.from', { box: t('chest.tier.' + c.tier) })));
+      li.append(ico, txt);
+      const href = verifyHref(c);
+      if (href) { const a = el('a', 'gm-hist-ver', t('chest.verifyShort')); a.href = href; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.title = t('chest.viewTx'); li.append(a); }
+      else li.append(el('small', 'gm-hist-ver', t(c.opening && c.opening.verified ? 'chest.verified' : 'chest.unverified')));
+      ul.append(li);
+    }
+    return ul;
   }
   /** One opening's reward into this browser's ledger and inventory, and the chest marked opened. */
   function settleChest(chest, op, verified) {

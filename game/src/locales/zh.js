@@ -943,4 +943,11 @@ export default {
   "led.card.price": "{price} 丝（基准 {base}）· 货架上 {n} 件",
   "led.card.trades": "最近交易",
   "led.card.none": "最近几分钟它没有交易。",
+  "led.part.title": "参与其中",
+  "led.part.lead": "你的操作也会上链：在摊位交易，把 silk 质押给城镇工坊，领取你的奖励份额。",
+  "led.part.goal.first_trade": "第一笔交易",
+  "led.part.goal.first_pledge": "第一次质押",
+  "led.part.goal.streak": "本周 3 天质押：{n}/{of}",
+  "led.part.open": "打开城镇工坊",
+  "led.part.note": "仅限测试网 silk：没有真实价值。比率浮动，可能为零。",
 };

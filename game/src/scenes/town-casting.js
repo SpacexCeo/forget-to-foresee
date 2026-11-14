@@ -205,7 +205,7 @@ export function createTownCasting({ scene, camera, town, player, i18n, coarse = 
       const id = CAST_KEYS[code];
       if (!id || !state.field) return false;
       if (quickOn()) {                                  // quick cast: at once toward the cursor, no aim preview
-        const cur = state.pointer ? pick(state.pointer[0], state.pointer[1]) : null;
+        const cur = state.aimPoint || (state.pointer ? pick(state.pointer[0], state.pointer[1]) : null);
         setArmed(id); state.aim = null;
         if (!release(quickCastPoint(CASTS[id], player.pos, cur, player.heading))) setArmed(null);
         return true;
@@ -225,6 +225,10 @@ export function createTownCasting({ scene, camera, town, player, i18n, coarse = 
 
     /** Where the mouse is over the canvas (null: no hover, e.g. touch). */
     setPointer(x, y) { state.pointer = x == null ? null : [x, y]; },
+    /** Mouse aim (ui/mouse-aim.js): the world point under the crosshair wins over the pointer; null gives the pointer back. */
+    setAimPoint(p) { state.aimPoint = p || null; },
+    /** Mouse aim: the left button casts what is armed at the crosshair. Returns true when something was armed. */
+    releaseArmed() { if (!state.armed) return false; release(state.aimPoint || null); return true; },
 
     /** QA and the capture script: arm `id` and aim at a world point. */
     aimAt(id, point) { if (!state.field) return false; setArmed(id); state.aim = { point: point.slice() }; state.fixedAim = point.slice(); return true; },
@@ -247,7 +251,7 @@ export function createTownCasting({ scene, camera, town, player, i18n, coarse = 
       }
       for (const x of extras) { const k = x.cooldown ? Math.max(0, Math.min(1, x.cooldown())) : 0; x.cd.style.width = (100 * k).toFixed(1) + '%'; x.button.hidden = x.available ? !x.available() : false; }
       if (state.armed) {
-        const target = state.fixedAim || (state.pointer && pick(state.pointer[0], state.pointer[1]));
+        const target = state.fixedAim || state.aimPoint || (state.pointer && pick(state.pointer[0], state.pointer[1]));
         if (target) state.aim = fx.aim.show(CASTS[state.armed], player.pos, target, t, groundY);
         else { // no pointer (touch): aim straight ahead until the tap
           const h = player.heading, f = [player.pos[0] + Math.sin(h) * 8, player.pos[1], player.pos[2] + Math.cos(h) * 8];

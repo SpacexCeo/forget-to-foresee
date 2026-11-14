@@ -26,6 +26,7 @@ import * as THREE from 'three';
 import { setMarkers } from '../sprint/markers.js';
 import { artBox, resIconPath } from '../market/art.js';
 import { portraitPath } from '../quests/portraits.js';
+import { registerWindow, claimWindow } from '../ui/window-toggle.js';
 
 /** A sprint flag: features.json (sprint §3.6), or ?ff=questJournal,questTracker,autoWalk for a local check. */
 export function flagOn(name, search = (globalThis.location && globalThis.location.search) || '') {
@@ -231,7 +232,8 @@ export function createTownQuests({ scene = null, hudToast = null, storage, townL
     return p;
   }
   function openLog() { closeLog(); logPanel = renderLog(); doc.body.append(logPanel); }
-  function toggleLog() { if (journal) { if (journal.isOpen) journal.close(); else journal.open(); return; } if (logPanel) closeLog(); else openLog(); }
+  function toggleLog() { if (journal) { if (journal.isOpen) journal.close(); else { claimWindow('journal'); journal.open(); } return; } if (logPanel) closeLog(); else { claimWindow('journal'); openLog(); } }
+  const offWindow = registerWindow('journal', { isOpen: () => !!logPanel || !!(journal && journal.isOpen), close: () => { closeLog(); if (journal && journal.isOpen) journal.close(); } }); // one window at a time (ui/window-toggle.js)
   let onboarding = false;                                                          // ui/onboarding-queue.js: no window opens while a first-time overlay runs
   const onOnboard = (e) => { onboarding = !!(e && e.detail && e.detail.active); };
   const onCloseAll = () => { closeLog(); if (journal && journal.isOpen) journal.close(); };
@@ -458,7 +460,7 @@ export function createTownQuests({ scene = null, hudToast = null, storage, townL
     openLog, closeLog, toggleLog, get logOpen() { return !!logPanel || !!(journal && journal.isOpen); },
     get guide() { return guide; }, feedGuide, publishMarkers,
     get journal() { return journal; }, get tracker() { return tracker; }, get walker() { return walker; }, walkTo, get tracked() { return tracked.slice(); },
-    dispose() { unSilk(); setMarkers('quests', []); if (trail) trail.dispose(); if (waypoint) waypoint.dispose(); if (journal) journal.close(); if (tracker) tracker.dispose(); if (walker) { walker.dispose(); setAutoWalker(null); } if (doc.body && doc.body.classList) doc.body.classList.remove('ftf-tracker-on'); closeTalk(); closeLog(); logBtn.remove(); line.remove(); win.removeEventListener('ftf:mob-killed', onKill); win.removeEventListener('ftf:journal-toggle', toggleLog); win.removeEventListener('keydown', onKey); win.removeEventListener('keydown', onGuideKey); win.removeEventListener('ftf:window-open', onWindow); win.removeEventListener('pointermove', onDrag); win.removeEventListener('ftf:portal-near', onPortal); win.removeEventListener('ftf:mob-killed', onHit); win.removeEventListener('ftf:mob-hit', onHit); },
+    dispose() { offWindow(); unSilk(); setMarkers('quests', []); if (trail) trail.dispose(); if (waypoint) waypoint.dispose(); if (journal) journal.close(); if (tracker) tracker.dispose(); if (walker) { walker.dispose(); setAutoWalker(null); } if (doc.body && doc.body.classList) doc.body.classList.remove('ftf-tracker-on'); closeTalk(); closeLog(); logBtn.remove(); line.remove(); win.removeEventListener('ftf:mob-killed', onKill); win.removeEventListener('ftf:journal-toggle', toggleLog); win.removeEventListener('keydown', onKey); win.removeEventListener('keydown', onGuideKey); win.removeEventListener('ftf:window-open', onWindow); win.removeEventListener('pointermove', onDrag); win.removeEventListener('ftf:portal-near', onPortal); win.removeEventListener('ftf:mob-killed', onHit); win.removeEventListener('ftf:mob-hit', onHit); },
   };
 }
 

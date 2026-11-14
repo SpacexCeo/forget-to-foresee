@@ -5,6 +5,9 @@
 // and the poll function (net/town-ledger.js fetchLedger) and mounts the returned root wherever it likes (the game
 // menu's Town tab). It polls only while its root is on the page.
 import { reasonText, traderCard, progressOf, agoOf, shortHash, silkOf, unitSilk, accountUrl, TRADERS } from './town-ledger-data.js';
+import { loadGoals, goalsView } from './town-goals.js';
+
+const localStore = () => { try { return globalThis.localStorage || null; } catch { return null; } };
 
 const REPO = 'https://github.com/SpacexCeo/forget-to-foresee/blob/main/';
 const CSS = `.tl { display: grid; gap: 12px; color: var(--ftf-text, #eef0ea); font: 14px/1.45 var(--font-ui, system-ui, sans-serif); }
@@ -48,13 +51,20 @@ const CSS = `.tl { display: grid; gap: 12px; color: var(--ftf-text, #eef0ea); fo
 .tl-goods { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 6px; }
 .tl-good { padding: 6px 8px; border-radius: 8px; background: rgba(214,226,214,.05); font-size: 13px; }
 .tl-good small { display: block; color: rgba(233,230,220,.62); }
+.tl-goals { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.tl-goal { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 99px; font-size: 12px; border: 1px solid rgba(197,164,105,.35); color: rgba(233,230,220,.8); }
+.tl-goal::before { content: ''; width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid rgba(197,164,105,.8); box-sizing: border-box; }
+.tl-goal.done { color: #e6d6a8; border-color: rgba(127,210,154,.55); background: rgba(127,210,154,.08); }
+.tl-goal.done::before { background: #7fd29a; border-color: #7fd29a; }
+.tl-go { min-height: 36px; padding: 6px 14px; border-radius: 8px; border: 1px solid #8c6a2a; background: var(--ftf-gold, #c5a469); color: #1b1406; font: 700 13px var(--font-ui, system-ui, sans-serif); cursor: pointer; }
+.tl-go:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .tl-row.new { animation: none; } }`;
 
 /**
  * @param {{doc?: Document, t: Function, poll: () => Promise<object|null>, now?: () => number, pollMs?: number, timers?: object, base?: string, focus?: string|null}} o
  * @returns {{root: HTMLElement, refresh(): Promise<void>, openTrader(key: string): void, destroy(): void, state(): object}}
  */
-export function mountTownLedger({ doc = globalThis.document, t, poll, now = () => Date.now(), pollMs = 20_000, timers = globalThis, base = '/', focus = null }) {
+export function mountTownLedger({ doc = globalThis.document, t, poll, now = () => Date.now(), pollMs = 20_000, timers = globalThis, base = '/', focus = null, storage = localStore(), win = globalThis }) {
   if (!(doc.getElementById && doc.getElementById('tl-css'))) { const s = doc.createElement('style'); s.id = 'tl-css'; s.textContent = CSS; doc.head.append(s); }
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const link = (href, text, cls) => { const a = el('a', cls, text); a.href = href; a.target = '_blank'; a.rel = 'noopener noreferrer'; return a; };
@@ -137,6 +147,19 @@ export function mountTownLedger({ doc = globalThis.document, t, poll, now = () =
     return box;
   }
 
+  /** "Take part": the player's own goals (ui/town-goals.js) and the way into the Town works window. */
+  function partBox() {
+    const box = el('div', 'tl-box tl-part');
+    box.append(el('h3', null, t('led.part.title')), el('p', 'tl-note', t('led.part.lead')));
+    const goals = el('div', 'tl-goals');
+    for (const g of goalsView(loadGoals(storage), now())) goals.append(el('span', 'tl-goal' + (g.done ? ' done' : ''), t('led.part.goal.' + g.id, { n: g.n, of: g.of })));
+    box.append(goals);
+    const go = el('button', 'tl-go', t('led.part.open')); go.type = 'button';
+    go.addEventListener('click', () => { try { win.dispatchEvent(new CustomEvent('ftf:town-works-open')); } catch { /* no window */ } });
+    box.append(go, el('p', 'tl-note', t('led.part.note')));
+    return box;
+  }
+
   function linksBox() {
     const box = el('div', 'tl-box');
     box.append(el('h3', null, t('led.more')));
@@ -183,7 +206,7 @@ export function mountTownLedger({ doc = globalThis.document, t, poll, now = () =
     trades.append(el('h3', null, t('led.trades')), el('p', 'tl-note', t('mk.label')));
     if (data.recent.length) { const ul = el('ul', 'tl-list'); for (const r of data.recent.slice(0, 12)) ul.append(tradeRow(r, fresh.has(r.hash))); trades.append(ul); } else trades.append(el('p', 'tl-note', t('led.none')));
     const side = el('div'); side.style.cssText = 'display:grid;gap:12px';
-    side.append(aiBox(), linksBox());
+    side.append(partBox(), aiBox(), linksBox());
     const cols = el('div', 'tl-cols'); cols.append(trades, side);
     root.replaceChildren(header(), cols);
   }

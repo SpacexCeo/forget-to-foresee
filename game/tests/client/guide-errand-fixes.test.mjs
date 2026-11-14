@@ -27,3 +27,9 @@ test('the loot step completes on the bag event once it is the active step', () =
 test('the town errand finds a townsperson where they stand now, not only at their home', () => {
   assert.match(src('boot-world.js'), /npcAt: \(key\) => folkAt\(key\) \|\| \(PROGRAMS\[key\]/);
 });
+
+test('no "I inspect … up close" hint, and I never starts an inspection in town (owner 14.11)', () => {
+  const s = src('boot-world.js');
+  assert.doesNotMatch(s, /inspect <b>\$\{near\.label\}<\/b> up close/);
+  assert.match(s, /playOn && !inTown && \(input\.hit\('KeyI'\)/);
+});

@@ -943,4 +943,11 @@ export default {
   "led.card.price": "{price} seta (base {base}) · {n} sullo scaffale",
   "led.card.trades": "Ultimi scambi",
   "led.card.none": "Nessuno scambio suo negli ultimi minuti.",
+  "led.part.title": "Partecipa",
+  "led.part.lead": "Anche le tue mosse vanno on chain: scambia a una bancarella, dai silk in pegno alle opere, riscuoti la tua quota.",
+  "led.part.goal.first_trade": "Primo scambio",
+  "led.part.goal.first_pledge": "Primo pegno",
+  "led.part.goal.streak": "Pegni in 3 giorni questa settimana: {n}/{of}",
+  "led.part.open": "Apri le opere della città",
+  "led.part.note": "Solo silk di testnet: nessun valore reale. Il tasso è variabile e può essere zero.",
 };
