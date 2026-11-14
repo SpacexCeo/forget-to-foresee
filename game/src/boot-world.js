@@ -761,6 +761,7 @@ function combatSound(k, mob, ev) {
   if (k === 'strike') cue('strike_swing');
   else if (k === 'strike3') { cue('strike_swing'); heavyUntil = performance.now() + 350; }
   else if (k === 'dash') cue('dash_whoosh');
+  else if (k === 'dodge') cue('dodge_whiff'); // a blow passed through the roll's i-frames: a light tick (audio/haptics.js)
   else if (k === 'super') { cue('strike_heavy'); heavyUntil = performance.now() + 350; }   // quiet: the sound layer adds its own on ftf:iris-action
   // the casts land with their own element (night 14.11): frost a glassy shatter, the snare a bite of current
   else if (k === 'hit' && ev && ev.src === 'lance') { cueAt('hit_frost', at); cueAt(S.hurt, at, 0.8); }
@@ -1134,7 +1135,7 @@ const floatQueue = []; // numbers sent while the layer loads (night 14.11: the f
 function loadFloatNumbers() {
   if (floatNumbers || floatLoading || !featureFlags.on('damageNumbers')) return floatLoading;
   floatLoading = import('./ui/float-numbers.js').then((m) => {
-    floatNumbers = m.createFloatNumbers({ camera, THREE, reduced: () => lookdev.reducedMotion, xpUnit: () => 'XP' });
+    floatNumbers = m.createFloatNumbers({ camera, THREE, reduced: () => lookdev.reducedMotion, xpUnit: () => 'XP', words: () => ({ dodge: ctx.i18n.t('town.cast.dodged') }) });
     for (const ev of floatQueue.splice(0)) floatNumbers.push(ev);
   }).catch(() => { floatLoading = null; floatQueue.length = 0; });
   return floatLoading;

@@ -1609,6 +1609,7 @@ export default {
   'companion.account': "Зберігається на власному акаунті героїні {account}",
   'town.cast.strike': "Удар",
   'town.cast.dash': "Ривок",
+  'town.cast.dodged': "Ухилення",
   'menu.achOverall': "Загальний поступ",
   'menu.unlocked': "Відкрито",
   'menu.locked': "Закрито",

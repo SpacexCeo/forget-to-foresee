@@ -1610,6 +1610,7 @@ export default {
   'companion.account': "Custodito dall’account della protagonista {account}",
   'town.cast.strike': "Colpo",
   'town.cast.dash': "Scatto",
+  'town.cast.dodged': "Schivato",
   'menu.achOverall': "Progresso complessivo",
   'menu.unlocked': "Sbloccato",
   'menu.locked': "Bloccato",

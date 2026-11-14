@@ -570,7 +570,15 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
     numbers.push({ el, p: [m.pos[0] + (Math.random() - 0.5) * 0.4, m.pos[1] + 0.6 + m.T.radius * 1.2, m.pos[2]], t: 0 });
   }
 
+  let dodgeAt = -1;
+  /** A blow passed through her i-frames: a "Dodged" word over her head and a light whiff cue (throttled). */
+  function dodged() {
+    const t = performance.now(); if (t - dodgeAt < 400) return; dodgeAt = t;
+    if (floatNumber) floatNumber({ kind: 'dodge', amount: 0, target: 'iris-dodge', pos: [player.pos[0], player.pos[1] + 2.1, player.pos[2]] });
+    if (onFeedback) onFeedback('dodge');
+  }
   function hurt(amount, heavy = false) {
+    if (iris.alive && iris.iframes > 0 && !immune()) dodged();                     // the roll beat the blow: say so
     if (!iris.alive || iris.iframes > 0 || immune()) return; // immune: the dragon ride and the Glass Shoal own her (owner 13.11)
     iris.calm = 0; if (heavy) shake = Math.max(shake, 0.6);
     iris.hp = Math.max(0, iris.hp - amount); iris.hurtT = 0.3;
