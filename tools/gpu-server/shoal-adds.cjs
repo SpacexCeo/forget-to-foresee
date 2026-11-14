@@ -12,7 +12,7 @@ const { execFileSync } = require('child_process');
   const p = await ctx.newPage(); const logs = [];
   p.on('console', (m) => { if (m.type() === 'error' || /shoal|tideling/i.test(m.text())) logs.push(m.type() + ' ' + m.text()); });
   p.on('pageerror', (e) => logs.push('pageerror ' + e.message));
-  await p.goto(url + '?play=direct&ff=glassShoal&shoal=arena&intro=0&skip=intro');
+  await p.goto(url + '?ff=glassShoal&shoal=arena&intro=0&skip=intro');
   const t0 = Date.now(); let arena = null;
   while (Date.now() - t0 < 240000) {
     arena = await p.evaluate(() => !!(window.__ftf && window.__ftf.glassShoal && window.__ftf.glassShoal.arena));
@@ -32,6 +32,9 @@ const { execFileSync } = require('child_process');
     if (seen > 0) break; await p.waitForTimeout(1000);
   }
   console.log('tideling meshes in the scene', seen);
+  // the first-visit name card would cover the fight: hide it for the recording (nothing is submitted)
+  await p.evaluate(() => { for (const el of document.querySelectorAll('body *')) if (/What should the town call you/.test(el.textContent || '') && el.children.length < 8) { let n = el; while (n.parentElement && getComputedStyle(n).position !== 'fixed' && n.parentElement !== document.body) n = n.parentElement; n.style.display = 'none'; } });
+  await p.waitForTimeout(Number(process.env.ADDS_WAIT || 7000));   // the adds walk in from around the boss
   const start = Date.now(); await p.waitForTimeout(6000);
   await p.screenshot({ path: out + '/adds.jpg', quality: 88 });
   const video = p.video(); await ctx.close(); const raw = await video.path();
