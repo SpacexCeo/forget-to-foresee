@@ -16,7 +16,7 @@
 
 /** Numbers of the effects (pure, for the tests and tuning). */
 export const SERPENT_FX = Object.freeze({
-  frost: 640, frostPhone: 240, waves: 8, ice: 0x9fe8ff, deep: 0x3a8cff, warm: 0xff9a5a,
+  frost: 900, frostPhone: 300, waves: 8, ice: 0x9fe8ff, deep: 0x3a8cff, warm: 0xff9a5a,
   waveLife: 0.75, geyserLife: 0.9, breathRun: 0.5, arcLife: 0.45, crustLife: 1.6,
 });
 
@@ -55,7 +55,7 @@ export function setTele(mat, k, op, t) { const u = mat.uniforms; u.uK.value = te
 
 const PTS_VERT = `attribute float aSize; attribute float aAlpha; attribute vec3 aColor; varying float vA; varying vec3 vC; uniform float uScale;
 void main(){ vA = aAlpha; vC = aColor; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_PointSize = aSize * uScale / max(0.5, -mv.z); gl_Position = projectionMatrix * mv; }`;
-const PTS_FRAG = `varying float vA; varying vec3 vC; void main(){ vec2 c = gl_PointCoord - 0.5; float r = dot(c, c) * 4.0; if (r > 1.0) discard; float s = exp(-r * 3.0); gl_FragColor = vec4(vC * (0.6 + s), vA * s); }`;
+const PTS_FRAG = `varying float vA; varying vec3 vC; void main(){ vec2 c = gl_PointCoord - 0.5; float r = dot(c, c) * 4.0; if (r > 1.0) discard; float s = exp(-r * 1.6); gl_FragColor = vec4(vC * (0.9 + 0.8 * s), vA * s); }`;
 const WAVE_FRAG = `uniform vec3 uColor; uniform float uA; varying vec2 vUv; void main(){ gl_FragColor = vec4(uColor, uA * smoothstep(0.0, 0.6, vUv.y) * (1.0 - smoothstep(0.85, 1.0, vUv.y))); }`;
 const GEY_FRAG = `uniform vec3 uColor; uniform float uA; varying vec2 vUv; void main(){ float h = vUv.y; gl_FragColor = vec4(uColor * (1.2 - h * 0.5), uA * (1.0 - h) * (0.55 + 0.45 * sin(vUv.x * 37.7))); }`;
 const UV_VERT = `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
@@ -135,11 +135,11 @@ export function createSerpentFx({ THREE, parent, mobile = false, rand = Math.ran
       // the frost front: it races along the mirror from the jaws to the cone's end in BREATH_RUN s, a wall of mist and shards
       // at its edge (what the camera behind her sees; the stream from the jaws is high above the frame)
       const front = Math.min(1, breathT / F.breathRun) * length, ang = Math.atan2(dir[0], dir[1]);
-      const m2 = Math.max(1, Math.round((mobile ? 110 : 260) * dt));
+      const m2 = Math.max(1, Math.round((mobile ? 160 : 420) * dt));
       for (let i = 0; i < m2; i++) {
         const u = Math.max(0.5, front - rand() * 3.5), s2 = (rand() * 2 - 1) * half * 0.95, a2 = ang + s2, mist = rand() < 0.35;
         emit(origin[0] + Math.sin(a2) * u, 0.15 + rand() * (mist ? 0.6 : 1.4), origin[2] + Math.cos(a2) * u, Math.sin(a2) * 3, 1 + rand() * 2.5, Math.cos(a2) * 3,
-          mist ? 0x3d7896 : rand() < 0.4 ? 0xffffff : F.ice, mist ? 1.8 + rand() * 1.6 : 0.5 + rand() * 0.7, 0.55 + rand() * 0.4, 1.2, mist ? 0 : 5);
+          mist ? 0x5c9cc0 : rand() < 0.4 ? 0xffffff : F.ice, mist ? 2.6 + rand() * 2 : 0.6 + rand() * 0.8, 0.55 + rand() * 0.4, 1.2, mist ? 0 : 5);
       }
       const n = Math.max(1, Math.round((mobile ? 160 : 420) * dt));
       for (let i = 0; i < n; i++) {
