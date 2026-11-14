@@ -83,5 +83,7 @@ test('phones: clip file URLs are versioned like the models (a cached old clip fi
   assert.match(modelListSource(new URL('../../public/assets/models', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), /export const ANIM_FILES = \{.*"iris":\d+/);
   const lib = readFileSync(new URL('../../src/play/anim-library.js', import.meta.url), 'utf8'), assets = readFileSync(new URL('../../src/render/assets.js', import.meta.url), 'utf8');
   assert.match(lib, /loader\.loadAsync\(animUrl\(name, base\)\)/); assert.match(lib, /'\?v=' \+ n/);
-  assert.match(assets, /setAnimVersions\(ANIM_FILES\)/);
+  assert.match(assets, /globalThis\.__ftfAnimFiles = MODEL_LIST\.ANIM_FILES/);
+  assert.doesNotMatch(assets, /from '\.\.\/play\//, 'no play/ import in the client core');
+  assert.match(lib, /animUrl\(name, base = '\/', files = globalThis\.__ftfAnimFiles/);
 });

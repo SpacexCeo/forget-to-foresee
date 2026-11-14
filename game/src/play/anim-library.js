@@ -24,11 +24,10 @@ export function sidecarEnabled(search = typeof location !== 'undefined' ? locati
 let loader = null;
 const cache = new Map();
 // Clip file URLs carry ?v=<bytes> like the models' (render/asset-catalog.js versionedModelUrl): a phone that cached an
-// old clip file must never pair it with a new model (owner 14.11: the new heroines did not move on phones). boot-world.js
-// hands over the build's sizes (virtual:model-list ANIM_FILES); without them the plain URL is used.
-let animVersions = {};
-export function setAnimVersions(files) { animVersions = files || {}; }
-export function animUrl(name, base = '/') { const n = animVersions[name]; return `${base}assets/anim/${name}.glb` + (n > 0 ? '?v=' + n : ''); }
+// old clip file must never pair it with a new model (owner 14.11: the new heroines did not move on phones). render/assets.js
+// hands over the build's sizes (virtual:model-list ANIM_FILES, render/assets.js puts them on globalThis.__ftfAnimFiles);
+// without them the plain URL is used.
+export function animUrl(name, base = '/', files = globalThis.__ftfAnimFiles || {}) { const n = files[name]; return `${base}assets/anim/${name}.glb` + (n > 0 ? '?v=' + n : ''); }
 const baseUrl = () => (import.meta.env && import.meta.env.BASE_URL) || '/';
 
 /**
