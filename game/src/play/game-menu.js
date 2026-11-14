@@ -14,7 +14,7 @@ import { NEAR_DEPLOYMENT } from '../net/near-deployment.js';
 import { loadHolder } from '../net/holder.js';
 import { holderSection } from './holder-panel.js';
 import { renderProfileView } from './profile-view.js';
-import { createChestBag } from '../game/chests.js';
+import { createChestBag, beginChestOpen, endChestOpen, chestOpenBusy, openChoices } from '../game/chests.js';
 import { createFriends } from './friends.js';
 import { createChestClient } from '../net/chest-client.js';
 import { groupChests, loadArchive, archiveOpened, outcomeOf, verifyHref, nftImage, rewardArt, chestArt } from './chest-history.js';
@@ -416,9 +416,8 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
     if (!owner && sealedNow.length) box.append(guestBanner()); // one line for the whole grid, not one per card (owner, 12.11)
     if (sealedNow.length >= 2 && owner && chestApi.available && chestApi.openMany) { // batch opening (owner, 12.11): one transaction for up to 10
       const row = el('div', 'gm-row'); row.style.display = 'flex'; row.style.gap = '8px'; row.style.flexWrap = 'wrap'; row.style.margin = '6px 0 10px';
-      const five = Math.min(5, sealedNow.length), most = Math.min(10, sealedNow.length);
-      for (const [label, k] of [[t('chest.batch.open', { n: five }), five], ...(most > five ? [[t('chest.batch.all', { n: most }), most]] : [])]) {
-        const b = btn(label, () => openMany(k, list), 'gm-btn'); b.style.minHeight = '40px'; b.style.padding = '8px 14px'; row.append(b);
+      for (const c of openChoices(sealedNow.length)) { // Open 10; Open all = batches of ten, one after another
+        const b = btn(t(c.key, { n: c.n }), () => openMany(c.all ? Infinity : c.n, list), 'gm-btn'); b.style.minHeight = '40px'; b.style.padding = '8px 14px'; b.disabled = chestOpenBusy(); row.append(b);
       }
       box.append(row);
     }
@@ -430,7 +429,7 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
         const box = el('img'); box.src = base + 'assets/items/' + chestArt(c.tier); box.alt = '';
         card.append(box, el('b', null, t('chest.tier.' + c.tier)), el('small', null, t('chest.sealed')));
         const b = btn(t('chest.open'), () => openOne(c, list), 'gm-btn'); b.style.marginTop = '8px'; b.style.minHeight = '40px'; b.style.padding = '8px 14px';
-        b.disabled = !chestApi.available || !owner;
+        b.disabled = !chestApi.available || !owner || chestOpenBusy();
         card.append(b);
         if (owner && !chestApi.available) card.append(el('small', null, t('chest.err.off')));
         g.append(card);
@@ -562,18 +561,31 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
     return wrap;
   }
   function openOne(chest, list) {
+    const live = bag.get(chest.id);
+    if (!live || live.state !== 'sealed' || !beginChestOpen()) return; // a sealed chest only, one opening at a time
     import('./chest-open.js').then((m) => {
       const r = m.openChestReveal({ doc, t, chest, client: chestApi, guest: owner, items: list, base, onSettled: (op, v) => settleChest(chest, op, v.verified) });
+      Promise.resolve(r.settled || r.result).finally(endChestOpen);
       r.result.then(() => { if (current === 'inventory') show('inventory'); });
-    }).catch((e) => console.warn('[chest]', e));
+    }).catch((e) => { endChestOpen(); console.warn('[chest]', e); });
   }
   /** Several sealed chests at once: one relayer transaction, a flip-by-flip reveal and a summary (play/chest-batch.js). */
   function openMany(count, list) {
-    import('./chest-batch.js').then((m) => {
-      const r = m.openChestBatch({ doc, t, client: chestApi, chests: bag.sealed().slice(0, count), count, items: list, base,
+    if (!beginChestOpen()) return; // one opening at a time
+    let left = Math.min(count, bag.sealed().length);
+    const next = () => import('./chest-batch.js').then((m) => {
+      const k = Math.min(10, left, bag.sealed().length);
+      if (k < 1) { endChestOpen(); if (current === 'inventory') show('inventory'); return; }
+      const r = m.openChestBatch({ doc, t, client: chestApi, chests: bag.sealed().slice(0, k), count: k, items: list, base,
         onSettled: (chest, op) => settleChest(chest, op, op.verification && op.verification.verified) });
-      r.result.then(() => { if (current === 'inventory') show('inventory'); });
-    }).catch((e) => console.warn('[chest]', e));
+      Promise.resolve(r.settled || r.result).finally(endChestOpen);
+      r.result.then((o) => {
+        // Open all: the next ten once this batch is claimed, while every chest asked for opened (a cut or an error stops)
+        left = o && o.ok && o.openings && !o.cut ? left - o.openings.length : 0;
+        if (left > 0 && bag.sealed().length && beginChestOpen()) next(); else if (current === 'inventory') show('inventory');
+      });
+    }).catch((e) => { endChestOpen(); console.warn('[chest]', e); });
+    next();
   }
 
   function show(id) {
