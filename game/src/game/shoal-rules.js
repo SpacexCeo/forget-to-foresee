@@ -296,6 +296,7 @@ export function hitBoss(b, amount, B = BOSS, o = {}) {
   const phase = phaseFor(hp / B.hp, B);
   const phaseUp = phase > b.phase && hp > 0;
   const nb = { ...b, hp, phase, dead: hp <= 0 };
+  if (nb.dead) { nb.state = 'dead'; nb.attack = null; nb.t = 0; nb.exposed = 0; } // it falls: no blow, no telegraph left glowing on the mirror (bench run 14.11)
   if (phaseUp) { nb.state = 'rest'; nb.t = 2.2; nb.attack = null; nb.idx = 0; nb.exposed = 0; } // it rears up: a breather between phases
   return { boss: nb, dealt, phaseUp };
 }

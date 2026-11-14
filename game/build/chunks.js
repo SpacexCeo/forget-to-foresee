@@ -43,7 +43,9 @@ export function chunkFor(id) {
     || p.includes('/src/features.js') || p.includes('/src/sprint/retry-import.js') || p.includes('/src/entry-url.js')) return 'boot'; // tiny, static with the entry (features.js once fell into client-core and dragged three, ui, play into the first load)
   if (p.includes('/node_modules/three/')) return 'three';
   if (p.includes('/src/render/') || p.includes('/src/physics/') || p.includes('/src/scenes/') || p.includes('/src/play/logogram.js') || CORE_PLAY.some((m) => p.includes(m))) return 'client-core';
-  if (p.includes('/src/locales/') || p.includes('/src/play/locales/')) return 'locales';
+  // game/journal-data.js has no imports and en-quests.js spreads its copy in: it rides with the locales, else the locales
+  // chunk imports ui while ui imports locales, a TDZ at boot (lead 14.11, "Cannot access 'Rs' before initialization").
+  if (p.includes('/src/locales/') || p.includes('/src/play/locales/') || p.includes('/src/game/journal-data.js')) return 'locales';
   // ui never imports play (rule 2): the leaf modules ui reads go with ui; the lazily opened replay screen, which pulls
   // the rules API (net/replay.js -> net/api.js), goes with play.
   if (UI_LEAVES.some((m) => p.includes(m))) return 'ui';
