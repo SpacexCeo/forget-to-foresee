@@ -64,6 +64,9 @@ const CSS = `
 .gm-detail[hidden] { display: none; } .gm-detail img { width: 96px; height: 96px; object-fit: contain; } .gm-detail b { font: 600 20px/1.2 "Cormorant Garamond", Georgia, serif; margin-right: 8px; }
 .gm-rchip { display: inline-block; padding: 2px 8px; border-radius: 8px; font: 600 11px/1.5 system-ui; background: rgba(197, 164, 105, .14); color: var(--ftf-gold, #c5a469); }
 @media (max-width: 640px) { .gm-tab { min-width: 72px; padding: 6px 10px; font-size: 12px; } }
+/* phones (mobile audit 14.11): the panel's one column never grows past the panel (a wide tab body pushed the × and the third wardrobe card off a 360 px screen) */
+.gm-panel { grid-template-columns: minmax(0, 1fr); } .gm-head .gm-x { flex: 0 0 44px; }
+.gm-ward-card { min-width: 0; } .gm-ward-card .gm-fchip { white-space: normal; max-width: 100%; }
 .gm { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; background: rgba(3, 7, 7, .62); font: 15px/1.4 system-ui, -apple-system, 'Segoe UI', sans-serif; color: var(--ftf-text, #eef0ea); }
 .gm-panel { position: relative; width: min(920px, calc(100vw - 24px)); height: min(640px, calc(100vh - 24px)); display: grid; grid-template-rows: auto auto 1fr; border-radius: 20px; overflow: hidden;
   background: rgba(13, 19, 18, .95); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid rgba(214, 226, 214, .12); box-shadow: 0 24px 60px rgba(0, 0, 0, .55); }

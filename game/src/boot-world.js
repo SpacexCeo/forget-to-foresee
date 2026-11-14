@@ -967,7 +967,10 @@ function updateAltarTimer() {
   // kept below the top-right chips (Controls, Profile) and inside the screen: on a phone the altar projects right under them
   const minTop = innerWidth < 700 || innerHeight < 500 ? (document.body.classList.contains('ph-on') ? 236 : 150) : 118, half = Math.min(altarTimer.offsetWidth / 2 || 110, innerWidth / 2 - 8);
   altarTimer.style.left = Math.max(half + 8, Math.min(innerWidth - half - 8, (_altarP.x + 1) / 2 * innerWidth)).toFixed(0) + 'px';
-  altarTimer.style.top = Math.max(minTop, (1 - _altarP.y) / 2 * innerHeight).toFixed(0) + 'px';
+  // and never under the quest tracker (tablet audit 14.11: the label sat in the tracker's lines and could not be tapped)
+  const x = Math.max(half + 8, Math.min(innerWidth - half - 8, (_altarP.x + 1) / 2 * innerWidth)), ft = document.querySelector('.ft:not([hidden])'), fr = ft && ft.getBoundingClientRect();
+  const under = fr && fr.height > 0 && x + half > fr.left && x - half < fr.right ? fr.bottom + (altarTimer.offsetHeight || 26) + 6 : 0;
+  altarTimer.style.top = Math.max(minTop, under, (1 - _altarP.y) / 2 * innerHeight).toFixed(0) + 'px';
 }
 
 /**

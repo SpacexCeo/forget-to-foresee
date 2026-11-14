@@ -49,7 +49,11 @@ const CSS = `
 .mk2-roll { font: 700 44px/1 var(--font-title, Georgia, serif); color: var(--ftf-gold-bright, #dcc08a); min-height: 48px; }
 .mk2-win { color: var(--ftf-ok, #5ccf8a); font-weight: 700; } .mk2-lose { color: #ff8a7a; font-weight: 700; }
 .mk2-modal { padding: 16px; border-radius: 12px; border: 1px solid rgba(197, 164, 105, .45); background: var(--ftf-panel-solid, #101f1a); display: grid; gap: 10px; max-width: 480px; }
-@media (max-width: 640px) { .mk2 { height: calc(100vh - 32px); } .mk2 th:nth-child(6), .mk2 td:nth-child(6) { display: none; } }
+@media (max-width: 640px) { .mk2 { height: calc(100vh - 32px); }
+  /* phones (mobile audit 14.11: at 360 px the panel grew past the screen, the × and the Games tab were cut): the panel never wider than the screen, the header wraps, the tabs scroll */
+  .mk2-wrap { padding: 8px; grid-template-columns: minmax(0, 1fr); } .mk2 { min-width: 0; max-width: 100%; height: calc(100vh - 16px); }
+  .mk2-head { flex-wrap: wrap; gap: 8px; padding: 10px 12px; } .mk2-head h3 { font-size: 18px; }
+  .mk2-tabs { overflow-x: auto; padding: 6px 8px 0; scrollbar-width: none; } .mk2-tabs button { flex: 0 0 auto; padding: 8px 10px; white-space: nowrap; } .mk2 th:nth-child(6), .mk2 td:nth-child(6) { display: none; } }
 @media (prefers-reduced-motion: reduce) { .mk2 * { transition: none !important; } }
 `;
 
