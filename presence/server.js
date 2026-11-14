@@ -1,5 +1,5 @@
 // Presence service: the shared sky town for up to 15 players per room (docs/multiplayer.md). Plain Node, no deps.
-//   node server.js   (env: PER_IP (local tests only; default 3), PORT=8788, HOST=0.0.0.0, ALLOWED_ORIGIN (comma list; localhost always allowed), TRUST_PROXY=1 behind Caddy,
+//   node server.js   (env: PER_IP (local tests only; default 3), PORT=8788, HOST=0.0.0.0, FTF_ALLOWED_ORIGINS or ALLOWED_ORIGIN (comma list added to the Pages origin; localhost always allowed), TRUST_PROXY=1 behind Caddy,
 //                     PRESENCE_DATA_DIR: the folder of chat-history.json, the rooms' last lines and actions; unset keeps them in memory only)
 // GET /health -> counts only. WebSocket on /presence (or /).
 import http from 'node:http';
@@ -11,6 +11,16 @@ import { createHistory } from './lib/history.js';
 export const NET = Object.freeze({ perIp: 3, newPerIpPerMin: 10, maxSockets: LIMITS.roomSize * LIMITS.maxRooms, maxPayload: 1024, pingMs: 15000 });
 const DEFAULT_ORIGINS = ['https://spacexceo.github.io'];
 
+/**
+ * The sites the page may be served from: the GitHub Pages origin always, plus a comma list from the env
+ * (FTF_ALLOWED_ORIGINS, or the older ALLOWED_ORIGIN), e.g. the owner's own domain; a trailing slash or path is dropped.
+ */
+export function originList(csv, always = DEFAULT_ORIGINS) {
+  const out = [...always];
+  for (const raw of String(csv || '').split(',')) { const s = raw.trim(); if (!s) continue; let o = s; try { o = new URL(s).origin; } catch { /* kept as typed */ } if (!out.includes(o)) out.push(o); }
+  return out;
+}
+
 export function originAllowed(origin, origins = DEFAULT_ORIGINS) {
   if (typeof origin !== 'string') return false;
   return origins.includes(origin) || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d{1,5})?$/.test(origin);
@@ -20,7 +30,7 @@ export function originAllowed(origin, origins = DEFAULT_ORIGINS) {
 export function createPresence({ env = process.env, now = () => Date.now(), log = (...a) => console.log(new Date().toISOString(), ...a), net: base = NET } = {}) {
   // PER_IP raises the per-IP socket cap for a local test server (presence/tools/bots.mjs); production keeps 3
   const net = Number(env.PER_IP) > 0 ? { ...base, perIp: Number(env.PER_IP), newPerIpPerMin: Math.max(base.newPerIpPerMin, 2 * Number(env.PER_IP)) } : base;
-  const origins = env.ALLOWED_ORIGIN ? env.ALLOWED_ORIGIN.split(',').map((s) => s.trim()).filter(Boolean) : DEFAULT_ORIGINS;
+  const origins = originList(env.FTF_ALLOWED_ORIGINS || env.ALLOWED_ORIGIN);
   const trustProxy = env.TRUST_PROXY === '1';
   const history = createHistory({ dir: env.PRESENCE_DATA_DIR || null, now, log });
   const hub = createHub({ now, log, history });

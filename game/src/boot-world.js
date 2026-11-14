@@ -56,6 +56,7 @@ import { features as featureFlags } from './features.js';
 import { mountSprint } from './sprint/index.js';
 import { createDay1Mint, loadDay1 } from './play/day1-mint.js';
 import { findHandBone } from './play/hand-bones.js';
+import { siteLink } from './ui/site-link.js';
 import { nextSkin, wearPlan } from './play/skins.js';
 import { TALK_RADIUS } from './scenes/town-quest.js';
 import { PROGRAMS, TOWNSFOLK } from './play/townsfolk-plan.js';
@@ -495,7 +496,7 @@ if (townMode.town) {
     townTales = m.createTownTales({ t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage, ledger: townLedger, chests: chestBag, folkAt, dark: afterDark, toast: (s) => toast(s), sound: (n) => cue(n),
       inkOn: () => featureFlags.on('tales'), lostOn: () => featureFlags.on('wayfarers'), folk: town.townsfolk, toWorld: townToWorld,
       say: (key, line) => { if (townBarks && townBarks.say) townBarks.say(key, line); },
-      postcard: (card) => { let link = 'https://spacexceo.github.io/forget-to-foresee/'; try { link = location.origin + location.pathname; } catch { /* default */ } import('./ui/postcard.js').then((pm) => pm.openPostcard({ doc: document, t: (k, a) => ctx.i18n.t(k, a), ...card, link })).catch((e) => console.warn('[tales] postcard', e)); } });
+      postcard: (card) => { const link = siteLink(); import('./ui/postcard.js').then((pm) => pm.openPostcard({ doc: document, t: (k, a) => ctx.i18n.t(k, a), ...card, link })).catch((e) => console.warn('[tales] postcard', e)); } });
     spots.push(...townTales.spots);
   }).catch((e) => console.warn('[tales]', e));
   townProps = createTownProps({ scene, town, ledger: townLedger, i18n: ctx.i18n, mobile: mobileDevice });

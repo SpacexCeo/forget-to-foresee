@@ -3,6 +3,7 @@
 // inline), and its strokes draw themselves in (stroke-dashoffset, motion tokens; reduced motion: a short fade).
 import { ensureWhStyle } from './index.js';
 import { shardTimeline } from './shard-card-model.js';
+import { siteLink } from '../site-link.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -55,7 +56,7 @@ export function shardImage(doc, card, size = 132) {
 }
 
 /** The game's own page (no query): the link a postcard carries. */
-const gameLink = () => { try { const u = new URL(location.href); return u.origin + u.pathname; } catch { return 'https://spacexceo.github.io/forget-to-foresee/'; } };
+const gameLink = () => siteLink();
 
 /** "Share postcard": a 1200×630 image of this card, drawn on demand (ui/postcard.js). */
 function shareButton(doc, t, card, line) {

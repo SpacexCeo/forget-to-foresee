@@ -39,7 +39,7 @@ test('CORS: the Pages site and localhost only', () => {
   const headers = {}; const res = { setHeader: (k, v) => { headers[k] = v; }, end() { this.ended = true; } };
   assert.equal(cors({ method: 'OPTIONS', headers: { origin: 'https://evil.example' } }, res), true);
   assert.equal(res.statusCode, 403); assert.equal(headers['Access-Control-Allow-Origin'], undefined);
-  assert.deepEqual(envConfig({ FTF_ALLOWED_ORIGINS: 'https://a.example, https://b.example' }).origins, ['https://a.example', 'https://b.example']);
+  assert.deepEqual(envConfig({ FTF_ALLOWED_ORIGINS: 'https://a.example, https://b.example/' }).origins, ['https://spacexceo.github.io', 'https://a.example', 'https://b.example'], 'the Pages origin stays; the list adds to it');
   assert.equal(envConfig({}).secretKey, '');
 });
 
