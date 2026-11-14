@@ -91,3 +91,7 @@ test('the chest moments are separate events: pickup (walked over), bagged, open,
   assert.match(src('scenes/town-monsters.js'), /if \(walked\) chestEvent\('pickup'/);
   assert.match(src('scenes/town-quests.js'), /d\.phase === 'open'\) questDo\(\{ type: 'EVENT', event: 'open_chest' \}\)/);
 });
+
+test('turning the camera with the mouse aim (no button held) completes the camera step', () => {
+  assert.match(src('scenes/town-quests.js'), /e\.buttons \|\| \(doc\.pointerLockElement && doc\.pointerLockElement === e\.target && Math\.abs\(e\.movementX \|\| 0\) > 2\)/);
+});

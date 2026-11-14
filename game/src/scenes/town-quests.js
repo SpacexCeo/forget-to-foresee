@@ -390,7 +390,9 @@ export function createTownQuests({ scene = null, hudToast = null, storage, townL
     onOpen: (id) => { if (journal) journal.open(null, id); }, onWalk: (v) => walkTo(v) }) : null;
   if (useTracker && doc.body && doc.body.classList) { doc.body.classList.add('ftf-tracker-on'); if (!doc.getElementById || !doc.getElementById('ft-hide-pill')) { const st = doc.createElement('style'); st.id = 'ft-hide-pill'; st.textContent = 'body.ftf-tracker-on .ftf-town-objective{display:none!important}'; (doc.head || doc.body).append(st); } }
   const onGuideKey = (e) => { const tag = e && e.target && e.target.tagName; if (tag === 'INPUT' || tag === 'TEXTAREA') return; if (e.code === 'KeyR') feedGuide('camera'); else if (e.code === 'KeyI') feedGuide('bag'); else if (e.code === 'KeyB') feedGuide('market'); };
-  const onDrag = (e) => { if (e && e.buttons && e.target && e.target.tagName === 'CANVAS') feedGuide('camera'); };
+  // a drag on the scene turns the camera; so does any mouse move while the mouse aim holds the pointer (ui/mouse-aim.js),
+  // with no button held: that turn counts too (owner P0 14.11: no dead end on the new player's path)
+  const onDrag = (e) => { if (e && e.target && e.target.tagName === 'CANVAS' && (e.buttons || (doc.pointerLockElement && doc.pointerLockElement === e.target && Math.abs(e.movementX || 0) > 2))) feedGuide('camera'); };
   const onPortal = () => feedGuide('portal'), onHit = () => feedGuide('hit');
   // the loot step also completes when a chest is really picked up (owner P0 14.11): a new sealed chest in the bag
   // chest moments (game/chests.js CHEST_EVENT), each on its own: her pickup completes the guide's loot step (remembered if
