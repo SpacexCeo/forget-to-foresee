@@ -191,6 +191,8 @@ const openSettings = (tab) => {
   import('./ui/settings-popup.js').then((m) => {
     settingsPopup ||= m.createSettingsPopup({ t: (k, a) => ctx.i18n.t(k, a), i18n: ctx.i18n, prefs: ctx.prefs, storage: ctx.storage, hooks: {
       onSettings: applyGameSettings,
+      // Settings → Account (owner 14.11): the linked sign-in methods, email, and the wallet sign-in panel
+      accountEmail: () => makeAccountEmail(), openAccount: () => openAccount(),
       audio: () => (play && play.hooks && play.hooks.audio) || (townAudio && townAudio.audio) || null,
       volumes: () => loadVolumes(ctx.storage), saveVolume: (bus, v) => saveVolumes(ctx.storage, { ...loadVolumes(ctx.storage), [bus]: v }),
       touch: () => ({ available: !!(input.touchControls && touchSticks), mode: touchSticks ? touchSticks.mode : 'tap', setMode: (md) => touchSticks && touchSticks.setMode(md) }),
@@ -884,14 +886,18 @@ function startSeason() {
 
 // ---- Day 1 (docs/day1-free-mint-plan.md): arrival, name, the free Elise mint, hints, story trailers, the skin ----
 const day1Mint = createDay1Mint({ storage: ctx.storage });
+// email sign-in and the linked methods (net/account-email.js; owner 14.11): the account panel and Settings → Account
+function makeAccountEmail() {
+  return Promise.all([import('./net/account-email.js'), import('./net/account-login.js'), import('./net/near-tx.js'), import('./net/day1-deployment.js'), import('./net/near-deployment.js')])
+    .then(([e, a, n, d, nd]) => e.createAccountEmail({ relayer: d.DAY1_DEPLOYMENT.relayer, guests: d.DAY1_DEPLOYMENT.guests, mint: day1Mint, client: n.createTxClient({ rpcUrls: nd.NEAR_DEPLOYMENT.rpcUrls }), signerFor: a.edSigner, newKey: n.generateKeyPair }));
+}
 // Sign in / create account (flag accountLogin, docs/account-login.md): panel, flow and wallets load on the first tap.
 const openAccount = (nickname = null) => import('./play/account-panel.js').then((m) => m.openAccountPanel({
   t: (k, a) => ctx.i18n.t(k, a), nickname,
   makeLogin: () => Promise.all([import('./net/account-login.js'), import('./net/near-tx.js'), import('./net/day1-deployment.js'), import('./net/near-deployment.js')])
     .then(([a, n, d, nd]) => a.createAccountLogin({ relayer: d.DAY1_DEPLOYMENT.relayer, guests: d.DAY1_DEPLOYMENT.guests, mint: day1Mint, client: n.createTxClient({ rpcUrls: nd.NEAR_DEPLOYMENT.rpcUrls }), storage: ctx.storage })),
   // email sign-in and the linked methods (net/account-email.js; owner 14.11 "link an email, sign in by email on the phone")
-  makeEmail: () => Promise.all([import('./net/account-email.js'), import('./net/account-login.js'), import('./net/near-tx.js'), import('./net/day1-deployment.js'), import('./net/near-deployment.js')])
-    .then(([e, a, n, d, nd]) => e.createAccountEmail({ relayer: d.DAY1_DEPLOYMENT.relayer, guests: d.DAY1_DEPLOYMENT.guests, mint: day1Mint, client: n.createTxClient({ rpcUrls: nd.NEAR_DEPLOYMENT.rpcUrls }), signerFor: a.edSigner, newKey: n.generateKeyPair })),
+  makeEmail: () => makeAccountEmail(),
 }).done).catch((e) => { console.warn('[account]', e); return { status: 'guest' }; });
 const day1On = () => {
   const q = params.get('day1');

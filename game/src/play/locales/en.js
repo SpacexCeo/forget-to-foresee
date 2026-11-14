@@ -1767,6 +1767,7 @@ const EN = {
   'set.acc.privacy': "Privacy",
   'set.acc.local': "Progress, settings and the guest key are stored on this device only. Clearing them cannot be undone, and without the key the guest account cannot be used again.",
   'set.acc.clear': "Clear local data",
+  'set.acc.signin': "Sign in or link a wallet",
   'set.acc.confirm': "Delete everything this game stored on this device, including the guest key? This cannot be undone.",
   'set.leave': "Leave to main menu",
   'set.leaveConfirm': "Leave the town for the main menu? Your progress is kept.",

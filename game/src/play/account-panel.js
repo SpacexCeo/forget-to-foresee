@@ -18,14 +18,6 @@ const CSS = `
 .acct-go { display: block; width: 100%; text-align: center; border: 0; background: var(--ftf-gold, #c5a469); color: #1b1407; }
 .acct-status { min-height: 1.4em; margin: 8px 0 4px; font-size: 14px; }
 .acct-small { margin: 12px 0 0; color: rgba(233, 230, 220, .6); font-size: 12.5px; }
-.acct-sec { margin: 14px 0 6px; padding-top: 12px; border-top: 1px solid rgba(214, 226, 214, .14); }
-.acct-sec h3 { margin: 0 0 8px; font: 600 15px/1.3 var(--font-ui, system-ui); }
-.acct-form { display: flex; gap: 8px; flex-wrap: wrap; }
-.acct-form input { flex: 1 1 180px; min-height: 44px; padding: 8px 12px; border-radius: 12px; border: 1px solid rgba(214, 226, 214, .28); background: #0b1110; color: inherit; font: 16px/1.2 var(--font-ui, system-ui); }
-.acct-form .acct-btn { flex: 0 0 auto; text-align: center; }
-.acct-list { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 6px; }
-.acct-list li { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 40px; padding: 4px 4px 4px 12px; border-radius: 10px; background: #131c1b; font-size: 14px; }
-.acct-list .acct-btn { min-height: 36px; padding: 6px 10px; font-size: 13px; }
 `;
 
 function ensureStyle(doc) {
@@ -121,61 +113,11 @@ export function openAccountPanel({ doc = document, t, makeLogin, makeEmail = nul
     if (sol.length) { solBtn.textContent = t('acct.sol', { name: sol[0].name }); for (const extra of sol.slice(1)) add(t('acct.sol', { name: extra.name }), () => run(w.solanaProvider(extra))); }
   }).catch(() => {});
 
-  // email (net/account-email.js): sign in by email on a device with no wallet app; a signed-in browser lists its linked
-  // methods, links an email and unlinks. Built after the panel shows; nothing is sent until a button is tapped.
-  /** An inline step: one input and its button; resolves the next step from onSubmit's answer. */
-  const form = (placeholder, type, label, onSubmit) => {
-    const f = el('form', 'acct-form'); const i = el('input'); i.type = type; i.placeholder = placeholder; i.required = true; i.setAttribute('aria-label', placeholder);
-    if (type === 'email') i.autocomplete = 'email'; else { i.inputMode = 'numeric'; i.autocomplete = 'one-time-code'; i.maxLength = 6; }
-    const b = el('button', 'acct-btn acct-go', label); b.type = 'submit';
-    f.addEventListener('submit', async (e) => { e.preventDefault(); if (busy) return; busy = true; b.disabled = true; say(t('acct.busy')); try { await onSubmit(i.value); } finally { busy = false; b.disabled = false; } });
-    f.append(i, b); return f;
-  };
-  const errText = (r) => (r.error === 'email_not_configured' ? t('acct.email.off') : t('acct.error', { reason: r.error || 'error' }));
+  // email and the linked methods (ui/account-methods.js, also in Settings → Account): built after the panel shows
   if (makeEmail) {
-    makeEmail().then(async (mail) => {
+    Promise.all([makeEmail(), import('../ui/account-methods.js')]).then(([mail, m]) => {
       if (closed) return;
-      const sec = el('div', 'acct-sec');
-      if (mail.canLink) {
-        sec.append(el('h3', null, t('acct.methods')));
-        const list = el('ul', 'acct-list'); sec.append(list);
-        const refresh = async () => {
-          const m = await mail.methods();
-          list.replaceChildren();
-          if (m.status !== 'ok') { list.append(el('li', null, errText(m))); return; }
-          if (!m.methods.length) list.append(el('li', null, t('acct.methods.none')));
-          for (const x of m.methods) {
-            const li = el('li'); li.append(el('span', null, t('acct.kind.' + x.kind) + ' · ' + x.hint));
-            const u = el('button', 'acct-btn', t('acct.unlink')); u.type = 'button';
-            u.addEventListener('click', async () => { u.disabled = true; const r = await mail.unlink(x.id); say(r.status === 'unlinked' ? t('acct.unlinked') : errText(r)); refresh(); });
-            li.append(u); list.append(li);
-          }
-        };
-        refresh();
-        sec.append(el('h3', null, t('acct.email.link')), el('p', 'acct-small', t('acct.email.note')));
-        const step = el('div'); sec.append(step);
-        let sentTo = null;
-        step.append(form(t('acct.email.place'), 'email', t('acct.email.send'), async (v) => {
-          const r = await mail.linkStart(v);
-          if (r.status !== 'sent') { say(errText(r)); return; }
-          sentTo = r.email; say(t('acct.email.sent', { email: sentTo }));
-          step.replaceChildren(form(t('acct.email.code'), 'text', t('acct.email.linkGo'), async (code) => {
-            const l = await mail.linkFinish(code);
-            if (l.status === 'linked') { say(t('acct.email.linked', { hint: l.hint })); refresh(); } else say(errText(l));
-          }));
-        }));
-        sec.append(el('p', 'acct-small', t('acct.wallet.link')));
-      } else {
-        sec.append(el('h3', null, t('acct.email.title')));
-        const step = el('div'); sec.append(step);
-        step.append(form(t('acct.email.place'), 'email', t('acct.email.send'), async (v) => {
-          const r = await mail.loginStart(v);
-          if (r.status !== 'sent') { say(errText(r)); return; }
-          say(t('acct.email.sent', { email: r.email }));
-          step.replaceChildren(form(t('acct.email.code'), 'text', t('acct.email.go'), async (code) => { const s = await mail.loginFinish(r.email, code); show(s.status === 'restored' ? s : { status: 'error', error: s.error === 'email_not_configured' ? s.error : s.error }); }));
-        }));
-      }
-      card.insertBefore(sec, status);
+      card.insertBefore(m.mountAccountMethods({ doc, t, mail, say, onSignedIn: (r) => setTimeout(() => close(r), 1600) }), status);
     }).catch(() => {});
   }
 

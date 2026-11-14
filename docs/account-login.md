@@ -83,7 +83,8 @@ per IP on `/api/auth/*`. Nonces live in the relayer's memory (one process).
 
 ## Email and linked methods (14 Nov)
 
-One canonical account per player: the Day-1 NEAR account every login maps to. In the account panel a signed-in
+One canonical account per player: the Day-1 NEAR account every login maps to. In **Settings → Account** and in the
+account panel (the same section, `ui/account-methods.js`) a signed-in
 browser sees **Linked sign-in methods** (each with Unlink), **Link an email**, and a note that another wallet is linked
 by signing in with it while this account is open. A browser with no account sees **Sign in with email**.
 

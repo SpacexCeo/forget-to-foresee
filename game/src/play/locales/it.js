@@ -1763,6 +1763,7 @@ export default {
   'set.acc.privacy': "Privacy",
   'set.acc.local': "Progressi, impostazioni e chiave dell’ospite restano solo su questo dispositivo. La cancellazione non si può annullare e senza la chiave l’account ospite non si può più usare.",
   'set.acc.clear': "Cancella i dati locali",
+  'set.acc.signin': "Accedi o collega un wallet",
   'set.acc.confirm': "Eliminare tutto ciò che il gioco ha salvato su questo dispositivo, chiave dell’ospite compresa? Non si può annullare.",
   'set.leave': "Esci al menu principale",
   'set.leaveConfirm': "Lasciare il paese per il menu principale? I progressi restano.",
