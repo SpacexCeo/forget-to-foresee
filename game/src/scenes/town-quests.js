@@ -373,7 +373,20 @@ export function createTownQuests({ scene = null, hudToast = null, storage, townL
   let tracked = []; try { tracked = (JSON.parse((storage && storage.getItem('ftf.tracked.v1')) || '[]') || []).filter((id) => QUESTS[id]).slice(0, MAX_TRACKED); } catch { tracked = []; }
   const saveTracked = () => { try { storage.setItem('ftf.tracked.v1', JSON.stringify(tracked)); } catch { /* memory only */ } };
   const lvl = () => { try { return Math.max(1, Number(level()) || 1); } catch { return 1; } };
-  const jModel = (q2 = '') => journalModel({ qs, now: now(), have: have(), level: lvl(), tracked, search: q2, giverName: gname, tr: say });
+  // the Glass Shoal main quest (flag glassShoal) as the journal's top banner: locked until level 5, then each step and where
+  let shoal = null;
+  if (flags('glassShoal')) Promise.all([import('../game/shoal-rules.js'), import('../locales/shoal.js'), import('./glass-shoal.js')]).then(([r, l, g]) => { shoal = { r, l, g }; if (journal && journal.isOpen) journal.refresh(); }).catch(() => { /* no banner */ });
+  function mainQuest() {
+    if (!shoal) return null;
+    const { r, l, g } = shoal; let s; try { s = r.readShoal(storage && storage.getItem(r.SHOAL_KEY)); } catch { s = r.freshShoal(); }
+    const lv = lvl(), T = (k) => l.shoalText((i18n && i18n.locale) || 'en', k), base = { id: 'shoal', title: T('shoal.quest') };
+    if (s.step === 'done') return { ...base, status: 'completed', step: say('journal.main.done') };
+    if (s.step === null && lv < r.UNLOCK_LEVEL) return { ...base, status: 'locked', step: say('journal.main.locked', { level: r.UNLOCK_LEVEL, now: lv }) };
+    const step = T(r.trackerKey(s, lv)), at = s.step === 'find_blade' ? g.SPOTS.blade : (['reach_stone', 'ride', 'defeat'].includes(s.step) ? g.SPOTS.stone : null);
+    const walk = s.step === null ? { kind: 'giver', giver: 'shardkeeper' } : at ? { kind: 'area', pos: at, label: step } : null;
+    return { ...base, status: s.step === null ? 'available' : 'active', step, walk };
+  }
+  const jModel = (q2 = '') => journalModel({ qs, now: now(), have: have(), level: lvl(), tracked, search: q2, giverName: gname, tr: say, main: mainQuest() });
   const walker = useWalk ? createAutoWalk({ driver: walkDriver, say, toast: notify, doc,
     planner: (from, to) => { const n = getTownNav(), r = n && n.plan(from, to); return r && r.path.length ? r.path : null; }, // round walls and props (physics/nav-grid.js)
     emit: (n, pl) => { try { win.dispatchEvent(new CustomEvent('ftf:' + n, { detail: pl })); } catch { /* none */ } } }) : null;
