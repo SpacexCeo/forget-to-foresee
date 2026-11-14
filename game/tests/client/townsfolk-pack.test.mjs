@@ -10,6 +10,7 @@ const BODY = /^(pelvis|spine|chest|neck|head|shoulder_[LR]|upperarm_[LR]|forearm
 
 test('townsfolk pack: one small shared file with the social clips, body tracks only, extras the retarget reads', () => {
   const { b, json } = glbJson(new URL(`../../public/assets/anim/${PACK_FILE}.glb`, import.meta.url));
+  assert.ok(!PACK_CLIPS.some((n) => /make_a_call_01|take_photo|wave_goodbye/.test(n)), 'no seated idle clip in the pack (owner 14.11)');
   assert.ok(b.length <= 2.2e6, 'the pack is ' + b.length + ' bytes');
   assert.deepEqual(json.animations.map((a) => a.name).sort(), [...PACK_CLIPS].sort());
   assert.ok(json.nodes.some((n) => n.name === 'pelvis'), 'the agent rig skeleton the game retargets from');
@@ -36,7 +37,7 @@ test('townsfolk pack: every wanted clip falls back to an older one until the pac
   const after = [...before, ...PACK_CLIPS];
   assert.equal(pickClip(after, 'greet'), 'greet_04'); assert.equal(pickClip(after, 'laugh'), 'laugh_01');
   assert.equal(pickClip(after, 'scratch'), 'scratch'); assert.equal(pickClip(after, 'arms_folded'), 'think');
-  for (const [want, got] of [['angry', 'angry_01'], ['laugh_b', 'laugh_02'], ['goodbye', 'wave_goodbye_01'], ['phone', 'make_a_call_01'], ['phone_game', 'take_photo'], ['dance', 'dance_03'], ['clap', 'clap'], ['cheer', 'cheer'], ['sit', 'sit']]) assert.equal(pickClip(after, want), got);
+  for (const [want, got] of [['angry', 'angry_01'], ['laugh_b', 'laugh_02'], ['goodbye', 'wave'], ['phone', 'make_a_call_02'], ['relax', 'standing_relax'], ['take_photo', 'make_a_call_02'], ['dance', 'dance_03'], ['clap', 'clap'], ['cheer', 'cheer'], ['sit', 'sit']]) assert.equal(pickClip(after, want), got);
 });
 
 test('townsfolk pack: a standing idle varies, the talkers cycle talk/complain and listen/agree/laugh, greetings alternate', () => {
