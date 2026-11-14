@@ -1439,6 +1439,7 @@ export default {
   'loading.log.houses': "Поднимаем дома и улицы…",
   'loading.slow': "Медленное соединение: загружаем облегчённые файлы…",
   'loading.reload': "Перезагрузить",
+  'loading.word': "ЗАГРУЗКА",
   'loading.log.shrine': "Зажигаем святилище…",
   'loading.log.altar': "Открываем алтарь…",
   'loading.log.sky': "Подвешиваем небесные острова…",

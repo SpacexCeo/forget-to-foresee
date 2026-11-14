@@ -63,6 +63,13 @@ function bootLog(root) {
 
 let PRISTINE = null; // a clean copy of #boot for the altar cover (createVeil)
 
+/** The LOADING word over the bar in the player's language (`loading.word`), once a translator is in. */
+function paintWord(root, translate) {
+  const w = root && root.querySelector ? root.querySelector('.boot-word') : null;
+  const v = w && translate ? translate('loading.word') : null;
+  if (v && v !== 'loading.word' && v !== '…' && v !== '...') w.textContent = v;
+}
+
 /**
  * The altar transition cover (\u201cThe Tournament begins\u201d): the same screen as the first load, cloned from the pristine
  * #boot, with its own subtitle. Returns {el, set(p), log(key), setSub(text), destroy()}; null without a DOM copy.
@@ -75,7 +82,7 @@ export function createVeil(doc = globalThis.document, { sub = '', t = null } = {
   el.classList.remove('boot--live', 'boot--failed');
   const subEl = el.querySelector('.boot-sub'), pct = el.querySelector('.boot-pct'), bar = el.querySelector('.boot-line');
   if (subEl) subEl.textContent = sub;
-  const lg = bootLog(el); if (t) lg.setTranslator(t);
+  const lg = bootLog(el); if (t) { lg.setTranslator(t); paintWord(el, t); }
   const api = {
     el,
     set(p) { const v = Math.max(0, Math.min(1, p || 0)); el.style.setProperty('--boot-p', v.toFixed(3)); if (pct) pct.textContent = Math.round(v * 100) + '%'; if (bar) bar.setAttribute('aria-valuenow', String(Math.round(v * 100))); },
@@ -200,7 +207,7 @@ export function createLoadingScreen(doc = globalThis.document) {
     /** A line for the log under the bar: a `loading.log.*` key (what is loading right now). */
     log(key) { if (lg) lg.log(key); },
     /** The locale arrived: the log's lines are shown in the player's language from now on. */
-    setTranslator(fn) { translate = fn; if (lg) lg.setTranslator(fn); },
+    setTranslator(fn) { translate = fn; if (lg) lg.setTranslator(fn); paintWord(root, fn); },
     /** The serif line over LOADING ("Forget to Foresee" on the first load). */
     setSub(text) { if (sub) sub.textContent = text; },
     /** Hands off: the ring completes, the screen cross-fades out over the screen duration; resolves when gone. */
@@ -222,7 +229,7 @@ export function createLoadingScreen(doc = globalThis.document) {
     reopen(text) {
       if (!finished) { if (label && text != null) label.textContent = text; return !!root; }
       if (!spare || !doc.body) return false;
-      root = spare.cloneNode(true); bind(); attachLog();
+      root = spare.cloneNode(true); bind(); attachLog(); paintWord(root, translate);
       shown = 0.04; real = 0; last = 0; finished = false; done = null;
       if (label && text != null) label.textContent = text;
       doc.body.append(root);

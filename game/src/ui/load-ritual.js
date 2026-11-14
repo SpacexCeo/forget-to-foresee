@@ -21,6 +21,15 @@ export const HINTS = Object.freeze({
   zh: { touch: '左手拇指行走，右手拇指环顾。', keys: 'WASD 行走，鼠标环顾，E 交谈。' },
 });
 export const langOf = (code) => { const l = String(code || 'en').slice(0, 2).toLowerCase(); return TIPS[l] ? l : 'en'; };
+/**
+ * The ritual's language, by the same rule as the language picker: ?lang=, else the saved choice, else the first browser
+ * language the game speaks, else English. Pure.
+ */
+export function ritualLang({ param = null, saved = null, navLangs = [] } = {}) {
+  for (const c of [param, saved]) if (c && TIPS[String(c).slice(0, 2).toLowerCase()]) return langOf(c);
+  for (const l of navLangs || []) { const c = String(l || '').slice(0, 2).toLowerCase(); if (TIPS[c]) return c; }
+  return 'en';
+}
 /** The line on show `ms` after the ritual began (a hint every fourth turn). */
 export function lineAt(ms, { lang = 'en', touch = false } = {}) {
   const tips = TIPS[langOf(lang)], i = Math.floor(Math.max(0, ms) / TIP_MS);
@@ -42,7 +51,8 @@ const CSS = `
 
 /**
  * Turns the ritual on over the existing loading screen. Returns a stop function (the screen removes itself anyway).
- * @param {{root?: HTMLElement|null, doc?: Document, lang?: string, touch?: boolean, reduced?: boolean, now?: () => number}} o
+ * `lang` may be a function: it is read again on every turn, so the lines follow the locale once the player picks one.
+ * @param {{root?: HTMLElement|null, doc?: Document, lang?: string | (() => string), touch?: boolean, reduced?: boolean, now?: () => number}} o
  */
 export function mountLoadRitual({ root = globalThis.document && globalThis.document.getElementById('boot'), doc = globalThis.document, lang = 'en', touch = false, reduced = false, now = () => Date.now() } = {}) {
   if (!root || !doc || root.classList.contains('boot--ritual')) return () => {};
@@ -51,15 +61,16 @@ export function mountLoadRitual({ root = globalThis.document && globalThis.docum
   const tip = doc.createElement('p'); tip.className = 'boot-tip'; tip.setAttribute('aria-live', 'off');
   const bottom = root.querySelector('.boot-bottom') || root; bottom.append(tip);
   const t0 = now();
+  const langNow = () => { try { return typeof lang === 'function' ? lang() : lang; } catch { return 'en'; } };
   let last = '';
   const show = () => {
-    const line = lineAt(now() - t0, { lang, touch });
+    const line = lineAt(now() - t0, { lang: langNow(), touch });
     if (line === last) return;
     last = line;
     if (reduced) { tip.textContent = line; return; }
     tip.classList.add('fade'); setTimeout(() => { tip.textContent = line; tip.classList.remove('fade'); }, 300);
   };
-  tip.textContent = last = lineAt(0, { lang, touch });
+  tip.textContent = last = lineAt(0, { lang: langNow(), touch });
   const timer = setInterval(() => { if (!root.isConnected) { clearInterval(timer); return; } show(); }, 500);
   return () => { clearInterval(timer); tip.remove(); root.classList.remove('boot--ritual'); };
 }

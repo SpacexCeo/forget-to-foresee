@@ -164,6 +164,14 @@ export function createTouchControls({ doc = document, input, t, base = '/', stor
   const dash = mk('dash', '', 'dash', t('town.cast.dash'), P(180));
   const use = mk('use', 'ts-use', null, t('touch.use')); use.prepend(doc.createTextNode(t('touch.use')));
   const cancel = el('div', 'ts-cancel', t('touch.cancel')); cancel.hidden = true; arc.append(cancel);
+  // the controls are built before the player picks a language (the entry gate comes after loading): relabel on a change
+  let useLabel = t('touch.use');
+  const relabel = () => {
+    const u = t('touch.use'); if (u === useLabel) return; useLabel = u;
+    for (const [b, k] of [[strike, 'town.cast.strike'], [lance, 'town.cast.lance'], [snare, 'town.cast.snare'], [dash, 'town.cast.dash'], [use, 'touch.use']]) b.setAttribute('aria-label', t(k));
+    if (use.firstChild && use.firstChild.nodeType === 3) use.firstChild.textContent = u;
+    cancel.textContent = t('touch.cancel');
+  };
   root.append(zone, arc); doc.body.append(root);
 
   const press = (b) => { b.classList.add('ts-down'); setTimeout(() => b.classList.remove('ts-down'), 140); };
@@ -257,6 +265,7 @@ export function createTouchControls({ doc = document, input, t, base = '/', stor
       const v = touch && mode === 'sticks' && active;
       if (v !== visible) { visible = v; root.hidden = !v; doc.body.classList.toggle('ts-on', v); if (!v) endStick(); else if (!stick) rest(); }
       if (!v) return;
+      relabel();
       const c = casting(), m = mobs(), f = flow();
       const field = !!(c && c.field);
       strike.hidden = dash.hidden = !(m && field); lance.hidden = snare.hidden = !field;

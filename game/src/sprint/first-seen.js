@@ -7,7 +7,7 @@ import { emit, on, state } from './bus.js';
 export const TIPS_KEY = 'ftf.tips.v1';
 const registry = new Map();
 const queue = [];
-let showing = null, store = null, docRef = null, touchOverride = null;
+let showing = null, store = null, docRef = null, touchOverride = null, tr = null; // tr: the game's live t() (mount), for the buttons
 
 const getStore = () => { if (store) return store; try { return globalThis.localStorage || null; } catch { return null; } };
 function load() { try { const v = JSON.parse(getStore().getItem(TIPS_KEY) || 'null'); return v && typeof v === 'object' ? { seen: v.seen || {}, off: !!v.off } : { seen: {}, off: false }; } catch { return { seen: {}, off: false }; } }
@@ -110,6 +110,9 @@ export function placeTip({ W, H, w, h, anchor = null, avoid = [] }) {
   return best;
 }
 
+/** A button label in the active locale (the game's t() once mounted), else the English. */
+const label = (key, en) => { try { const v = tr ? tr(key) : null; return v && v !== key && v !== '…' && v !== '...' ? v : en; } catch { return en; } };
+
 function render(doc, tip) {
   const el = doc.createElement('div'); el.className = 'ftf-tip'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', tip.title || 'Tip');
   el.style.cssText = 'position:fixed;left:0;top:0;z-index:var(--z-coach,35);width:max-content;max-width:min(340px, calc(100vw - 32px));box-sizing:border-box;padding:12px 14px;'
@@ -120,7 +123,7 @@ function render(doc, tip) {
   const p = doc.createElement('div'); p.textContent = tip.body || '';
   const row = doc.createElement('div'); row.style.cssText = 'display:flex;gap:8px;margin-top:10px;justify-content:flex-end';
   const mk = (text, fn, primary) => { const b = doc.createElement('button'); b.type = 'button'; b.textContent = text; b.style.cssText = `min-height:36px;padding:0 14px;border-radius:999px;cursor:pointer;font:600 13px system-ui,sans-serif;${primary ? 'background:rgba(201,163,90,.22);color:#f6df9b;border:1px solid rgba(201,163,90,.75)' : 'background:transparent;color:#a9b3a8;border:1px solid rgba(255,255,255,.18)'}`; b.addEventListener('click', fn); return b; };
-  row.append(mk('Skip tips', () => { skipTips(); emit('tip.dismissed', { id: tip.id, skipped: true }); }, false), mk('Got it', () => done(true), true));
+  row.append(mk(label('tip.skip', 'Skip tips'), () => { skipTips(); emit('tip.dismissed', { id: tip.id, skipped: true }); }, false), mk(label('tip.gotIt', 'Got it'), () => done(true), true));
   el.append(h, p, row);
   doc.body.append(el);
   // place next to the anchor (selector or element), else upper centre; never over a visible button (owner, 14.11)
@@ -141,5 +144,6 @@ function render(doc, tip) {
 /** Module contract (registry.js): mount(ctx) -> {dispose}. */
 export function mount(ctx = {}) {
   if (ctx.storage) _configure({ storage: ctx.storage });
+  if (typeof ctx.t === 'function') tr = ctx.t;
   return { dispose() { hideCurrent(); } };
 }

@@ -3,6 +3,7 @@
 // the numbers, small gold small-caps labels, the heroine's portrait in a teal rim light, level + title + XP bar, the
 // town silk card, three agent tiles, the town-silk chart, the stats grid and Open trades / Trade log tabs. Real data
 // only (the town ledger, src/game/town-economy.js); every block has an honest empty state.
+import { formatSilkWallet } from '../net/silk-core.js';
 
 export const PROFILE_CSS = `
 .gm-pv { --pv-bg: #0f1615; --pv-panel: #131c1b; --pv-line: rgba(214, 226, 214, .12); --pv-text: #e9e6dc; --pv-muted: rgba(233, 230, 220, .62);
@@ -147,7 +148,7 @@ export function renderProfileView({ doc, t, ledger, base, nickname = null, elise
   const silk = el('section', 'pv-panel pv-silk');
   const sl = el('div'); const stored = el('p', 'pv-muted'); stored.append(el('span', 'pv-dot'), doc.createTextNode(t('profile.silk.stored')));
   sl.append(el('div', 'pv-label', t('inv.townSilk')), stored, el('p', 'pv-muted', t('profile.silk.note')));
-  silk.append(sl, el('div', 'pv-num', money(m.silk)));
+  silk.append(sl, el('div', 'pv-num', formatSilkWallet(m.silk)));
 
   // three agent tiles
   const tiles = el('section', 'pv-tiles');

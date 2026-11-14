@@ -24,7 +24,7 @@ test('silk chip: line 1 is the Gate number; pending, syncing and offline lines; 
   assert.equal(b.line2, null); assert.equal(b.showSync, false); assert.equal(b.tooltip.length, 7, 'pending and play lines hidden at 0');
   const c = silkChipText(view({ pendingC: 100, syncing: true, chainOk: true }), t); assert.equal(c.line2, 'Syncing…'); assert.equal(c.showSync, false);
   const d = silkChipText(view({ pendingC: 100, chainOk: false, localTotalC: 10000, totalC: 10100 }), t); assert.equal(d.line2, 'Playing locally'); assert.equal(d.line2Kind, 'local'); assert.equal(d.line1, '100', 'local: this device\'s silk');
-  assert.equal(silkChipText(view({ noAccount: true, localTotalC: 12345 }), t).line1, '123.45');
+  assert.equal(silkChipText(view({ noAccount: true, localTotalC: 12345 }), t).line1, '123', 'the wallet count is whole silk (B10)');
   const l = ledgerSilkView({ silk: 4200 }, 20000); assert.equal(l.gateC, 4200); assert.equal(l.playC, 4200); assert.equal(l.feeC, 20000);
 });
 

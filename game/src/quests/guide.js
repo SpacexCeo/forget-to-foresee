@@ -62,11 +62,14 @@ export function guideView(g, fee, tr = null) {
 /** Coach marks (sprint §4.11): steps 4, 6 and 7 point at their HUD button (the seam's first-seen bubble, once each). */
 export const GUIDE_COACH = Object.freeze({ journal: '#rpg-tray-journal, .ftf-quest-log-btn', loot: '#rpg-tray-bag', market: '#rpg-tray-market' });
 export const coachId = (stepId) => 'guide.' + stepId;
-/** Registers the three coach marks with sprint/first-seen.js: registerTip({id, trigger: null, anchor, title, body}). */
+/**
+ * Registers the three coach marks with sprint/first-seen.js: registerTip({id, trigger: null, anchor, title, body}).
+ * Title and body are getters, read when the mark shows, so they follow a language picked after registration.
+ */
 export function registerGuideCoach(registerTip, title = (n, total) => `Guide ${n}/${total}`, tr = null) {
   for (const [id, anchor] of Object.entries(GUIDE_COACH)) {
     const n = GUIDE_STEPS.findIndex((s) => s.id === id) + 1;
-    registerTip({ id: coachId(id), trigger: null, anchor, title: title(n, GUIDE_STEPS.length), body: stepText(GUIDE_STEPS[n - 1], '', tr) });
+    registerTip({ id: coachId(id), trigger: null, anchor, get title() { return title(n, GUIDE_STEPS.length); }, get body() { return stepText(GUIDE_STEPS[n - 1], '', tr); } });
   }
 }
 /** The coach mark to show for the guide's active step, or null. */

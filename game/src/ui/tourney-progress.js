@@ -5,7 +5,7 @@
 
 /** createTourneyProgress({t, base}) -> {update({visible, gate, reduced})}. */
 export function createTourneyProgress({ doc = globalThis.document, t, base = '/' }) {
-  let chip = null, last = null, wasOpen = null;
+  let chip = null, last = null, wasOpen = null, lastText = null;
   const make = () => {
     chip = doc.createElement('div'); chip.className = 'ftf-spiders'; chip.setAttribute('role', 'status'); chip.hidden = true;
     chip.style.cssText = 'position:fixed;left:50%;top:max(54px,env(safe-area-inset-top));transform:translateX(-50%);z-index:30;display:flex;align-items:center;gap:8px;padding:5px 12px 5px 6px;border-radius:999px;border:1px solid rgba(233,180,76,.55);background:rgba(18,26,27,.82);color:#f3ead6;font:600 13px/1.2 system-ui,sans-serif;pointer-events:none;transition:transform .25s,box-shadow .25s;max-width:calc(100vw - 32px)';
@@ -32,10 +32,11 @@ export function createTourneyProgress({ doc = globalThis.document, t, base = '/'
       if (gate.open || !visible) { if (chip) chip.hidden = true; return; }
       if (!chip) make();
       chip.hidden = false;
-      if (last !== gate.n) {
-        const bump = last != null && gate.n > last; last = gate.n;
-        chip.querySelector('.ftf-spiders-n').textContent = t('town.spiders.chip', { n: gate.n, need: gate.need });
-        chip.querySelector('.ftf-spiders-hint').textContent = t('town.spiders.hint');
+      const text = t('town.spiders.chip', { n: gate.n, need: gate.need }), hintText = t('town.spiders.hint');
+      if (last !== gate.n || lastText !== text + hintText) { // a new count, or the player switched language
+        const bump = last != null && gate.n > last; last = gate.n; lastText = text + hintText;
+        chip.querySelector('.ftf-spiders-n').textContent = text;
+        chip.querySelector('.ftf-spiders-hint').textContent = hintText;
         if (bump && !reduced) { chip.style.transform = 'translateX(-50%) scale(1.15)'; chip.style.boxShadow = '0 0 18px rgba(233,180,76,.8)'; setTimeout(() => { chip.style.transform = 'translateX(-50%)'; chip.style.boxShadow = ''; }, 280); }
       }
     },

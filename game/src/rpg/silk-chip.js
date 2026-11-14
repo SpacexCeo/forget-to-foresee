@@ -1,7 +1,7 @@
 // The silk chip (sprint plan 5.12): the ONE silk number (gateC from A3's silkView()), a "+N waiting" line with Sync,
 // "Syncing…", "Offline", and the exact tooltip breakdown. Pure text functions plus a small DOM builder.
 
-import { formatSilkC } from '../net/silk-core.js';
+import { formatSilkC, formatSilkWallet } from '../net/silk-core.js';
 
 /** Silk from hundredths, in the one format of the game (net/silk-core.js formatSilkC). */
 export const fmtSilk = (c) => formatSilkC(c);
@@ -19,7 +19,7 @@ export const ledgerSilkView = (ledger, feeC = 0) => {
 export function silkChipText(v, t) {
   // no NEAR account, or NEAR not reachable: the silk on this device, labelled honestly (design review 13.11)
   const local = v.noAccount || v.chainOk === false;
-  const line1 = fmtSilk(local ? (v.localTotalC != null ? v.localTotalC : v.totalC) : v.gateC);
+  const line1 = formatSilkWallet(local ? (v.localTotalC != null ? v.localTotalC : v.totalC) : v.gateC); // the wallet count: whole silk (B10)
   let line2 = null, kind = null;
   if (local) { line2 = t('silk.device'); kind = 'local'; }   // "Playing locally" in all five locales
   else if (v.syncing) { line2 = t('silk.syncing'); kind = 'syncing'; }

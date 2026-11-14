@@ -9,6 +9,17 @@ export function formatSilkC(c) {
 }
 
 /**
+ * A wallet balance (HUD count, inventory, profile): whole silk, or one decimal below 10 ("108", "9.5", "1,234").
+ * Rounds down so the wallet never reads more than is held (199.6 shows "199", not the 200 a fee might need).
+ * Display only; prices, fees and tooltips keep formatSilkC.
+ */
+export function formatSilkWallet(c) {
+  const n = Math.max(0, Math.floor(Number(c) || 0));
+  const v = n < 1000 ? Math.floor(n / 10) / 10 : Math.floor(n / 100);
+  return v.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 1 });
+}
+
+/**
  * The view from its inputs (pure). `creditedC` (what the relayer has credited so far) makes `pendingC` right after the
  * gate burned silk; without it the on-chain number stands in for it.
  */

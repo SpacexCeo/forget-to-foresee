@@ -7,7 +7,7 @@ import { cue } from '../audio/town-audio.js';
 const CSS = `
 .d1 { position: fixed; inset: 0; z-index: var(--z-dialogue, 50); display: grid; place-items: center; font: 16px/1.45 var(--font-ui, system-ui, sans-serif); color: var(--ftf-text, #eef0ea); pointer-events: none; }
 .d1 > * { pointer-events: auto; }
-.d1-title { text-align: center; text-shadow: 0 2px 18px rgba(0,0,0,.6); animation: d1-in .9s ease both; }
+.d1-title { text-align: center; text-shadow: 0 2px 2px rgba(0,0,0,.9), 0 0 14px rgba(0,0,0,.85); padding: 18px 32px; border-radius: var(--radius-modal, 14px); background: rgba(6, 12, 10, .62); box-shadow: 0 0 48px 24px rgba(6, 12, 10, .45); animation: d1-in .9s ease both; }   /* a solid shadow and a dark backdrop: readable over the bright stairs (playtest 14.11) */
 .d1-title h1 { margin: 0; font: 600 clamp(36px, 7vw, 72px)/1 var(--font-title, Georgia, serif); letter-spacing: .04em; }
 .d1-title p { margin: 6px 0 0; font: 600 clamp(16px, 2.6vw, 24px)/1 var(--font-ui, system-ui, sans-serif); letter-spacing: .4em; text-indent: .4em; color: var(--ftf-gold-bright, #dcc08a); }
 .d1-panel { background: var(--ftf-panel-solid, #101f1a); border: 1px solid var(--ftf-line, rgba(197, 164, 105, .4)); border-radius: var(--radius-modal, 14px); padding: 22px 24px; width: min(440px, calc(100% - 32px)); box-shadow: var(--shadow, 0 8px 32px rgba(0,0,0,.55)); text-align: center; }   /* opaque: nothing shows through (design review 13.11) */
@@ -48,6 +48,8 @@ html[data-motion="reduce"] .d1 *, html[data-motion="reduce"] .d1-hint { animatio
 `;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+/** Keys pressed this soon after the name field appears were meant for the game, not the field (faster than anyone reads it). */
+export const NAME_KEY_GRACE_MS = 250;
 function ensureStyle(doc) { if (!doc.getElementById('d1-style')) { const s = doc.createElement('style'); s.id = 'd1-style'; s.textContent = CSS; doc.head.append(s); } }
 function el(doc, tag, cls, text) { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
 function btn(doc, text, fn, ghost = false) { const b = el(doc, 'button', 'd1-btn' + (ghost ? ' d1-ghost' : ''), text); b.type = 'button'; b.addEventListener('click', fn); return b; }
@@ -83,6 +85,9 @@ export async function runArrival({ doc = document, t, mint, flyIn = null, reduce
       p.append(s);
     }
     p.addEventListener('submit', (e) => { e.preventDefault(); const v = input.value.trim() || 'Guest'; resolve(signedIn ? { restored: true, name: v } : v); });
+    // the key that was down as the field took focus (E to talk to the Courier, held or auto-repeating) never types into it (playtest B1)
+    const shownAt = Date.now();
+    input.addEventListener('keydown', (e) => { if (e.repeat || Date.now() - shownAt < NAME_KEY_GRACE_MS) e.preventDefault(); });
     root.replaceChildren(p); input.focus();
   });
   if (name && name.restored) { // a returning player on a new device: the account and its Elise are already there
@@ -91,6 +96,8 @@ export async function runArrival({ doc = document, t, mint, flyIn = null, reduce
     root.remove();
     return { name: back, restored: true };
   }
+  // save the name now, so the HUD shows it at once (it read "Traveller" until the claim, or until the mint's keygen)
+  mint.setRecord({ nickname: name });
   // 3. the burst
   const burst = el(doc, 'div', 'd1-burst'); doc.body.append(burst); setTimeout(() => burst.remove(), 1200);
   const gift = el(doc, 'div', 'd1-title'); gift.append(el(doc, 'h1', null, t('day1.gift')));

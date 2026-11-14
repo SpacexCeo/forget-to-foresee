@@ -1441,6 +1441,7 @@ export default {
   'loading.log.houses': "Alziamo case e strade…",
   'loading.slow': "Connessione lenta: carichiamo i file leggeri…",
   'loading.reload': "Ricarica",
+  'loading.word': "CARICAMENTO",
   'loading.log.shrine': "Accendiamo il santuario…",
   'loading.log.altar': "Apriamo l'altare…",
   'loading.log.sky': "Appendiamo le isole del cielo…",

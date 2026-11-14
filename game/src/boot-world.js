@@ -1265,6 +1265,10 @@ const physics = { steps: 0, substeps: 0, colliders: 0, grounded: false };
 const dialogueCue = { name: null, speaker: null, st: cueState(), irisFocus: [0, 0, 0] };
 onBus('npe.camera', (p) => { dialogueCue.name = (p && p.target) || null; dialogueCue.speaker = (p && p.speaker) || null; });
 for (const n of ['npe.completed', 'npe.skipped']) onBus(n, () => { dialogueCue.name = null; dialogueCue.speaker = null; });
+// The Elder speaks to her in the arrival dialogue: that counts as q_welcome's "Talk to the Elder" (playtest 14.11 B4)
+let elderSpokeInIntro = false;
+onBus('npe.camera', (p) => { if (p && p.speaker === 'elder') elderSpokeInIntro = true; });
+onBus('npe.completed', () => { if (elderSpokeInIntro && townQuests && townQuests.creditElderTalk) townQuests.creditElderTalk(); });
 const hudStats = () => ({ info: renderer.info, physics, streaming: streamer.stats(), events: streamer.events, camera: rig, lookdev: lookdev.stats() });
 
 // Camera presets for screenshots / measurements (dev only).

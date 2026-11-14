@@ -22,11 +22,13 @@ import { features } from './features.js';
 import { retryImport, installPreloadGuard, bootFailure } from './sprint/retry-import.js';
 
 const params = new URLSearchParams(location.search);
+/** The player's saved language (ui/prefs.js, key ftf.prefs.v1), read live so the loading lines follow the picker. */
+const savedLocale = () => { try { return (JSON.parse(localStorage.getItem('ftf.prefs.v1') || 'null') || {}).locale || null; } catch { return null; } };
 installPreloadGuard(window); // a stale chunk after a deploy: one guarded reload, never the broken-load screen (sprint 8.3)
 // remote feature flags (features.js): fetched at once, never waited for; ?debug=1 shows where they came from
 features.load().then(() => {
   // the loading ritual (flag loadRitual): only while the loading screen is still up
-  if (features.on('loadRitual') && document.getElementById('boot')) import('./ui/load-ritual.js').then((m) => m.mountLoadRitual({ lang: params.get('lang') || navigator.language, touch: !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches), reduced: !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) })).catch(() => {});
+  if (features.on('loadRitual') && document.getElementById('boot')) import('./ui/load-ritual.js').then((m) => m.mountLoadRitual({ lang: () => m.ritualLang({ param: params.get('lang'), saved: savedLocale(), navLangs: navigator.languages || [navigator.language] }), touch: !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches), reduced: !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) })).catch(() => {});
   if (params.get('debug') !== '1') return;
   const d = document.createElement('div'); d.id = 'ftf-flags-debug'; d.textContent = 'flags: ' + features.source;
   d.style.cssText = 'position:fixed;left:6px;bottom:6px;z-index:99999;font:11px ui-monospace,monospace;color:#9fb;background:rgba(0,0,0,.55);padding:2px 6px;border-radius:4px;pointer-events:none';

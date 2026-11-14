@@ -7,6 +7,7 @@ import { NEAR_DEPLOYMENT } from '../net/near-deployment.js';
 import { DAY1_DEPLOYMENT } from '../net/day1-deployment.js';
 import { createTxClient } from '../net/near-tx.js';
 import { EXPLORER } from '../net/network.js';
+import { formatSilkWallet } from '../net/silk-core.js';
 
 const CSS = `
 .ftf-prof { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; background: rgba(6, 10, 12, .6); font: 15px/1.45 system-ui, sans-serif; color: #f3ead6; }
@@ -163,7 +164,7 @@ export function openProfile({ doc = document, t, ledger, quest = null, obs = () 
   const mem = o && o.memories ? o.memories.length : null, forgotten = o && o.iris && o.iris.forgotten ? o.iris.forgotten.length : null;
   const words = o && o.dictionary && Array.isArray(o.dictionary.cells) ? o.dictionary.cells.filter((c) => c && c.known != null).length : null;
   panel.append(el('h3', null, t('inv.offchain')), el('p', 'ftf-prof-note', t('inv.offchain.note')), dl([
-    [t('inv.townSilk'), (ledger.silk / 100).toFixed(2)],
+    [t('inv.townSilk'), formatSilkWallet(ledger.silk)],
     [t('inv.seasonSilk'), o && o.iris ? String(o.iris.silk) : t('inv.noSeason')],
     [t('inv.hires'), hires.length ? hires.map((h) => t('folk.name.' + h.npc) + (h.ready ? ' ✓' : '…')).join(', ') : t('inv.none')],
     [t('inv.memories'), mem == null ? t('inv.noSeason') : t('inv.memoriesLine', { kept: mem, forgotten: forgotten ?? 0 })],

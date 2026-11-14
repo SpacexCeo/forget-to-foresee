@@ -171,7 +171,7 @@ export function createSettingsPopup({ doc = globalThis.document, t: tGame, i18n,
     },
     audio() {
       const a = hooks.audio ? hooks.audio() : null;
-      const vols = a ? a.getVolumes() : (hooks.volumes ? hooks.volumes() : { master: 0.8, music: 0.7, sfx: 0.35 });
+      const vols = a ? a.getVolumes() : (hooks.volumes ? hooks.volumes() : { master: 0.8, music: 0.55, sfx: 0.75 });
       const setVol = (bus, v) => { const rt = hooks.audio && hooks.audio(); if (rt) rt.setVolume(bus, v); else if (hooks.saveVolume) hooks.saveVolume(bus, v); };
       const out = [el('h3', null, t('set.audio.title'))];
       for (const bus of ['master', 'music', 'sfx']) out.push(row('set.audio.' + bus, range(Math.round((vols[bus] || 0) * 100), 0, 100, 5, (v) => v + ' %', (v) => setVol(bus, v / 100), t('set.audio.' + bus))));

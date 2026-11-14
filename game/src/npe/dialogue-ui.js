@@ -94,7 +94,8 @@ export function playDialogue({ doc, lines, name, hint, count, skipLabel, reduced
   function skip() { end('skipped'); }
   const onKey = (e) => {
     if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); skip(); }
-    else if (e.key === 'e' || e.key === 'E' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); advance(); }
+    // the physical E key too: under a Cyrillic layout it reads 'у', and those presses were lost (playtest B3)
+    else if (e.key === 'e' || e.key === 'E' || e.code === 'KeyE' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); advance(); }
   };
   box.addEventListener('click', advance);
   skipBtn.addEventListener('click', (e) => { if (e && e.stopPropagation) e.stopPropagation(); skip(); });

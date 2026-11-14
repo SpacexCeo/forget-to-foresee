@@ -1440,6 +1440,7 @@ export default {
   'loading.log.houses': "Зводимо будинки й вулиці…",
   'loading.slow': "Повільне з'єднання: завантажуємо полегшені файли…",
   'loading.reload': "Перезавантажити",
+  'loading.word': "ЗАВАНТАЖЕННЯ",
   'loading.log.shrine': "Запалюємо святилище…",
   'loading.log.altar': "Відчиняємо вівтар…",
   'loading.log.sky': "Підвішуємо небесні острови…",

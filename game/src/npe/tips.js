@@ -18,12 +18,16 @@ export const A4_TIPS = Object.freeze([
 export const QUEUE = Object.freeze({ gapMs: 1500, perMinute: 3, windowMs: 60_000 });
 
 const fmt = (s, a) => String(s).replace(/\{(\w+)\}/g, (m, k) => (a && a[k] != null ? String(a[k]) : m));
-/** Title and body for a tip id with the placeholders filled. */
-export const tipText = (id, vars = {}) => ({ title: fmt(TIPS[id + '.title'] || id, vars), body: fmt(TIPS[id + '.body'] || '', vars) });
+/** Title and body for a tip id with the placeholders filled: the active locale through `t` when given, else the English. */
+const inLocale = (t, key, vars, en) => { try { const v = t ? t(key, vars) : null; return v && v !== key && v !== '…' && v !== '...' ? v : en; } catch { return en; } };
+export const tipText = (id, vars = {}, t = null) => ({ title: inLocale(t, id + '.title', vars, fmt(TIPS[id + '.title'] || id, vars)), body: inLocale(t, id + '.body', vars, fmt(TIPS[id + '.body'] || '', vars)) });
 
-/** Registers the A4 tips with the seam: firstSeen.registerTip({id, trigger, anchor, title, body}). */
-export function registerTips(firstSeen, vars = {}) {
-  for (const tip of A4_TIPS) firstSeen.registerTip({ ...tip, ...tipText(tip.id, vars) });
+/**
+ * Registers the A4 tips with the seam: firstSeen.registerTip({id, trigger, anchor, title, body}). Title and body are
+ * getters, read when the tip shows, so a tip registered before the player picked a language still shows in it.
+ */
+export function registerTips(firstSeen, vars = {}, t = null) {
+  for (const tip of A4_TIPS) firstSeen.registerTip({ ...tip, get title() { return tipText(tip.id, vars, t).title; }, get body() { return tipText(tip.id, vars, t).body; } });
   return A4_TIPS.length;
 }
 

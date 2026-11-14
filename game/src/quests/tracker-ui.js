@@ -93,7 +93,7 @@ export function createTrackerUI({ doc, say, giverName, data, onOpen, onWalk, onH
     if (compact) {   // two lines: the Road home, and the active quest (or the guide step, or the town errand)
       const line = el('div', 'ft-cline'), road = el('button', 'ft-croad'); road.type = 'button';
       road.append(el('span', 'ft-cic', '\u25C6'), el('span', null, say('tracker.road')), el('b', null, say('tracker.roadValue', { gate, fee })));
-      road.addEventListener('click', () => onOpen(null));
+      road.title = say('tracker.roadValue', { gate, fee }) + ' · ' + say('tracker.roadTip'); road.addEventListener('click', () => onOpen(null));
       const more = el('button', 'ft-ib ft-showmore', '\u2304'); more.type = 'button'; more.title = say('tracker.more'); more.setAttribute('aria-label', say('tracker.more'));
       more.addEventListener('click', () => { pref.compact = false; save(); render(true); });   // the full tracker, remembered
       const hide = el('button', 'ft-ib ft-close', '\u00D7'); hide.type = 'button'; hide.title = say('tracker.hide'); hide.setAttribute('aria-label', say('tracker.hide'));
@@ -114,7 +114,7 @@ export function createTrackerUI({ doc, say, giverName, data, onOpen, onWalk, onH
     const road = el('button', 'ft-road'); road.type = 'button';
     road.append(el('small', null, say('tracker.road')), el('b', null, say('tracker.roadValue', { gate, fee })));
     const bar = el('div', 'ft-bar'); const i = el('i'); i.style.width = Math.min(100, Math.round(100 * d.road.gateC / Math.max(1, d.road.feeC))) + '%'; bar.append(i); road.append(bar);
-    road.title = say('tracker.roadValue', { gate, fee });
+    road.title = say('tracker.roadValue', { gate, fee }) + ' · ' + say('tracker.roadTip');   // what counts: Gate silk, not this device's play silk (B9)
     road.addEventListener('click', () => onOpen(null));
     root.append(road);
     const rest = el('div', 'ft-rest');

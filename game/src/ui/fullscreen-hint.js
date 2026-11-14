@@ -20,9 +20,15 @@ export function isFullscreen({ fsElement = null, displayFull = false, inner = [0
   return screen[0] > 0 && Math.abs(inner[0] - screen[0]) <= 2 && Math.abs(inner[1] - screen[1]) <= 2;
 }
 
-/** Whether the line shows this moment. Pure. */
-export function fsHintVisible({ allowed, dismissed, full, booting, busy }) {
-  return !!allowed && !dismissed && !full && !booting && !busy;
+/** How long the line stays up (ms of being shown) before it hides itself until the player leaves fullscreen again. */
+export const FS_HINT_SHOW_MS = 8000;
+
+/**
+ * Whether the line shows this moment. Pure. expired: it has been up FS_HINT_SHOW_MS already; combat: a target frame is
+ * on screen (the enemy's HP bar sits at the top centre, right under the hint: playtest 14.11).
+ */
+export function fsHintVisible({ allowed, dismissed, full, booting, busy, expired = false, combat = false }) {
+  return !!allowed && !dismissed && !full && !booting && !busy && !expired && !combat;
 }
 
 const CSS = `
@@ -63,7 +69,16 @@ export function mountFullscreenHint({ t, params = null, busy = () => false, doc 
 
   const full = () => isFullscreen({ fsElement: doc.fullscreenElement || doc.webkitFullscreenElement || null, displayFull: mm('(display-mode: fullscreen)'),
     inner: [win.innerWidth, win.innerHeight], screen: [(win.screen && win.screen.width) || 0, (win.screen && win.screen.height) || 0] });
-  const update = () => { el.hidden = !fsHintVisible({ allowed, dismissed, full: full(), booting: !!doc.getElementById('boot'), busy: !!busy() }); };
+  let shownMs = 0, lastAt = 0, wasFull = false;
+  const combat = () => { try { return !!doc.querySelector('.rpg-target:not([hidden])'); } catch { return false; } };
+  const update = () => {
+    const now = Date.now(), isFull = full();
+    if (wasFull && !isFull) shownMs = 0; // left fullscreen: the reminder gets its few seconds again
+    wasFull = isFull;
+    if (!el.hidden && lastAt) shownMs += now - lastAt;
+    lastAt = now;
+    el.hidden = !fsHintVisible({ allowed, dismissed, full: isFull, booting: !!doc.getElementById('boot'), busy: !!busy(), expired: shownMs >= FS_HINT_SHOW_MS, combat: combat() });
+  };
   go.addEventListener('click', () => {
     const r = doc.documentElement;
     try { const p = (r.requestFullscreen || r.webkitRequestFullscreen).call(r, { navigationUI: 'hide' }); if (p && p.catch) p.catch(() => {}); } catch { /* the browser said no: F11 still works */ }
@@ -72,7 +87,7 @@ export function mountFullscreenHint({ t, params = null, busy = () => false, doc 
   x.addEventListener('click', () => { dismissed = true; try { if (ss) ss.setItem(FS_HINT_OFF, '1'); } catch { /* */ } update(); });
   const onChange = () => update();
   doc.addEventListener('fullscreenchange', onChange); win.addEventListener('resize', onChange);
-  const timer = setInterval(update, 1000); // the overlays come and go without events of their own
+  const timer = setInterval(update, 500); // the overlays (and the target frame) come and go without events of their own
   update();
   return {
     el, update,

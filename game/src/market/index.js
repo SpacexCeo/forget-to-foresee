@@ -6,7 +6,20 @@ import { createDice } from './dice.js';
 import { silkView } from '../net/silk-core.js';
 import { registerWindow, claimWindow } from '../ui/window-toggle.js';
 
+// One market window per page (playtest 14.11): with the `marketplace` flag on, the sprint registry mounts this module
+// and boot-world's lazy 'ftf:market-open' loader mounted it a second time, so two identical windows stacked on every
+// open. The close button removed only the top one, B and Esc talked to the registered (already closed) one, and the
+// market looked impossible to close. A second mount now shares the first; the last dispose tears it down.
+let shared = null, mounts = 0;
+
 export function mount(ctx) {
+  if (!shared) { shared = mountOnce(ctx); mounts = 0; }
+  const api = shared; mounts++;
+  let done = false;
+  return { open: api.open, dispose() { if (done) return; done = true; if (--mounts === 0 && shared === api) { shared = null; api.dispose(); } } };
+}
+
+function mountOnce(ctx) {
   const win = ctx.win || globalThis;
   // Loom Dice plays with play silk only (silk on this device that can never be recorded on NEAR)
   let wheelId = null; try { wheelId = ctx.storage.getItem('ftf.dice.id'); if (!wheelId) { wheelId = 'd' + Math.random().toString(36).slice(2, 12); ctx.storage.setItem('ftf.dice.id', wheelId); } } catch { wheelId = 'session'; }

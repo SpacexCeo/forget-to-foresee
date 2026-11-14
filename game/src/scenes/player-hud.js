@@ -5,7 +5,7 @@
 // archipelago keeps its own trial/silk HUD (the judge path). The bottom-left corner stays free for the chat panel.
 
 import { showPremise } from '../ui/premise.js';
-import { silkView, subscribeSilk, syncSilkNow, formatSilkC } from '../net/silk-core.js';
+import { silkView, subscribeSilk, syncSilkNow, formatSilkC, formatSilkWallet } from '../net/silk-core.js';
 
 const ICON = (d) => `url("data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#e6c47c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + d + '</svg>')}")`;
 const I_SKIP = ICON('<path d="M5 5l9 7-9 7zM17 5v14"/>');
@@ -219,7 +219,7 @@ export function createPlayerHud({ doc = document, t, ledger, chests = null, base
     const f = el('span', 'ph-delta ph-' + d.sign, d.text); wallet.append(f); setTimeout(() => f.remove(), 1300);
   }
   function setCount(cents) {
-    count.textContent = formatSilkC(cents);
+    count.textContent = formatSilkWallet(cents);
   }
   let lastLocal = null;
   function renderSilk() {

@@ -13,7 +13,7 @@ import { ledgerSilkView } from './silk-chip.js';
 import * as silkCore from '../net/silk-core.js';
 import { portalFee } from '../game/expedition-config.js';
 import { xpForKill } from '../game/town-economy.js';
-import { mobDisplayName } from '../game/mob-names.js';
+import { mobDisplayName, resolveMobId, MOB_DISPLAY } from '../game/mob-names.js';
 import { blocksWindows } from '../ui/onboarding-queue.js';
 import { registerWindow, claimWindow, pressWindow, isWindowOpen } from '../ui/window-toggle.js';
 
@@ -35,6 +35,8 @@ export function loadHotbar(storage) { try { return S.cleanHotbar(JSON.parse((sto
 export function mount(ctx) {
   const doc = ctx.doc || globalThis.document, win = ctx.win || globalThis.window, now = ctx.now || (() => performance.now());
   const t = hudT(ctx.t), storage = ctx.storage;
+  /** A monster's name in the active locale (mob.<id>), else the English display name. */
+  const mobName = (type) => { const id = resolveMobId(type), d = id && MOB_DISPLAY[id]; const v = d ? t(d.key) : null; return v && v !== d.key && v !== '…' && v !== '...' ? v : mobDisplayName(type); };
   const emit = (name, payload) => { try { if (ctx.bus && ctx.bus.emit) ctx.bus.emit(name, payload); else win.dispatchEvent(new CustomEvent('ftf:' + name, { detail: payload })); } catch { /* never break the frame */ } };
   const mobsOf = () => (ctx.mobs ? ctx.mobs() : (win.__ftf && win.__ftf.town && win.__ftf.town.mobs)) || null;
   let rec = loadProgress(storage), bar = loadHotbar(storage);
@@ -208,7 +210,7 @@ export function mount(ctx) {
   const offHit = ctx.bus && ctx.bus.on ? ctx.bus.on('mob.hit', onHit) : null;
   const onKill = (e) => {
     const d = e.detail || {}; if (!d.type) return;
-    hud.log(t('hud.log.kill', { mob: mobDisplayName(d.type) }), 'sys');
+    hud.log(t('hud.log.kill', { mob: mobName(d.type) }), 'sys');
     const p = S.passives(rec).killXpPct;                                             // Scholar: Field Notes
     if (p > 0 && ctx.ledger && ctx.ledger.grant) ctx.ledger.grant({ xp: Math.round(xpForKill(d.type, !!d.elite) * p) });
     if (targetId && !mobById(targetId)) targetId = null;
@@ -272,7 +274,7 @@ export function mount(ctx) {
       hud.render({
         portrait: (ctx.base || '/') + 'assets/ui/portraits/' + skin + '_128.webp', name: playerName(),
         level: L, hp: self.hp, maxHP: stats.maxHP, mana: caster.mana, maxMana: stats.maxMana, manaPulse: manaPulseUntil > tnow,
-        target: tg ? { name: mobDisplayName(tg.mob.type).replace(/^./, (c) => c.toUpperCase()), hp: tg.mob.hp, maxHp: tg.mob.T.hp, elite: !!tg.mob.T.elite } : null,
+        target: tg ? { name: mobName(tg.mob.type).replace(/^./, (c) => c.toUpperCase()), hp: tg.mob.hp, maxHp: tg.mob.T.hp, elite: !!tg.mob.T.elite } : null,
         buffs: Object.entries(self.buffs).map(([id, b]) => ({ id, name: id, left: (b.until - tnow) / 1000, debuff: false })),
         cast: cast && cast.dur > 300 ? { name: cast.name, p: Math.min(1, (tnow - cast.t0) / cast.dur) } : null,
         slots, xpInto: xi.into, xpNeed: xi.need, silk: sv, silkPop,

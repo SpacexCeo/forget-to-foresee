@@ -1440,6 +1440,7 @@ export default {
   'loading.log.houses': "正在建起房屋和街道……",
   'loading.slow': "网络较慢：正在加载轻量资源……",
   'loading.reload': "重新加载",
+  'loading.word': "加载中",
   'loading.log.shrine': "正在点亮神龛……",
   'loading.log.altar': "正在开启祭坛……",
   'loading.log.sky': "正在悬挂天空之岛……",

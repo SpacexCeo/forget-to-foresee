@@ -107,10 +107,14 @@ export function runIntro(ctx) {
       onDone: (i) => step({ type: 'line_done', last: i === lines.length - 1 }) });
     current = d;
     const end = await d.done;
-    if (end === 'skipped') { step({ type: 'skip_all' }); emit('npe.skipped', { step: 'dialogue', ms: Date.now() - t0 }); if (ctx.toast) ctx.toast(t('npe.skipped')); }
+    const skippedMs = Date.now() - t0;
+    if (end === 'skipped') { step({ type: 'skip_all' }); if (ctx.toast) ctx.toast(t('npe.skipped')); }
     // the card
     const card = openRoadmapCard({ doc, t, vars }); current = { skip: card.close };
     const pick = await card.result;
+    // npe.skipped goes out only now, next to npe.completed: the wake-up crowd and the dialogue camera stop on it, and a skip
+    // used to clear them before the card while a finished talk kept them till the card closed (playtest B7)
+    if (end === 'skipped') emit('npe.skipped', { step: 'dialogue', ms: skippedMs });
     step({ type: pick === 'start' ? 'start_card' : 'later' });
     subs.dispose(); lock(false); setActive(false);
     step({ type: 'handoff_done' });
@@ -128,7 +132,7 @@ export function mount(ctx) {
   const search = ctx.search != null ? ctx.search : (globalThis.location && globalThis.location.search) || '';
   // the A4 first-seen tips (sprint 1.5), when the tips are on
   const tipsOn = ctx.flags ? (typeof ctx.flags.on === 'function' ? ctx.flags.on('firstSeenTips') : typeof ctx.flags.get === 'function' ? ctx.flags.get('firstSeenTips') : !!ctx.flags.firstSeenTips) : false;
-  if (tipsOn) registerTips(firstSeen, lineVars(search));
+  if (tipsOn) registerTips(firstSeen, lineVars(search), ctx.t);
   // phones never auto-pop anything (owner 13.11): there the intro runs only when asked (?intro=1); the card stays in the menu
   const touch = (ctx.keys && ctx.keys.touchControls) || firstSeen.isTouch(ctx.doc || globalThis.document);
   const run = shouldRun({ flag, search, rec }) && (!touch || /[?&]intro=1\b/.test(search)) ? runIntro({ ...ctx, search }) : null;

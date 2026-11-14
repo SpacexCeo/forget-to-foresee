@@ -490,6 +490,14 @@ export function createTownQuests({ scene = null, hudToast = null, storage, townL
       if (panel && panelGiver && pos) { const p = folkAt(panelGiver); if (p && Math.hypot(p[0] - pos[0], p[2] - pos[2]) > 4.5) closeTalk(); }
     },
     act, openTalk, closeTalk,
+    /** The Elder spoke to her in the arrival dialogue (npe intro): count it as the talk, without opening the talk panel. */
+    creditElderTalk() {
+      if (story.guide.talked) return false;
+      if (typeof feedGuide === 'function') feedGuide('talked:elder');
+      storyDo({ type: 'GUIDE_STEP', id: 'talked' }); questDo({ type: 'GUIDE', step: 'talked' });
+      if (questStatus(qs, 'q_welcome', now()) === 'available') questDo({ type: 'ACCEPT', questId: 'q_welcome' });
+      return true;
+    },
     /** Leaving the town hides the objective line and any talk; the story state lives on (the twist runs across it). */
     setActive(on) { active = !!on; if (!active) { if (trail) trail.set(null); closeTalk(); closeLog(); if (journal) journal.close(); if (walker) walker.cancel('replaced'); } if (tracker) tracker.setHidden(!active); logBtn.hidden = !active; renderObjective(); },
     subscribe(f) { listeners.add(f); return () => listeners.delete(f); },

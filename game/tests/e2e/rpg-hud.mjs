@@ -83,7 +83,7 @@ const g = await page.evaluate(() => ({ cd: window.__ftf.town.mobs.actions.strike
 await page.evaluate(async () => { const k = await import('/src/ui/keybinds.js'); k.setBindings(k.defaultBindings(), localStorage); });
 ok('E6 Strike rebound to G: G strikes, the binding is stored', g.cd > 0 && g.stored === 'KeyG', g);
 // E8: the chip shows the one Gate number of the shared silk model
-const e8 = await page.evaluate(async () => { const sc = await import('/src/net/silk-core.js'); const v = sc.silkView(); return { chip: document.querySelector('.rpg-silk .l1').textContent, gate: sc.formatSilkC ? sc.formatSilkC(v.gateC) : String(v.gateC / 100) }; });
+const e8 = await page.evaluate(async () => { const sc = await import('/src/net/silk-core.js'); const v = sc.silkView(); return { chip: document.querySelector('.rpg-silk .l1').textContent, gate: sc.formatSilkWallet ? sc.formatSilkWallet(v.gateC) : String(v.gateC / 100) }; });
 ok('E8 silk chip equals silkView().gateC', e8.chip.replace(/,/g, '') === String(e8.gate).replace(/,/g, '').replace(/ silk$/, ''), e8);
 // F1: the cheat sheet
 await page.keyboard.press('F1'); await page.waitForTimeout(500);

@@ -19,7 +19,7 @@ import { createFriends } from './friends.js';
 import { createChestClient } from '../net/chest-client.js';
 import { groupChests, loadArchive, archiveOpened, outcomeOf, verifyHref, nftImage, rewardArt, chestArt } from './chest-history.js';
 import { cue } from '../audio/town-audio.js';
-import { formatSilkC } from '../net/silk-core.js';
+import { formatSilkC, formatSilkWallet } from '../net/silk-core.js';
 import { wardrobe, TRY_ON_SECONDS } from './skins.js';
 import { collectionView, shardCard, dragonCardArt } from './nft-collection.js';
 import { chainSection } from './chain-panel.js';
@@ -342,7 +342,7 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
           g.append(c);
         }
         const sum = el('div', 'gm-row');
-        sum.append(el('span', 'gm-chip', t('inv.townSilk') + ': ' + formatSilkC(ledger.silk)), btn(t('menu.openWheel'), () => show('wheel')));
+        sum.append(el('span', 'gm-chip', t('inv.townSilk') + ': ' + formatSilkWallet(ledger.silk)), btn(t('menu.openWheel'), () => show('wheel')));
         return [el('p', 'gm-note', t('inv.offchain.note')), sum, wardrobeSection(), chestSection(list), chips, g, detail];
       });
     },

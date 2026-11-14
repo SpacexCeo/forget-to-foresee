@@ -14,7 +14,7 @@ import { formatSilkC } from '../net/silk-core.js';
 
 /** Town-local metres beside the spawn, to Iris's right in the first frame (the spawn is (0, 0, 25), she faces -z). */
 export const PORTAL_TOWN = Object.freeze([4.4, 0, 24.8]);      // clear of the standing mirror at (2.8, 0, 21.5) and of the stall posts further right
-export const PORTAL_REACH = 3;
+export const PORTAL_REACH = 3.8; // wider than before (playtest 14.11: the goal read only from right beside it), still short of the spawn 4.4 m away
 /** How high the frame floats above the ground (metres). */
 export const FLOAT_Y = 0.42;
 
@@ -76,6 +76,19 @@ function glyphTexture(w = 256, h = 16) {
   return t;
 }
 
+/** The gate's name as a canvas sprite over the arch (null without a canvas). */
+function portalLabel(text, doc, own) {
+  if (!doc || !doc.createElement) return null;
+  const c = doc.createElement('canvas'); if (!c) return null; c.width = 512; c.height = 96; const g = c.getContext && c.getContext('2d'); if (!g) return null;
+  g.fillStyle = 'rgba(14,16,24,0.78)'; g.strokeStyle = 'rgba(57,214,196,0.9)'; g.lineWidth = 4;
+  if (g.roundRect) { g.beginPath(); g.roundRect(4, 4, 504, 88, 20); g.fill(); g.stroke(); } else { g.fillRect(4, 4, 504, 88); g.strokeRect(4, 4, 504, 88); }
+  let size = 40; do { g.font = `600 ${size}px system-ui, sans-serif`; size -= 2; } while (size > 20 && g.measureText(text).width > 460);
+  g.fillStyle = '#f6c860'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, 256, 50, 460);
+  const tex = own(new THREE.CanvasTexture(c)); tex.colorSpace = THREE.SRGBColorSpace;
+  const s = new THREE.Sprite(own(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, toneMapped: false, fog: false }))); s.scale.set(2.4, 0.45, 1); s.name = 'story_portal_label'; s.renderOrder = 3;
+  return s;
+}
+
 const VEIL_VERT = /* glsl */`varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
 const VEIL_FRAG = /* glsl */`
   uniform float uTime, uOpacity, uFlare; uniform vec3 uDeep, uBright; varying vec2 vUv;
@@ -114,6 +127,9 @@ export function createTownPortal({ scene, position, facing = 0, i18n, read, onPa
   // the frame of light: a hairline outline, closed under the veil (it floats), and inside it a thin band of glyphs
   const frameMat = own(new THREE.MeshBasicMaterial({ color: LOOK.dormant.glyph, transparent: true, opacity: 0.9, toneMapped: false, depthWrite: false, blending: THREE.AdditiveBlending }));
   const ring = new THREE.Mesh(own(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(archPoints(40, 1.2, 2.98), true), 96, 0.022, 5, true)), frameMat); ring.name = 'story_portal_ring';
+  // a soft rim halo around the hairline (playtest 14.11: the goal read as a small dark arch): a wider, faint additive tube
+  const haloMat = own(new THREE.MeshBasicMaterial({ color: LOOK.dormant.glyph, transparent: true, opacity: 0.32, toneMapped: false, depthWrite: false, blending: THREE.AdditiveBlending }));
+  const halo = new THREE.Mesh(own(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(archPoints(40, 1.2, 2.98), true), 64, 0.075, 6, true)), haloMat); halo.name = 'story_portal_halo';
   const glyphs = own(glyphTexture());
   const bandMat = own(new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 0.6, emissive: new THREE.Color(LOOK.dormant.glyph), emissiveMap: glyphs, emissiveIntensity: 1.4, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
   const inner = new THREE.CatmullRomCurve3(archPoints(40, 1.08, 2.86));
@@ -132,7 +148,9 @@ export function createTownPortal({ scene, position, facing = 0, i18n, read, onPa
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, fog: false }));
   const pool = new THREE.Mesh(own(new THREE.PlaneGeometry(5.2, 4.2)), poolMat); pool.rotation.x = -Math.PI / 2; pool.position.set(0, 0.16, 0.9); pool.renderOrder = 1;
   const lift = new THREE.Group(); lift.name = 'story_portal_float'; lift.position.y = FLOAT_Y; // the gate hovers; the pool stays on the cobbles
-  lift.add(ring, band, disc);
+  lift.add(ring, halo, band, disc);
+  // a world label over the arch like the other points of interest (null without a canvas, e.g. in tests)
+  const label = portalLabel(t('story.portal.title'), doc, own); if (label) { label.position.set(0, 3.75, 0); lift.add(label); }
   root.add(lift, pool);
   let glow = null;
   if (light) { glow = new THREE.PointLight(LOOK.dormant.light, LOOK.dormant.intensity, 7, 2); glow.position.set(0, 1.5, 0.7); lift.add(glow); }
@@ -153,6 +171,7 @@ export function createTownPortal({ scene, position, facing = 0, i18n, read, onPa
     const L = LOOK[s] || LOOK.dormant;
     discMat.uniforms.uDeep.value.setHex(L.deep); discMat.uniforms.uBright.value.setHex(L.bright); discMat.uniforms.uOpacity.value = L.veil; discMat.uniforms.uFlare.value = 0;
     bandMat.emissive.setHex(L.glyph); bandMat.emissiveIntensity = s === 'ready' ? 2.2 : s === 'spent' ? 0 : 1.4;
+    haloMat.color.setHex(L.glyph); haloMat.opacity = s === 'spent' ? 0 : s === 'ready' ? 0.45 : 0.32;
     frameMat.color.setHex(s === 'spent' ? 0x2a3238 : L.glyph); frameMat.opacity = s === 'spent' ? 0.35 : 0.9; poolMat.uniforms.uColor.value.setHex(L.light); poolMat.uniforms.uOpacity.value = L.pool;
     if (glow) { glow.color.setHex(L.light); glow.intensity = L.intensity; }
   }
