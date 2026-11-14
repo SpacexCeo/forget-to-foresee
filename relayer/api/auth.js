@@ -37,7 +37,7 @@ export function authHandler(opts = {}) {
   let store = opts.store || null; // opened on the first request: the env (FTF_DATA_DIR) is final by then
   const bucket = opts.bucket || createBucket({ capacity: 20, refillMs: 60 * 1000 });
   let linker = opts.linker || null, email = opts.email || null;
-  const codes = opts.codes || createCodes({ now: opts.now });
+  let codes = opts.codes || null; // made with the linker, on the first request: the storage (FTF_DB) is final by then
   const log = opts.log || ((line) => console.log(line));
   return async function handler(req, res) {
     const cfg = envConfig(env);
@@ -57,6 +57,7 @@ export function authHandler(opts = {}) {
       const mainnet = opts.mainnetClient || createTxClient({ rpcUrls: env.FTF_MAINNET_RPC ? env.FTF_MAINNET_RPC.split(',').map((s) => s.trim()).filter(Boolean) : MAINNET_RPC, fetch: opts.fetch || globalThis.fetch, timeoutMs: 20_000 });
       const ak = opts.accessKey || accessKeyVia(client, mainnet);
       linker = createLinker({ store, nonces, accessKey: ak, origins: cfg.origins, now: opts.now });
+      codes = codes || createCodes({ now: opts.now });
       email = email || createEmailAuth({ store, codes, mailer: opts.mailer || createMailer({ env, fetch: opts.fetch || globalThis.fetch, log }), accessKey: ak, key: keyFromEnv(env), now: opts.now });
     }
     if (route !== '/link') {

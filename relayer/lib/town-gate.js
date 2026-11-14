@@ -18,9 +18,10 @@
 // read from data/coord-key.json, which scripts/coord-key.mjs writes (mode 600) and only ever prints the public key of.
 import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { b58decode, importSecretKey } from './near-tx.js';
 import { loadLog } from './pass-eligibility.js';
+import { activeDb, dbCreditLedger } from './storage.js';
 import { verifyLog } from './expedition-rules/expedition-log.js';
 import { EXPEDITION } from './expedition-rules/expedition-config.js';
 import { createQueue } from './core.js';
@@ -89,6 +90,7 @@ export function creditableMicro(log, gatePriceMicro, { feeC = EXPEDITION.PORTAL_
 
 /** The per-guest credit ledger: {credited: "µ silk", day, today: "µ silk"} in <dir>/<guest>.json. */
 export function createCreditLedger(dir) {
+  const db = activeDb(); if (db) return dbCreditLedger(db); // FTF_DB: the town_credits table
   const file = (g) => join(dir, g + '.json');
   return {
     get(g) { try { return JSON.parse(readFileSync(file(g), 'utf8')); } catch { return { credited: '0', day: 0, today: '0' }; } },
@@ -173,6 +175,8 @@ export function gateDayStats(entries, now = Date.now(), { recent = 5 } = {}) {
 
 /** The gate log's rows of today and yesterday (jsonlLog writes one file a day: market-YYYY-MM-DD.jsonl). Never throws. */
 export function readGateLog(dir, now = Date.now()) {
+  const db = activeDb();
+  if (db) { try { const day0 = Math.floor((now - 86_400_000) / 86_400_000) * 86_400_000; return db.journal.read(basename(String(dir)), day0).filter((e) => e && e.kind === 'gate'); } catch { return []; } }
   const out = [];
   for (const d of [now, now - 86_400_000]) {
     let s = ''; try { s = readFileSync(join(dir, `market-${new Date(d).toISOString().slice(0, 10)}.jsonl`), 'utf8'); } catch { continue; }

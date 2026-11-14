@@ -2,6 +2,7 @@
 // node server.js   (env: FTF_GUEST_KEY, NEARAI_API_KEY, FTF_MARKET=1, FTF_ALLOWED_ORIGINS or ALLOWED_ORIGIN (comma list added to the Pages origin), PORT=8787, HOST=0.0.0.0, TRUST_PROXY=1 behind a reverse proxy)
 import http from 'node:http';
 import { readFileSync } from 'node:fs';
+import { requireStorage, resetDb } from './lib/storage.js';
 
 /** KEY=value lines from relayer/.env (never committed); variables already set in the environment win. */
 export function loadDotEnv(path = new URL('./.env', import.meta.url), env = process.env) {
@@ -56,10 +57,13 @@ export function createServer() {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const port = Number(process.env.PORT) || 8787, host = process.env.HOST || '0.0.0.0';
+  // the storage first: with FTF_DB set the relayer does not start without its database (never a silent fallback to files)
+  try { console.log(requireStorage(process.env)); }
+  catch (e) { console.error(`FATAL: the database (FTF_DB=${process.env.FTF_DB}) cannot be opened: ${e && e.message}. The relayer refuses to start so that no data is lost or split; fix the file or its permissions, or unset FTF_DB to run on the JSON files.`); process.exit(1); }
   const market = marketDaemon();
   // the pass queue worker: every 10 s (the kill switch is read on every attempt, so a STOP file halts sending within 10 s)
   if (process.env.FTF_PASS_KEY) setInterval(() => { passService().work().catch(() => {}); }, 10_000).unref();
   createServer().listen(port, host, () => console.log(`relayer on http://${host}:${port} (NEAR ${NET.network}, key ${process.env.FTF_GUEST_KEY ? 'set' : 'NOT set'}, TEE ${process.env.NEARAI_API_KEY ? 'set' : 'NOT set'}, chests ${process.env.FTF_CHEST_KEY ? 'set' : 'NOT set'}, skins ${process.env.FTF_SKIN_KEY ? 'set' : 'NOT set'}, dragons ${process.env.FTF_COMPANION_KEY ? 'set' : 'NOT set'}, market ${market ? market.stats().traders + ' traders' : 'off'}, pass ${process.env.FTF_PASS_KEY ? 'set' : 'dry-run'} ${process.env.FTF_PASS_NETWORK ? (process.env.FTF_PASS_NETWORK === 'mainnet' ? 'mainnet' : 'testnet') : NET.network})`));
-  const bye = () => { if (market) market.stop(); process.exit(0); };
+  const bye = () => { if (market) market.stop(); resetDb(); process.exit(0); }; // resetDb: the database is checkpointed and closed
   process.on('SIGTERM', bye); process.on('SIGINT', bye);
 }

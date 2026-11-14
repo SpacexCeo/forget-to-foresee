@@ -3,6 +3,7 @@
 //   POST /api/market/resource {side, item, qty, account_id, tx_hash} -> settles a player's on-chain payment (buy) or
 //        item transfer (sell): the stall mints the items or pays the silk. Dry run unless FTF_TOWN_SEND=1.
 import { appendFileSync, mkdirSync, readFileSync } from 'node:fs';
+import { activeDb } from '../../lib/storage.js';
 import { join } from 'node:path';
 import { cors, createBucket, envConfig, clientIp, DEFAULTS } from '../../lib/core.js';
 import { createTxClient, importSecretKey } from '../../lib/near-tx.js';
@@ -21,7 +22,8 @@ let journal = null;
 function loadJournal(file) {
   if (journal) return journal;
   let hashes = [];
-  try { hashes = readFileSync(file, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)).filter((e) => e.settled || e.dry_run).map((e) => e.hash); } catch { /* a fresh desk */ }
+  const db = activeDb(); // FTF_DB: receipts of kind 'resource'
+  try { hashes = (db ? db.receipts.list('resource') : readFileSync(file, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l))).filter((e) => e.settled || e.dry_run).map((e) => e.hash); } catch { /* a fresh desk */ }
   journal = createHashJournal(hashes);
   return journal;
 }
@@ -61,7 +63,11 @@ export function resourceHandler(opts = {}) {
       },
     };
     const out = await settle({ side: body.side, item: body.item, qty: body.qty, account: body.account_id, hash: body.tx_hash }, deps);
-    try { mkdirSync(mcfg.dataDir, { recursive: true }); appendFileSync(file, JSON.stringify({ at: Date.now(), hash: body.tx_hash, account: body.account_id, ...out }) + '\n'); } catch { /* disk */ }
+    try {
+      const rec = { at: Date.now(), hash: body.tx_hash, account: body.account_id, ...out }, db = activeDb();
+      if (db) db.receipts.add('resource', rec, { ref: body.tx_hash, account: body.account_id, at: rec.at });
+      else { mkdirSync(mcfg.dataDir, { recursive: true }); appendFileSync(file, JSON.stringify(rec) + '\n'); }
+    } catch { /* disk */ }
     const { status, ...rest } = out;
     return json(res, status, rest);
   };

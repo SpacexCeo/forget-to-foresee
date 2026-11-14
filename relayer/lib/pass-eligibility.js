@@ -4,6 +4,7 @@
 // portal_paid of the Gate-Loom fee (PORTAL_FEE_C, 200 silk), covered by verifiable income earned before it. The client can never supply a number.
 // The rules modules are loaded lazily; where they are absent, nobody is eligible (an honest default, never a guess).
 import { readFileSync } from 'node:fs';
+import { activeDb } from './storage.js';
 import { join } from 'node:path';
 import { EXPEDITION } from './expedition-rules/expedition-config.js';
 
@@ -12,6 +13,7 @@ const GUEST_RE = /^(?=.{2,64}$)[a-z0-9]+([-_][a-z0-9]+)*(\.[a-z0-9]+([-_][a-z0-9
 /** The stored log of one guest, or null when there is none (or the name is not a plain account id). */
 export function loadLog(dir, guest) {
   if (!dir || !GUEST_RE.test(String(guest))) return null;
+  const db = activeDb(); if (db) return db.expedition.load(guest); // FTF_DB: the expedition_events table
   let text;
   try { text = readFileSync(join(dir, guest + '.jsonl'), 'utf8'); } catch { return null; }
   const out = [];

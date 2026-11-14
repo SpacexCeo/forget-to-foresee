@@ -2,6 +2,7 @@
 // for the process. Off unless FTF_TOWN=1 (ftf-town, lib/town-traders.js; a dry run unless FTF_TOWN_SEND=1). The trader keys live in data/market-keys.json on the relayer's server
 // (made there by scripts/market-keys.mjs, mode 600, never committed); this module never prints them.
 import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { activeDb, dbFileStore, dbJournalLog } from '../lib/storage.js';
 import { join } from 'node:path';
 import { createTxClient } from '../lib/near-tx.js';
 import { DEFAULTS } from '../lib/core.js';
@@ -36,13 +37,15 @@ export function loadTraderKeys(path, kind = 'traders') {
 
 /** A JSON file store with an atomic replace. */
 export function fileStore(path) {
+  const db = activeDb(); if (db) return dbFileStore(db, path); // FTF_DB: a kv document (town-state)
   return {
     load() { try { return JSON.parse(readFileSync(path, 'utf8')); } catch { return null; } },
     save(obj) { mkdirSync(join(path, '..'), { recursive: true }); writeFileSync(path + '.tmp', JSON.stringify(obj)); renameSync(path + '.tmp', path); },
   };
 }
 /** Appends one JSON line per entry (a new file per UTC day). */
-export const jsonlLog = (dir) => (entry) => {
+export const jsonlLog = (dir) => { const db = activeDb(); return db ? dbJournalLog(db, dir) : fileJsonl(dir); }; // FTF_DB: the journal table, the stream is the folder's name
+const fileJsonl = (dir) => (entry) => {
   try { mkdirSync(dir, { recursive: true }); appendFileSync(join(dir, `market-${new Date(entry.at || Date.now()).toISOString().slice(0, 10)}.jsonl`), JSON.stringify(entry) + '\n'); } catch { /* disk full: keep trading */ }
 };
 

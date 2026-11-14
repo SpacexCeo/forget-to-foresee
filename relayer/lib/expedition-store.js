@@ -5,6 +5,7 @@
 // append-only), which lib/pass-eligibility.js reads. Kill acceptance is T1: plausibility, not proof. Without a
 // directory nothing is stored (the answer says so). No keys of ours are used here.
 import { appendFileSync, mkdirSync, statSync } from 'node:fs';
+import { activeDb } from './storage.js';
 import { join } from 'node:path';
 import { b58decode } from './near-tx.js';
 import { loadLog } from './pass-eligibility.js';
@@ -124,7 +125,9 @@ export async function appendBatch(v, { dir, now = Date.now(), load = loadLog, ap
     if (!chain.ok) return { status: 422, body: { error: 'log_invalid', reason: chain.reason, at: chain.at } };
     const bad = checkEntries(all, stored.length, now);
     if (bad) return { status: 422, body: { error: 'implausible', reason: bad.reason, at: bad.at } };
-    append(join(dir, v.accountId + '.jsonl'), v.entries.map((e) => JSON.stringify(e)).join('\n') + '\n');
+    const db = activeDb();
+    if (db) db.expedition.append(v.accountId, stored.length, v.entries, now); // FTF_DB: one transaction for the batch
+    else append(join(dir, v.accountId + '.jsonl'), v.entries.map((e) => JSON.stringify(e)).join('\n') + '\n');
     return { status: 200, body: { stored: true, length: all.length, head: all[all.length - 1].hash, trust: 'T1 kills are server-checked for plausibility, not proven' } };
   });
 }
@@ -133,6 +136,7 @@ export async function appendBatch(v, { dir, now = Date.now(), load = loadLog, ap
 export function logStatus(dir, guest) {
   if (!dir) return { stored: false, reason: 'storage_off' };
   const log = loadLog(dir, guest) || [];
-  let bytes = 0; try { bytes = statSync(join(dir, guest + '.jsonl')).size; } catch { /* none yet */ }
+  let bytes = 0; const db = activeDb();
+  if (db) bytes = db.expedition.status(guest).bytes; else try { bytes = statSync(join(dir, guest + '.jsonl')).size; } catch { /* none yet */ }
   return { stored: true, length: log.length, head: log.length ? log[log.length - 1].hash : null, bytes };
 }

@@ -1,0 +1,7 @@
+{
+  "name": "ftf-db",
+  "private": true,
+  "type": "module",
+  "description": "The project database: SQLite through node:sqlite, shared by the relayer and the presence service",
+  "scripts": { "test": "node --test tests/*.test.mjs" }
+}
