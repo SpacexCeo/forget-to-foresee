@@ -11,9 +11,9 @@ No wallet, no gas prompt, nothing to buy.
 
 - **Provable fairness:** the season's 15 signs are on `ftf-seasons.testnet`, revealed and re-hashed by the contract;
   `node tools/verify/verify.mjs proof.json` checks a proof copied from the game.
-- **A live on-chain world:** 20 scripted trader wallets on `ftf-town.testnet`, 7,716 trades on chain by 13.11
-  (`/api/market/stats`).
-- **Onboarding without a wallet:** 46 guest accounts and heroine NFTs minted through the relayer by 13.11
+- **A live on-chain world:** 20 scripted trader wallets on `ftf-town.testnet`, over 21,000 trades on 13 Nov alone
+  (`/api/market/stats`, recounted in `docs/proof/tx-2026-11-13.md`).
+- **Onboarding without a wallet:** 56 guest accounts and heroine NFTs minted through the relayer by the end of 13 Nov
   (`/api/health`, `heroine.ftf-coordinator.testnet`).
 
 ## Other tracks it fits

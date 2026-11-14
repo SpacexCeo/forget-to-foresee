@@ -58,8 +58,10 @@ Re-count before sending:
 - **`nfts`** (NFTs That Do Something) — **claimed** (owner, 09.11). The design is "an NFT whose biography is the currency",
   and the NEP-171 contract `contracts/memory-shard` runs on testnet as `ftf-shards.testnet` (21 tests, 3 shards of
   the recorded season minted by the coordinator script). In the game, Profile → NFTs → Holder access reads them from
-  the chain. Claimed for the memory
-  shards only: Iris is not an NFT, live seasons mint nothing, and a player-owned agent NFT is future work.
+  the chain. Also claimed: an NFT that owns an NFT.
+  Every Day 1 guest gets an Elise heroine NFT whose token has its own sub-account (56 by the end of 13 Nov); dragon NFTs
+  are minted to that sub-account (`companions.ftf-coordinator.testnet`, 6), so the dragon follows the heroine.
+  Not claimed: Iris is not an NFT, live seasons mint nothing, and a player-owned agent NFT is future work.
 - Not claimed: `social` (we have no shared budget / DAO), `agents` (our agents do not pay for anything in NEAR),
   `open` (only as a fallback instead of `nfts`).
 

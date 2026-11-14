@@ -2,7 +2,7 @@
 
 `docs/submission/` is the single current submission package: this file (the order), `x-post.md` (the demo post),
 `apply-form.md` (the form values and payload), `jury-video.md` (the video for the post) and the video pipeline notes
-(`trailer.md`, `video-shot-list.md`). Dates: freeze 13.11 20:00 Kyiv, deadline 15.11 01:59 Kyiv (14.11 23:59 UTC).
+(`trailer.md`, `video-shot-list.md`). Dates: the 13.11 freeze was dropped (set one stop-merging time on 14.11), deadline 15.11 01:59 Kyiv (14.11 23:59 UTC).
 
 ## 0. Day 1 contracts and the agent card (testnet, signed by ftf-coordinator.testnet)
 
