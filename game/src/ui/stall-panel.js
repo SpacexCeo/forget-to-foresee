@@ -87,6 +87,8 @@ export function createStallPanel({ t, client, town = null, doc = globalThis.docu
         state.append(doc.createTextNode(t(res.settled ? (side === 'buy' ? 'stall.done.buy' : 'stall.done.sell') : 'stall.done.dry', { n: q.qty, item: t('res.' + item), silk: silkText(q.silk) }) + ' '));
         const link = res.url || res.playerUrl;
         if (link) { const a = el('a', null, t('stall.verified')); a.href = link; a.target = '_blank'; a.rel = 'noopener noreferrer'; state.append(a); }
+        // a settled trade counts for the works window's goals and the shared town's action feed (ui/town-goals.js)
+        if (res.settled) try { globalThis.dispatchEvent(new CustomEvent('ftf:feat', { detail: { k: 'trade' } })); } catch { /* optional */ }
       } else if (res.error === 'not_registered') {
         // the plain next step: set up the town account through the relayer (free, one tap), then try again
         state.append(doc.createTextNode(t('stall.err.not_registered') + ' '), setupButton(state));
