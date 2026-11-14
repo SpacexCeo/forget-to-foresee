@@ -53,6 +53,7 @@ import { createTownLedger } from './game/town-economy.js';
 import { features as featureFlags } from './features.js';
 import { mountSprint } from './sprint/index.js';
 import { createDay1Mint, loadDay1 } from './play/day1-mint.js';
+import { findHandBone } from './play/hand-bones.js';
 import { nextSkin, wearPlan } from './play/skins.js';
 import { TALK_RADIUS } from './scenes/town-quest.js';
 import { PROGRAMS, TOWNSFOLK } from './play/townsfolk-plan.js';
@@ -691,10 +692,10 @@ function mountCasting() {
     // phones: a skill tap fires at once at the targeted creature, else the soft lock, else the nearest in range (owner 14.11)
     assist: (id, range) => assistPoint(player.pos, range, { target: typeof window.__ftfTarget === 'function' ? window.__ftfTarget() : null, locked: townMobs ? townMobs.locked : null, mobs: townMobs && townMobs.brain ? townMobs.brain.mobs : [] }),
     // her cast clip (art/anim/iris_actions.py): a wind-up, then the release frame on which the cast leaves her hand; the
-    // effect, the sound and the hits wait for that frame. Without the clip (?anim=v1) her hand goes up and it leaves at once.
+    // effect, the sound and the hits wait for that frame. Without the clip her hand goes up and it leaves at once.
     onCastStart: (id) => { interruptMove(0); castWindup = { id, t: 0 }; cue(id === 'snare' ? 'cast_charge_storm' : 'cast_charge_frost'); /* the build through the wind-up */ const c = irisAvatar && irisAvatar.cast('cast_' + id); if (!c && irisAvatar) irisAvatar.react('greet', clock.elapsedTime); return c ? quickRelease(c) : 0; },
     onCast: (id, shot) => { for (const c of companions) c.flourish(lookdev.reducedMotion); if (townMonsters) townMonsters.cast(id, shot); cue(id === 'snare' ? 'cast_release_storm' : 'cast_release_frost'); }, // on the release frame
-    handPos: () => { const m = irisAvatar && irisAvatar.irisModel, h = m && m.model.getObjectByName('hand_R'); if (!h) return null; const v = h.getWorldPosition(new THREE.Vector3()); return [v.x, v.y, v.z]; },
+    handPos: () => { const m = irisAvatar && irisAvatar.irisModel, h = m && findHandBone(m.model, 'R'); if (!h) return null; const v = h.getWorldPosition(new THREE.Vector3()); return [v.x, v.y, v.z]; },
     onFire: (c) => { if (townMobs) townMobs.cast(c); },
     // UI-003 strike and dash slots for the hillside fight (play/mobs.js ACTIONS: F / 3, Space / 4)
     extra: [
@@ -1570,7 +1571,7 @@ function frame() {
   // the cast's wind-up (night 14.11): motes of its element gather at her hand until the release frame
   if (castWindup) {
     castWindup.t += dt;
-    const hm = townMobs && townMobs.fx && irisAvatar && irisAvatar.irisModel, hb = hm && hm.model.getObjectByName('hand_R'), h = hb ? hb.getWorldPosition(_windHand).toArray() : null;
+    const hm = townMobs && townMobs.fx && irisAvatar && irisAvatar.irisModel, hb = hm && findHandBone(hm.model, 'R'), h = hb ? hb.getWorldPosition(_windHand).toArray() : null;
     if (castWindup.t > 0.5 || !h) castWindup = null;
     else if (!lookdev.reducedMotion) { castWindup.acc = (castWindup.acc || 0) + dt; while (castWindup.acc > 0.02) { castWindup.acc -= 0.02; townMobs.fx.trail(h, castWindup.id === 'snare' ? 0xc9a8ff : 0xa8e4ff, 0.22, 0.28 * (1 - castWindup.t * 1.6)); } }
   }

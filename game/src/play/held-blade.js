@@ -4,6 +4,7 @@
 // frame, so every clip keeps playing and the hand stays shut. Only a heroine whose model carries the finger joints
 // (`index_mid_R`, ...) holds it; another heroine, or an older model file, is left alone.
 import { GRIP } from './grip-pose.js';
+import { GRIPS } from './grip-pose-rigs.js';
 import { LAYER_OVERLAY } from '../render/layers.js';
 
 /**
@@ -21,7 +22,20 @@ export function glowBand(y, t, g = BLADE_GLOW) {
 
 /** Bones a model must have to hold the sword: the socket bone and every finger joint of the grip pose. */
 export function canHold(hasBone, grip = GRIP) {
-  return hasBone('prop_R') && Object.keys(grip.pose).every((n) => hasBone(n));
+  return hasBone(grip.seat || 'prop_R') && Object.keys(grip.pose).every((n) => hasBone(n));
+}
+
+/**
+ * The grips the build knows, one per rig (3D A, 14.11: the new Tripo heroines have no `prop_R`). A grip is
+ * {seat?: bone name (default 'prop_R'), sword_in_seat? | sword_in_prop_R: column-major 4x4, pose: {bone: quat}}; a rig
+ * with no grip of its own fights with empty hands rather than a sword at a guessed angle. art/agents/grip.sh writes
+ * GRIP (the game's own rig); play/grip-pose-rigs.js holds the other rigs' grips.
+ */
+export const KNOWN_GRIPS = Object.freeze([GRIP, ...GRIPS]);
+
+/** The first grip whose seat and finger bones the model has, or null. Pure. */
+export function pickGrip(hasBone, grips = KNOWN_GRIPS) {
+  return grips.find((g) => g && g.pose && canHold(hasBone, g)) || null;
 }
 
 /** The sword file for this device: the light variant on phones when it ships. */
@@ -38,9 +52,12 @@ export function heldBladeFile(mobile, has) {
  * @param {(name: string) => Promise<{gltf: object}>} o.fetchGltf @param {(name: string) => boolean} o.hasModelFile
  * @param {boolean} [o.mobile]
  */
-export function createHeldBlade({ THREE, model, held, fetchGltf, hasModelFile, mobile = false, grip = GRIP }) {
-  const seat = new THREE.Matrix4().fromArray(grip.sword_in_prop_R);
-  const quats = Object.fromEntries(Object.entries(grip.pose).map(([n, q]) => [n, new THREE.Quaternion(q[0], q[1], q[2], q[3])]));
+export function createHeldBlade({ THREE, model, held, fetchGltf, hasModelFile, mobile = false, grip = null, grips = grip ? [grip] : KNOWN_GRIPS }) {
+  const built = new Map();   // grip -> {seat, quats}
+  const prep = (g) => {
+    if (!built.has(g)) built.set(g, { seat: new THREE.Matrix4().fromArray(g.sword_in_seat || g.sword_in_prop_R), quats: Object.fromEntries(Object.entries(g.pose).map(([n, q]) => [n, new THREE.Quaternion(q[0], q[1], q[2], q[3])])) });
+    return built.get(g);
+  };
   let sword = null, loading = false, on = null;   // on: {root, bones: [[bone, gripQuat, restQuat]], holder}
   let shown = false, time = 0;
   const uTime = { value: 0 };
@@ -107,11 +124,13 @@ export function createHeldBlade({ THREE, model, held, fetchGltf, hasModelFile, m
 
   function attach(root) {
     const bone = (n) => root.getObjectByName(n);
-    if (!canHold((n) => !!bone(n), grip)) return false;
+    const g = pickGrip((n) => !!bone(n), grips);
+    if (!g) return false;
+    const { seat, quats } = prep(g);
     const holder = new THREE.Group(); holder.name = 'held_blade_seat';
     holder.matrixAutoUpdate = false; holder.matrix.copy(seat);
     holder.add(sword);
-    bone('prop_R').add(holder);
+    bone(g.seat || 'prop_R').add(holder);
     on = { root, holder, bones: Object.keys(quats).map((n) => [bone(n), quats[n], bone(n).quaternion.clone()]) };
     return true;
   }
