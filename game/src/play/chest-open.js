@@ -13,6 +13,13 @@ const ERR_KEYS = ['off', 'soon', 'rate', 'daily', 'sold_out', 'no_guest', 'no_ke
 
 const FRAME = Object.freeze({ common: 'common', uncommon: 'common', rare: 'rare', epic: 'epic', legendary: 'legendary', nft: 'mythic' });
 const GLOW = Object.freeze({ common: '#cfc6ad', uncommon: '#2fc4b2', rare: '#5fb6ff', epic: '#c77dff', legendary: '#ffc46b', mythic: '#ffe7a8' });
+/** The season deck's odds (docs/chests.md, relayer/lib/chest-deck.js: 10,000 positions, each drawn once), in percent. */
+export const CHEST_ODDS = Object.freeze([
+  ['nft', [['legendary', 0.6], ['rare', 2.4], ['uncommon', 7]]],
+  ['silk', [['×5', 20], ['×10', 12], ['×25', 4]]],
+  ['xp', [['×10', 15], ['×25', 5]]],
+  ['item', [['common', 18], ['uncommon', 10], ['rare', 6]]],
+]);
 export const REEL = Object.freeze({ tiles: 46, land: 40, tile: 108, seconds: 5.2 });
 
 const CSS = `
@@ -38,6 +45,10 @@ const CSS = `
 .co-ver { font-size: 13px; max-width: 560px; } .co-ver b { color: #7fd18b; } .co-ver.co-no b { color: #ff8a7a; }
 .co-ver code { font: 12px ui-monospace, monospace; color: rgba(233,230,220,.75); word-break: break-all; }
 .co a { color: #d9b26a; }
+.co-odds { font-size: 13px; color: rgba(233, 230, 220, .8); } .co-odds summary { cursor: pointer; color: #d9b26a; }
+.co-odds table { margin: 6px auto 0; border-collapse: collapse; text-align: left; } .co-odds td { padding: 3px 8px; border-top: 1px solid rgba(214, 226, 214, .1); }
+.co-odds td:first-child { font-weight: 600; color: #e9e6dc; } .co-odds .co-pct { color: #d9b26a; font-variant-numeric: tabular-nums; }
+.co-added { font-weight: 600; color: #7fd18b; }
 .co-note { color: rgba(233, 230, 220, .62); font-size: 13px; max-width: 520px; }
 .co-btns { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 .co-btn { min-height: 44px; padding: 10px 22px; border-radius: 10px; border: 0; cursor: pointer; font: 700 15px/1 system-ui; color: #14201c; background: linear-gradient(135deg, #e6c27e, #c99a48); }
@@ -111,7 +122,17 @@ export function openChestReveal({ doc = document, t, chest, client, guest, items
   const stage = el('div'); stage.style.position = 'relative';
   const info = el('div'); info.setAttribute('aria-live', 'polite');
   const btns = el('div', 'co-btns');
-  box.append(title, chestEl, reel, stage, info, btns);
+  // the drop table, always one tap away (the box tier never changes it)
+  const odds = el('details', 'co-odds'); odds.append(el('summary', null, t('chest.odds')));
+  const otb = el('table');
+  for (const [kind, rows] of CHEST_ODDS) {
+    const tr = el('tr'); tr.append(el('td', null, t('chest.odds.' + kind)));
+    const td = el('td'); td.textContent = rows.map(([k, p]) => `${k.startsWith('×') ? k : t('rarity.' + k)} ${p}%`).join(' · ');
+    const sum = el('td', 'co-pct', Math.round(rows.reduce((a, [, p]) => a + p, 0)) + '%');
+    tr.append(sum, td); otb.append(tr);
+  }
+  odds.append(otb, el('p', 'co-note', t('chest.oddsNote')));
+  box.append(title, chestEl, reel, stage, info, btns, odds);
   root.append(box);
   root.addEventListener('pointerdown', (e) => e.stopPropagation());
   root.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Escape' && done) close(); });
@@ -209,7 +230,8 @@ export function openChestReveal({ doc = document, t, chest, client, guest, items
       const links = el('p', 'co-note');
       if (op.tx) { const a = el('a', null, t('chest.viewTx')); a.href = `${explorer}/txns/${op.tx}`; a.target = '_blank'; a.rel = 'noopener noreferrer'; links.append(a); }
       if (op.nft && op.nft.contract && op.nft.tokenId) { const a = el('a', null, t('chest.viewNft')); a.href = `${explorer}/nft-token/${op.nft.contract}/${op.nft.tokenId}`; a.target = '_blank'; a.rel = 'noopener noreferrer'; if (links.childNodes.length) links.append(doc.createTextNode(' · ')); links.append(a); }
-      info.replaceChildren(ver, det, links);
+      const added = el('p', 'co-added', t(op.outcome && op.outcome.kind === 'nft' ? 'chest.addedNft' : 'chest.added'));
+      info.replaceChildren(added, ver, det, links);
       closeBtn();
     });
   }).catch((e) => { console.warn('[chest] reveal', e); info.replaceChildren(el('p', null, t('chest.err.bad'))); closeBtn(); settledP(outcomeResult); });
