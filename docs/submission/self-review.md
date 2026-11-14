@@ -47,15 +47,15 @@ after it. The relayer's day counter resets at 00:00 UTC.
 | 5 | Turn on `damageNumbers` and `loadRitual` (see the flags below) | lead | proposed |
 | 6 | The jury video and the X post | owner | drafts in this folder |
 
-## Flags that are off on the live page ()
+## Flags that are off on the live page (`game/public/features.json`)
 
 New work ships with its flag on (owner, 14 Nov); a flag is only an off switch.
 
 | Flag | Ready to turn on? | Why |
 | --- | --- | --- |
-|  | **Yes**, after the lead's boot check | Wired in  and , pooled DOM (24 elements), ; worker 3 polishes it tonight |
-|  | **Yes**, after the lead's boot check | Wired in  (loading screen only),  |
-|  | Owner's call | Built and tested; placeholder models are being replaced tonight (Fable A/B) |
-| , , , ,  | No | Defined in  but nothing in the game reads them: turning them on changes nothing |
+| `damageNumbers` | **Yes**, after the lead's boot check | Wired in `boot-world.js` and `play/mobs.js`, pooled DOM (24 elements), `tests/client/float-numbers.test.mjs`; worker 3 polishes it tonight |
+| `loadRitual` | **Yes**, after the lead's boot check | Wired in `main.js` (loading screen only), `tests/client/load-ritual.test.mjs` |
+| `glassShoal` | Owner's call | Built and tested; placeholder models are being replaced tonight (Fable A/B) |
+| `loomMeter`, `presenceChip`, `tuneOverlay`, `statusBanner`, `register` | No | Defined in `src/features.js`, but nothing in the game reads them: turning them on changes nothing |
 
-The Town works goals and share () have no flag: they are part of the window.
+The Town works goals and share (`wip/defi-pass`) have no flag: they are part of the window.
