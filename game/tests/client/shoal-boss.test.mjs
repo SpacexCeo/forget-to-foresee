@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { bossAnimStep, freshBossAnim, fadeWeights, BOSS_CLIPS, BOSS_ANIM } from '../../src/game/shoal-boss-anim.js';
+import { bossAnimStep, freshBossAnim, fadeWeights, BOSS_CLIPS, BOSS_ANIM, ALL_CLIPS, CLIP_STANDIN, clipOn } from '../../src/game/shoal-boss-anim.js';
 import * as R from '../../src/game/shoal-rules.js';
 
 const glb = (name) => {
@@ -33,9 +33,9 @@ test('boss anim: the blow in the clip lands when the rules strike, in every phas
         assert.ok(Math.abs(a.time - BOSS_ANIM.wind) < 0.05, 'phase ' + phase + ' ' + a.clip + ' strikes at ' + a.time);
       }
       if (b.state === 'telegraph' && b.attack.kind !== 'adds') assert.ok(a.time <= BOSS_ANIM.wind + 1e-9);
-      assert.ok(BOSS_CLIPS.includes(a.clip)); assert.ok(a.time >= 0 && a.time <= BOSS_ANIM.len[a.clip] + 1e-9);
+      assert.ok(ALL_CLIPS.includes(a.clip)); assert.ok(a.time >= 0 && a.time <= BOSS_ANIM.len[a.clip] + 1e-9);
     }
-    assert.ok(strikes > 5); assert.ok(seen.has('slam') && seen.has('sweep'));
+    assert.ok(strikes > 5); assert.ok(seen.size >= 3, 'phase ' + phase + ': ' + [...seen]);
   }
 });
 
@@ -83,4 +83,34 @@ test('the killing blow clears the boss\'s attack: no telegraph is left glowing a
   const r = R.hitBoss({ ...b, exposed: 1 }, 1e9);
   assert.equal(r.boss.dead, true); assert.equal(r.boss.state, 'dead'); assert.equal(r.boss.attack, null);
   assert.deepEqual(R.bossStep(r.boss, 5, [0, 0]).events, [], 'a dead boss does nothing');
+});
+
+
+// ---- the ice dragon (owner 14.11): breath, claw, takeoff / flight, dive, roar; the Hollow Tide plays stand-ins
+test('the ice dragon: breath cone, claw arc, the flight of phase 3 and its dive, stand-in clips on another model', () => {
+  const B = R.BOSS;
+  const breath = { kind: 'breath', at: [0, 0], dir: [0, 1] }, claw = { kind: 'claw', at: [0, 0], dir: [0, 1] };
+  assert.equal(R.inDanger(breath, 0, 20), true, 'in the cone'); assert.equal(R.inDanger(breath, 12, 8), false, 'beside it');
+  assert.equal(R.inDanger(breath, 0, -5), false, 'behind it'); assert.equal(R.inDanger(breath, 0, 20, B, 6), false, 'flying over the breath');
+  assert.equal(R.inDanger(claw, 0, 6), true); assert.equal(R.inDanger(claw, 0, 14), false, 'out of its reach');
+  // phase 1 far away: the claw becomes breath; close: the claw
+  let b = { ...R.freshBoss(0), t: 0.01 };
+  let r = R.bossStep(b, 0.02, [0, 30]); assert.equal(r.boss.attack.kind, 'breath');
+  r = R.bossStep({ ...R.freshBoss(0), t: 0.01 }, 0.02, [0, -4]); assert.equal(r.boss.attack.kind, 'claw');
+  // phase 3: it takes off, breathes from the air (melee-proof, damage x airMult), dives and lands
+  b = { ...R.freshBoss(2), t: 0.01 }; const kinds = []; let flew = false, landed = false;
+  for (let i = 0; i < 60 * 40 && !landed; i++) {
+    const s = R.bossStep(b, 1 / 60, [0, 8]); b = s.boss;
+    for (const e of s.events) { if (e.type === 'takeoff') flew = true; if (e.type === 'telegraph') kinds.push(e.attack.kind); if (e.type === 'strike' && e.attack.kind === 'dive') landed = true; }
+    if (flew && !landed && b.airborne) { const h = R.hitBoss({ ...b, exposed: 0 }, 1000); assert.equal(h.dealt, Math.round(1000 * B.armor * B.airMult)); }
+  }
+  assert.ok(flew && landed && !b.airborne, kinds.join(','));
+  assert.deepEqual(kinds.slice(0, 4), ['takeoff', 'breath', 'breath', 'dive']);
+  // a phase break lands it; the killing blow ends the flight too
+  assert.equal(R.hitBoss({ ...R.freshBoss(1), airborne: true }, 1e9 / B.armor).boss.airborne, false);
+  // clips: the dragon's own when the model has them, the stand-in otherwise
+  const tide = (n) => BOSS_CLIPS.includes(n);
+  for (const [c, s] of Object.entries(CLIP_STANDIN)) { assert.equal(clipOn(c, tide), s); assert.equal(clipOn(c, () => true), c); }
+  let a = { clip: 'idle', time: 0, phase: 2 };
+  a = bossAnimStep(a, { ...R.freshBoss(2), airborne: true, state: 'rest', t: 2 }, 1 / 60, 0.9); assert.equal(a.clip, 'fly', 'it hovers in the air');
 });

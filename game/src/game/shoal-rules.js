@@ -256,16 +256,23 @@ export const BOSS = f({
   exposedMult: 1.5,       // damage taken while the weak point is open
   exposedTime: 2.0,       // seconds the crest stays open after she dodges a blow
   contact: 6.5,           // the body's radius on the plain
+  // the ice dragon (owner 14.11): phase 1 on the ground (claw, landing slam, tail sweep, ice breath), phase 2 adds the
+  // bite charge and the wyrmlings, phase 3 takes to the air (it rises, breathes from above, dives into a slam, lands)
   phases: f([
-    f({ id: 1, above: 1.0, rotation: f(['slam', 'slam', 'sweep']), telegraph: 1.4, rest: 1.6, adds: 0 }),
-    f({ id: 2, above: 0.66, rotation: f(['lunge', 'slam', 'adds', 'lunge', 'sweep']), telegraph: 1.15, rest: 1.3, adds: 3 }),
-    f({ id: 3, above: 0.33, rotation: f(['lunge', 'slam', 'slam', 'sweep', 'lunge']), telegraph: 0.9, rest: 0.95, adds: 2 }),
+    f({ id: 1, above: 1.0, rotation: f(['claw', 'slam', 'sweep', 'breath']), telegraph: 1.4, rest: 1.6, adds: 0 }),
+    f({ id: 2, above: 0.66, rotation: f(['lunge', 'breath', 'adds', 'claw', 'sweep']), telegraph: 1.15, rest: 1.3, adds: 3 }),
+    f({ id: 3, above: 0.33, rotation: f(['takeoff', 'breath', 'breath', 'dive', 'claw', 'lunge']), telegraph: 0.9, rest: 0.95, adds: 2 }),
   ]),
+  airMult: 0.6,           // damage taken while it flies (higher, harder to hit), the open weak point aside
   attacks: f({
     // `reach` = how high above the mirror the blow still lands (metres): flying over a sweep works, over a slam not
     slam: f({ damage: 20, radius: 6.5, active: 0.25, reach: 9 }),          // a ring under her: a geyser column
     sweep: f({ damage: 18, radius: 17, inner: 7, active: 0.35, reach: 2.6 }), // a wide ring around the body: step in, roll or rise
-    lunge: f({ damage: 32, width: 5, length: 34, active: 0.3, reach: 4 }),  // a straight charge line at her
+    lunge: f({ damage: 32, width: 5, length: 34, active: 0.3, reach: 4 }),  // a straight charge line at her (the bite)
+    breath: f({ damage: 26, length: 26, half: 0.42, active: 0.8, reach: 5 }), // a cone of ice from its jaws toward her: step out sideways or rise
+    claw: f({ damage: 22, radius: 10, half: 1.05, active: 0.25, reach: 3 }),  // a short arc in front of it, only when she is close
+    takeoff: f({ damage: 0, active: 0.6 }),                                    // it rises into the air (phase 3)
+    dive: f({ damage: 28, radius: 7.5, active: 0.3, reach: 9 }),              // from the air it dives onto her place and lands
     adds: f({ damage: 0, active: 0.1 }),
   }),
   add: f({ hp: 120, damage: 8, speed: 3.6, reach: 1.6, cooldown: 1.6, jump: 2.2 }), // jump: the highest they can bite
@@ -282,7 +289,7 @@ export const checkpointHp = (phase, B = BOSS) => Math.round(B.phases[phase].abov
 
 /** A fresh boss (or one restored at a phase checkpoint). */
 export function freshBoss(phase = 0, B = BOSS) {
-  return { hp: checkpointHp(phase, B), phase, state: 'rest', t: 3, attack: null, target: null, idx: 0, exposed: 0, dead: false, adds: [], nextAddId: 1 };
+  return { hp: checkpointHp(phase, B), phase, state: 'rest', t: 3, attack: null, target: null, idx: 0, exposed: 0, dead: false, adds: [], nextAddId: 1, airborne: false };
 }
 
 /**
@@ -291,13 +298,13 @@ export function freshBoss(phase = 0, B = BOSS) {
  */
 export function hitBoss(b, amount, B = BOSS, o = {}) {
   if (b.dead || amount <= 0) return { boss: b, dealt: 0, phaseUp: false };
-  const dealt = Math.round(amount * (b.exposed > 0 ? B.exposedMult : o.pierce ? 1 : B.armor));
+  const dealt = Math.round(amount * (b.exposed > 0 ? B.exposedMult : o.pierce ? 1 : B.armor) * (b.airborne && !(b.exposed > 0) ? (B.airMult ?? 1) : 1));
   const hp = Math.max(0, b.hp - dealt);
   const phase = phaseFor(hp / B.hp, B);
   const phaseUp = phase > b.phase && hp > 0;
   const nb = { ...b, hp, phase, dead: hp <= 0 };
-  if (nb.dead) { nb.state = 'dead'; nb.attack = null; nb.t = 0; nb.exposed = 0; } // it falls: no blow, no telegraph left glowing on the mirror (bench run 14.11)
-  if (phaseUp) { nb.state = 'rest'; nb.t = 2.2; nb.attack = null; nb.idx = 0; nb.exposed = 0; } // it rears up: a breather between phases
+  if (nb.dead) { nb.state = 'dead'; nb.attack = null; nb.t = 0; nb.exposed = 0; nb.airborne = false; } // it falls: no blow, no telegraph left glowing on the mirror (bench run 14.11)
+  if (phaseUp) { nb.state = 'rest'; nb.t = 2.2; nb.attack = null; nb.idx = 0; nb.exposed = 0; nb.airborne = false; } // it lands and roars: a breather between phases
   return { boss: nb, dealt, phaseUp };
 }
 /** Pure: she dodged through a blow: the crest opens. */
@@ -314,6 +321,12 @@ export function inDanger(atk, px, pz, B = BOSS, py = 0) {
   const dx = px - atk.at[0], dz = pz - atk.at[1];
   if (atk.kind === 'slam') return Math.hypot(dx, dz) <= A.radius;
   if (atk.kind === 'sweep') { const d = Math.hypot(dx, dz); return d <= A.radius && d >= A.inner; }
+  if (atk.kind === 'dive') return Math.hypot(dx, dz) <= A.radius;
+  if (atk.kind === 'breath' || atk.kind === 'claw') {
+    const along = dx * atk.dir[0] + dz * atk.dir[1], across = dx * atk.dir[1] - dz * atk.dir[0], d = Math.hypot(dx, dz);
+    if (along <= 0 || d > (atk.kind === 'breath' ? A.length : A.radius)) return false;
+    return Math.abs(Math.atan2(across, along)) <= A.half;
+  }
   if (atk.kind === 'lunge') {
     const along = dx * atk.dir[0] + dz * atk.dir[1], across = Math.abs(dx * atk.dir[1] - dz * atk.dir[0]);
     return along >= 0 && along <= A.length && across <= A.width / 2;
@@ -333,9 +346,14 @@ export function bossStep(b, dt, player, B = BOSS) {
   let nb = { ...b, t: b.t - dt, exposed: Math.max(0, b.exposed - dt) };
   if (nb.t > 0) return { boss: nb, events };
   if (nb.state === 'rest') {
-    const kind = P.rotation[nb.idx % P.rotation.length];
+    let kind = P.rotation[nb.idx % P.rotation.length];
+    const o0 = ARENA.boss, tx = player[0] - o0[0], tz = player[1] - o0[1], td = Math.hypot(tx, tz) || 1, toHer = [tx / td, tz / td];
+    if (kind === 'claw' && td > B.attacks.claw.radius + 4) kind = 'breath'; // too far for its claws: it breathes instead
+    if (kind === 'takeoff' && nb.airborne) kind = 'breath';
+    if (kind === 'dive' && !nb.airborne) kind = 'slam';
     let atk;
-    if (kind === 'slam') atk = { kind, at: [player[0], player[1]] };
+    if (kind === 'slam' || kind === 'dive') atk = { kind, at: [player[0], player[1]] };
+    else if (kind === 'breath' || kind === 'claw') atk = { kind, at: [o0[0], o0[1]], dir: toHer };
     else if (kind === 'sweep') atk = { kind, at: [...ARENA.boss] };
     else if (kind === 'lunge') {
       const o = ARENA.boss, dx = player[0] - o[0], dz = player[1] - o[1], d = Math.hypot(dx, dz) || 1;
@@ -351,7 +369,8 @@ export function bossStep(b, dt, player, B = BOSS) {
       for (let i = 0; i < P.adds; i++) { const a = (i / Math.max(1, P.adds)) * Math.PI * 2 + nb.idx; adds.push({ id: id++, hp: B.add.hp, x: ARENA.boss[0] + Math.cos(a) * 9, z: ARENA.boss[1] + Math.sin(a) * 9, cd: 1 }); }
       nb.adds = adds; nb.nextAddId = id;
       events.push({ type: 'spawn', count: P.adds });
-    } else events.push({ type: 'strike', attack: nb.attack, damage: A.damage });
+    } else if (nb.attack.kind === 'takeoff') { nb.airborne = true; events.push({ type: 'takeoff' }); }
+    else { if (nb.attack.kind === 'dive') nb.airborne = false; events.push({ type: 'strike', attack: nb.attack, damage: A.damage }); }
   } else {
     events.push({ type: 'end', attack: nb.attack });
     nb = { ...nb, state: 'rest', t: P.rest, attack: null };

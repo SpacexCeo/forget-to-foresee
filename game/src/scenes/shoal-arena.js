@@ -11,7 +11,7 @@ import { shoalSkillsFor, shoalExtrasFor, comboStep } from '../rpg/shoal-skills.j
 /** The sword clips of the Loomblade combo, per step (null: the old strike stays until its cut is approved). */
 export const COMBO_CLIPS = Object.freeze(['slash1', null, null]);
 import { hasModelFile, fetchGltf, getModelVariant } from '../render/assets.js';
-import { bossAnimStep, freshBossAnim, fadeWeights, BOSS_ANIM } from '../game/shoal-boss-anim.js';
+import { bossAnimStep, freshBossAnim, fadeWeights, BOSS_ANIM, clipOn } from '../game/shoal-boss-anim.js';
 import { createAddsView } from './shoal-adds-view.js';
 import { createHitFx } from '../render/hit-fx.js';
 import { impactOf, IMPACT } from '../render/hit-fx-core.js';
@@ -111,6 +111,9 @@ export function createShoalArena(o) {
   const ring = new THREE.Mesh(new THREE.RingGeometry(0.1, 1, 48), teleMat()); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.05; ring.visible = false; root.add(ring);
   const band = new THREE.Mesh(new THREE.RingGeometry(R.BOSS.attacks.sweep.inner, R.BOSS.attacks.sweep.radius, 64), teleMat()); band.rotation.x = -Math.PI / 2; band.position.set(R.ARENA.boss[0], 0.05, R.ARENA.boss[1]); band.visible = false; root.add(band);
   const line = new THREE.Mesh(new THREE.PlaneGeometry(R.BOSS.attacks.lunge.width, R.BOSS.attacks.lunge.length), teleMat()); line.geometry.rotateX(-Math.PI / 2); line.geometry.translate(0, 0, R.BOSS.attacks.lunge.length / 2); line.position.y = 0.05; line.visible = false; root.add(line);
+  // the ice dragon's: a cone of breath and the arc of its claws, flat fans opening along +z (rotated to her at the telegraph)
+  const fan = (radius, half, color) => { const g = new THREE.CircleGeometry(radius, 40, Math.PI / 2 - half, half * 2); g.rotateX(-Math.PI / 2); g.scale(1, 1, -1); const m = new THREE.Mesh(g, teleMat()); m.material.color.setHex(color); m.position.y = 0.06; m.visible = false; root.add(m); return m; };
+  const breathFan = fan(R.BOSS.attacks.breath.length, R.BOSS.attacks.breath.half, 0x9fe8ff), clawFan = fan(R.BOSS.attacks.claw.radius, R.BOSS.attacks.claw.half, 0xff7a3a);
   // pickups, adds, projectiles, the chest
   const orbMat = { hp: new THREE.MeshBasicMaterial({ color: 0x6aff9a }), stamina: new THREE.MeshBasicMaterial({ color: 0xffe066 }) };
   const orbs = new Map(R.ARENA.pickups.map((p) => { const m = new THREE.Mesh(new THREE.SphereGeometry(0.45, 14, 10), orbMat[p.kind]); m.position.set(p.at[0], 1, p.at[1]); root.add(m); return [p.id, m]; }));
@@ -242,7 +245,7 @@ export function createShoalArena(o) {
     const r = R.hitBoss(B, amount, R.BOSS, opts); B = r.boss;
     if (!opts.noCharge) charge(r.dealt, 0);
     if (r.dealt > 0) bossFlashT = 0.12;
-    if (r.phaseUp) { flash(say(B.phase === 1 ? 'shoal.phase2' : 'shoal.phase3')); }
+    if (r.phaseUp) { flash(say(B.phase === 1 ? 'shoal.phase2' : 'shoal.phase3')); cue('storm_crack'); shakeT = 0.3; shakeAmp = reduced() ? 0 : 0.3; } // the roar
     if (B.dead && !won) { won = true; boss.visible = !!bossModel; /* the model falls and sinks first (draw hides it) */ chest.visible = true; addsView.clear(); B = { ...B, adds: [] }; flash(say('shoal.victory'), 3.5); onWin(); }
     return r.dealt;
   };
@@ -358,7 +361,10 @@ export function createShoalArena(o) {
     if (A && atk.kind === 'slam' && atk.at) fx.shock([atk.at[0], 0, atk.at[1]], 0xff9a5a, A.radius);
     else if (A && atk.kind === 'sweep') fx.shock([R.ARENA.boss[0], 0, R.ARENA.boss[1]], 0xff9a5a, A.radius);
     else if (A && atk.kind === 'lunge' && atk.at && atk.dir) fx.shock([atk.at[0] + atk.dir[0] * A.length * 0.5, 0, atk.at[1] + atk.dir[1] * A.length * 0.5], 0xff9a5a, A.width * 1.2);
-    cue('mob_hulker_slam');
+    else if (A && atk.kind === 'dive' && atk.at) { fx.shock([atk.at[0], 0, atk.at[1]], 0x9fe8ff, A.radius); shakeT = 0.22; shakeAmp = reduced() ? 0 : 0.25; }
+    else if (A && atk.kind === 'breath' && atk.dir) fx.shock([atk.at[0] + atk.dir[0] * A.length * 0.6, 0, atk.at[1] + atk.dir[1] * A.length * 0.6], 0x9fe8ff, A.length * 0.4);
+    else if (A && atk.kind === 'claw' && atk.dir) fx.shock([atk.at[0] + atk.dir[0] * A.radius * 0.6, 0, atk.at[1] + atk.dir[1] * A.radius * 0.6], 0xff9a5a, A.radius * 0.5);
+    cue(atk.kind === 'breath' ? 'cast_release_frost' : atk.kind === 'claw' ? 'strike_heavy' : 'mob_hulker_slam');
     if (!R.inDanger(atk, me3.x, me3.z, R.BOSS, me3.lift)) return;
     const real = H.dodge > 0; // a dodge's frames open the crest; the Tempest's do not
     const r = hurt(damage);
@@ -412,7 +418,11 @@ export function createShoalArena(o) {
       // the boss
       if (!won) {
         const r = R.bossStep(B, sdt, [me3.x, me3.z]); B = r.boss;
-        for (const e of r.events) if (e.type === 'strike') strikeLands(e.attack, e.damage);
+        for (const e of r.events) {
+          if (e.type === 'strike') strikeLands(e.attack, e.damage);
+          else if (e.type === 'takeoff') { flash(say('shoal.takeoff'), 1.8); cue('dash_whoosh'); }
+          else if (e.type === 'telegraph' && e.attack.kind === 'breath') cue('cast_charge_frost'); // the inhale
+        }
         const a = R.addsStep(B.adds, sdt, [me3.x, me3.z], R.BOSS, me3.lift); B = { ...B, adds: a.adds };
         if (a.damage) hurt(a.damage);
       }
@@ -448,7 +458,7 @@ export function createShoalArena(o) {
     draw(dt, sdt);
   }
 
-  let tt = 0;
+  let tt = 0, bossLift = 0;
   function draw(dt, sdt) {
     tt += sdt;
     const red = reduced();
@@ -456,14 +466,16 @@ export function createShoalArena(o) {
     const rise = won ? 0 : 1, sway = red ? 0 : Math.sin(tt * 0.8) * 0.4;
     const toMe = Math.atan2(me3.x - R.ARENA.boss[0], me3.z - R.ARENA.boss[1]);
     if (!won) boss.rotation.y = toMe;
+    bossLift += ((B.airborne && !won ? 9 : 0) - bossLift) * Math.min(1, sdt * (B.airborne ? 1.6 : 4)); boss.position.y = bossLift; // in the air (phase 3) it hovers high
     if (bossModel) {
       bossAnim = bossAnimStep(bossAnim, B, red ? 0 : sdt, R.BOSS.phases[B.phase].telegraph, won);
       if (red && bossAnim.clip === 'rise') bossAnim = { ...bossAnim, clip: 'idle', time: 0 }; // reduced motion: it is simply there
       if (red && won) bossAnim = { ...bossAnim, clip: 'death', time: BOSS_ANIM.len.death };      // reduced motion: it is simply gone
       if (won && bossAnim.time >= BOSS_ANIM.len.death) boss.visible = false;
       if (bossMixer) {
-        fadeWeights(bossW, bossAnim.clip, red ? 1 : sdt);
-        for (const name in bossActions) { const a = bossActions[name]; a.setEffectiveWeight(bossW[name] || 0); if (name === bossAnim.clip) a.time = Math.min(bossAnim.time, a.getClip().duration - 1e-3); }
+        const shown = clipOn(bossAnim.clip, (n) => !!bossActions[n]); // the dragon's own clip, or its stand-in on another model
+        fadeWeights(bossW, shown, red ? 1 : sdt);
+        for (const name in bossActions) { const a = bossActions[name]; a.setEffectiveWeight(bossW[name] || 0); if (name === shown) a.time = Math.min(bossAnim.time, a.getClip().duration - 1e-3); }
         bossMixer.update(0);
       }
       for (const g of bossGlow) g.m.emissiveIntensity = g.base * (B.exposed > 0 ? 1.8 + 0.6 * Math.sin(tt * 12) : won ? Math.max(0, 1 - bossAnim.time / 2) : 1);
@@ -477,12 +489,14 @@ export function createShoalArena(o) {
     crestMat.emissive.setHex(B.exposed > 0 ? 0xffa040 : 0x2a6cff);
     bossHud.classList.toggle('sa-open', B.exposed > 0);
     // telegraphs
-    ring.visible = band.visible = line.visible = false;
+    ring.visible = band.visible = line.visible = breathFan.visible = clawFan.visible = false;
     if (B.attack && (B.state === 'telegraph' || B.state === 'active')) {
       const a = B.attack, k = B.state === 'active' ? 1 : 1 - Math.max(0, B.t) / (R.BOSS.phases[B.phase].telegraph || 1);
       const op = B.state === 'active' ? 0.85 : 0.25 + 0.45 * k;
       if (a.kind === 'slam') { ring.visible = true; ring.position.set(a.at[0], 0.05, a.at[1]); const r = R.BOSS.attacks.slam.radius; ring.scale.set(r, r, r); ring.material.opacity = op; }
       if (a.kind === 'sweep') { band.visible = true; band.material.opacity = op; }
+      if (a.kind === 'dive') { ring.visible = true; ring.position.set(a.at[0], 0.05, a.at[1]); const r = R.BOSS.attacks.dive.radius; ring.scale.set(r, r, r); ring.material.opacity = op; }
+      if (a.kind === 'breath' || a.kind === 'claw') { const m = a.kind === 'breath' ? breathFan : clawFan; m.visible = true; m.position.set(a.at[0], 0.06, a.at[1]); m.rotation.y = Math.atan2(a.dir[0], a.dir[1]); m.material.opacity = op; }
       if (a.kind === 'lunge') { line.visible = true; line.position.set(a.at[0], 0.05, a.at[1]); line.rotation.y = Math.atan2(a.dir[0], a.dir[1]); line.material.opacity = op; }
     }
     // adds
