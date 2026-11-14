@@ -178,7 +178,7 @@ const retargeted = new Map();
 export function townsfolkClips(model, { names = null, body = 'adult', armOut = 0, key = null, base = baseUrl(), file = 'townsfolk', planted = /^npc_/.test(key || '') } = {}) {
   const k = key ? `${file}|${key}|${typeof body === 'string' ? body : JSON.stringify(body)}|${armOut}|${names ? names.join(',') : '*'}|${planted ? 'p' : ''}` : null;
   if (k && retargeted.has(k)) return retargeted.get(k);
-  const shared = () => loadFile(file, base).then((g) => retargetClips(g, model, { names, body, armOut, planted }), (e) => { console.warn('[anim] shared clips failed', file, e); return []; });
+  const shared = () => loadFile(file, base).then((g) => retargetClips(g, model, { names, body, armOut, planted, sliced: true }), (e) => { console.warn('[anim] shared clips failed', file, e); return []; });
   // a quest giver: the clips baked for this very body (the shared set retargeted here is only the fallback when the file fails)
   const own = file === 'townsfolk' ? bakedClipFile(key) : null;
   const p = own
@@ -216,22 +216,23 @@ const legLength = (rest) => ['L', 'R'].reduce((s, x) => s + rest.get(`thigh_${x}
  * reference's rest directions (so each limb points exactly where the clip points it whatever the two rest poses
  * are), the spine, neck and head keep the model's own posture (a stooped elder stays stooped). The pelvis travel is
  * scaled by the leg-length ratio, then both legs are solved again onto the scaled ankle positions, so the feet stay
- * planted on a child as on a tall adult.
+ * planted on a child as on a tall adult. `sliced`: return a Promise and spread the clips over frames (at most
+ * RETARGET_SLICE_MS of work per frame); otherwise the clips come back at once.
  */
-export function retargetClips(gltf, model, { names = null, body = 'adult', armOut = 0, planted = false } = {}) {
+export function retargetClips(gltf, model, { names = null, body = 'adult', armOut = 0, planted = false, sliced = false } = {}) {
   const style = { ...BODY_STYLE.adult, ...(typeof body === 'string' ? BODY_STYLE[body] : body), planted };
   style.armOut += armOut;
   gltf.scene.updateMatrixWorld(true);
   const refBones = []; gltf.scene.traverse((o) => { if (o !== gltf.scene) refBones.push(o); });
   const ref = restOf(refBones, (b) => b.matrixWorld);
   let skinned = null; model.traverse((o) => { if (!skinned && o.isSkinnedMesh && o.skeleton.bones.some((b) => b.name === 'pelvis')) skinned = o; });
-  if (!skinned || !ref.has('pelvis')) return [];
+  if (!skinned || !ref.has('pelvis')) return sliced ? Promise.resolve([]) : [];
   const sk = skinned.skeleton;
   // the model's rest pose: its bones as they are now, in the model's own space (the pose the file was loaded in)
   model.updateWorldMatrix(true, true);
   const toModel = new THREE.Matrix4().copy(model.matrixWorld).invert();
   const tgt = restOf(sk.bones, (b) => new THREE.Matrix4().multiplyMatrices(toModel, b.matrixWorld));
-  for (const n of ['thigh_L', 'shin_L', 'foot_L', 'thigh_R', 'shin_R', 'foot_R', 'pelvis']) if (!tgt.has(n)) return [];
+  for (const n of ['thigh_L', 'shin_L', 'foot_L', 'thigh_R', 'shin_R', 'foot_R', 'pelvis']) if (!tgt.has(n)) return sliced ? Promise.resolve([]) : [];
   const order = sk.bones.map((b) => b.name).filter((n) => tgt.has(n));
   order.sort((a, b) => depth(tgt, a) - depth(tgt, b));
   const scale = legLength(tgt) / legLength(ref);
@@ -250,13 +251,27 @@ export function retargetClips(gltf, model, { names = null, body = 'adult', armOu
   const legs = ['L', 'R'].map((s) => ({ thigh: `thigh_${s}`, shin: `shin_${s}`, foot: `foot_${s}`, l1: tgt.get(`thigh_${s}`).wp.distanceTo(tgt.get(`shin_${s}`).wp), l2: tgt.get(`shin_${s}`).wp.distanceTo(tgt.get(`foot_${s}`).wp) }));
   // the pelvis track is local to the pelvis' parent, whatever sits above it (a scaled armature on the townsfolk)
   const pelvisParentInv = new THREE.Matrix4().multiplyMatrices(toModel, tgt.get('pelvis').bone.parent.matrixWorld).invert();
-  const out = [];
-  for (const clip of gltf.animations) {
-    if (names && !names.includes(clip.name)) continue;
-    out.push(retargetClip(clip, ref, tgt, order, K, legs, scale, style, pelvisParentInv));
-  }
-  return out;
+  const job = (clip) => retargetClip(clip, ref, tgt, order, K, legs, scale, style, pelvisParentInv);
+  const list = gltf.animations.filter((clip) => !names || names.includes(clip.name));
+  if (!sliced) return list.map(job);
+  // one character's set over several frames: the rest poses are captured above, each clip is pure maths on them
+  // (on a mid laptop a whole set in one frame cost 0.1-0.25 s: the town's first walk and the Shoal's first dodge
+  // hitched while the townsfolk pack retargeted; GPU bench 14.11)
+  return (async () => {
+    const out = []; let t0 = now();
+    for (const clip of list) {
+      out.push(job(clip));
+      if (now() - t0 > RETARGET_SLICE_MS) { await nextFrame(); t0 = now(); }
+    }
+    return out;
+  })();
 }
+
+/** Milliseconds of retargeting per frame before the rest waits for the next frame (retargetClips sliced). */
+export const RETARGET_SLICE_MS = 5;
+const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+// after the next frame is drawn (a timeout queued from the frame callback), or a plain timeout without frames (tests)
+const nextFrame = () => new Promise((resolve) => (typeof requestAnimationFrame === 'function' ? requestAnimationFrame(() => setTimeout(resolve, 0)) : setTimeout(resolve, 0)));
 
 const tgtPelX = (rest) => (rest.get('pelvis') ? rest.get('pelvis').wp.x : 0);
 function depth(rest, n) { let d = 0; for (let p = rest.get(n).parent; p; p = rest.get(p).parent) d++; return d; }
