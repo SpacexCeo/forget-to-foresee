@@ -1,6 +1,6 @@
 // In-game check of one townsperson (e.g. the owner's Tripo girl, child_a): boots the town, waits until that person has
-// the full model and the shared pack's clips, then films seconds of her from a camera 3.2 m to her side that follows her
-// (same frame capture as town-talk.cjs: rendered from the game scene, pixels read back).
+// the full model and the shared pack's clips, then films seconds of her from a camera above and beside her that follows her
+// (Iris is kept 4.5 m south of her so the game draws and animates her; same frame capture as town-talk.cjs: rendered from the game scene, pixels read back).
 //   node tools/gpu-server/townsperson.cjs <url of the build's index> <out dir> <key> [seconds, default 5]
 // Needs Playwright and ffmpeg; take the browser lock first (mkdir /root/locks/browser).
 const { chromium } = require('playwright');
@@ -25,9 +25,10 @@ const { execFileSync } = require('child_process');
   await p.evaluate((k) => { const F = window.__ftf, r = F.renderer, q = F.town.scene.townsfolk.byKey.get(k), cam = F.camera.clone(), at = q.root.position.clone();
     const c = window.__cap = { on: true, frames: [], log: [], copy: document.createElement('canvas') }; const g = c.copy.getContext('2d');
     c.timer = setInterval(() => { if (!c.on) return;
-      q.root.getWorldPosition(at); const y = q.root.rotation.y; // beside her: to her left, a little ahead, at chest height
-      cam.position.set(at.x + Math.cos(y) * 3.2 + Math.sin(y) * 1.2, at.y + 1.1, at.z - Math.sin(y) * 3.2 + Math.cos(y) * 1.2); cam.lookAt(at.x, at.y + 0.7, at.z); cam.updateMatrixWorld();
-      const t = r.getRenderTarget(); r.setRenderTarget(null); r.render(F.scene, cam); const gl = r.getContext(), w = gl.drawingBufferWidth, h = gl.drawingBufferHeight, px = new Uint8ClampedArray(w * h * 4); gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px); r.setRenderTarget(t);
+      q.root.getWorldPosition(at); // from above and to one side (clear of the lanes' walls), looking down at her
+      F.player.pos[0] = at.x; F.player.pos[1] = at.y; F.player.pos[2] = at.z + 4.5; // Iris 4.5 m behind her: the game camera sees her, so she is drawn and animated
+      cam.position.set(at.x + 1.5, at.y + 1.9, at.z + 1.5); cam.lookAt(at.x, at.y + 0.6, at.z); cam.updateMatrixWorld();
+      const t = r.getRenderTarget(), shown = q.root.visible; q.root.visible = true; r.setRenderTarget(null); r.render(F.scene, cam); q.root.visible = shown; /* the game culls her with its own lagging camera */ const gl = r.getContext(), w = gl.drawingBufferWidth, h = gl.drawingBufferHeight, px = new Uint8ClampedArray(w * h * 4); gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px); r.setRenderTarget(t);
       const im = new ImageData(w, h); for (let yy = 0; yy < h; yy++) im.data.set(px.subarray((h - 1 - yy) * w * 4, (h - yy) * w * 4), yy * w * 4); if (c.copy.width !== w) { c.copy.width = w; c.copy.height = h; } g.putImageData(im, 0, 0);
       c.frames.push(c.copy.toDataURL('image/jpeg', 0.9)); c.log.push(q.current + ' ' + q.plan.speed.toFixed(2)); }, 66); }, key);
   const start = Date.now(); await p.waitForTimeout(Number(secs) * 1000 + 300); const took = (Date.now() - start) / 1000;
