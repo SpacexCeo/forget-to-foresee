@@ -2,8 +2,10 @@
 // Same vocabulary as src/locales/zh.js: 贝壳, 丝, 回合, 锚, 卷轴; clans 伊里斯, 盐, 灰, 苔, 琥珀, 霜.
 import quests from './zh-quests.js';
 import hud from './zh-hud.js';
+import account from './zh-account.js';
 export default {
   ...hud, // first: the RPG HUD (en-hud.js keys); this file's own copies below win
+  ...account, // the account panel (en-account.js keys)
   // ---- badge, help ----
   'play.badge': '本地演示 · 规则在你的浏览器中运行，与代理 API 共用同一个房间',
   'play.help.title': '操作',
@@ -636,6 +638,10 @@ export default {
   'ledger.copy': "复制验证步骤",
   'ledger.copied': "已复制",
   'ledger.view': "查看交易",
+  // ---- entry gate (ui/entry-gate.js): the one button after loading, then the language ----
+  'entry.enter': "进入世界",
+  'entry.lang': "选择语言",
+  'entry.ready': "小镇已就绪",
   'intro.skip': "跳过",
   'spot.wheel': "转动转盘",
   'item.prop_wheel_of_fortune': "幸运转盘",
@@ -1400,10 +1406,10 @@ export default {
   'town.cast.quickTip': 'Q / V 立即朝光标方向施放（在射程内，否则在最大射程）',
   'set.ctl.quick': '快速施放（电脑）',
   'set.ctl.quickNote': 'Q / V 立即朝鼠标光标方向施放，无需瞄准。',
-  'set.ctl.mouse': '鼠标',
+  'set.ctl.mouse': '操控模式',
   'set.ctl.mouse.aim': '瞄准（移动鼠标转动视角）',
-  'set.ctl.mouse.classic': '经典（按住右键）',
-  'set.ctl.mouseNote': '瞄准：点击场景以捕获鼠标。左键：攻击，或执行提示的动作。右键：长枪。按住 Ctrl 显示光标；Esc 打开菜单。',
+  'set.ctl.mouse.classic': '经典（左键点击移动，右键拖动转视角）',
+  'set.ctl.mouseNote': '瞄准：点击场景以捕获鼠标。左键：攻击，或执行提示的动作。右键：长枪。按住 Ctrl 显示光标；Esc 打开菜单。经典：左键点击走到该处，按住右键拖动转动视角。',
   'bark.role.guard': "石蛛和更凶的怪物在下城门外的山坡上作乱。打退它们：它们会掉落宝箱！",
   'bark.role.baker': "刚出炉的面包，还热着呢！",
   'bark.role.lamplighter': "每盏灯都点亮了，每个角落都看得见。",

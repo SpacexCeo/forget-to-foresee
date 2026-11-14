@@ -3,8 +3,10 @@
 // Muschio, Ambra, Brina.
 import quests from './it-quests.js';
 import hud from './it-hud.js';
+import account from './it-account.js';
 export default {
   ...hud, // first: the RPG HUD (en-hud.js keys); this file's own copies below win
+  ...account, // the account panel (en-account.js keys)
   // ---- badge, help ----
   'play.badge': 'Demo locale · le regole girano nel tuo browser attraverso la stessa stanza dell’API degli agenti',
   'play.help.title': 'Comandi',
@@ -637,6 +639,10 @@ export default {
   'ledger.copy': "Copia i passi di verifica",
   'ledger.copied': "Copiato",
   'ledger.view': "Apri la transazione",
+  // ---- entry gate (ui/entry-gate.js): the one button after loading, then the language ----
+  'entry.enter': "Entra nel mondo",
+  'entry.lang': "Scegli la lingua",
+  'entry.ready': "La città è pronta",
   'intro.skip': "Salta",
   'spot.wheel': "Gira la ruota",
   'item.prop_wheel_of_fortune': "Ruota della fortuna",
@@ -1401,10 +1407,10 @@ export default {
   'town.cast.quickTip': 'Q / V subito verso il cursore (entro la portata, altrimenti al massimo)',
   'set.ctl.quick': 'Lancio rapido (PC)',
   'set.ctl.quickNote': 'Q / V si lanciano subito verso il cursore, senza mirare.',
-  'set.ctl.mouse': 'Modalità mouse',
+  'set.ctl.mouse': 'Modalità di controllo',
   'set.ctl.mouse.aim': 'Mira (il mouse gira la visuale)',
-  'set.ctl.mouse.classic': 'Classico (tieni premuto il tasto destro)',
-  'set.ctl.mouseNote': "Mira: clicca la scena per catturare il mouse. Tasto sinistro: colpo, o l'azione del suggerimento. Tasto destro: Lancia. Tieni premuto Ctrl per il cursore; Esc apre il menu.",
+  'set.ctl.mouse.classic': 'Classico (clic sinistro per camminare, trascina col destro per la visuale)',
+  'set.ctl.mouseNote': "Mira: clicca la scena per catturare il mouse. Tasto sinistro: colpo, o l'azione del suggerimento. Tasto destro: Lancia. Tieni premuto Ctrl per il cursore; Esc apre il menu. Classico: il clic sinistro porta al punto, tieni premuto il tasto destro e trascina per girare la visuale.",
   'bark.role.guard': "Ragni di pietra e di peggio razziano il pendio oltre la porta bassa. Respingili: lasciano scrigni!",
   'bark.role.baker': "Pane fresco dal forno, ancora caldo!",
   'bark.role.lamplighter': "Ogni lampada accesa, ogni angolo visto.",
