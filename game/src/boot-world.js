@@ -1262,7 +1262,7 @@ function clickWalk(target, run) {
   moveTarget = null; if (play) play.cancelRoute();
   if (!townFlow.walkTo(r.path)) return false;
   const end = r.path[r.path.length - 1];
-  clickNav = { target: end, run, best: Infinity, bestAt: performance.now(), replans: 0, ms: r.ms };
+  clickNav = { target: end, run, best: Infinity, bestAt: performance.now(), replans: 0, ms: r.ms, reached: r.reached, path: r.path };
   marker.position.set(end[0], end[1] + 0.06, end[2]); marker.visible = true;
   return true;
 }
@@ -1733,6 +1733,7 @@ window.__ftf = {
     get photo() { return photo; }, // photo mode (QA: toggle, setFilter, requestCapture)
     get monsters() { return townMonsters; }, chests: chestBag, // monsters outside the walls and the chest bag (QA)
     companions, // dragon companions in flight (QA)
+    get nav() { return navTown; }, get clickWalk() { return clickNav; }, // click-to-move: the walk grid and the route in progress (QA)
   } : null,
 };
 requestAnimationFrame(frame);
