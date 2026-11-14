@@ -256,3 +256,12 @@ test('the boss is a finished episode: home again, a chapter-close card with the 
   const { lootRowText } = await import('../../src/play/season-loot-ui.js');
   assert.equal(lootRowText({ kind: 'boss_chest', text: 'A legendary chest' }, (k) => k), 'A legendary chest');
 });
+
+test('the Shoal\'s action buttons are painted icons like the town hotbar, the key in the corner and the name as the tooltip (owner 14.11)', async () => {
+  const { existsSync, readFileSync } = await import('node:fs');
+  const { SHOAL_SKILLS } = await import('../../src/rpg/shoal-skills.js');
+  for (const s of SHOAL_SKILLS) assert.ok(s.art && existsSync(new URL(`../../public/assets/ui/icons/${s.art}.webp`, import.meta.url)), s.id + ' has its icon');
+  const arena = readFileSync(new URL('../../src/scenes/shoal-arena.js', import.meta.url), 'utf8');
+  assert.match(arena, /b\.classList\.add\('sa-ic'\); b\.style\.backgroundImage = `url\("\$\{ICON_BASE\}assets\/ui\/icons\/\$\{s\.art\}\.webp"\)`; const n = say\('shoal\.skill\.' \+ s\.id\); b\.title = `\$\{n\} \(\$\{keyCap\(s\.key\)\}\)`;/);
+  assert.match(arena, /\.sa-skill\.sa-ic span\{position:absolute;width:1px;height:1px;overflow:hidden/, 'the text label is for screen readers only');
+});

@@ -33,6 +33,9 @@ const CSS = `
 .sa-skill kbd{position:absolute;left:4px;top:3px;font:600 10px system-ui;opacity:.75}.sa-skill s{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);text-decoration:none}
 .sa-skill u{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(0deg,rgba(255,138,58,.55),rgba(200,240,255,.25));text-decoration:none}
 .sa-skill.sa-ultb{grid-column:span 2;font-size:13px}
+.sa-skill.sa-ic{background-size:cover;background-position:center;background-repeat:no-repeat;padding:0}.sa-skill.sa-ultb.sa-ic{background-size:contain;background-color:rgba(18,14,8,.85)}
+.sa-skill.sa-ic span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.sa-skill.sa-ic kbd{left:auto;right:3px;top:3px;padding:1px 4px;border-radius:4px;background:rgba(0,0,0,.65);color:#fff;opacity:1}
 .sa-skill.sa-ultb.sa-ready{border-color:#ffd27a;color:#fff;box-shadow:0 0 14px rgba(255,170,80,.85);animation:sa-pulse 1.2s ease-in-out infinite}
 .sa-skill.sa-on{border-color:#c8f0ff;color:#fff;background:rgba(40,70,90,.85)}
 .sa-skill.sa-down{transform:scale(.94)}
@@ -56,6 +59,7 @@ html[data-motion=reduce] .sa-skill.sa-ultb.sa-ready{animation:none}
  * @param {boolean} o.mobile @param {() => string} o.hero @param {(name: string) => void} o.clip @param {() => number[]} o.axes
  * @param {object} o.rig the camera rig (ground axes) @param {() => void} o.onWin @param {() => void} o.onDeath @param {() => void} o.onHome
  */
+const ICON_BASE = (() => { try { return (import.meta.env && import.meta.env.BASE_URL) || '/'; } catch { return '/'; } })();
 export function createShoalArena(o) {
   const { THREE, scene, center, camera = null, say, reduced, mobile, hero, clip, axes, rig, onWin, onDeath, onHome } = o;
   // the heroine's own companion dragons (their world positions, kinds and a flourish), when the chain says she has any
@@ -205,10 +209,13 @@ export function createShoalArena(o) {
   function buildSkills() {
     skillsEl.textContent = ''; skillBtns = []; liftBtn = ultBtn = null;
     const keyCap = (k) => (k === 'Space' ? '␣' : k);
+    // owner 14.11: painted icons like the town hotbar, the key in the corner, the name as the tooltip (and for screen readers)
+    const iconize = (b, s) => { if (!s.art) return; b.classList.add('sa-ic'); b.style.backgroundImage = `url("${ICON_BASE}assets/ui/icons/${s.art}.webp")`; const n = say('shoal.skill.' + s.id); b.title = `${n} (${keyCap(s.key)})`; b.setAttribute('aria-label', n); };
     // Elise: Lift and the Tempest on the top row (the Tempest twice as wide), her three casts under them
     for (const s of shoalExtrasFor(hero())) {
       const b = el('button', 'sa-skill' + (s.kind === 'ultimate' ? ' sa-ultb' : ' sa-liftb')); b.type = 'button'; b.dataset.skill = s.id;
       b.setAttribute('aria-label', say('shoal.skill.' + s.id));
+      iconize(b, s);
       if (s.kind === 'ultimate') { b.append(el('u'), el('kbd', null, keyCap(s.key)), el('span', null, say('shoal.skill.' + s.id))); ultBtn = b; b.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); ult(); }); }
       else {
         b.append(el('kbd', null, keyCap(s.key)), el('span', null, say('shoal.skill.' + s.id))); liftBtn = b;
@@ -225,7 +232,7 @@ export function createShoalArena(o) {
     }
     for (const s of shoalSkillsFor(hero())) {
       const b = el('button', 'sa-skill'); b.type = 'button'; b.dataset.skill = s.id;
-      b.append(el('kbd', null, keyCap(s.key)), el('span', null, say('shoal.skill.' + s.id)), el('s'));
+      b.append(el('kbd', null, keyCap(s.key)), el('span', null, say('shoal.skill.' + s.id)), el('s')); iconize(b, s);
       b.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); if (e.pointerType !== 'mouse') touchAim = true; use(s); });
       skillsEl.append(b); skillBtns.push({ b, s });
     }
