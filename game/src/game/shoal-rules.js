@@ -249,9 +249,9 @@ export const inTempest = (me, at, extra = 0, U = ULT) => Math.hypot(me[0] - at[0
  * ring or line glows before the hit lands (readable: never under 0.8 s). `checkpoint` = the HP a death resets it to.
  */
 export const BOSS = f({
-  // tuned on the scripted run (tests/client/shoal-sim.mjs): an average Elise wins in about 3 minutes standing
-  // still, more with the walking and aiming of a real fight; a weak one dies a few times but gets there
-  hp: 10000,
+  // tuned on the scripted run (tests/client/shoal-sim.mjs): an average Elise wins in about 2 minutes standing still,
+  // more with the walking and aiming of a real fight (owner 14.11: 10000 dragged past 4 minutes with real keys)
+  hp: 6000,
   armor: 0.2,             // damage taken while the crest is closed
   exposedMult: 1.5,       // damage taken while the weak point is open
   exposedTime: 2.0,       // seconds the crest stays open after she dodges a blow
@@ -262,7 +262,7 @@ export const BOSS = f({
   phases: f([
     f({ id: 1, above: 1.0, rotation: f(['slam', 'sweep', 'breath', 'slam']), telegraph: 1.4, rest: 1.6, adds: 0 }),
     f({ id: 2, above: 0.66, rotation: f(['lunge', 'breath', 'adds', 'slam', 'sweep']), telegraph: 1.15, rest: 1.3, adds: 3 }),
-    f({ id: 3, above: 0.33, rotation: f(['lunge', 'breath', 'slam', 'sweep', 'breath', 'lunge']), telegraph: 0.9, rest: 0.95, adds: 2 }),
+    f({ id: 3, above: 0.25, rotation: f(['lunge', 'breath', 'slam', 'sweep', 'breath', 'lunge']), telegraph: 0.9, rest: 0.95, adds: 2 }),
   ]),
   airMult: 0.6,           // damage taken while it flies (higher, harder to hit), the open weak point aside
   attacks: f({

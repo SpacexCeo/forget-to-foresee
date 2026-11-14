@@ -37,7 +37,7 @@ export function resetTips() { save({ seen: {}, off: false }); }
 export function skipTips() { const v = load(); v.off = true; save(v); hideCurrent(); queue.length = 0; }
 
 // a tip waits while the intro runs or a window is open (the game menu, a chest reveal, a Day-1 card): it never pops over one (jury path 14.11)
-const blocked = (doc) => !!(state.get('npe.active') || (doc && (doc.getElementById && doc.getElementById('ftf-modal-open') || (doc.body && doc.body.classList.contains('ftf-modal-open')) || (doc.querySelector && doc.querySelector('.gm, .co, .cb, .d1-panel, .d1-card, .ftf-portal-panel, dialog[open]')))));
+const blocked = (doc) => !!(state.get('npe.active') || (doc && (doc.getElementById && doc.getElementById('ftf-modal-open') || (doc.body && (doc.body.classList.contains('ftf-modal-open') || doc.body.classList.contains('ftf-in-shoal'))) || (doc.querySelector && doc.querySelector('.gm, .co, .cb, .d1-panel, .d1-card, .ftf-portal-panel, dialog[open]')))));
 
 // a tip held back by an open window shows once the window closes (checked every 1.5 s while one waits)
 let drainTimer = null;
