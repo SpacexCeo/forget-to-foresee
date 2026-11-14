@@ -10,7 +10,7 @@ import { fetchGltfUrl } from '../render/assets.js';
 import { TOWN_ORIGIN } from './town-layout.js';
 import { onField } from './town-outside.js';
 import { MONSTERS, castHits, spawnPoint } from './monster-rules.js';
-import { rollDrop, chestTier, lootFxOf, LOOT, chestEvent } from '../game/chests.js';
+import { rollDrop, chestTier, lootFxOf, LOOT } from '../game/chests.js';
 import { cue } from '../audio/town-audio.js';
 export { MONSTERS, castHits, spawnPoint };
 
@@ -236,11 +236,9 @@ export function createTownMonsters({ scene, town, player, bag, onPickup = () => 
           continue;
         }
         // walking onto it picks it up; an uncollected chest goes to the bag by itself after LOOT.autoBagS, so nothing is lost
-        const walked = Math.hypot(ch.at[0] - player.pos[0], ch.at[2] - player.pos[2]) <= MONSTERS.pickup && Math.abs(ch.at[1] - player.pos[1]) < 2;
-        if (walked || ch.t >= LOOT.autoBagS) {
+        if ((Math.hypot(ch.at[0] - player.pos[0], ch.at[2] - player.pos[2]) <= MONSTERS.pickup && Math.abs(ch.at[1] - player.pos[1]) < 2) || ch.t >= LOOT.autoBagS) {
           ch.picked = 0.0001;
           const c = bag.add({ tier: ch.tier, source: 'monster' });
-          if (walked) chestEvent('pickup', { id: c.id, tier: c.tier, source: 'monster' }); // her own pickup (not the auto-bag)
           cue('gift_chime');
           onPickup(c);
         }

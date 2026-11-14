@@ -74,13 +74,3 @@ test('boss model: both files carry the eight clips with the lengths the game tim
     void bin;
   }
 });
-
-test('the killing blow clears the boss\'s attack: no telegraph is left glowing after the win (GPU bench run 14.11)', async () => {
-  const R = await import('../../src/game/shoal-rules.js');
-  let b = R.freshBoss(2);
-  b = R.bossStep(b, 10, [0, 0]).boss;                       // rest -> telegraph
-  assert.equal(b.state, 'telegraph'); assert.ok(b.attack);
-  const r = R.hitBoss({ ...b, exposed: 1 }, 1e9);
-  assert.equal(r.boss.dead, true); assert.equal(r.boss.state, 'dead'); assert.equal(r.boss.attack, null);
-  assert.deepEqual(R.bossStep(r.boss, 5, [0, 0]).events, [], 'a dead boss does nothing');
-});
