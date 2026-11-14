@@ -43,7 +43,7 @@ export function mountAccountMethods({ doc = globalThis.document, t, mail, onSign
   const sec = el('div', 'acct-sec');
   const msg = el('p', 'acct-msg'); msg.setAttribute('role', 'status'); msg.setAttribute('aria-live', 'polite');
   const tell = say || ((text) => { msg.textContent = text; });
-  const errText = (r) => (r.error === 'email_not_configured' ? t('acct.email.off') : t('acct.error', { reason: r.error || 'error' }));
+  const errText = (r) => (r.error === 'email_not_configured' ? t('acct.email.off') : r.error === 'last_method' ? t('acct.unlink.last') : t('acct.error', { reason: r.error || 'error' }));
   let busy = false;
   /** One inline step: an input and its button (email or the 6-digit code). */
   const form = (placeholder, type, label, onSubmit, value = '') => {
@@ -117,9 +117,11 @@ export function mountAccountMethods({ doc = globalThis.document, t, mail, onSign
       list.replaceChildren();
       if (m.status !== 'ok') { list.append(el('li', null, errText(m))); return; }
       if (!m.methods.length) list.append(el('li', null, t('acct.methods.none')));
+      if (m.methods.length === 1) list.append(el('li', 'acct-last', t('acct.unlink.last')));
       for (const x of m.methods) {
         const li = el('li'); li.append(ic(el('span', null, t('acct.kind.' + x.kind) + ' · ' + x.hint), x.kind === 'email' ? 'email' : 'wallet'));
         const u = ic(el('button', null, t('acct.unlink')), 'unlink'); u.type = 'button';
+        if (m.methods.length <= 1) { u.disabled = true; u.title = t('acct.unlink.last'); } // the last way in stays (the relayer refuses it too)
         u.addEventListener('click', async () => { u.disabled = true; const r = await mail.unlink(x.id); tell(r.status === 'unlinked' ? t('acct.unlinked') : errText(r)); refresh(); });
         li.append(u); list.append(li);
       }

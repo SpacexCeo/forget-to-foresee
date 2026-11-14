@@ -50,6 +50,7 @@ export default {
   'acct.methods.none': "暂无：仅此浏览器。",
   'acct.unlink': "解除绑定",
   'acct.unlinked': "已解除绑定。",
+  'acct.unlink.last': "这是你唯一的登录方式：请先绑定另一种方式，再解除它。",
   'acct.wallet.link': "要绑定另一个钱包，请在此账户打开时用它在下方登录。",
   'acct.kind.email': "邮箱",
   'acct.kind.evm': "EVM 钱包",

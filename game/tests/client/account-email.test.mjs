@@ -72,8 +72,10 @@ test('unknown email: no_account and no mail; wrong code; unlink forgets the emai
   await phone.mail.loginStart('ann@example.com');
   assert.equal((await phone.mail.loginFinish('ann@example.com', w.outbox.at(-1).code === '000000' ? '000001' : '000000')).error, 'wrong_code');
   const id = (await desk.mail.methods()).methods[0].id;
+  assert.deepEqual(await desk.mail.unlink(id), { status: 'error', error: 'last_method' }, 'the only way in is never unlinked');
+  w.store.set('evm:0xabcdef0123456789abcdef0123456789abcdef01', { account: ACC, kind: 'evm', address: '0xabcdef0123456789abcdef0123456789abcdef01', linked_at: 'x', history: [] }); // a wallet linked to the same account
   assert.deepEqual(await desk.mail.unlink(id), { status: 'unlinked' });
-  assert.deepEqual((await desk.mail.methods()).methods, []);
+  assert.deepEqual((await desk.mail.methods()).methods.map((x) => x.kind), ['evm'], 'the wallet stays as the way in');
   await phone.mail.loginStart('ann@example.com'); assert.equal(w.outbox.length, 2, 'no new code for an unlinked email');
 });
 

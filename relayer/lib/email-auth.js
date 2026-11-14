@@ -220,7 +220,7 @@ export function createEmailAuth({ store, codes, mailer, accessKey, key, now = ()
       const p = await proof(b && b.account, 'unlink', id); if (!p.ok) return { status: 401, body: { error: p.error } };
       const r = store.get(id);
       if (!r || r.account !== b.account.account_id) return { status: 404, body: { error: 'not_linked' } };
-      if (methodsOf(r.account).length <= 1 && r.kind !== 'email') return { status: 409, body: { error: 'last_method' } };
+      if (methodsOf(r.account).length <= 1) return { status: 409, body: { error: 'last_method' } }; // owner 15.11: the last way in is never unlinked, an email included
       store.remove(id);
       return { status: 200, body: { status: 'unlinked', key_pub: r.key_pub || null } };
     },

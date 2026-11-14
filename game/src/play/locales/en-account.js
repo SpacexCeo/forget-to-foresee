@@ -51,6 +51,7 @@ export default {
   'acct.methods.none': "None yet: this browser only.",
   'acct.unlink': "Unlink",
   'acct.unlinked': "Unlinked.",
+  'acct.unlink.last': "This is your only way in: link another method before unlinking it.",
   'acct.wallet.link': "To link another wallet, sign in with it below while this account is open.",
   'acct.kind.email': "Email",
   'acct.kind.evm': "EVM wallet",

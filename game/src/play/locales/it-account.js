@@ -50,6 +50,7 @@ export default {
   'acct.methods.none': "Nessuno per ora: solo questo browser.",
   'acct.unlink': "Scollega",
   'acct.unlinked': "Scollegato.",
+  'acct.unlink.last': "È il tuo unico modo di accedere: collega un altro metodo prima di scollegarlo.",
   'acct.wallet.link': "Per collegare un altro wallet, accedi con quello qui sotto mentre questo account è aperto.",
   'acct.kind.email': "Email",
   'acct.kind.evm': "Wallet EVM",
