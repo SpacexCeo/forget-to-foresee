@@ -117,7 +117,7 @@ varying vec2 vP;
 void main() {
   float tip = smoothstep(0.15, 0.78, vR);
   float hub = exp(-pow((vR - 0.17) / 0.04, 2.0));
-  vec3 col = mix(uColor * 0.5, vec3(1.0, 1.0, 0.98) * 1.6, tip) + uColor * hub * 1.2;
+  vec3 col = mix(uColor * 0.6, mix(uColor, vec3(1.0), 0.6) * 1.6, tip) + uColor * hub * 1.2;
   gl_FragColor = vec4(col * uFade, (0.35 + 0.65 * tip) * uFade);
 }`;
 const BLUR_VS = /* glsl */`varying vec2 vP; void main() { vP = position.xz; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
@@ -131,7 +131,7 @@ void main() {
   float band = pow(0.5 + 0.5 * sin(ang * 4.0 - uTime * 34.0 + r * 3.0), 6.0);
   float ring = smoothstep(0.35, 0.82, r) * (1.0 - smoothstep(0.82, 1.0, r));
   float rim = exp(-pow((r - 0.86) / 0.05, 2.0));
-  float a = (band * ring * 0.45 + rim * 0.35) * uFade;
+  float a = (band * ring * 0.32 + rim * 0.1) * uFade;
   gl_FragColor = vec4(mix(uColor, vec3(1.0), rim * 0.5) * 1.3, a);
 }`;
 
@@ -292,7 +292,7 @@ export function createSpellFx({ THREE, parent, scale = 1, rand = Math.random }) 
   const _w = new THREE.Vector3(), _eye = new THREE.Vector3();
   const N = (k) => Math.max(1, Math.round(k * scale));
 
-  function ember(color = 0xff8a3a, size = 0.55) {
+  function ember(color = 0xff8a3a, size = 0.7) {
     const obj = new THREE.Group(); obj.name = 'spell-ember';
     const m = new THREE.Mesh(plane, new THREE.ShaderMaterial({
       uniforms: { uTime: time, uSeed: { value: rand() }, uSize: { value: size }, uColor: { value: new THREE.Color(color) } },
