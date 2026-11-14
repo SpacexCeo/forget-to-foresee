@@ -32,7 +32,10 @@ export function cursorFor(node, { scene = null, booting = false, canvas = null }
 }
 
 const CSS = `
-html.ftf-gc-on, html.ftf-gc-on * { cursor: none !important; }
+html.ftf-gc-on.ftf-gc-live, html.ftf-gc-on.ftf-gc-live * { cursor: none !important; }
+/* the custom cursor is not drawn (no mouse move yet, after leaving the window, a fullscreen switch): the system pointer
+   shows, even under a film overlay that hides the cursor, so a button can always be found (owner 14.11) */
+html.ftf-gc-on:not(.ftf-gc-live) button, html.ftf-gc-on:not(.ftf-gc-live) #boot, html.ftf-gc-on:not(.ftf-gc-live) #boot * { cursor: default !important; }
 .ftf-gc { position: fixed; left: 0; top: 0; z-index: 2147483647; width: 32px; height: 32px; overflow: hidden; pointer-events: none; contain: strict;
   transform: translate3d(calc(var(--gc-x, -64px) - var(--gc-hx, 2px)), calc(var(--gc-y, -64px) - var(--gc-hy, 2px)), 0); will-change: transform; }
 .ftf-gc[hidden] { display: none; }
@@ -60,6 +63,8 @@ export function installGameCursor({ base = '/', sceneState = () => null, canvas 
   for (const n of Object.keys(CURSORS)) for (const f of [`cursor_${n}.png`, `cursor_${n}_frames.png`]) { const im = new win.Image(); im.src = base + CURSOR_BASE + f; }
   const host = doc.createElement('div'); host.className = 'ftf-gc'; host.hidden = true; host.setAttribute('aria-hidden', 'true');
   host.append(doc.createElement('i')); doc.body.append(host);
+  // the system pointer is hidden only while our element is actually drawn (ftf-gc-live)
+  const show = (on) => { host.hidden = !on; doc.documentElement.classList.toggle('ftf-gc-live', !!on); };
   doc.documentElement.classList.add('ftf-gc-on');
   let state = '', over = null, pressT = 0, x = -64, y = -64;
   const set = (next) => {
@@ -75,13 +80,13 @@ export function installGameCursor({ base = '/', sceneState = () => null, canvas 
   const locked = () => !!doc.pointerLockElement;   // mouse aim: the crosshair is the cursor
   const refresh = () => set(cursorFor(over, { scene: sceneState(), booting: !!doc.getElementById('boot'), canvas: canvas() }));
   const move = (e) => {
-    if (e.pointerType && e.pointerType !== 'mouse') { host.hidden = true; return; }
+    if (e.pointerType && e.pointerType !== 'mouse') { show(false); return; }
     x = e.clientX; y = e.clientY; over = e.target;
     // a modal <dialog> (the menu, Settings) sits in the browser's top layer, above any z-index: our element would hide
     // under it, so over an open modal the system pointer comes back (owner 14.11: "the cursor does not work in the menu")
     const modal = topModal();
     doc.documentElement.classList.toggle('ftf-gc-on', !modal);
-    host.hidden = locked() || !!modal;
+    show(!locked() && !modal);
     host.style.setProperty('--gc-x', x + 'px'); host.style.setProperty('--gc-y', y + 'px');
     refresh();
   };
@@ -91,8 +96,8 @@ export function installGameCursor({ base = '/', sceneState = () => null, canvas 
     pressT = setTimeout(() => host.classList.remove('press'), PRESS.ms);
   };
   const down = (e) => { if (!e.pointerType || e.pointerType === 'mouse') press(); };
-  const leave = () => { host.hidden = true; };
-  const lockChange = () => { host.hidden = locked() || x < 0; };
+  const leave = () => { show(false); };
+  const lockChange = () => { show(!locked() && x >= 0); };
   // the scene changes under a still mouse (a prompt appears, the camera starts turning): read it again ten times a second
   const timer = setInterval(() => { if (!host.hidden && over && over === canvas()) refresh(); }, 100);
   doc.addEventListener('pointermove', move, { passive: true, capture: true });
@@ -107,7 +112,7 @@ export function installGameCursor({ base = '/', sceneState = () => null, canvas 
       clearTimeout(pressT); clearInterval(timer);
       doc.removeEventListener('pointermove', move, { capture: true }); doc.removeEventListener('pointerdown', down, { capture: true });
       doc.removeEventListener('pointerlockchange', lockChange); doc.documentElement.removeEventListener('mouseleave', leave);
-      doc.documentElement.classList.remove('ftf-gc-on'); host.remove();
+      doc.documentElement.classList.remove('ftf-gc-on', 'ftf-gc-live'); host.remove();
     },
   };
 }

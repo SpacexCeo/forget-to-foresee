@@ -640,6 +640,7 @@ export default {
   'ledger.view': "Открыть транзакцию",
   // ---- entry gate (ui/entry-gate.js): the one button after loading, then the language ----
   'entry.enter': "Войти в мир",
+  'entry.enterHint': "или нажмите Enter",
   'entry.lang': "Выберите язык",
   'entry.ready': "Город готов",
   // ---- "Press F11 for fullscreen" (ui/fullscreen-hint.js) ----

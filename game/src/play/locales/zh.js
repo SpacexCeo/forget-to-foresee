@@ -642,6 +642,7 @@ export default {
   'ledger.view': "查看交易",
   // ---- entry gate (ui/entry-gate.js): the one button after loading, then the language ----
   'entry.enter': "进入世界",
+  'entry.enterHint': "或按 Enter 键",
   'entry.lang': "选择语言",
   'entry.ready': "小镇已就绪",
   // ---- "Press F11 for fullscreen" (ui/fullscreen-hint.js) ----

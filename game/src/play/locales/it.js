@@ -643,6 +643,7 @@ export default {
   'ledger.view': "Apri la transazione",
   // ---- entry gate (ui/entry-gate.js): the one button after loading, then the language ----
   'entry.enter': "Entra nel mondo",
+  'entry.enterHint': "oppure premi Invio",
   'entry.lang': "Scegli la lingua",
   'entry.ready': "La città è pronta",
   // ---- "Press F11 for fullscreen" (ui/fullscreen-hint.js) ----
