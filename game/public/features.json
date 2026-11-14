@@ -27,6 +27,7 @@
     "glassShoal": false,
     "townLedger": true,
     "tales": true,
-    "wayfarers": true
+    "wayfarers": true,
+    "shellAura": true
   }
 }
