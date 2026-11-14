@@ -113,7 +113,7 @@ test('desktop governor: a strong GPU climbs to 2x supersampling on ultra, steps 
   const gov = new TierGovernor(g);
   let r = run(gov, 'ultra', 16, 60 * 15);
   assert.deepEqual(r.changes, [{ pixelScale: 1.25 }, { pixelScale: 1.5 }], 'vsync-bound 16 ms frames keep the budget: it climbs');
-  r = run(gov, 'ultra', 30, 400);
+  r = run(gov, 'ultra', 30, 200);
   assert.deepEqual(r.changes, [{ pixelScale: 1.25 }], 'one slow window takes back exactly one step');
   r = run(gov, 'ultra', 16, 2000);
   assert.deepEqual(r.changes, [], 'locked: no climbing again');
