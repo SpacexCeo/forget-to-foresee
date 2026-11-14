@@ -60,7 +60,7 @@ export function buildDevice() {
     /** power 0..1: the band spins up to 1.5 turns a second, the pane fills with light. */
     update(dt, t, power) {
       spin += dt * power * 1.5 * Math.PI * 2; band.rotation.y = spin; bandMat.opacity = 0.25 + 0.75 * power;
-      paneMat.uniforms.uTime.value = t; paneMat.uniforms.uPower.value = power; light.intensity = 7 * power; // a cool light: at arm's length a warm 11 turned her black jacket olive (QA 14.11)
+      paneMat.uniforms.uTime.value = t; paneMat.uniforms.uPower.value = power; light.intensity = 4 * power; // a cool light: at arm's length a warm 11 turned her black jacket olive (QA 14.11)
       light.color.setRGB(0.72 + 0.12 * power, 0.9, 1.0 - 0.08 * power);
       if (model) {
         const hum = 0.85 + 0.15 * Math.sin(t * 6.0);

@@ -12,6 +12,7 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { buildLab, LAB_MODELS } from '../../scenes/lab/index.js';
 import { buildVortexDisk, buildTunnel, buildVortexFx, buildTunnelStreaks, WarpShader } from './vortex.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
+import { installGrade } from '../../render/grade.js';
 import { createLabAudio } from './lab-audio.js';
 import { createIrisPoses } from './iris-poses.js';
 import { createTimeline } from './timeline.js';
@@ -38,6 +39,22 @@ async function loadIris(phone) {
     return { model, mixer, acts, poses: createIrisPoses(model), w: { idle: 1, walk: 0, run: 0 } };
   } catch (e) { if (globalThis.console) globalThis.console.warn('[prologue] Iris not loaded', e); return null; }
 }
+
+/** A camera's look on top of the grade (display referred): vignette, a little warm halation round highlights, fine grain. */
+const FilmShader = {
+  uniforms: { tDiffuse: { value: null }, uTime: { value: 0 } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: `uniform sampler2D tDiffuse; uniform float uTime; varying vec2 vUv;
+    float h(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+    void main(){
+      vec3 c = texture2D(tDiffuse, vUv).rgb;
+      float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
+      c += vec3(0.05, 0.022, 0.0) * smoothstep(0.75, 1.0, l);                 // halation: highlights bleed warm
+      vec2 q = vUv - 0.5; c *= mix(1.0, 0.72, smoothstep(0.25, 0.85, dot(q, q) * 2.2));   // vignette
+      c += (h(vUv * 1024.0 + fract(uTime * 13.7)) - 0.5) * 0.028 * (1.0 - l * 0.6);  // grain, less in the lights
+      gl_FragColor = vec4(c, 1.0);
+    }`,
+};
 
 /** The owner's lab room and device models: {room, device} scenes (either null when missing or failed). */
 async function loadLabModels(phone) {
@@ -69,7 +86,7 @@ export function createPrologue(ctx = {}) {
     host.append(vign, white, black, title); document.body.append(host);
     let renderer;
     try { renderer = new THREE.WebGLRenderer({ canvas, antialias: !phone, powerPreference: 'high-performance' }); } catch { host.remove(); throw new Error('no renderer for the prologue'); }
-    renderer.setPixelRatio(Math.min(globalThis.devicePixelRatio || 1, phone ? 1 : 1.5)); renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
+    renderer.setPixelRatio(Math.min(globalThis.devicePixelRatio || 1, phone ? 1 : 1.5)); renderer.outputColorSpace = THREE.SRGBColorSpace; installGrade(renderer); renderer.toneMappingExposure = 1.15;   // the game's grade (AgX, saturation, S-curve, cool shadows, warm lights)
     if (!phone) { renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; }
     const scene = new THREE.Scene(); scene.background = new THREE.Color(0x05070c);
     // a soft studio environment: the lacquer, steel and glass get reflections, the shadows a little fill
@@ -77,13 +94,14 @@ export function createPrologue(ctx = {}) {
     scene.environment = envTex; scene.environmentIntensity = 0.3;
     const camera = new THREE.PerspectiveCamera(40, 1, 0.05, 200);
     // bloom on what is brighter than white (LED lines, downlight discs, the crystal, the vortex); phones draw direct
-    let composer = null, bloom = null, warp = null;
+    let composer = null, bloom = null, warp = null, film = null;
     if (!phone) {
       composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 }));
       composer.addPass(new RenderPass(scene, camera));
       warp = new ShaderPass(WarpShader); composer.addPass(warp);   // the pull's swirl, shock ring, zoom blur and fringes
       bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.5, 0.45, 2.0); composer.addPass(bloom);
       composer.addPass(new OutputPass());
+      film = new ShaderPass(FilmShader); composer.addPass(film);   // the lens: vignette, a breath of halation, fine grain
     }
     const resize = () => { const w = host.clientWidth || innerWidth, h = host.clientHeight || innerHeight; renderer.setSize(w, h, false); if (composer) composer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); };
     resize(); addEventListener('resize', resize);
@@ -159,11 +177,13 @@ export function createPrologue(ctx = {}) {
         if (cam.tunnel) { u.uCenter.value.set(0.5, 0.5); u.uPinch.value = 0; u.uRing.value = -1; u.uZoom.value = motion * (0.7 + 2.5 * (1 - ss(31, 31.8, t)) + 1.2 * ss(33.5, 34.8, t)); u.uChroma.value = motion * 0.006; }
         else {
           camera.updateMatrixWorld(); ndc.copy(DEVICE).project(camera); u.uCenter.value.set(ndc.x * 0.5 + 0.5, ndc.y * 0.5 + 0.5);
-          u.uPinch.value = motion * open * (0.25 + 0.45 * ss(27.5, 31, t)) * (ndc.z < 1 ? 1 : 0);
-          u.uRing.value = t >= 26.5 && t < 27.9 ? (t - 26.5) * 1.3 : -1; u.uZoom.value = motion * 0.6 * ss(29.5, 31, t);
-          u.uChroma.value = motion * (0.0015 + 0.012 * open * ss(27.5, 31, t));
+          const on = open > 0.001 && ndc.z < 1 ? motion : 0;   // nothing at all before the vortex, or with the device behind the camera
+          u.uPinch.value = on * open * (0.25 + 0.45 * ss(27.5, 31, t));
+          u.uRing.value = on && t >= 26.5 && t < 27.9 ? (t - 26.5) * 1.3 : -1; u.uZoom.value = on * 0.6 * ss(29.5, 31, t);
+          u.uChroma.value = on * open * (0.002 + 0.012 * ss(27.5, 31, t));
         }
       }
+      if (film) film.uniforms.uTime.value = reduced ? 0 : t;
       if (composer) composer.render(); else renderer.render(scene, camera);
       if (st.done) { finish(resolve); return; }
       raf = requestAnimationFrame(() => frame(resolve));
