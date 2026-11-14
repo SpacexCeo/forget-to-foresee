@@ -9,6 +9,7 @@ export const ROUTES = Object.freeze({
   quests: { event: 'ftf:journal-toggle' },
   market: { event: 'ftf:market-open' },
   bag: { event: 'ftf:menu-open', tab: 'inventory' }, // the game menu's Inventory tab (boot-world.js listens)
+  map: { event: 'ftf:town-map' }, // the painted town map (play/town-map-ui.js; boot-world.js listens)
 });
 
 /** Opens window `id`; returns true when something real handled it. */
