@@ -52,7 +52,7 @@ test('dragon model: both files carry the seven clips, one skin with the saddle s
   }
 });
 
-test('saddle model: one mesh inside the prop budget, its origin at the seat (the dragon's saddle socket)', () => {
+test('saddle model: one mesh inside the prop budget, its origin at the seat (the saddle socket of the dragon)', () => {
   for (const [file, maxBytes, maxTris] of [['dragon_saddle.glb', 1.5e6, 5000], ['dragon_saddle_m.glb', 0.6e6, 3000]]) {
     const { json, bytes } = glb(file);
     assert.ok(bytes <= maxBytes, file + ' is ' + bytes + ' bytes');
