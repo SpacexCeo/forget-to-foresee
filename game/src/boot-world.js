@@ -999,48 +999,71 @@ function updateAltarTimer() {
 }
 
 /**
- * The intro fly-through (feature 5): on the first visit the camera sweeps down from high above the town, circling a
- * third of the way round, and settles behind Iris. Any key or tap, or Skip, ends it; ?skip=intro, the jury path and
- * reduced motion never show it. Remembered in this browser. Resolves when it is over.
+ * The opening shot (owner 14.11): on the first visit a fast drone flight from the Tournament altar down the street to
+ * the heroine, then the camera swings round behind her into the play view (the controls' framing), and only then the
+ * HUD fades in and the premise card shows (main.js waits on `introDone`). About 3.5 s; any key or tap, or Skip, cuts
+ * to the play view; ?skip=intro, the jury path, the Glass Shoal and reduced motion never show it. Remembered in this
+ * browser. Resolves when it is over.
  */
 const INTRO_KEY = 'ftf.intro.v1';
+/** Shot timing (seconds) and framing: the flight, then the swing; the drone's distance and pitch over the street. */
+const INTRO_SHOT = Object.freeze({ fly: 2.3, swing: 1.2, droneDist: 15, dronePitch: 30, hudFade: 0.6 });
+const INTRO_CSS = `body.ftf-intro > :not(#app):not(#boot):not(.ftf-intro-skip){opacity:0!important;pointer-events:none!important}
+body.ftf-intro-out > :not(#app):not(#boot){transition:opacity ${INTRO_SHOT.hudFade}s ease}`;
 /** A Day-1 panel (welcome, name, cards, claim) is on screen: the street's talk prompts and barks wait. */
 const day1Open = () => !!document.querySelector('.d1-panel, .d1-card');
 let introOn = false; // the intro flight is on screen (the barks wait)
-function introFly(ms = 6500) {
+let introDone = Promise.resolve(false); // main.js: the premise card waits for the opening shot
+const smooth = (x) => { const c = Math.min(1, Math.max(0, x)); return c * c * (3 - 2 * c); };
+const angTo = (from, to) => Math.atan2(Math.sin(to - from), Math.cos(to - from));
+function introFly() {
   let seen = false; try { seen = !!(ctx.storage && ctx.storage.getItem(INTRO_KEY)); } catch { /* none */ }
   // never on the Glass Shoal (?shoal=…): its end put the town camera back over the fight's (GPU bench 14.11)
   if (seen || judge || lookdev.reducedMotion || params.get('skip') === 'intro' || params.get('intro') === 'off' || params.get('shoal')) return Promise.resolve(false);
+  if (!document.getElementById('ftf-intro-css')) { const st = document.createElement('style'); st.id = 'ftf-intro-css'; st.textContent = INTRO_CSS; document.head.append(st); }
+  document.body.classList.add('ftf-intro'); introOn = true; // the HUD stays away from the first frame on (under the loading screen too)
   // the town is entered under the loading screen: fly only once the screen is gone (main.js sets __ftfBootMarks.done)
   const revealed = () => new Promise((res) => { const t0 = performance.now(); const tick = () => ((window.__ftfBootMarks && window.__ftfBootMarks.done) || performance.now() - t0 > 180000 ? res() : setTimeout(tick, 150)); tick(); });
-  return revealed().then(() => new Promise((resolve) => {
+  introDone = revealed().then(() => new Promise((resolve) => {
     try { if (ctx.storage) ctx.storage.setItem(INTRO_KEY, '1'); } catch { /* memory only */ }
-    let t0 = 0; const turn = (2 * Math.PI) / 3, startYaw = rig.yaw; // t0: the first frame (a slow first frame must not eat the flight)
-    const skip = document.createElement('button'); skip.type = 'button'; skip.className = 'ftf-town-prompt'; skip.textContent = ctx.i18n.t('intro.skip');
+    const S = INTRO_SHOT, DEG = Math.PI / 180;
+    const her = focus.clone(), altar = new THREE.Vector3(TOWN_ALTAR.focus[0], TOWN_ALTAR.focus[1], TOWN_ALTAR.focus[2]);
+    const playYaw = rig.yaw, playDist = rig.dist; // the spawn put the camera behind her (the controls' framing)
+    // the drone looks down the street from the altar toward her: the camera trails the moving focus
+    const flyYaw = Math.atan2(altar.x - her.x, altar.z - her.z);
+    const drone = new THREE.Vector3().copy(altar);
+    const skip = document.createElement('button'); skip.type = 'button'; skip.className = 'ftf-town-prompt ftf-intro-skip'; skip.textContent = ctx.i18n.t('intro.skip');
     skip.style.cssText = 'position:fixed;right:16px;bottom:76px;left:auto;transform:none;z-index:31'; // above the HUD tray (it covered the Settings button)
     document.body.append(skip);
-    let done = false, last = 0; introOn = true;
+    let done = false, t0 = 0; // t0: the first frame (a slow first frame must not eat the flight)
     const end = () => {
       if (done) return; done = true; introOn = false;
-      rig.pitchOverride = null; rig.dist = TOWN_CAMERA.dist; rig.rotate(startYaw - rig.yaw);
+      rig.focusOverride = null; rig.pitchOverride = null; rig.dist = playDist; rig.yaw = rig.baseYaw; rig.rotate(playYaw - rig.baseYaw);
       skip.remove(); window.removeEventListener('keydown', end); window.removeEventListener('pointerdown', end);
-      resolve(true);
+      document.body.classList.add('ftf-intro-out'); document.body.classList.remove('ftf-intro'); // the HUD fades in
+      setTimeout(() => { document.body.classList.remove('ftf-intro-out'); resolve(true); }, S.hudFade * 1000);
     };
     skip.addEventListener('click', end);
     window.addEventListener('keydown', end); window.addEventListener('pointerdown', end);
-    rig.rotate(-turn);
+    rig.focusOverride = drone; rig.yaw = rig.baseYaw; rig.rotate(flyYaw - rig.baseYaw); rig.dist = S.droneDist; rig.pitchOverride = S.dronePitch * DEG;
+    const playPitch = () => THREE.MathUtils.clamp(rig.pitchFor(playDist) + rig.pitchOffset, rig.minPitch, 75 * DEG);
     const step = () => {
       if (done) return;
-      if (glassShoal && glassShoal.owns && glassShoal.owns()) { done = true; introOn = false; rig.pitchOverride = null; skip.remove(); window.removeEventListener('keydown', end); window.removeEventListener('pointerdown', end); resolve(true); return; } // the Shoal took the camera
+      if (glassShoal && glassShoal.owns && glassShoal.owns()) { end(); return; } // the Shoal took the camera
       if (!t0) t0 = performance.now();
-      const p = Math.min(1, (performance.now() - t0) / ms), e = p * p * (3 - 2 * p);
-      rig.dist = 70 + (TOWN_CAMERA.dist - 70) * e;
-      rig.pitchOverride = (62 - 50 * e) * Math.PI / 180;
-      const target = turn * e; rig.rotate(target - last); last = target;
-      if (p < 1) requestAnimationFrame(step); else end();
+      const t = (performance.now() - t0) / 1000;
+      // 1) the flight: fast off the altar, easing in over her
+      const x = Math.min(1, t / S.fly), f = 1 - Math.pow(1 - x, 3); drone.lerpVectors(altar, focus, f); // off at speed, braking over her
+      // 2) the swing: round behind her, down to the play distance and pitch
+      const w = smooth((t - S.fly * 0.75) / S.swing);
+      const yawNow = flyYaw + angTo(flyYaw, playYaw) * w; rig.yaw = rig.baseYaw; rig.rotate(yawNow - rig.baseYaw);
+      rig.dist = S.droneDist + (playDist - S.droneDist) * w;
+      rig.pitchOverride = (S.dronePitch * DEG) + (playPitch() - S.dronePitch * DEG) * w;
+      if (t < S.fly * 0.75 + S.swing) requestAnimationFrame(step); else end();
     };
     requestAnimationFrame(step);
   }));
+  return introDone;
 }
 
 /** The camera settles on the heroine from high above the gate (Day 1 arrival). */
@@ -1741,7 +1764,7 @@ window.__ftf = {
   } : null,
 };
 requestAnimationFrame(frame);
-return { enterWorld, signIn: () => openAccount(), cursorScene, world3d, player, rig, lookdev, renderer, streamer, get play() { return play; }, town, townMode, 
+return { enterWorld, get introDone() { return introDone; }, signIn: () => openAccount(), cursorScene, world3d, player, rig, lookdev, renderer, streamer, get play() { return play; }, town, townMode, 
   /** The first town view is complete: ground under Iris, every street piece real and warmed, her own model in (main.js gates the loading screen on it). */
   get townReady() { return !town || !inTown || (town.shown && townGrounded && (!irisLoad.hasModel || irisLoad.loaded || (irisLoad.failed && import.meta.env.DEV))); } };
 }

@@ -40,6 +40,7 @@ export class CameraRig {
     this.inspect = null;                         // {center: Vector3, radius, yaw, pitch, dist}
     this.lastSweep = 1;
     this.focusHeightOverride = null;             // metres above the focus; rooms keep the view under the ceiling props (scenes/town-shops.js)
+    this.focusOverride = null;                   // Vector3; a scripted shot follows this point instead of the heroine
     this.pitchOverride = null;                   // radians; dev/cinematic shots only (null = zoom-tied pitch)
   }
 
@@ -139,7 +140,7 @@ export class CameraRig {
         this.dist += (this.distTarget - this.dist) * (1 - Math.exp(-dt * this.distEaseRate));
         if (Math.abs(this.distTarget - this.dist) < 0.05) { this.dist = this.distTarget; this.distTarget = null; }
       }
-      this.focus.copy(focus);
+      this.focus.copy(this.focusOverride || focus); // focusOverride: a scripted shot (the town's opening drone flight)
       const sf = this.smoothFocus;
       if (!this.hasFocus || sf.distanceTo(this.focus) > this.snapDistance) { sf.copy(this.focus); this.lookAhead.set(0, 0, 0); this.hasFocus = true; }
       else {

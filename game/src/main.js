@@ -112,9 +112,9 @@ const townShown = (w) => new Promise((resolve) => {
 });
 
 /** Title and premise once the town is revealed (ui/premise.js); never blocks input. */
-const premise = (ctx) => showPremise(document, (k) => ctx.i18n.t(k), {
+const premise = (ctx, w) => Promise.resolve(w && w.introDone).catch(() => {}).then(() => showPremise(document, (k) => ctx.i18n.t(k), {
   params, reducedMotion: !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches),
-});
+})); // after the opening shot has settled behind her, never over the flight (owner 14.11)
 
 /**
  * The entry gate (ui/entry-gate.js; owner 14.11): everything is loaded, the screen shows one "Enter the world" button,
@@ -168,7 +168,7 @@ ctxP.then(async (ctx) => {
       const w = await startWorld(ctx);
       await w.enterWorld();
       if (covered) { report('Loading the town'); await townShown(w); await loading.finish(); }
-      if (town) premise(ctx);
+      if (town) premise(ctx, w);
     };
     shellUi = ui.mountShell(uiRoot, { ctx, onFirstContact: enter });
     marks.lobby = Math.round(performance.now() - t0);
@@ -195,7 +195,7 @@ ctxP.then(async (ctx) => {
     marks.gate = Math.round(performance.now() - t0);
     if (town) await entryGate(ctx, w);
     await loading.finish();
-    if (town) { premise(ctx); fullscreenHint(ctx); }
+    if (town) { premise(ctx, w); fullscreenHint(ctx); }
   }
   clearInterval(slowTimer);
   marks.done = Math.round(performance.now() - t0);

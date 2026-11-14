@@ -103,3 +103,17 @@ test('weather (ftf:weather): the rain bed by state, thunder after a storm flash,
   ta.footContact('stone'); assert.equal(played.at(-1).n, 'step_stone', 'dry again');
   ta.dispose();
 });
+
+test('the opening shot: a drone flight from the altar to her, a swing behind her, 3-4 s, the HUD and the premise card after it (owner 14.11)', async () => {
+  const { readFileSync } = await import('node:fs');
+  const boot = readFileSync(new URL('../../src/boot-world.js', import.meta.url), 'utf8');
+  const main = readFileSync(new URL('../../src/main.js', import.meta.url), 'utf8');
+  const shot = boot.match(/const INTRO_SHOT = Object\.freeze\(\{ fly: ([\d.]+), swing: ([\d.]+)/);
+  const secs = Number(shot[1]) * 0.75 + Number(shot[2]);
+  assert.ok(secs >= 2.5 && secs <= 4, `the shot lasts ${secs} s`);
+  const body = boot.slice(boot.indexOf('function introFly('), boot.indexOf('/** The camera settles on the heroine'));
+  for (const want of ['TOWN_ALTAR.focus', 'rig.focusOverride = drone', "classList.add('ftf-intro')", "classList.remove('ftf-intro')", 'rig.focusOverride = null'])
+    assert.ok(body.includes(want), want);
+  assert.match(main, /w\.introDone[\s\S]{0,80}showPremise/, 'the premise card waits for the shot');
+  assert.ok((main.match(/premise\(ctx, w\)/g) || []).length >= 2);
+});
