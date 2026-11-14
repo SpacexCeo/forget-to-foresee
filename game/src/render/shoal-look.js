@@ -22,7 +22,7 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { GodRaysPass } from './post.js';
 import { clampParams, shoalQuality, sunDirection, sunColor, buildLut, SHOAL_DEFAULT } from './shoal-look-data.js';
 
-const ICE_AIR = new THREE.Color(0.7, 0.8, 0.88), ICE_FOG = new THREE.Color(0.66, 0.76, 0.84), _fwd = new THREE.Vector3();
+const ICE_AIR = new THREE.Color(0.6, 0.74, 0.88), ICE_FOG = new THREE.Color(0.58, 0.7, 0.82), _fwd = new THREE.Vector3();
 export const SHOAL_SIZE = 900;          // the flat's side in metres (it reads as endless under the fog)
 const SKY_R = 1600;
 
@@ -140,7 +140,7 @@ export function createShoalLook({ renderer, scene, camera, tier = 'high', profil
   const hemi = new THREE.HemisphereLight(0x9fb8cc, 0x56636e, 0.55); root.add(hemi);
   // a cold back light from beyond what the camera looks at: an icy rim on the serpent's edges, its silhouette reads
   // against the warm haze (no shadow, follows the camera in update())
-  const rim = new THREE.DirectionalLight(0xa8d8ff, 2.4); rim.name = 'shoal_rim'; root.add(rim, rim.target);
+  const rim = new THREE.DirectionalLight(0xa8d8ff, 4.5); rim.name = 'shoal_rim'; root.add(rim, rim.target);
   let csm = null, sun = null;
   if (Q.cascades > 1) {
     csm = new CSM({ maxFar: 600, cascades: Q.cascades, mode: 'practical', parent: scene, shadowMapSize: Q.shadowSize, lightDirection: new THREE.Vector3(0, -1, 0), camera, lightIntensity: 3.2, lightMargin: 120 });
@@ -218,8 +218,8 @@ export function createShoalLook({ renderer, scene, camera, tier = 'high', profil
   function apply() {
     const d = sunDirection(P.sunHeight, P.sunBearing); sunDir.set(d[0], d[1], d[2]).normalize();
     const c = sunColor(P.sunHeight); sunCol.setRGB(c[0], c[1], c[2]);
-    horizon.setRGB(0.91 * (0.75 + 0.25 * c[1]), 0.76 * (0.7 + 0.3 * c[1]), 0.6 * (0.6 + 0.4 * c[2])).lerp(ICE_AIR, 0.55);
-    fogColor.copy(horizon).lerp(ICE_FOG, 0.45);
+    horizon.setRGB(0.91 * (0.75 + 0.25 * c[1]), 0.76 * (0.7 + 0.3 * c[1]), 0.6 * (0.6 + 0.4 * c[2])).lerp(ICE_AIR, 0.78);
+    fogColor.copy(horizon).lerp(ICE_FOG, 0.55);
     fog.color.copy(fogColor); fog.density = P.fog;
     if (csm) { csm.lightDirection.copy(sunDir).negate(); for (const l of csm.lights) l.color.copy(sunCol); }
     if (sun) { sun.color.copy(sunCol); }
