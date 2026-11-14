@@ -58,11 +58,11 @@ test('boss anim: cross-fade weights stay normalised and reach the clip', () => {
   assert.ok(w.slam > 0.9);
 });
 
-test('boss model: both files carry the eight clips with the lengths the game times them by, inside the budget', () => {
+test('boss model: both files carry the eight clips plus breath and stagger (the ice serpent), with the lengths the game times them by, inside the budget', () => {
   for (const [file, maxBytes, maxTris] of [['hollow_tide.glb', 8e6, 50000], ['hollow_tide_m.glb', 3e6, 22000]]) {
     const { json, bytes, bin } = glb(file);
     assert.ok(bytes <= maxBytes, file + ' is ' + bytes + ' bytes');
-    assert.deepEqual(json.animations.map((x) => x.name).sort(), [...BOSS_CLIPS].sort());
+    assert.deepEqual(json.animations.map((x) => x.name).sort(), [...BOSS_CLIPS, 'breath', 'stagger'].sort()); // the serpent's own (W1 14.11): no stand-in for them
     assert.equal(json.skins.length, 1); assert.ok(json.skins[0].joints.length <= 32);
     const tris = json.meshes.flatMap((m) => m.primitives).reduce((n, p) => n + json.accessors[p.indices].count / 3, 0);
     assert.ok(tris <= maxTris, file + ' has ' + tris + ' triangles');

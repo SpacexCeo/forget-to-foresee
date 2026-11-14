@@ -1,5 +1,5 @@
-// The Hollow Tide's clip choice (pure: no three.js). The model `hollow_tide.glb` ships eight clips made in
-// art/shoal/boss/b02_clips.py: idle (loop), rise, slam, lunge, sweep, hit, roar, death. When a phase breaks it recoils
+// The Hollow Tide's clip choice (pure: no three.js). The model `hollow_tide.glb` ships ten clips made in
+// art/shoal/boss/b02_clips.py: idle (loop), rise, slam, lunge, sweep, hit, roar, death, and the ice serpent's breath and stagger. When a phase breaks it recoils
 // (`hit`) and then roars, unless the next telegraph cuts in. Every attack clip starts with
 // exactly `wind` seconds of wind-up; the fight's telegraph (1.4 / 1.15 / 0.9 s by phase, game/shoal-rules.js) is
 // mapped onto that part, so the blow in the clip lands when the rules strike, at any phase. scenes/shoal-arena.js
@@ -21,7 +21,7 @@ export const clipOn = (clip, has) => (has(clip) ? clip : has(CLIP_STANDIN[clip])
 export const BOSS_ANIM = Object.freeze({
   wind: 1.0, fade: 0.2, staggerGap: 12, // staggerGap: seconds between two reels (the crest still opens every time)
   len: Object.freeze({ idle: 4.0, rise: 2.4, slam: 2.55, lunge: 2.4, sweep: 2.55, hit: 1.0, roar: 2.2, death: 3.4,
-    breath: 2.4, claw: 2.55, takeoff: 2.4, dive: 2.55, fly: 4.0, stagger: 1.0 }), // the dragon's: as their stand-ins until its clips are measured
+    breath: 2.4, claw: 2.55, takeoff: 2.4, dive: 2.55, fly: 4.0, stagger: 1.4 }), // breath, stagger: the ice serpent's own clips (b02_clips.py); claw..fly: a winged boss's stand-ins
 });
 const ATTACKS = new Set(['slam', 'lunge', 'sweep', 'breath', 'claw', 'takeoff', 'dive']);
 const clamp01 = (x) => Math.max(0, Math.min(1, x));

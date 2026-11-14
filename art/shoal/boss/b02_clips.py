@@ -3,7 +3,8 @@
 idle (4 s loop); rise (2.4 s, out of the mirror, a roar); slam, lunge, sweep: each starts with exactly WIND = 1 s
 of wind-up (the game stretches it over the telegraph of the phase), then the strike, a hold and a recovery that ends
 in idle's first frame; hit (1.0 s recoil); roar (2.2 s, after a phase breaks); death (3.4 s: it thrashes, falls on
-the mirror and sinks).
+the mirror and sinks); breath (2.4 s: the inhale is the 1 s wind-up, then a 0.8 s cone of ice, jaw wide, head along
+the mirror); stagger (1.4 s: it reels while the crest is open, swaying twice, head lolling).
 A serpent moves as a travelling wave, never as one stiff arc (3D review A.41-44): in idle the sway runs from the head
 down the body at one phase step per joint; a hit, the roar's shiver and the fall of the death start at the head and
 run down; in a slam or a lunge the lower joints start a little early so the head whips in last, exactly on the
@@ -161,11 +162,33 @@ def death(t):
     p.loc = (0, 0, -5.0 * sm(2.1, 3.4, T)); return p
 
 
+def breath_wind(w):
+    """The inhale (the wind-up, stretched over the telegraph): it rears back and up, the jaw closes, the chest swells."""
+    p = spine(Pose(), fx=lambda i: -8.0 * w * min(1, i / 3) - 2.0 * w * bump(i, NB * 0.45, 2.5)); p['jaw'] = q(x=2); p['head'] = q(x=-14 * w); return p
+
+
+def breath_hit(k):
+    """The exhale: the head drops forward to aim the cone of ice along the mirror, jaw wide (no lunge: it stays put)."""
+    p = dart(K_LUNGE * 0.55 * k); p['jaw'] = q(x=48); p['head'] = q(x=7); return p
+
+
+def stagger(t):
+    """1.4 s: the crest is open and it reels: it sags, the body sways side to side twice (the sway runs from the head
+    down), the head lolls with the jaw slack, then it gathers itself back into idle."""
+    T = t * 1.4; a = sm(0, 0.15, T) * (1 - sm(0.95, 1.4, T)); LAG = 0.03
+    sway = lambda i: sin(2 * pi * (T - LAG * (NB - 1 - i)) / 0.7) * (1 - 0.5 * sm(0.2, 1.2, T))
+    p = spine(Pose(), fx=lambda i: 4.5 * a * (i / NB), fy=lambda i: 7.0 * a * AMP[i] * sway(i))
+    p['head'] = q(x=12 * a, y=9 * a * sway(NB - 1)); p['jaw'] = q(x=6 + 20 * a)
+    return blend(blend(IDLE0, p, sm(0, 0.1, T)), IDLE0, sm(1.15, 1.4, T))
+
+
 slam, T_SLAM = attack(slam_hit, slam_wind)
+breath, T_BREATH = attack(breath_hit, breath_wind, strike=0.2, hold=0.8, recover=0.4)   # 2.4 s: the cone lasts the hold
 lunge, T_LUNGE = attack(lunge_hit, lunge_wind, strike=0.25, hold=0.2, recover=0.95, loc_strike=(0, -9.0, 0))
 sweep, T_SWEEP = sweep_fn()
 CLIPS = [('idle', idle, 4.0, True, None), ('rise', rise, 2.4, False, IDLE0), ('slam', slam, T_SLAM, False, IDLE0), ('lunge', lunge, T_LUNGE, False, IDLE0),
-         ('sweep', sweep, T_SWEEP, False, IDLE0), ('hit', hit, 1.0, False, IDLE0), ('roar', roar, 2.2, False, IDLE0), ('death', death, 3.4, False, None)]
+         ('sweep', sweep, T_SWEEP, False, IDLE0), ('hit', hit, 1.0, False, IDLE0), ('roar', roar, 2.2, False, IDLE0), ('death', death, 3.4, False, None),
+         ('breath', breath, T_BREATH, False, IDLE0), ('stagger', stagger, 1.4, False, IDLE0)]   # the ice serpent's own (W1, 14.11)
 for name, fn, sec, loop, ends in CLIPS: K.bake(name, fn, sec, loop, ends_like=ends)
 rig.animation_data.use_nla = False   # the NLA would override the poses set by hand
 head_at = {n: [round(float(v), 2) for v in K.bone_tip(f(tt), 'head')] for n, f, tt in (('slam', slam, (WIND + 0.3) / T_SLAM), ('lunge', lunge, (WIND + 0.25) / T_LUNGE), ('sweep', sweep, (WIND + 0.25) / T_SWEEP), ('death', death, 0.6))}
