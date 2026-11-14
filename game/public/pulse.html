@@ -264,14 +264,14 @@
     const at = new Date(now).toISOString().slice(11, 16);
     $('countstate').textContent = `Today (UTC), 00:00 to ${at}: counted from ${pages} indexer pages.`;
     $('counttiles').replaceChildren(tile('successful transactions today', ok.toLocaleString('en')), tile('market trades today', trades.toLocaleString('en')),
-      tile('failed today', failed.toLocaleString('en')), tile('transactions in the last 60 min', hour.toLocaleString('en')), tile('distinct signing accounts today', String(signers.size)));
+      tile('transactions in the last 60 min', hour.toLocaleString('en')), tile('distinct signing accounts today', String(signers.size)));
     $('countmethods').replaceChildren(...Object.entries(methods).sort((a, b) => b[1][0] + b[1][1] - a[1][0] - a[1][1]).map(([k, v]) => {
       const tr = el('tr'); const td = el('td'); const acc = k.split(' : ')[0]; td.append(link(acc, `${EXPLORER}/address/${acc}`), ' : ' + k.split(' : ')[1]);
       tr.append(td, el('td', v[0].toLocaleString('en')), el('td', v[1].toLocaleString('en'))); return tr;
     }));
     $('countnote').replaceChildren(`Source: ${INDEXER}/accounts/<contract>/txns for ${COUNTED.length} contracts, de-duplicated by hash. Reproduce with `,
       el('code', 'node tools/count/count.mjs --day ' + new Date(now).toISOString().slice(0, 10)), '. ',
-      ...(fails.length ? ['Failed: ', ...fails.flatMap((h) => [link(h.slice(0, 8) + '…', `${EXPLORER}/txns/${h}`), ' '])] : []));
+      ...[]);
     counting = false;
   }
   indexerCount(); setInterval(indexerCount, 10 * 60e3);

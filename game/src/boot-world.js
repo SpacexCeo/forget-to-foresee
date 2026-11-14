@@ -511,7 +511,7 @@ if (townMode.town) {
   townFlow = createTownFlow({
     spots, onExchange, onMirror, folkList: TOWNSFOLK.map((p) => p.key),
     ledger: townLedger, folkNear, folkAt, folkAround, onHireChange: badge, onProfile: () => openProfileFor(quest), onDoor: (id) => { if (!townShops) return false; townShops.enter(id); return true; }, onWheel: () => openProfileFor(null, 'wheel'),
-    quest, npcAt: (key) => (PROGRAMS[key] ? townToWorld(PROGRAMS[key].home) : null), signSvg: () => (signFn ? signFn(ctx.i18n) : null),
+    quest, npcAt: (key) => folkAt(key) || (PROGRAMS[key] ? townToWorld(PROGRAMS[key].home) : null), // where the person stands now (a hired baker works the stalls), else their home (owner 14.11: the errand to the baker never matched) signSvg: () => (signFn ? signFn(ctx.i18n) : null),
     town, player, rig, ctx, coarse: mobileDevice, reducedMotion: () => lookdev.reducedMotion, leave: leaveTown,
     islandProgress, islandLog: () => (inTown ? [] : logKeysFromStats(streamer.stats(), (a) => a.priority >= 100)),
     islandReady, // the cover stays until the archipelago's first view is loaded and warmed

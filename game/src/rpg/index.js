@@ -159,6 +159,7 @@ export function mount(ctx) {
   }
   function openWindow(id) {
     if (id !== 'menu' && blocksWindows()) return;                                   // a first-time overlay runs: windows wait
+    try { win.dispatchEvent(new CustomEvent('ftf:window-open', { detail: { id } })); } catch { /* no window */ } // the starter guide counts a window however it opened (key, tray, touch)
     if (id === 'menu') { if (ctx.openMenu) ctx.openMenu(); else { const e = new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape', bubbles: true }); e.__rpg = true; win.dispatchEvent(e); } return; }
     if (id === 'skills') { import('./skill-tree-ui.js').then((m) => { tree = tree || m.createSkillTree({ doc, t, api }); tree.toggle(); open.skills = tree.isOpen; }); return; }
     if (id === 'character') { import('./character-panel.js').then((m) => { sheet = sheet || m.createCharacterPanel({ doc, t, api }); sheet.toggle(); open.character = sheet.isOpen; }); return; }
