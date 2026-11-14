@@ -35,6 +35,7 @@ const CSS = `.ftf-chat { position: fixed; left: calc(12px + env(safe-area-inset-
 .ftf-chat-log li.friend button::before, .ftf-chat-log li.friend b::before { content: '★ '; font-size: 11px; }
 .ftf-chat-row { display: flex; gap: 6px; }
 .ftf-chat-row input { flex: 1; min-height: 34px; padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(233,180,76,.5); background: #1c2426; color: #f3ead6; font: 14px system-ui, sans-serif; }
+@media (pointer: coarse) { .ftf-chat-row input { font-size: 16px; } } /* iOS zooms the page into an input under 16 px */
 .ftf-chat-row button, .ftf-chat-menu button { min-height: 34px; padding: 4px 12px; border-radius: 8px; border: 1px solid rgba(233,180,76,.6); background: rgba(233,180,76,.14); color: #f3ead6; cursor: pointer; }
 .ftf-chat-menu { display: flex; gap: 6px; margin: 0 0 6px; align-items: center; flex-wrap: wrap; font-size: 13px; }
 .ftf-chat-menu[hidden] { display: none; }`;

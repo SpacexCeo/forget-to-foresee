@@ -42,6 +42,7 @@ const CSS = `
 .ftf-say { position: fixed; left: 0; top: 0; z-index: 12; pointer-events: none; max-width: 240px; padding: 6px 10px; border-radius: 12px;
   background: rgba(16, 22, 24, .86); color: #f3ead8; font: 13px/1.35 system-ui, -apple-system, 'Segoe UI', sans-serif;
   border: 1px solid rgba(233, 180, 76, .45); transform: translate(-50%, -100%); white-space: normal; word-break: break-word; text-align: center; }
+@media (max-width: 600px) { .ftf-say { max-width: 180px; font-size: 12px; padding: 5px 8px; } }
 .ftf-say::after { content: ''; position: absolute; left: 50%; bottom: -6px; margin-left: -6px; border: 6px solid transparent; border-bottom: 0; border-top-color: rgba(16, 22, 24, .86); }
 `;
 
@@ -53,7 +54,7 @@ export function createChatBubbles({ doc = globalThis.document, camera, THREE }) 
   if (!doc.getElementById('ftf-say-css')) { const s = doc.createElement('style'); s.id = 'ftf-say-css'; s.textContent = CSS; doc.head.append(s); }
   const q = createBubbleQueue();
   const els = new Map();
-  const v = new THREE.Vector3(), cam = new THREE.Vector3();
+  const v = new THREE.Vector3(), cam = new THREE.Vector3(), placed = [];
   return {
     push: (key, text, at) => q.push(key, text, at),
     update(at, heads) {
@@ -70,10 +71,18 @@ export function createChatBubbles({ doc = globalThis.document, camera, THREE }) 
         if (!el) { el = doc.createElement('div'); el.className = 'ftf-say'; doc.body.append(el); els.set(b.key, el); }
         if (el.textContent !== b.text) el.textContent = b.text;
         const bw = el.offsetWidth || 0, bh = el.offsetHeight || 0; // keep the whole bubble on screen near the edges (UI fit 14.11)
-        el.style.left = Math.min(Math.max((v.x + 1) / 2 * innerWidth, bw / 2 + 8), innerWidth - bw / 2 - 8).toFixed(1) + 'px';
-        el.style.top = Math.min(Math.max((1 - v.y) / 2 * innerHeight, bh + 14), innerHeight - 8).toFixed(1) + 'px';
+        const x = Math.min(Math.max((v.x + 1) / 2 * innerWidth, bw / 2 + 8), innerWidth - bw / 2 - 8);
+        placed.push({ el, x, y: Math.min(Math.max((1 - v.y) / 2 * innerHeight, bh + 14), innerHeight - 8), bw, bh });
         keep.add(b.key);
       }
+      // two speakers standing close: the farther bubble (higher on screen) moves up above the nearer one, never on it
+      placed.sort((a, b) => b.y - a.y);
+      for (let i = 0; i < placed.length; i++) {
+        const p = placed[i];
+        for (let j = 0; j < i; j++) { const q = placed[j]; if (Math.abs(p.x - q.x) < (p.bw + q.bw) / 2 && p.y > q.y - q.bh - 4 && p.y - p.bh < q.y) { p.y = q.y - q.bh - 6; j = -1; } }
+        p.el.style.left = p.x.toFixed(1) + 'px'; p.el.style.top = Math.max(p.bh + 14, p.y).toFixed(1) + 'px';
+      }
+      placed.length = 0;
       for (const [k, el] of els) if (!keep.has(k)) { el.remove(); els.delete(k); }
     },
     clear() { for (const el of els.values()) el.remove(); els.clear(); },
