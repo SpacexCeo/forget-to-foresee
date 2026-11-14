@@ -21,6 +21,8 @@ export const DEFAULT_FLAGS = Object.freeze({
   newPlayerIntro: false, labPrologue: false, agentTournament: false, firstSeenTips: false,
   glassShoal: false, // the level-5 boss fight: quest, Loomblade, dragon ride, the Glass Shoal (docs/plans/boss/glass-shoal-boss.md)
   accountLogin: false, // sign in / create account with a NEAR, EVM or Solana wallet (docs/account-login.md)
+  wayfarers: false, // the Wayfarers from Kallima: visitors in town (a placeholder body until their model) and the Lost Tourist
+  tales: false, // town tales: the Scribe's lost words, a night step with the Sweeper (game/tales.js, scenes/town-tales.js)
   townLedger: false, // the Town Ledger: the game menu's Town tab and the market pill's button (docs/plans/track-fit-gaps.md)
 });
 export const FEATURES_TIMEOUT_MS = 3000;

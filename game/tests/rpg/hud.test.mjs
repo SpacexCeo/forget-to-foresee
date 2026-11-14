@@ -99,3 +99,10 @@ test('minimap rim clamp: inside points stay, outside points sit on the rim', asy
   const [x, y, off] = clampToRim(300, 100, 200, 10);
   assert.equal(off, true); assert.equal(Math.round(x), 190); assert.equal(y, 100);
 });
+
+test('the tray shows the bare key under the icon, no [ ] brackets (owner 13.11)', async () => {
+  const { HUD_CSS } = await import('../../src/rpg/hud-style.js');
+  assert.doesNotMatch(HUD_CSS, /\.rpg-tray \.k::(before|after)/);
+  assert.doesNotMatch(HUD_CSS, /content: "[\[\]]"/);
+  assert.match(HUD_CSS, /\.rpg-tray \.k \{ font-size: max\(9px, calc\(10 \* var\(--k\)\)\); opacity: \.8; \}/);
+});

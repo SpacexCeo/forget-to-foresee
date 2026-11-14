@@ -13,17 +13,17 @@ the post: the weekly tournament (a UI simulation), any "player-owned" or "live-m
 commitment makes the game impossible to modify (the rules run in the browser; the commitment fixes the Guests'
 events, not silk or outcomes).
 
-## Post 1 (attach the 60 s jury video: `docs/submission/jury-video.md`)
+## Post 1 (attach the jury video: `docs/submission/video-shot-list.md`)
 
-> A hill town on NEAR testnet: 20 traders, each with its own account and key, trade on chain all day. Over 18,000 trades a day, every price with a readable reason.
+> A hill town on NEAR testnet: 20 traders, each with its own account and key, trade on chain all day. Over 21,000 trades on 13 Nov, every price with a readable reason.
 >
 > Play as a guest, no wallet popups.
 >
 > Built at NEAR HACKATHON by @Lambada_eth
 > @NEARProtocol #NEARHackathon
 
-(267 characters as X counts them. Lead with the live economy (owner's jury review, 13.11). "Over 18,000 trades a day": the relayer reported 18,568 trades
-on 13 Nov by about 19:10 UTC; check `today` in `/api/market/stats` on the day of posting. Credit @Lambada_eth.)
+(271 characters as X counts them. Lead with the live economy. "Over 21,000 trades on 13 Nov": the public-indexer recount for the whole UTC day is
+21,233 market trades (`docs/proof/tx-2026-11-13.md`). Credit @Lambada_eth.)
 
 ## Post 2 (reply)
 

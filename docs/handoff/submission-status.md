@@ -1,8 +1,10 @@
 # Submission status (audit 12.11.2026, 12:00 Kyiv)
 
+**Superseded (14.11):** presence and the TEE path are live, the tests have grown; the current state is the README live block, `docs/STATS.md` and `docs/submission/self-review.md`. Kept as the 12.11 record.
+
 Checked against `docs/hackathon-rules.md` (rules from https://nearhackathon.com/HACKATHON.md, last compared 08.11 —
 re-read it before submitting), current `main` (`86bb5b0`) and the live sites. Deadline: **14.11 23:59 UTC = 15.11
-01:59 Kyiv**; our freeze is 13.11 20:00 Kyiv. Every step marked **owner** needs the owner's account, wallet or
+01:59 Kyiv**; the 13.11 20:00 freeze was dropped (the owner sets a stop-merging time on 14.11). Every step marked **owner** needs the owner's account, wallet or
 confirmation; agents never post, submit, tag or sign for the owner.
 
 ## What is true today (checked live)

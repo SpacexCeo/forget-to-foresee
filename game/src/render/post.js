@@ -24,6 +24,8 @@ import { SMAAPass } from 'three/examples/jsm/postprocessing/SMAAPass.js';
 import { Pass, FullScreenQuad } from 'three/examples/jsm/postprocessing/Pass.js';
 import { LAYER_OVERLAY } from './layers.js';
 
+const _WHITE = new THREE.Color(1, 1, 1), _p = new THREE.Vector3(), _view = new THREE.Vector3(); // per-frame scratch (the shafts' sun)
+
 const COPY_VS = /* glsl */`varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
 
 /** Bloom threshold in linear HDR: diffuse white under the sun stays below it, emissives are above. */
@@ -95,12 +97,12 @@ export class GodRaysPass extends Pass {
   }
 
   /** The shafts take the sun's colour (linear RGB, normalised) so they agree with the sky. */
-  setSunColor(color) { this.color.copy(color).lerp(new THREE.Color(1, 1, 1), 0.25); }
+  setSunColor(color) { this.color.copy(color).lerp(_WHITE, 0.25); }
 
   /** Projects the sun direction; shafts fade out as the sun leaves the frame or goes behind the camera. */
   setSun(sunDirection, camera) {
-    const p = camera.position.clone().addScaledVector(sunDirection, 1000).project(camera);
-    const behind = p.z > 1 || sunDirection.dot(camera.getWorldDirection(new THREE.Vector3())) < 0;
+    const p = _p.copy(camera.position).addScaledVector(sunDirection, 1000).project(camera);
+    const behind = p.z > 1 || sunDirection.dot(camera.getWorldDirection(_view)) < 0;
     this.sunUv.set(p.x * 0.5 + 0.5, p.y * 0.5 + 0.5);
     const margin = 0.35;
     const inside = behind ? 0 : Math.min(

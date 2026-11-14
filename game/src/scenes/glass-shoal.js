@@ -60,6 +60,7 @@ html[data-motion=reduce] .gs-track{animation:none}
  * @param {() => boolean} o.reduced @param {boolean} o.mobile @param {() => string} o.hero 'iris' | 'elise'
  * @param {(name: string) => void} [o.clip] plays a combat clip on the heroine
  * @param {() => number[]} o.axes the movement axes [x, y] (keys or the stick)
+ * @param {() => {kind: string, pos: object, flourish?: Function}[]} [o.allies] her companion dragons (world positions) that join the fight
  */
 export function createGlassShoal(o) {
   const { THREE, scene, rig, player, toWorld, groundAt, folkAt, ledger, chests = null, storage = null, toast = () => {}, reduced = () => false, mobile = false, hero = () => 'iris', clip = () => {}, axes = () => [0, 0] } = o;
@@ -139,7 +140,7 @@ export function createGlassShoal(o) {
   function loadArena() {
     if (!arenaLoading) arenaLoading = import('./shoal-arena.js').then((m) => { arena = m.createShoalArena({ THREE, scene, camera: o.camera, center: arenaCenter(), say, toast, reduced, mobile, hero, clip, axes, rig,
       onWin: () => { try { globalThis.dispatchEvent(new CustomEvent('ftf:feat', { detail: { k: 'boss', v: 'shoal' } })); } catch { /* the room's action feed is optional */ } if (event('boss_down') && ledger) { ledger.grant({ xp: R.REWARD.xp }); if (chests) try { chests.add({ tier: R.REWARD.chest, source: 'boss' }); } catch { /* the bag is optional */ } } },
-      onDeath: () => event('death'), onHome: () => flyHome() }); return arena; });
+      onDeath: () => event('death'), onHome: () => flyHome(), allies: o.allies }); return arena; });
     return arenaLoading;
   }
 

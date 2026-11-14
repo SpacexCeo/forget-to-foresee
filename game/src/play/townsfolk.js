@@ -18,7 +18,8 @@ import { FADE, findLookBones, applyLookTo } from './gait.js';
 import { townsfolkClips, mergeClips, faceLayerClip } from './anim-library.js';
 const MAX_STEP = 0.45; // the largest ground step a walker takes (play/town-paths.js MAX_STEP; no import: chunk order)
 import { MIN_GAP } from './townsfolk-plan.js';
-import { TOWNSFOLK, PROGRAMS, PersonPlan, tradeProgram, homeProgram, mayTrade, pickClip, animStride, LOOK_RADIUS } from './townsfolk-plan.js';
+import { TOWNSFOLK, PROGRAMS, PersonPlan, tradeProgram, homeProgram, mayTrade, pickClip, animStride, LOOK_RADIUS, WAYFARERS, walkProgram } from './townsfolk-plan.js';
+import { features } from '../features.js';
 
 const SIT_PELVIS_ABOVE = 0.10; // hip joint above the seat top when seated (m, scaled with the body)
 const SIT_PELVIS_Z = -0.07;    // hip joint along the 0.46 m deep seat (bench local, the sitter faces +Z; back rail at -0.26)
@@ -32,8 +33,9 @@ const BODY = { child_a: 'child', child_b: 'child', guard: 'guard' }; // the elde
 class Person {
   constructor(def, scene) {
     this.def = def;
-    this.plan = new PersonPlan(def, PROGRAMS[def.key]);
+    this.plan = new PersonPlan(def, def.program || PROGRAMS[def.key]);
     this.root = new THREE.Group();
+    if (def.scale) this.root.scale.setScalar(def.scale); // a placeholder body brought to the visitor's height
     this.root.name = def.asset + '#townsfolk';
     this.root.visible = false;
     scene.add(this.root);
@@ -68,7 +70,8 @@ class Person {
       if (face) this.mixer.clipAction(face).play();
       // move at the speed the clips walk at, so the feet never slide; sit at the height the sit clip sits at
       const speedOf = (want) => { const c = this.clips.get(pickClip(this.names, want)); return c && c.userData && c.userData.speed > 0 ? c.userData.speed : 0; };
-      this.clipSpeed = { walk: speedOf('walk') || this.def.walk, run: speedOf('run') || this.def.run || 2.6 };
+      const k = this.def.scale || 1; // a scaled body strides further per cycle
+      this.clipSpeed = { walk: (speedOf('walk') * k) || this.def.walk, run: (speedOf('run') * k) || this.def.run || 2.6 };
       this.plan.walkSpeed = this.clipSpeed.walk; if (this.def.run) this.plan.runSpeed = this.clipSpeed.run;
       const sit = this.clips.get('sit');
       this.sitDrop = sit && sit.userData && sit.userData.pelvis_y ? sit.userData.pelvis_y - 0.10 * (sit.userData.scale || 1) : null;
@@ -121,8 +124,9 @@ class Person {
 /**
  * @param {{scene: THREE.Scene, library: {fileFor: Function}, groundAt?: (x:number, z:number, fromY?:number) => (number|null)}} o
  */
-export function createTownsfolk({ scene, library, groundAt = null }) {
-  const people = TOWNSFOLK.map((def) => new Person(def, scene));
+export function createTownsfolk({ scene, library, groundAt = null, visitors = () => features.on('wayfarers') }) {
+  // the town's own people, then the visitors from other worlds (shown only while `visitors()`; a visitor can also be gone)
+  const people = [...TOWNSFOLK, ...WAYFARERS].map((def) => new Person(def, scene));
   const byKey = new Map(people.map((p) => [p.key = p.def.key, p]));
   const plans = new Map(people.map((p) => [p.def.key, p.plan]));
   let extraBodies = () => [];
@@ -176,7 +180,7 @@ export function createTownsfolk({ scene, library, groundAt = null }) {
     ctx.iris = _local; ctx.reduced = reducedMotion;
     irisPush[0] = 0; irisPush[1] = 0;
     for (const p of people) { // a body never overlaps Iris: she is eased out, at most 1.2 m/s
-      if (p.state !== 'loaded' || Math.abs(p.plan.y - _local[1]) > 1.2) continue;
+      if (p.state !== 'loaded' || Math.abs(p.plan.y - _local[1]) > 1.2 || (p.def.visitor && (p.gone || !visitors()))) continue; // a hidden visitor never nudges her
       const dx = _local[0] - p.plan.x, dz = _local[2] - p.plan.z, d = Math.hypot(dx, dz);
       if (d < MIN_GAP && d > 1e-4) { const k = Math.min(MIN_GAP - d, 1.2 * dt) / d; irisPush[0] += dx * k; irisPush[1] += dz * k; }
     }
@@ -218,7 +222,7 @@ export function createTownsfolk({ scene, library, groundAt = null }) {
       p.root.rotation.y = plan.yaw;
       _sphere.center.set(p.root.position.x, p.root.position.y + 0.9, p.root.position.z); _sphere.radius = 1.4;
       const onScreen = !camera || _frustum.intersectsSphere(_sphere);
-      p.root.visible = onScreen && dist < reach;
+      p.root.visible = onScreen && dist < reach && !(p.def.visitor && (p.gone || !visitors()));
       const stride = animStride(dist, { phone: isPhone, visible: p.root.visible });
       p.acc += dt;
       if (!stride || (frame + i) % stride !== 0) { if (!stride) p.acc = 0; continue; }
@@ -274,6 +278,14 @@ export function createTownsfolk({ scene, library, groundAt = null }) {
 
   return {
     people, byKey, update, setActive, setBadge, sendToTrade, irisPush,
+    /** A visitor walks `path` (town-local points) from where they stand and waits there (scenes/wayfarer-tale.js). */
+    walkAlong(key, path) { const p = byKey.get(key); if (!p) return false; const plan = p.plan; plan.program = walkProgram([plan.x, plan.y, plan.z], path); plan.index = -1; plan.next(); return true; },
+    /** True once a walkAlong walk is done (they wait at its end). */
+    walkDone(key) { const p = byKey.get(key); return !!p && p.plan.program.steps.length === 2 && p.plan.index === 1; },
+    /** A visitor leaves (through the Gate-Loom): hidden; `false` brings them back home. */
+    setGone(key, gone) { const p = byKey.get(key); if (!p) return; p.gone = !!gone; if (!gone) { p.plan.program = p.def.program || PROGRAMS[p.def.key]; p.plan.x = p.plan.program.home[0]; p.plan.y = p.plan.program.home[1]; p.plan.z = p.plan.program.home[2]; p.plan.index = -1; p.plan.next(); } },
+    /** Whether a visitor shows now (the flag on and not gone). */
+    visitorShown(key) { const p = byKey.get(key); return !!p && !!p.def.visitor && !p.gone && visitors(); },
     /** Other heroines (town-local [x, y, z] list) the townsfolk walk round. */
     setBodies(fn) { extraBodies = typeof fn === 'function' ? fn : () => []; },
     /** For QA and the dev HUD: per person key -> state, file, position, clip. */
