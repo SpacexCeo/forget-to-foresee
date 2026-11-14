@@ -20,6 +20,7 @@ import { CameraRig } from './render/camera-rig.js';
 import { cueShot, cueState, stepCue } from './render/dialogue-camera.js';
 import { on as onBus } from './sprint/bus.js';
 import { setIntroHud } from './ui/intro-hud.js';
+import { createStrikeTrail } from './render/strike-trail.js';
 import { fixedSteps, rayCast, moveCapsule, MASK_PLAYER } from './physics/collision.js';
 import { PHYSICS_DT, steerTo, clickStuck } from './physics/character.js';
 import { damp } from './physics/motion.js';
@@ -393,6 +394,14 @@ function townHome(spot = TOWN_SPAWN) {
   // never below the spot's own data height: a piece not streamed in yet (the altar steps) would answer with the terrain under it
   return { position: [p[0], Math.max(d ? d[1] : -Infinity, p[1] + SPAWN_DROP), p[2]], heading: spot.heading };
 }
+// the heroine's strike trails and contact flashes (render/strike-trail.js), driven by her clips' own moments
+const strikeTrail = createStrikeTrail({ THREE, parent: scene });
+window.addEventListener('ftf:iris-action', (e) => {
+  const d = e.detail || {}, m = irisAvatar && irisAvatar.irisModel;
+  if (!m || !m.model || d.clip === 'dash' || d.clip === 'strike_charge') return; // the dash has its own trail; a held wind-up is no swing
+  if (d.phase === 'start') strikeTrail.start(m.model, d.clip, d.impact, heldBlade ? heldBlade.sword : null);
+  else if (d.phase === 'impact') strikeTrail.impact();
+});
 let heldBlade = null, heldBladeLoading = false; // the Loomblade in her fist once she has taken it (play/held-blade.js)
 let shoalArt = null, shoalArtLoading = false; // the Shoal's look for the fight (render/shoal-arena-look.js), loaded when the arena first opens
 let town = null, townFlow = null, townCasting = null, townMobs = null, inTown = false, townGrounded = false, irisAvatar = null, killXp = null, endgamePass = null, stallMounted = false, worksMounted = false, tournMounted = false;
@@ -967,7 +976,10 @@ function updateAltarTimer() {
   // kept below the top-right chips (Controls, Profile) and inside the screen: on a phone the altar projects right under them
   const minTop = innerWidth < 700 || innerHeight < 500 ? (document.body.classList.contains('ph-on') ? 236 : 150) : 118, half = Math.min(altarTimer.offsetWidth / 2 || 110, innerWidth / 2 - 8);
   altarTimer.style.left = Math.max(half + 8, Math.min(innerWidth - half - 8, (_altarP.x + 1) / 2 * innerWidth)).toFixed(0) + 'px';
-  altarTimer.style.top = Math.max(minTop, (1 - _altarP.y) / 2 * innerHeight).toFixed(0) + 'px';
+  // and never under the quest tracker (tablet audit 14.11: the label sat in the tracker's lines and could not be tapped)
+  const x = Math.max(half + 8, Math.min(innerWidth - half - 8, (_altarP.x + 1) / 2 * innerWidth)), ft = document.querySelector('.ft:not([hidden])'), fr = ft && ft.getBoundingClientRect();
+  const under = fr && fr.height > 0 && x + half > fr.left && x - half < fr.right ? fr.bottom + (altarTimer.offsetHeight || 26) + 6 : 0;
+  altarTimer.style.top = Math.max(minTop, under, (1 - _altarP.y) / 2 * innerHeight).toFixed(0) + 'px';
 }
 
 /**
@@ -1173,6 +1185,14 @@ const mouseAim = createMouseAim({ target: renderer.domElement, input,
   onAction: mouseKey,
   // the browser took Esc to free the pointer: the page gets the Esc it never saw (the cast is put away, a panel closes, else the menu)
   onEscape: () => { for (const type of ['keydown', 'keyup']) document.body.dispatchEvent(new KeyboardEvent(type, { code: 'Escape', key: 'Escape', bubbles: true })); } });
+/**
+ * The game cursor over the scene (ui/game-cursor.js; owner 14.11): grab while the camera turns, attack on a locked target,
+ * else the plain pointer (a click on the ground walks there). The talk / interact cursors belong to the prompt button.
+ */
+function cursorScene() {
+  if (input.dragPointer != null) return 'grab';
+  return townMobs && townMobs.locked ? 'attack' : null;
+}
 function strikeNow() { if (townMobs && townMobs.strike(strikeAimInput())) interruptMove(STRIKE_ROOT); }
 let inspecting = null;
 let accumulator = 0;
@@ -1499,11 +1519,16 @@ function frame() {
     } else if (demoShown) demoPlayer.hide();
     demoShown = mpOn;
   }
-  if (mp && mpOn !== mpShown) { mpShown = mpOn; mp.setVisible(mpOn); }
-  if (mp && mpOn) mp.update(dt, { pos: player.pos, heading: player.heading, speed: Math.hypot(player.vel[0], player.vel[1]), grounded: player.grounded !== false, reducedMotion: lookdev.reducedMotion });
+  if (mp && mpOn !== mpShown && !(play && !inTown && entered && !judge)) { mpShown = mpOn; mp.setVisible(mpOn); }
+  // the isles too (presence v2): in a season the others in the archipelago share a room of their own
+  const mpIsles = !!(mp && play && !inTown && entered && !judge);
+  if (mp && mpIsles && !mpShown) { mpShown = true; mp.setVisible(true); }
+  if (mp && (mpOn || mpIsles)) mp.update(dt, { pos: player.pos, heading: player.heading, speed: Math.hypot(player.vel[0], player.vel[1]), grounded: player.grounded !== false, reducedMotion: lookdev.reducedMotion, area: mpOn ? 'town' : 'isles' });
+  // the shared town-hill spiders (presence v2, play/mobs.js MobBrain.share): the server's spiders once both are loaded
+  if (mp && mp.mobLink && townMobs && townMobs.brain && townMobs.brain.link !== mp.mobLink) townMobs.brain.share(mp.mobLink);
   else if (!mpTried && mpOn && !judge && params.get('mp') !== '0') {
     mpTried = true;
-    import('./play/multiplayer.js').then((m) => { const d1 = loadDay1(ctx.storage); mp = m.createMultiplayer({ scene, camera, THREE, t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage, me: (d1.guest || {}).account_id || null, ledger: townLedger, chests: chestBag, name: d1.nickname || '', account: (d1.guest && d1.minted && d1.guest.account_id) || null, lv: townLedger && townLedger.level ? Math.min(99, townLedger.level.level) : null, skin: irisAvatar && irisAvatar.hero ? irisAvatar.hero.id : 'iris', phone: mobileDevice, bots: Math.max(0, Math.min(14, Number(params.get('bots')) || 0)) }); mpShown = true; if (window.__ftf) window.__ftf.mp = mp; })
+    import('./play/multiplayer.js').then((m) => { const d1 = loadDay1(ctx.storage); mp = m.createMultiplayer({ onChatClose: () => mouseAim.resume(), scene, camera, THREE, t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage, me: (d1.guest || {}).account_id || null, ledger: townLedger, chests: chestBag, name: d1.nickname || '', account: (d1.guest && d1.minted && d1.guest.account_id) || null, lv: townLedger && townLedger.level ? Math.min(99, townLedger.level.level) : null, skin: irisAvatar && irisAvatar.hero ? irisAvatar.hero.id : 'iris', phone: mobileDevice, bots: Math.max(0, Math.min(14, Number(params.get('bots')) || 0)) }); mpShown = true; if (window.__ftf) window.__ftf.mp = mp; })
       .catch((e) => console.warn('[mp]', e));
   }
   if (town && town.active) {
@@ -1595,6 +1620,8 @@ function frame() {
   else if (irisAvatar) irisAvatar.update(dt, movingState, avatar, clock.elapsedTime, speed, player.run && movingState, lookdev.reducedMotion, null); // the town: her gait before the season
   // the sword in her hand: after the mixer, so the closed fist sits on top of every clip
   if (heldBlade) heldBlade.update(dt, lookdev.reducedMotion);
+  strikeTrail.update(dt, lookdev.reducedMotion); // after the mixer and the grip: the trail follows the pose drawn this frame
+  if (heldBlade) { /* loaded */ }
   else if (!heldBladeLoading && glassShoal && glassShoal.hasBlade && glassShoal.hasBlade()) {
     heldBladeLoading = true;
     import('./play/held-blade.js').then((m) => { heldBlade = m.createHeldBlade({ THREE, fetchGltf: prefetchGltf, hasModelFile, mobile: mobileDevice,
@@ -1659,7 +1686,7 @@ window.__ftf = {
   } : null,
 };
 requestAnimationFrame(frame);
-return { enterWorld, signIn: () => openAccount(), world3d, player, rig, lookdev, renderer, streamer, get play() { return play; }, town, townMode, 
+return { enterWorld, signIn: () => openAccount(), cursorScene, world3d, player, rig, lookdev, renderer, streamer, get play() { return play; }, town, townMode, 
   /** The first town view is complete: ground under Iris, every street piece real and warmed, her own model in (main.js gates the loading screen on it). */
   get townReady() { return !town || !inTown || (town.shown && townGrounded && (!irisLoad.hasModel || irisLoad.loaded || (irisLoad.failed && import.meta.env.DEV))); } };
 }

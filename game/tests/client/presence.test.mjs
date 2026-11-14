@@ -26,7 +26,7 @@ test('online: hello, welcome, snapshots, chat, mute, send rate', async () => {
   let t = 1000; const store = new Map(); const storage = { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, v) };
   const mp = createPresence({ url: 'wss://x/presence', name: 'ann', skin: 'elise', WebSocketImpl: FakeWS, now: () => t, storage });
   assert.equal(mp.status, 'connecting'); await tick();
-  const ws = FakeWS.last; assert.deepEqual(ws.sent[0], { t: 'hello', v: 1, name: 'ann', skin: 'elise' });
+  const ws = FakeWS.last; assert.deepEqual(ws.sent[0], { t: 'hello', v: 1, name: 'ann', skin: 'elise', area: 'town' });
   ws.recv({ t: 'welcome', id: 7, room: 2, max: 15, players: [{ id: 3, name: 'bob', skin: 'iris', p: [0, 0, 0], h: 0, a: 'idle' }] });
   assert.equal(mp.status, 'online'); assert.equal(mp.count, 2); assert.equal(mp.room, 2);
   t += 100; ws.recv({ t: 'snap', s: [[3, 1, 0, 0, 0, 'walk'], [7, 9, 9, 9, 0, 'run']] });

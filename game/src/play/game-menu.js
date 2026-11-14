@@ -21,7 +21,7 @@ import { groupChests, loadArchive, archiveOpened, outcomeOf, verifyHref, nftImag
 import { cue } from '../audio/town-audio.js';
 import { formatSilkC } from '../net/silk-core.js';
 import { wardrobe, TRY_ON_SECONDS } from './skins.js';
-import { collectionView } from './nft-collection.js';
+import { collectionView, shardCard, dragonCardArt } from './nft-collection.js';
 
 /** UI-004 tab icons (line art, currentColor). */
 const TAB_ICON = Object.freeze({
@@ -64,6 +64,10 @@ const CSS = `
 .gm-detail[hidden] { display: none; } .gm-detail img { width: 96px; height: 96px; object-fit: contain; } .gm-detail b { font: 600 20px/1.2 "Cormorant Garamond", Georgia, serif; margin-right: 8px; }
 .gm-rchip { display: inline-block; padding: 2px 8px; border-radius: 8px; font: 600 11px/1.5 system-ui; background: rgba(197, 164, 105, .14); color: var(--ftf-gold, #c5a469); }
 @media (max-width: 640px) { .gm-tab { min-width: 72px; padding: 6px 10px; font-size: 12px; } }
+/* phones (mobile audit 14.11): the panel's one column never grows past the panel (a wide tab body pushed the × and the third wardrobe card off a 360 px screen) */
+.gm-panel { grid-template-columns: minmax(0, 1fr); } .gm-head .gm-x { flex: 0 0 44px; }
+.gm-ward-card { min-width: 0; } .gm-ward-card .gm-fchip { white-space: normal; max-width: 100%; }
+@media (max-width: 480px) { .gm-head { padding-right: 64px; flex-wrap: wrap; } .gm-head .gm-x { position: absolute; top: 12px; right: 12px; } .gm-head h2 { min-width: 0; font-size: 16px; letter-spacing: .04em; overflow-wrap: anywhere; } }   /* a long tab title (Achievements) pushed the × off a 360 px screen */
 .gm { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; background: rgba(3, 7, 7, .62); font: 15px/1.4 system-ui, -apple-system, 'Segoe UI', sans-serif; color: var(--ftf-text, #eef0ea); }
 .gm-panel { position: relative; width: min(920px, calc(100vw - 24px)); height: min(640px, calc(100vh - 24px)); display: grid; grid-template-rows: auto auto 1fr; border-radius: 20px; overflow: hidden;
   background: rgba(13, 19, 18, .95); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid rgba(214, 226, 214, .12); box-shadow: 0 24px 60px rgba(0, 0, 0, .55); }
@@ -83,7 +87,7 @@ const CSS = `
 .gm-card img { width: 72px; height: 72px; object-fit: contain; display: block; margin: 0 auto 4px; filter: drop-shadow(0 4px 6px rgba(0,0,0,.18)); }
 .gm-card b { display: block; font: 700 13px/1.2 system-ui; } .gm-card small { display: block; color: rgba(233, 230, 220, .62); font-size: 11px; }
 .gm-count { position: absolute; top: 6px; right: 8px; min-width: 22px; padding: 2px 6px; border-radius: 11px; background: #0b100f; color: var(--ftf-text, #eef0ea); font: 700 11px/1.4 system-ui; }
-.gm-card[data-rarity="rare"]::after, .gm-card[data-rarity="epic"]::after, .gm-card[data-rarity="legendary"]::after { content: ""; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 40%, rgba(255,255,255,.22) 50%, transparent 60%); transform: translateX(-120%); animation: gm-shine 3.2s ease-in-out infinite; }
+.gm-card[data-rarity="rare"]::after, .gm-card[data-rarity="epic"]::after, .gm-card[data-rarity="legendary"]::after { content: ""; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 40%, rgba(255,255,255,.22) 50%, transparent 60%); transform: translateX(-120%); animation: gm-shine 3.2s ease-in-out infinite; pointer-events: none; }   /* the shine lay over the card and took the clicks: Open on a rare or better chest did nothing (mobile audit 14.11) */
 @keyframes gm-shine { 60%, 100% { transform: translateX(120%); } }
 .gm-card.gm-new { animation: gm-pop .5s cubic-bezier(.3, 1.6, .5, 1); }
 @keyframes gm-pop { from { transform: scale(.6); } to { transform: scale(1); } }
@@ -102,6 +106,9 @@ const CSS = `
 .gm-medal[data-done="true"] { background: linear-gradient(160deg, #2a2716, #1a211b); border-color: rgba(197, 164, 105, .4); }
 .gm-nft { position: relative; border-radius: 16px; overflow: hidden; background: var(--ftf-panel-solid, #101f1a); border: 1px solid rgba(214, 226, 214, .12); box-shadow: 0 6px 18px rgba(0, 0, 0, .3); padding: 10px; }
 .gm-nft img { width: 100%; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 10px; }
+.gm-shard { border-color: color-mix(in srgb, var(--rc) 55%, transparent); }
+.gm-shard .gm-shard-art { aspect-ratio: 2 / 3; }
+.gm-shard .gm-shard-art img { width: 78%; height: 78%; aspect-ratio: auto; object-fit: contain; border-radius: 0; }
 .gm-loot { border-color: color-mix(in srgb, var(--rc) 55%, transparent); }
 .gm-loot .gm-loot-art { display: grid; place-items: center; aspect-ratio: 1; margin-bottom: 8px; border-radius: 12px; background: radial-gradient(circle, color-mix(in srgb, var(--rc) 35%, transparent) 0%, transparent 70%), #0b100f; box-shadow: inset 0 0 0 2px var(--rc); }
 .gm-loot .gm-loot-art img { width: 72%; height: 72%; aspect-ratio: auto; object-fit: contain; border-radius: 0; filter: drop-shadow(0 6px 10px rgba(0,0,0,.5)); }
@@ -248,8 +255,11 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
         const mine = r.items.filter((x) => x.mine), others = r.items.filter((x) => !x.mine);
         for (const it of [...mine, ...others]) {
           const c = el('div', 'gm-nft');
+          const sh = shardCard(it); // owner 14.11: every token card has its picture, like Elise's
           if (it.kind === 'heroine') { const img = el('img'); img.src = base + 'assets/cards/elise.webp'; img.alt = ''; c.append(img); }
-          c.append(el('b', null, it.mine ? t('inv.elise') : it.label || it.tokenId));
+          else if (sh) { c.classList.add('gm-shard'); c.style.setProperty('--rc', sh.color); const art = el('div', 'gm-loot-art gm-shard-art'); const img = el('img'); img.src = base + 'assets/items/' + sh.art; img.alt = ''; art.append(img); c.append(art); }
+          c.append(el('b', null, it.mine ? t('inv.elise') : sh ? t('shard.nft.card', { kind: t('shard.nft.kind.' + sh.kind) }) : it.label || it.tokenId));
+          if (sh && sh.clan) c.append(el('span', 'gm-loot-rar', sh.clan));
           const chip = el('span', 'gm-chip gm-near', 'NEAR testnet'); c.append(el('br'), chip);
           if (it.href) { const a = el('a', 'gm-chip', t('menu.viewToken')); a.href = it.href; a.target = '_blank'; a.rel = 'noopener noreferrer'; c.append(a); }
           c.append(el('p', 'gm-note', it.mine ? t('menu.ownedByYou') : t('inv.owner', { owner: it.owner || '—' })));
@@ -266,6 +276,7 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
           const g2 = el('div', 'gm-grid'); g2.style.gridTemplateColumns = 'repeat(auto-fill, minmax(160px, 1fr))';
           for (const d of r.dragons) {
             const c = el('div', 'gm-nft');
+            const dart = dragonCardArt(d.kind); if (dart) { const img = el('img'); img.src = base + 'assets/' + dart; img.alt = ''; c.append(img); } // the painted dragon card
             c.append(el('b', null, d.title), el('br'), el('span', 'gm-chip gm-near', t('companion.owned')));
             const a = el('a', 'gm-chip', t('menu.viewToken')); a.href = d.href; a.target = '_blank'; a.rel = 'noopener noreferrer'; c.append(a);
             c.append(el('p', 'gm-note', t('companion.account', { account: r.account })));

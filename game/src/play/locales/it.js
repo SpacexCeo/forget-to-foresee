@@ -3,9 +3,11 @@
 // Muschio, Ambra, Brina.
 import quests from './it-quests.js';
 import hud from './it-hud.js';
+import npe from './it-npe.js';
 import account from './it-account.js';
 export default {
   ...hud, // first: the RPG HUD (en-hud.js keys); this file's own copies below win
+  ...npe, // the new-player dialogue, barks, card, glossary, Cup, tips and judge panel (en-npe.js, en-tips.js, en-judge.js keys)
   ...account, // the account panel (en-account.js keys)
   // ---- badge, help ----
   'play.badge': 'Demo locale · le regole girano nel tuo browser attraverso la stessa stanza dell’API degli agenti',
@@ -643,6 +645,10 @@ export default {
   'entry.enter': "Entra nel mondo",
   'entry.lang': "Scegli la lingua",
   'entry.ready': "La città è pronta",
+  // ---- "Press F11 for fullscreen" (ui/fullscreen-hint.js) ----
+  'fs.hint': "Premi F11 per lo schermo intero",
+  'fs.hint.click': "Clicca per lo schermo intero",
+  'fs.hint.close': "Nascondi fino alla prossima visita",
   'intro.skip': "Salta",
   'spot.wheel': "Gira la ruota",
   'item.prop_wheel_of_fortune': "Ruota della fortuna",
@@ -1255,6 +1261,7 @@ export default {
   'shard.nft.kind.promise': "promessa",
   'shard.nft.kind.insight': "intuizione",
   'shard.nft.kind.lie': "menzogna",
+  'shard.nft.card': "Frammento di memoria · {kind}",
 
   // ---- agent card NFT (src/ui/world-hud/agent-card.js) ----
   'agentcard.title': "{agent} · scheda dell’agente",
@@ -1631,6 +1638,8 @@ export default {
   'mp.act.boss.shoal': "{name} ha sconfitto la Marea Cava alla Secca di Vetro",
   'mp.act.trade': "{name} ha comprato merce al mercato",
   'mp.act.gate': "{name} ha nutrito il Telaio-Porta",
+  'mp.act.joined': "{name} entra in città",
+  'mp.act.left': "{name} lascia la città",
   'set.title': "Impostazioni",
   'set.close': "Chiudi",
   'set.tab.graphics': "Grafica",

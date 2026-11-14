@@ -315,9 +315,9 @@ export function createShoalArena(o) {
   function melee(range, dmg, heavy = false, step = 0) {
     const fx0 = Math.sin(me3.heading), fz0 = Math.cos(me3.heading);
     const hx = me3.x + fx0 * range * 0.6, hz = me3.z + fz0 * range * 0.6;
-    // the blade's arc: the combo cuts right, left, then a rising finisher; the heavy slash a wide, slower crescent
     const src = heavy ? 'blade_heavy' : 'blade', onBoss = bossDist() <= R.BOSS.contact + range;
-    fx.slash([me3.x, 1.15 + me3.lift, me3.z], me3.heading, range * (heavy ? 1.1 : 0.9), IMPACT[src].color, heavy ? 1 : step % 2 ? -1 : 1, heavy ? 0 : step === 2 ? -0.5 : 0.15, heavy ? 0.28 : 0.2);
+    // no fixed arc in front of her (owner 14.11: the strikes must follow the hand): the trail rides the limb or blade that swings
+    // (render/strike-trail.js, driven by her clip's own start and impact moments)
     cue(heavy ? 'strike_heavy' : 'strike_swing');
     if (onBoss) { damageBoss(dmg); landFx(src, bossHitAt(1.6)); cue(heavy ? 'strike_heavy' : 'strike_impact'); }
     const near = B.adds.filter((a) => Math.hypot(a.x - hx, a.z - hz) <= range + 0.8);

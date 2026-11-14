@@ -2,9 +2,11 @@
 // Same vocabulary as src/locales/zh.js: 贝壳, 丝, 回合, 锚, 卷轴; clans 伊里斯, 盐, 灰, 苔, 琥珀, 霜.
 import quests from './zh-quests.js';
 import hud from './zh-hud.js';
+import npe from './zh-npe.js';
 import account from './zh-account.js';
 export default {
   ...hud, // first: the RPG HUD (en-hud.js keys); this file's own copies below win
+  ...npe, // the new-player dialogue, barks, card, glossary, Cup, tips and judge panel (en-npe.js, en-tips.js, en-judge.js keys)
   ...account, // the account panel (en-account.js keys)
   // ---- badge, help ----
   'play.badge': '本地演示 · 规则在你的浏览器中运行，与代理 API 共用同一个房间',
@@ -642,6 +644,10 @@ export default {
   'entry.enter': "进入世界",
   'entry.lang': "选择语言",
   'entry.ready': "小镇已就绪",
+  // ---- "Press F11 for fullscreen" (ui/fullscreen-hint.js) ----
+  'fs.hint': "按 F11 进入全屏",
+  'fs.hint.click': "点击进入全屏",
+  'fs.hint.close': "隐藏，直到下次访问",
   'intro.skip': "跳过",
   'spot.wheel': "转动转盘",
   'item.prop_wheel_of_fortune': "幸运转盘",
@@ -1254,6 +1260,7 @@ export default {
   'shard.nft.kind.promise': "承诺",
   'shard.nft.kind.insight': "洞见",
   'shard.nft.kind.lie': "谎言",
+  'shard.nft.card': "记忆碎片 · {kind}",
 
   // ---- agent card NFT (src/ui/world-hud/agent-card.js) ----
   'agentcard.title': "{agent} · 智能体卡片",
@@ -1630,6 +1637,8 @@ export default {
   'mp.act.boss.shoal': "{name} 在玻璃浅滩击败了空潮",
   'mp.act.trade': "{name} 在市场买了东西",
   'mp.act.gate': "{name} 喂饱了织门",
+  'mp.act.joined': "{name} 来到了城镇",
+  'mp.act.left': "{name} 离开了",
   'set.title': "设置",
   'set.close': "关闭",
   'set.tab.graphics': "画面",

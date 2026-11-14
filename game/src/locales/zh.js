@@ -12,7 +12,7 @@ export default {
   'app.title.line2': 'TO FORESEE',
   'app.title.full': 'Forget to Foresee',
   'app.tagline': '未来以记忆为代价',
-  'premise.line': "艾瑞丝从 2048 年坠入一座山城。在 NEAR 测试网上赚取 200 丝，打开织门回家。",
+  'premise.line': "艾瑞斯从 2048 年坠入一座山城。在 NEAR 测试网上赚取 200 丝，打开织门回家。",
   'premise.hint': "第一步在右侧的新手指引里。",
 
   // ---- common ----

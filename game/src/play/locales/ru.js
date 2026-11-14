@@ -1,8 +1,10 @@
 // Russian: the second UI language of the 3D play layer. Keys mirror en.js exactly.
 import quests from './ru-quests.js';
 import hud from './ru-hud.js';
+import npe from './ru-npe.js';
 export default {
   ...hud, // first: the RPG HUD (en-hud.js keys); this file's own copies below win
+  ...npe, // the new-player dialogue, barks, card, glossary, Cup, tips and judge panel (en-npe.js, en-tips.js, en-judge.js keys)
   // ---- badge, help ----
   'play.badge': 'Локальное демо · правила работают в браузере через ту же комнату, что и API для агентов',
   'play.help.title': 'Управление',
@@ -640,6 +642,10 @@ export default {
   'entry.enter': "Войти в мир",
   'entry.lang': "Выберите язык",
   'entry.ready': "Город готов",
+  // ---- "Press F11 for fullscreen" (ui/fullscreen-hint.js) ----
+  'fs.hint': "Нажмите F11 для полного экрана",
+  'fs.hint.click': "Нажмите, чтобы открыть на весь экран",
+  'fs.hint.close': "Скрыть до следующего захода",
   'intro.skip': "Пропустить",
   'spot.wheel': "Крутить колесо",
   'item.prop_wheel_of_fortune': "Колесо фортуны",
@@ -1253,6 +1259,7 @@ export default {
   'shard.nft.kind.promise': "обещание",
   'shard.nft.kind.insight': "озарение",
   'shard.nft.kind.lie': "ложь",
+  'shard.nft.card': "Осколок памяти · {kind}",
 
   // ---- agent card NFT (src/ui/world-hud/agent-card.js) ----
   'agentcard.title': "{agent} · карточка агента",
@@ -1629,6 +1636,8 @@ export default {
   'mp.act.boss.shoal': "{name} побеждает Полый Прилив на Стеклянной Отмели",
   'mp.act.trade': "{name} покупает товар на рынке",
   'mp.act.gate': "{name} накормил(а) Ткацкие Врата",
+  'mp.act.joined': "{name} теперь в городе",
+  'mp.act.left': "{name} покидает город",
   'set.title': "Настройки",
   'set.close': "Закрыть",
   'set.tab.graphics': "Графика",

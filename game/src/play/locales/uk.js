@@ -2,9 +2,11 @@
 // Same vocabulary as src/locales/uk.js: Мушля, шовк, тик, якір, Сувій; clans Ірис, Сіль, Попіл, Мох, Бурштин, Іній.
 import quests from './uk-quests.js';
 import hud from './uk-hud.js';
+import npe from './uk-npe.js';
 import account from './uk-account.js';
 export default {
   ...hud, // first: the RPG HUD (en-hud.js keys); this file's own copies below win
+  ...npe, // the new-player dialogue, barks, card, glossary, Cup, tips and judge panel (en-npe.js, en-tips.js, en-judge.js keys)
   ...account, // the account panel (en-account.js keys)
   // ---- badge, help ----
   'play.badge': 'Локальне демо · правила працюють у вашому браузері через ту саму кімнату, що й API агентів',
@@ -642,6 +644,10 @@ export default {
   'entry.enter': "Увійти у світ",
   'entry.lang': "Оберіть мову",
   'entry.ready': "Місто готове",
+  // ---- "Press F11 for fullscreen" (ui/fullscreen-hint.js) ----
+  'fs.hint': "Натисніть F11 для повного екрана",
+  'fs.hint.click': "Натисніть, щоб відкрити на весь екран",
+  'fs.hint.close': "Сховати до наступного заходу",
   'intro.skip': "Пропустити",
   'spot.wheel': "Крутити колесо",
   'item.prop_wheel_of_fortune': "Колесо фортуни",
@@ -1254,6 +1260,7 @@ export default {
   'shard.nft.kind.promise': "обіцянка",
   'shard.nft.kind.insight': "осяяння",
   'shard.nft.kind.lie': "брехня",
+  'shard.nft.card': "Уламок пам’яті · {kind}",
 
   // ---- agent card NFT (src/ui/world-hud/agent-card.js) ----
   'agentcard.title': "{agent} · картка агента",
@@ -1630,6 +1637,8 @@ export default {
   'mp.act.boss.shoal': "{name} перемагає Порожній Приплив на Скляній Мілині",
   'mp.act.trade': "{name} купує товар на ринку",
   'mp.act.gate': "{name} нагодував(ла) Ткацьку Браму",
+  'mp.act.joined': "{name} тепер у місті",
+  'mp.act.left': "{name} залишає місто",
   'set.title': "Налаштування",
   'set.close': "Закрити",
   'set.tab.graphics': "Графіка",

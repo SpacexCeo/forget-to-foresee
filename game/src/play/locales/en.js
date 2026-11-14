@@ -647,6 +647,10 @@ const EN = {
   'entry.enter': "Enter the world",
   'entry.lang': "Choose your language",
   'entry.ready': "The town is ready",
+  // ---- "Press F11 for fullscreen" (ui/fullscreen-hint.js) ----
+  'fs.hint': "Press F11 for fullscreen",
+  'fs.hint.click': "Click to go fullscreen",
+  'fs.hint.close': "Hide until the next visit",
   'intro.skip': "Skip",
   'spot.wheel': "Spin the wheel",
   'item.prop_wheel_of_fortune': "Wheel of fortune",
@@ -1259,6 +1263,7 @@ const EN = {
   'shard.nft.kind.promise': "promise",
   'shard.nft.kind.insight': "insight",
   'shard.nft.kind.lie': "lie",
+  'shard.nft.card': "Memory shard · {kind}",
 
   // ---- the agent card NFT (src/ui/world-hud/agent-card.js; src/net/agent-nft.js) ----
   'agentcard.title': "{agent} · agent card",
@@ -1635,6 +1640,8 @@ const EN = {
   'mp.act.boss.shoal': "{name} defeated the Hollow Tide at the Glass Shoal",
   'mp.act.trade': "{name} bought goods at the market",
   'mp.act.gate': "{name} fed the Gate-Loom",
+  'mp.act.joined': "{name} joined the town",
+  'mp.act.left': "{name} left the town",
   'set.title': "Settings",
   'set.close': "Close",
   'set.tab.graphics': "Graphics",

@@ -71,3 +71,28 @@ test('the menu actions of the inventory and the NFTs tab have their sound (a car
     m.close();
   } finally { globalThis.dispatchEvent = had; delete globalThis.__ftfSkins; }
 });
+
+test('memory shard tokens get a painted shard per kind in their clan colour; dragons their card; the NFT tab shows the pictures (owner 14.11)', async () => {
+  const { SHARD_ART, shardCard, dragonCardArt, CLAN_COLOR } = await import('../../src/play/nft-collection.js');
+  const { SHARD_KINDS, CLANS } = await import('../../src/net/shard-nft.js');
+  assert.deepEqual(Object.keys(SHARD_ART).sort(), [...SHARD_KINDS].sort(), 'every kind of memory has its art');
+  assert.equal(new Set(Object.values(SHARD_ART)).size, SHARD_KINDS.length, 'a different shard for each');
+  for (const id of Object.values(SHARD_ART)) assert.ok(existsSync(new URL(`../../public/assets/items/icons/${id}_256.webp`, import.meta.url)), id);
+  assert.deepEqual(Object.keys(CLAN_COLOR).sort(), [...CLANS].sort());
+  assert.deepEqual(shardCard({ kind: 'shard', clan: 'frost', shardKind: 'insight' }), { art: 'icons/shard_violet_cluster_256.webp', kind: 'insight', clan: 'frost', color: CLAN_COLOR.frost });
+  assert.equal(shardCard({ kind: 'shard', label: 'iris · call' }).art, 'icons/shard_teal_twin_256.webp', 'from the label when only that is known');
+  assert.equal(shardCard({ kind: 'shard', label: 'iris · nonsense' }), null); assert.equal(shardCard({ kind: 'heroine' }), null);
+  for (const k of ['cinder', 'nacre', 'rill']) assert.ok(existsSync(new URL('../../public/assets/' + dragonCardArt(k), import.meta.url)), k);
+  for (const loc of ['en', 'ru', 'uk', 'it', 'zh']) assert.ok(PLAY_MESSAGES[loc]['shard.nft.card'], loc);
+  const { doc } = installDom();
+  const { openGameMenu } = await import('../../src/play/game-menu.js');
+  const storage = memoryStorage(); const i18n = createPlayI18n('en'); const t = (k, a) => i18n.t(k, a);
+  const onChain = Promise.resolve({ state: 'loaded', items: [{ kind: 'shard', clan: 'iris', shardKind: 'call', label: 'iris · call', tokenId: 's-1', owner: 'lambada_eth.testnet', href: 'https://testnet.nearblocks.io/x' }, { kind: 'shard', label: 'frost · insight', tokenId: 's-2', owner: 'lambada_eth.testnet' }] });
+  const m = openGameMenu({ doc, t, ledger: createTownLedger({ storage }), storage, tab: 'nfts', manifest: Promise.resolve([]), onChain, base: '/' });
+  await new Promise((r) => setTimeout(r, 0)); await new Promise((r) => setTimeout(r, 0));
+  const cards = m.root.querySelectorAll('.gm-shard');
+  assert.equal(cards.length, 2);
+  assert.ok(cards[0].querySelector('img').src.endsWith('assets/items/icons/shard_teal_twin_256.webp'));
+  assert.match(cards[0].textContent, /Memory shard · call/); assert.match(cards[1].textContent, /Memory shard · insight/);
+  m.close();
+});

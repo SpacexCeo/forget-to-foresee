@@ -71,7 +71,7 @@ test('names, validation, filter edge cases', () => {
 
 test('hello may carry the player\'s NEAR account and shown level; others see them; bad values are dropped', async () => {
   const { validate } = await import('../lib/hub.js');
-  assert.deepEqual(validate({ t: 'hello', name: 'a', skin: 'iris', account: 'ann-1.guests.ftf-coordinator.testnet', lv: 7 }), { t: 'hello', name: 'a', skin: 'iris', account: 'ann-1.guests.ftf-coordinator.testnet', lv: 7 });
+  assert.deepEqual(validate({ t: 'hello', name: 'a', skin: 'iris', account: 'ann-1.guests.ftf-coordinator.testnet', lv: 7 }), { t: 'hello', name: 'a', skin: 'iris', account: 'ann-1.guests.ftf-coordinator.testnet', lv: 7, area: 'town' });
   const bad = validate({ t: 'hello', name: 'a', account: 'Not An Account!', lv: 500 });
   assert.equal(bad.account, null); assert.equal(bad.lv, null);
 });
