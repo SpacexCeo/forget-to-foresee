@@ -29,6 +29,7 @@ import { Input } from './ui/input.js';
 import { PAD } from './ui/gamepad.js';
 import { navigateGamepadMenu } from './ui/gamepad-menu.js';
 import { mountSceneControls } from './ui/scene-controls.js';
+import { bindI18n } from './ui/dom.js';
 import { setBindings, loadBindings, bindings } from './ui/keybinds.js';
 import { createMouseAim, aimPoint } from './ui/mouse-aim.js';
 import { menuKeyAction, registerWindow, claimWindow, closeTopWindow } from './ui/window-toggle.js';
@@ -220,6 +221,7 @@ const controls = mountSceneControls(document.getElementById('scene-controls'), {
     { label: 'Touch: use the joysticks (left stick moves, skill buttons on the right)', visible: () => !!(input.touchControls && touchSticks && touchSticks.mode === 'tap'), onClick: () => touchSticks.setMode('sticks') },
     { label: 'Start over (a new season)', visible: () => !!play, onClick: () => { if (window.confirm('Start a new season? The current one is lost.')) startOver(); } },
   ] });
+bindI18n(document.getElementById('scene-controls'), ctx.i18n); // the gear's label follows the locale (it was English everywhere)
 { const st = document.createElement('style'); st.textContent = '.ftf-play-away #ui > *:not(.ftf-root-menu) { display: none !important; }'; document.head.append(st); }
 const toastEl = document.getElementById('toast');
 

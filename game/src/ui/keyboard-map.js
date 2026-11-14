@@ -112,8 +112,8 @@ export function controlsDiagram({ doc = globalThis.document, b, t, touch = false
   ul.append(item(t('set.kbd.m.left'), t('set.kbd.walkTalk')), item(t('set.kbd.m.right'), t('set.kbd.look')), item(t('set.kbd.m.wheel'), t('set.kbd.zoom')));
   mouse.append(ul);
   wrap.append(keys, mouse); box.append(wrap);
-  // long labels (ru "Действие", it "Bersaglio") shrink until they fit the key, else wrap to two lines; the title has the full text
-  const fit = () => { for (const s of keys.querySelectorAll('small')) { let f = 9; s.style.fontSize = ''; while (f > 6.5 && s.clientWidth && (s.scrollWidth > s.clientWidth || s.scrollHeight > 2 * f * 1.05 + 1)) { f -= 0.5; s.style.fontSize = f + 'px'; } } };
+  // long labels (ru "Действие", it "Bersaglio") shrink until they fit the key (wrapping to at most three lines); the title has the full text
+  const fit = () => { for (const s of keys.querySelectorAll('small')) { let f = 9; s.style.fontSize = ''; while (f > 6 && s.clientWidth && (s.scrollWidth > s.clientWidth || s.scrollHeight > 3 * f * 1.05 + 1)) { f -= 0.5; s.style.fontSize = f + 'px'; } } };
   const RO = (doc.defaultView || globalThis).ResizeObserver;
   if (RO) new RO(fit).observe(keys);
   return box;

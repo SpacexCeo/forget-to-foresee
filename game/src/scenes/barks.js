@@ -127,8 +127,10 @@ export function createBarks({ camera, i18n, people, hour = () => 'day', rain = (
       v.set(pos[0], pos[1] + (heightOf(current.key) || 1.7) + 0.35, pos[2]).project(camera);
       if (v.z > 1 || v.z < -1 || Math.abs(v.x) > 1.1 || Math.abs(v.y) > 1.1) { el.style.opacity = '0'; return; } // behind the camera or off screen
       const w = (globalThis.innerWidth || 1280), h = (globalThis.innerHeight || 720);
-      el.style.left = ((v.x + 1) / 2 * w).toFixed(1) + 'px';
-      el.style.top = ((1 - v.y) / 2 * h).toFixed(1) + 'px';
+      // the bubble is centred over the head and sits above it: keep all of it on screen near the edges (UI fit 14.11)
+      const bw = el.offsetWidth || 0, bh = el.offsetHeight || 0;
+      el.style.left = Math.min(Math.max((v.x + 1) / 2 * w, bw / 2 + 8), w - bw / 2 - 8).toFixed(1) + 'px';
+      el.style.top = Math.min(Math.max((1 - v.y) / 2 * h, bh + 8), h - 8).toFixed(1) + 'px';
       const age = t - current.t0;
       el.style.opacity = age > BARK.show - BARK.fade ? '0' : '1';
     },
