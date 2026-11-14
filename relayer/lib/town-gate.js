@@ -24,6 +24,7 @@ import { loadLog } from './pass-eligibility.js';
 import { verifyLog } from './expedition-rules/expedition-log.js';
 import { EXPEDITION } from './expedition-rules/expedition-config.js';
 import { createQueue } from './core.js';
+import { netOf } from './network.js';
 
 /** One send at a time with the coordinator key (its nonce is sequential): shared by the portal and the player moves. */
 export const coordQueue = createQueue();
@@ -46,7 +47,7 @@ const readCoordFile = (env) => { try { const r = JSON.parse(readFileSync(coordKe
 export const townGateEnv = (env = process.env) => {
   const f = env.FTF_TOWN_COORD_KEY ? null : readCoordFile(env);
   return {
-  town: env.FTF_TOWN_CONTRACT || 'ftf-town.testnet',
+  town: env.FTF_TOWN_CONTRACT || netOf(env).town,
   coord: env.FTF_TOWN_COORD || (f ? f.account : ''), coordKey: env.FTF_TOWN_COORD_KEY || (f ? f.secretKey : ''),
   logDir: env.FTF_EXPEDITION_DIR || '', dataDir: env.FTF_DATA_DIR || new URL('../data', import.meta.url).pathname,
   guestDaySilk: Math.max(1, Number(env.FTF_GUEST_CREDIT_DAY) || GATE.guestDaySilk),

@@ -10,6 +10,7 @@ import { HIRE, snapshotSeries } from '../game/town-economy.js';
 import { matchIntent, replyFor } from '../game/intents.js';
 import { guideAnim, GUIDE_ANIM_PAGES } from './guide-anim.js';
 import { createPillStack, pillKey, parsePillKey } from './panel-pills.js';
+import { txUrl } from '../net/network.js';
 
 /** Townsfolk who keep a monster-resource stall (net/stall-client.js STALLS; a test checks them): their card opens it. The
  * ash-ore stall belongs to the Ash clan agent, who has no townsperson's card yet. */
@@ -327,7 +328,7 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     if (st && st.state === 'sending') box.append(el('p', null, i18n.t('ledger.sending')));
     else if (st && st.state === 'done') {
       box.append(el('p', null, st.verified ? i18n.t('ledger.verified') : i18n.t('ledger.mismatch', { reason: st.reason })));
-      if (st.hash) { const a = el('a', null, i18n.t('ledger.view')); a.href = 'https://testnet.nearblocks.io/txns/' + st.hash; a.target = '_blank'; a.rel = 'noopener noreferrer'; box.append(a); }
+      if (st.hash) { const a = el('a', null, i18n.t('ledger.view')); a.href = txUrl(st.hash); a.target = '_blank'; a.rel = 'noopener noreferrer'; box.append(a); }
       box.append(copyStepsButton(npc, r, el, b));
     } else if (why) box.append(el('p', null, i18n.t('ledger.why.' + why)));
     else {
@@ -393,7 +394,7 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
       const reason = st.chain.reason && i18n.has && i18n.has('ledger.why.' + st.chain.reason) ? i18n.t('ledger.why.' + st.chain.reason) : String(st.chain.reason || '').replace(/_/g, ' ');
       const p = el('p', null, st.chain.ok ? i18n.t('tee.recorded') : i18n.t('tee.recordFailed', { reason }));
       if (!st.chain.hash) return [p];
-      const a = el('a', null, i18n.t('ledger.view')); a.href = 'https://testnet.nearblocks.io/txns/' + st.chain.hash; a.target = '_blank'; a.rel = 'noopener noreferrer';
+      const a = el('a', null, i18n.t('ledger.view')); a.href = txUrl(st.chain.hash); a.target = '_blank'; a.rel = 'noopener noreferrer';
       return [p, a];
     };
     box.append(teeLine(st, el, b, chainNote));

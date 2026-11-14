@@ -7,6 +7,7 @@
 import { sha256 } from '../game/crypto.js';
 import { NEAR_DEPLOYMENT } from './near-deployment.js';
 import { createNearClient, explorerLinks } from './near.js';
+import { NET } from './network.js';
 
 export const SHARD_KINDS = ['first', 'call', 'gift', 'betrayal', 'debt', 'promise', 'insight', 'lie'];
 export const CLANS = ['iris', 'salt', 'ash', 'moss', 'amber', 'frost'];
@@ -109,7 +110,7 @@ export function shardMetadata(input) {
   const what = d.weight > 0 ? `a ${d.kind} memory of weight ${d.weight}` : `${d.kind === 'lie' ? 'a lie' : 'an insight'}`;
   return {
     title: `Memory shard #${d.shard_id} · ${cap(d.kind)} · season ${d.season_id}`,
-    description: `${cap(d.owner_clan)} forgot ${what} at trial ${d.forgotten_at_tick} of season ${d.season_id}; the shard was ${sale}.${unlock} The season's schedule root is ${d.schedule_root} (contracts/season-commit). Forget to Foresee, NEAR testnet.`,
+    description: `${cap(d.owner_clan)} forgot ${what} at trial ${d.forgotten_at_tick} of season ${d.season_id}; the shard was ${sale}.${unlock} The season's schedule root is ${d.schedule_root} (contracts/season-commit). Forget to Foresee, ${NET.label}.`,
     media: `data:image/svg+xml;base64,${b64(svg)}`,
     media_hash: hexToB64(sha256(svg)),
     copies: 1,

@@ -1,18 +1,7 @@
-// Day 1 (free mint) deployment on NEAR testnet: public account ids and the guest key's public part, written by
-// contracts/scripts/day1-*.sh. Never a private key: the guest key's secret is in the build environment (VITE_FTF_GUEST_KEY).
-export const DAY1_DEPLOYMENT = {
-  "network": "testnet",
-  "heroine": "heroine.ftf-coordinator.testnet",
-  "companions": "companions.ftf-coordinator.testnet",
-  "guests": "guests.ftf-coordinator.testnet",
-  "guestKeyAccount": "guests.ftf-coordinator.testnet",
-  "guestKeyPublic": "ed25519:3aViGk5NRgNqojA67rNfUqN5g7VyGkDXYZytfvuHyPgA",
-  "agents": "agents.ftf-coordinator.testnet",
-  "ledger": "ledger.ftf-coordinator.testnet",
-  "relayer": "https://159-195-130-113.sslip.io",
-  "chests": "chests.ftf-coordinator.testnet",
-  "skins": "skins.ftf-coordinator.testnet",
-  "presence": "wss://159-195-130-113.sslip.io/presence",
-  "town": "ftf-town.testnet",
-  "items": "items.ftf-town.testnet"
-};
+// The Day 1 deployment this build uses: the record for the network chosen in net/network.js (VITE_FTF_NEAR_NETWORK).
+// The records are written by contracts/scripts/day1-write.mjs.
+import { NEAR_NETWORK } from './network.js';
+import { DAY1_DEPLOYMENT_TESTNET } from './day1-deployment.testnet.js';
+import { DAY1_DEPLOYMENT_MAINNET } from './day1-deployment.mainnet.js';
+
+export const DAY1_DEPLOYMENT = NEAR_NETWORK === 'mainnet' ? DAY1_DEPLOYMENT_MAINNET : DAY1_DEPLOYMENT_TESTNET;

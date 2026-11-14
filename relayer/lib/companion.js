@@ -18,9 +18,10 @@
 import { b58decode, createTxClient, importSecretKey, sha256 } from './near-tx.js';
 import { loadLog } from './pass-eligibility.js';
 import { verifyLog } from './expedition-rules/expedition-log.js';
+import { NET, netOf } from './network.js';
 
 export const COMPANION = Object.freeze({
-  companions: 'companions.ftf-coordinator.testnet', heroine: 'heroine.ftf-coordinator.testnet', guests: 'guests.ftf-coordinator.testnet',
+  companions: NET.companions, heroine: NET.heroine, guests: NET.guests,
   maxSkewMs: 5 * 60 * 1000, gas: 30_000_000_000_000n,
 });
 export const DRAGON_KINDS = Object.freeze(['nacre', 'rill', 'cinder']);
@@ -36,11 +37,11 @@ export const companionMessage = (accountId, at, reason, seasonId = '', heroineTo
 
 export const companionEnv = (env = process.env) => ({
   secretKey: env.FTF_COMPANION_KEY || '',
-  companions: env.FTF_COMPANIONS_CONTRACT || COMPANION.companions,
-  heroine: env.FTF_HEROINE_CONTRACT || COMPANION.heroine,
-  guests: env.FTF_GUESTS_CONTRACT || COMPANION.guests,
+  companions: env.FTF_COMPANIONS_CONTRACT || netOf(env).companions,
+  heroine: env.FTF_HEROINE_CONTRACT || netOf(env).heroine,
+  guests: env.FTF_GUESTS_CONTRACT || netOf(env).guests,
   logDir: env.FTF_EXPEDITION_DIR || '',
-  town: env.FTF_TOWN_CONTRACT || 'ftf-town.testnet',
+  town: env.FTF_TOWN_CONTRACT || netOf(env).town,
 });
 
 /** Shape check of a claim. */

@@ -7,6 +7,7 @@ import { guestFrom } from './agent-ledger.js';
 import { relayerUrl } from './tee-agent.js';
 import { PASS_DEPLOYMENT } from './pass-deployment.js';
 import { EXPEDITION } from '../game/expedition-config.js';
+import { NEAR_NETWORK } from './network.js';
 
 export const BOARD_SEASON = 1;
 export const NAMED_RE = /^(([a-z\d]+[-_])*[a-z\d]+\.)*([a-z\d]+[-_])*[a-z\d]+$/;
@@ -14,7 +15,7 @@ export const IMPLICIT_RE = /^[0-9a-f]{64}$/;
 const HASH_RE = /^[1-9A-HJ-NP-Za-km-z]{43,44}$/;
 
 /** relayer lib/pass.js checkWallet, same rules: {ok, implicit} | {ok: false}. Uppercase is refused, never lowercased. */
-export function checkWallet(id, { network = 'testnet', forbidden = [] } = {}) {
+export function checkWallet(id, { network = NEAR_NETWORK, forbidden = [] } = {}) {
   if (typeof id !== 'string' || id.length < 2 || id.length > 64) return { ok: false };
   const implicit = IMPLICIT_RE.test(id);
   if (!implicit && !NAMED_RE.test(id)) return { ok: false };

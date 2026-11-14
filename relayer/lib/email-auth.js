@@ -12,6 +12,7 @@
 // Testnet only: the key holds testnet NEAR and game items with no real value; that custody is stated in the docs.
 import { createHash, createCipheriv, createDecipheriv, randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
 import { verifyGuest } from './auth.js';
+import { NET } from './network.js';
 
 export const EMAIL = Object.freeze({ codeTtlMs: 10 * 60 * 1000, maxTries: 5, perEmailPerHour: 5, proofTtlMs: 5 * 60 * 1000, maxCodes: 20000 });
 const EMAIL_RE = /^[a-z0-9._%+-]{1,64}@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,24}$/;
@@ -39,7 +40,7 @@ export function unseal(box, key) {
 }
 
 /** The account proof text a full-access key of the account signs (the browser builds the same; a test checks). */
-export const proofMessage = (action, accountId, detail, at) => `Forget to Foresee account\nAction: ${action}\nAccount: ${accountId}\nDetail: ${detail}\nAt: ${at}\nThis proves you control this game account on NEAR testnet. It sends no transaction.`;
+export const proofMessage = (action, accountId, detail, at) => `Forget to Foresee account\nAction: ${action}\nAccount: ${accountId}\nDetail: ${detail}\nAt: ${at}\nThis proves you control this game account on NEAR ${NET.network}. It sends no transaction.`;
 
 /** One-time codes in memory: issue(email, purpose, bind) -> code | {error}; take(email, code, purpose) -> {ok, bind} | {ok:false, error}. */
 export function createCodes({ now = () => Date.now(), rand = () => randomInt(0, 1_000_000), salt = randomBytes(16) } = {}) {
@@ -74,7 +75,7 @@ export function createMailer({ env = process.env, fetch = globalThis.fetch, log 
     configured: !!(apiKey && from),
     async send(to, code, purpose) {
       const subject = purpose === 'link' ? 'Link this email to your Forget to Foresee account' : 'Your Forget to Foresee sign-in code';
-      const text = `Your code: ${code}\n\nIt works for 10 minutes. If you did not ask for it, ignore this email: nothing happens without the code.\n\nForget to Foresee runs on NEAR testnet; nothing in the game has real-world value.`;
+      const text = `Your code: ${code}\n\nIt works for 10 minutes. If you did not ask for it, ignore this email: nothing happens without the code.\n\nForget to Foresee runs on NEAR ${NET.network}${NET.network === 'testnet' ? '; nothing in the game has real-world value' : ''}.`;
       const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ from, to: [to], subject, text }) });
       if (!r.ok) { log(`[auth] email send failed ${r.status}`); throw new Error('send_failed'); }
       return true;

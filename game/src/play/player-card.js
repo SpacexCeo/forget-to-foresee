@@ -6,6 +6,7 @@
 // Phone: opens on tap only, closes on a tap outside or Esc; nothing pops up by itself.
 import { formatSilkC } from '../net/silk-core.js';
 import { createFriends } from './friends.js';
+import { NET } from '../net/network.js';
 
 export const PRACTICE_KEY = 'ftf.practice.trades.v1';
 const HERO_LABEL = { iris: 'Iris', elise: 'Elise', sheriffchenko: 'Sheriffchenko' };
@@ -42,7 +43,7 @@ export async function readPublic(account) {
   try {
     const [{ createTxClient }, { readLootNfts }, { NEAR_DEPLOYMENT }, { DAY1_DEPLOYMENT }] = await Promise.all([import('../net/near-tx.js'), import('../net/chest-client.js'), import('../net/near-deployment.js'), import('../net/day1-deployment.js')]);
     const client = createTxClient({ rpcUrls: NEAR_DEPLOYMENT.rpcUrls, timeoutMs: 10000 });
-    const [row, loot] = await Promise.all([client.view(DAY1_DEPLOYMENT.town || 'ftf-town.testnet', 'balance_of', { account_id: account }).catch(() => null), readLootNfts({ owner: account })]);
+    const [row, loot] = await Promise.all([client.view(DAY1_DEPLOYMENT.town || NET.accounts.town, 'balance_of', { account_id: account }).catch(() => null), readLootNfts({ owner: account })]);
     if (loot.state === 'offline' && row == null) return { offline: true };
     return { silkC: row ? Math.floor(Number(BigInt(row.silk) / 10_000n)) : 0, nfts: loot.state === 'loaded' ? loot.items.map((i) => ({ title: i.title, href: i.href })) : [] };
   } catch { return { offline: true }; }

@@ -3,9 +3,10 @@
 // looks. The numbers come from the relayer's gate log (GET /api/town/gate?stats=1: every paid gate with its transaction)
 // and, when the relayer cannot answer, from the town contract's own counters (pulse: gate_burned, gates_paid — the
 // all-time total, never called "today"). Nothing here is invented: no answer, no number. No DOM, no network.
+import { EXPLORER } from '../net/network.js';
 
 export const MICRO = 1_000_000;
-export const EXPLORER = 'https://testnet.nearblocks.io';
+export { EXPLORER };
 /** Silk at which the Loom is half fed for the day (its glow and motes follow 1 - 2^(-silk / HALF)). */
 export const HALF_FED_SILK = 400;
 

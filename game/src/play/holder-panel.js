@@ -1,6 +1,7 @@
 // Holder access section of the game menu's NFTs tab (audit QW-6). Read-only: an account id in, what it holds on the
 // game's NFT contracts out (explorer links), and the cosmetic perks that holding unlocks in this browser.
 import { checkHolder, loadHolder, saveHolder, JUDGE_ACCOUNT } from '../net/holder.js';
+import { NET } from '../net/network.js';
 
 /**
  * @param {{doc: Document, t: Function, storage?: object, owner?: string|null, check?: Function, onChange?: Function}} o
@@ -11,7 +12,7 @@ export function holderSection({ doc = document, t, storage = null, owner = null,
   const box = el('section', 'gm-holder');
   box.append(el('h3', null, t('holder.heading')), el('p', 'gm-note', t('holder.note')));
   const row = el('div', 'gm-row');
-  const input = el('input'); input.type = 'text'; input.placeholder = 'name.testnet'; input.setAttribute('aria-label', t('holder.account'));
+  const input = el('input'); input.type = 'text'; input.placeholder = 'name' + NET.suffix; input.setAttribute('aria-label', t('holder.account'));
   input.autocomplete = 'off'; input.spellcheck = false; input.value = (loadHolder(storage) || {}).account || owner || '';
   input.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') run(input.value); });
   const mk = (text, fn, cls = 'gm-btn') => { const b = el('button', cls, text); b.type = 'button'; b.addEventListener('click', fn); return b; };

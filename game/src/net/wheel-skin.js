@@ -7,6 +7,7 @@ import { NEAR_DEPLOYMENT } from './near-deployment.js';
 import { DAY1_DEPLOYMENT } from './day1-deployment.js';
 import { guestFrom } from './agent-ledger.js';
 import { relayerUrl } from './tee-agent.js';
+import { NET, txUrl } from './network.js';
 
 const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
 const bytes = (s) => new TextEncoder().encode(s);
@@ -14,7 +15,7 @@ const bytes = (s) => new TextEncoder().encode(s);
 const REASON = { wheel_not_configured: 'not_configured', not_found: 'not_configured', sold_out: 'sold_out', already_owned: 'already_owned', rate_limited: 'rate', invalid_spin: 'invalid',
   bad_signature: 'failed', not_your_key: 'failed', stale: 'failed', replayed: 'failed', tx_failed: 'failed', rpc: 'network' };
 /** The skin contract (contracts/skin-nft; views skin_info, skin_of). */
-export const SKIN_CONTRACT = 'skins.ftf-coordinator.testnet';
+export const SKIN_CONTRACT = NET.accounts.skins;
 export const skinContract = (dep = DAY1_DEPLOYMENT) => (dep && dep.skins) || SKIN_CONTRACT;
 
 /** The text the guest key signs (the relayer checks the same text). */
@@ -40,7 +41,7 @@ export async function claimWheelSkin({ storage, wheelId, seed, deployment = DAY1
     if (!ans.token_id && (r.status === 202 || ans.pending === true || ans.status === 'pending' || ans.status === 'recorded' || ans.status === 'mint_pending')) return { ok: false, reason: 'recorded', verified: ans.verified === true, left: Number.isFinite(+ans.left) ? +ans.left : null, claimId: ans.claim_id || ans.id || null };
     if (ans.error === 'already_owned') return { ok: false, reason: 'already_owned', tokenId: ans.token_id || null }; // a retry after the mint: the existing token
     if (!r.ok || !ans.token_id) return { ok: false, reason: r.status === 404 ? 'not_configured' : REASON[ans.error] || (r.status >= 500 ? 'network' : 'failed') };
-    return { ok: true, tokenId: ans.token_id, txHash: ans.tx_hash || null, contract: ans.contract || skinContract(deployment), explorer: ans.tx_hash ? 'https://testnet.nearblocks.io/txns/' + ans.tx_hash : null };
+    return { ok: true, tokenId: ans.token_id, txHash: ans.tx_hash || null, contract: ans.contract || skinContract(deployment), explorer: ans.tx_hash ? txUrl(ans.tx_hash) : null };
   } catch { return { ok: false, reason: 'network' }; }
 }
 

@@ -7,6 +7,7 @@
 import { createTxClient, generateKeyPair, importSecretKey } from '../net/near-tx.js';
 import { DAY1_DEPLOYMENT } from '../net/day1-deployment.js';
 import { NEAR_DEPLOYMENT } from '../net/near-deployment.js';
+import { EXPLORER } from '../net/network.js';
 
 export const DAY1_KEY = 'ftf.day1.v1';
 /** The free fund cannot pay for another guest, or today's free mints are used up: a retry will not help now. */
@@ -32,7 +33,7 @@ export function createDay1Mint({ storage = null, deployment = DAY1_DEPLOYMENT, r
   const set = (phase, reason = null) => { st.phase = phase; st.reason = reason; emit(); };
   const relayer = relayerUrl ? String(relayerUrl).replace(/\/$/, '') : null;
   const available = () => !!(deployment && deployment.guests && deployment.heroine && (relayer || (deployment.guestKeyAccount && guestSecret)));
-  const explorer = (NEAR_DEPLOYMENT.explorer || 'https://testnet.nearblocks.io').replace(/\/$/, '');
+  const explorer = (NEAR_DEPLOYMENT.explorer || EXPLORER).replace(/\/$/, '');
   let running = null;
 
   async function run(nickname) {

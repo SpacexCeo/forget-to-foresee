@@ -2,8 +2,9 @@
 // the last trades with their testnet transaction hashes) for the ticker. No keys, no signing: the trades are made by
 // the relayer's daemon, each signed by that townsperson's own key. Pure apart from fetch.
 import { relayerUrl } from './tee-agent.js';
+import { EXPLORER } from './network.js';
 
-export const EXPLORER = 'https://testnet.nearblocks.io';
+export { EXPLORER };
 export const POLL_MS = 20_000;
 const KEYS = /^[a-z_]{2,16}$/, HASH = /^[1-9A-HJ-NP-Za-km-z]{40,50}$/;
 

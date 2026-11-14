@@ -1,6 +1,7 @@
 // The chest list in the Inventory tab and the loot NFT cards in the NFTs tab (owner 13.11: opened chests looked like
 // actions, loot NFTs had no picture). Pure helpers: which chests are sealed, opened or archived, what came out of an
 // opened one, whether it was "dust" (a small leftover), and which item icon a loot NFT shows. No DOM here.
+import { txUrl } from '../net/network.js';
 
 /** The archived chest ids (opened chests moved out of the history by the player), separate from the chest bag. */
 export const ARCHIVE_KEY = 'ftf.chests.archive.v1';
@@ -65,7 +66,7 @@ export function outcomeOf(chest) {
 export function verifyHref(chest) {
   const op = chest && chest.opening;
   const tx = op && op.tx;
-  return op && op.verified && tx && /^[1-9A-HJ-NP-Za-km-z]{32,64}$/.test(String(tx)) ? `https://testnet.nearblocks.io/txns/${tx}` : null;
+  return op && op.verified && tx && /^[1-9A-HJ-NP-Za-km-z]{32,64}$/.test(String(tx)) ? txUrl(tx) : null;
 }
 
 // The NFT part of the season deck (relayer/lib/chest-deck.js NFT_TIERS and ITEMS; tests check they stay equal):

@@ -9,10 +9,11 @@ import { DAY1_DEPLOYMENT } from './day1-deployment.js';
 import { NEAR_DEPLOYMENT } from './near-deployment.js';
 import { guestFrom } from './agent-ledger.js';
 import { relayerUrl } from './tee-agent.js';
+import { txUrl } from './network.js';
 
 export const CHEST_DECK_VERSION = 'ftf-chest-1';
 export const chestContract = (dep = DAY1_DEPLOYMENT) => (dep && dep.chests) || null;
-const explorer = (h) => 'https://testnet.nearblocks.io/txns/' + h;
+const explorer = (h) => txUrl(h);
 const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
 
 /** Whether the relayer can open chests (one health call per page). */
