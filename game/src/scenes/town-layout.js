@@ -195,14 +195,19 @@ export function shopFromData(s, index) {
   const pt = (p, fallback) => add3(origin, (p && p.position) || fallback);
   const opens = 'opens' in s ? s.opens : (s.id in SHOP_OPENS ? SHOP_OPENS[s.id] : null);
   const door = { position: townToWorld(s.door.position), heading: s.door.heading, radius: s.door.radius ?? 1.6 };
+  const exit = { position: pt(it.exit, [0, 0, size[2] / 2 - 0.5]), radius: (it.exit && it.exit.radius) ?? 1.1 };
+  // she appears a step into the room, clear of the exit zone (the data's spawn stood inside it: "Leave" showed the
+  // moment she came in and a second E sent her straight back out)
+  const spawn = pt(it.spawn, [0, 0, size[2] / 2 - 1.2]), ex = spawn[0] - exit.position[0], ez = spawn[2] - exit.position[2], ed = Math.hypot(ex, ez), want = exit.radius + 0.3;
+  if (ed < want) { if (ed > 1e-6) { spawn[0] = exit.position[0] + ex / ed * want; spawn[2] = exit.position[2] + ez / ed * want; } else spawn[2] = exit.position[2] - want; }
   return Object.freeze({
     id: s.id, index, piece: s.piece,
     keeper: s.keeper || SHOP_KEEPERS[s.id] || null,
     opens: SHOP_VIEWS.includes(opens) ? opens : null,
     origin: Object.freeze(origin), size: Object.freeze(size.slice()),
     door: Object.freeze(door), street: Object.freeze(shopStreetReturn(door)),
-    spawn: Object.freeze({ position: pt(it.spawn, [0, 0, size[2] / 2 - 1.2]), heading: (it.spawn && it.spawn.heading) ?? Math.PI }),
-    exit: Object.freeze({ position: pt(it.exit, [0, 0, size[2] / 2 - 0.5]), radius: (it.exit && it.exit.radius) ?? 1.1 }),
+    spawn: Object.freeze({ position: spawn, heading: (it.spawn && it.spawn.heading) ?? Math.PI }),
+    exit: Object.freeze(exit),
     counter: Object.freeze({ position: pt(it.counter, [0, 0, -2]), radius: (it.counter && it.counter.radius) ?? 1.8 }),
     keeperStand: Object.freeze({ position: pt(it.shopkeeper_stand, [0, 0, -4]), heading: (it.shopkeeper_stand && it.shopkeeper_stand.heading) ?? 0 }),
     killY: origin[1] - 10,
