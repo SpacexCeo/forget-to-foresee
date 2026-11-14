@@ -496,6 +496,8 @@ if (townMode.town) {
     spots.push(...townTales.spots);
   }).catch((e) => console.warn('[tales]', e));
   townProps = createTownProps({ scene, town, ledger: townLedger, i18n: ctx.i18n, mobile: mobileDevice });
+  // the archipelago's banners and torches dressing the square and the lower street (scenes/town-decor.js; light files on phones)
+  { const T = town; import('./scenes/town-decor-view.js').then((m) => m.placeTownDecor({ THREE, scene, origin: TOWN_ORIGIN_W, groundAt: (x, z, y) => T.groundAt(x, z, y), world: T.world })).catch((e) => console.warn('[decor]', e)); }
   // the mirror and the notice board: the two spots the town files do not model get an object (owner 12.11)
   if (!hatchLoading) { hatchLoading = true; import('./scenes/hatchkeeper.js').then((m) => { hatchkeeper = m.createHatchkeeper({ pet: hatchPet(), scene, t: (k, a) => ctx.i18n.t(k, a), groundAt: (x, z) => town.groundAt(x, z), mobile: mobileDevice, reduced: () => lookdev.reducedMotion }); spots.push(hatchkeeper.spot); }).catch((e) => console.warn('[hatchkeeper]', e)); }
   if (!spotProps) spotProps = createSpotProps({ scene, town, near: (id) => { const s = spots.find((x) => x.id === id); return !!(s && inTown && s.near(player.pos)); } });
