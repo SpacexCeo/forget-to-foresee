@@ -28,7 +28,7 @@
  "head_from": 0.9,
  "spine_bones": 12,
  "plates": 24,
- "sides": 28,
+ "sides": 36,
  "side_crystals": 14,
  "head": {
   "length": 4.6,
@@ -53,5 +53,8 @@
   "crown": 7,
   "crown_height": 4.2
  },
- "emissive_strength": 2.5
+ "emissive_strength": 2.5,
+ "hood": 5,
+ "hood_length": 4.2,
+ "floor_shards": 13
 }

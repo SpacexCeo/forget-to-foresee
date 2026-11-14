@@ -9,7 +9,7 @@ A = args(); ROOT = A['root']
 bpy.ops.wm.open_mainfile(filepath=f'{ROOT}/work/08_clips.blend')
 rig = bpy.data.objects['dragon_rig']; mesh = bpy.data.objects['dragon']
 def pose(clip, frame):
-    for t in rig.animation_data.nla_tracks: t.is_solo = t.name == clip
+    rig.animation_data.nla_tracks[clip].is_solo = True   # solo one track (setting False on the others would end solo mode)
     bpy.context.scene.frame_set(frame)
 SHOTS = [('glide', 20, 'behind', None), ('flap', 8, 'below', None), ('flap', 26, 'q34', None), ('bank_l', 30, 'front_hi', None), ('idle', 10, 'q34', None),
          ('idle', 10, 'q34', ((0, -3.2, 4.3), 1.7)), ('land', 30, 'side', None), ('glide', 40, 'top', None)]

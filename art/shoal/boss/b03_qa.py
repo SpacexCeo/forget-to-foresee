@@ -17,6 +17,6 @@ SHOTS = [('idle', 20, 'player', ((0, -1, 7), 12)), ('idle', 60, 'front_lo', ((0,
          ('slam', 39, 'player_r', ((0, -4, 5), 12)), ('lunge', 38, 'high', ((0, -12, 4), 16)), ('sweep', 40, 'high', ((0, 0, 4), 15)),
          ('death', 60, 'player', ((0, -4, 4), 12)), ('idle', 90, 'behind', ((0, 0, 7), 12))]
 for i, (clip, frame, view, focus) in enumerate(SHOTS):
-    for t in rig.animation_data.nla_tracks: t.is_solo = t.name == clip
+    rig.animation_data.nla_tracks[clip].is_solo = True   # solo one track (setting False on the others would end solo mode)
     bpy.context.scene.frame_set(frame); beauty(f'{ROOT}/renders/qa_{i}_{clip}', [mesh], views=(view,), res=1000, samples=48, focus=focus)
 print('REPORT', json.dumps(dict(step='b03_qa', shots=len(SHOTS), status='PASS')))

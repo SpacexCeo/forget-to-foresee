@@ -64,9 +64,9 @@ def mesh_obj(name, verts, faces, mats, mode, smooth_shade=False):
     parts.append((o, mode)); return o
 
 
-def prism(name, base, axis, r, length, mat, mode, sides=6, tip=0.25, taper=0.85):
+def prism(name, base, axis, r, length, mat, mode, sides=6, tip=0.25, taper=0.85, flat=1.0, wide=None):
     """A crystal: a prism with a pointed tip. Returns the object."""
-    ax = np.array(axis, float); ax /= np.linalg.norm(ax); e1 = np.cross(ax, [0.3, 0.2, 0.93]); e1 /= np.linalg.norm(e1); e2 = np.cross(ax, e1)
+    ax = np.array(axis, float); ax /= np.linalg.norm(ax); e1 = np.cross(ax, [0.3, 0.2, 0.93] if wide is None else wide); e1 /= np.linalg.norm(e1); e2 = np.cross(ax, e1) * flat
     ring = lambda h, rr: [np.array(base) + ax * h + rr * (math.cos(2 * math.pi * k / sides + 0.4) * e1 + math.sin(2 * math.pi * k / sides + 0.4) * e2) for k in range(sides)]
     v = ring(0, r) + ring(length * (1 - tip), r * taper) + [np.array(base) + ax * length]; f = []
     for k in range(sides):
@@ -97,7 +97,7 @@ else:
                 facet = 1 + 0.05 * math.cos(5 * a + ph) + 0.03 * math.cos(9 * a + 2 * ph) + 0.02 * math.cos(17 * a + 3 * ph)
                 keel = 1 + 0.10 * math.exp(-((abs(a - math.pi)) / 0.35) ** 2)          # a ridge down the back
                 belly = 1 - 0.06 * math.exp(-(min(a, 2 * math.pi - a) / 0.6) ** 2)      # a flatter front
-                rr = R * facet * keel * belly if rf > 0.85 else R
+                rr = R * facet * keel * belly * (1 + rng.normal(0, 0.018)) if rf > 0.85 else R
                 verts.append(P + rr * (math.cos(a) * Nn + wide * math.sin(a) * XAX) + (T * rr * (tilt[0] * math.cos(a) + tilt[1] * math.sin(a)) if rf > 0.85 else 0))
         base = p * 4 * SIDES
         for ring_i in range(3):
@@ -135,6 +135,17 @@ else:
         for j in range(rng.integers(2, 4)):
             ax = d + T * rng.uniform(0.1, 0.9) + rng.normal(0, 0.25, 3)
             prism(f'cr{i}_{j}', base + rng.normal(0, 0.12, 3) * R, ax, R * rng.uniform(0.07, 0.13), R * rng.uniform(0.5, 1.1), 'glass', ('rigid', s))
+    # the hood: crystal blades fanning from both sides of the chest (the silhouette at 30 m)
+    for sgn in (1, -1):
+        for j, sj in enumerate(np.linspace(C['chest'][0] - 0.10, C['chest'][0] + 0.12, C['hood'])):
+            P, T, Nn = frame(sj); Rr = radius(sj) * (1 + C['chest'][2] * chest(sj)); k = 1 - abs(j - (C['hood'] - 1) / 2) / C['hood']
+            ax = XAX * sgn * 1.0 + T * (0.35 + 0.12 * j) - Nn * 0.45
+            prism(f'hood{sgn}{j}', P + XAX * sgn * Rr * 0.8 - Nn * Rr * 0.25, ax, 0.55 * k + 0.25, C['hood_length'] * (0.55 + 0.75 * k), 'glass', ('rigid', sj), sides=6, tip=0.45, taper=0.8, flat=0.28, wide=T)
+    # shards where the body breaks through the mirror
+    s_floor = float(SS[np.argmin(np.abs(PTS[:, 2]))]); P, T, Nn = frame(s_floor); Rr = radius(s_floor)
+    for a in np.linspace(0, 2 * np.pi, C['floor_shards'], endpoint=False):
+        d = math.cos(a) * Nn + math.sin(a) * XAX; a2 = a + rng.normal(0, 0.15)
+        prism(f'shard{a:.2f}', P + d * Rr * 1.02 - T * 0.5, d * rng.uniform(0.7, 1.3) + T * rng.uniform(0.6, 1.2), Rr * rng.uniform(0.10, 0.19), Rr * rng.uniform(0.6, 1.35), 'glass', ('rigid', s_floor), sides=5, tip=0.5)
     # ---- head: local (u forward, x across, n up) on the frame at the neck's end
     H0, HT, HN = frame(SH); HT = HT / np.linalg.norm(HT); HUP = -HN                      # HUP: the top of the head
     Hd = C['head']; L = Hd['length']
@@ -177,6 +188,8 @@ else:
         e = to_world(0.36 * L, sgn * width(0.36 * L) * 0.93, mouth(0.36 * L) + (top(0.36 * L) - mouth(0.36 * L)) * 0.42)
         bm = bmesh.new(); bmesh.ops.create_uvsphere(bm, u_segments=8, v_segments=6, radius=0.26); me = bpy.data.meshes.new('eye'); bm.to_mesh(me); bm.free()
         o = bpy.data.objects.new(f'head_eye{sgn}', me); bpy.context.scene.collection.objects.link(o); o.location = e; o.scale = (0.7, 1.7, 0.6); me.materials.append(MATS['eye']); parts.append((o, 'head'))
+        prism(f'head_horn{sgn}', to_world(0.30 * L, sgn * width(0.30 * L) * 0.62, top(0.30 * L) * 0.92), HUP * 0.75 - HT * 1.0 + XAX * sgn * 0.45, 0.30, 3.0, 'stone_lo', 'head', sides=6, tip=0.75, taper=0.8)
+        for j in range(3): prism(f'jaw_beard{sgn}{j}', to_world((0.45 + 0.17 * j) * L, sgn * 0.28, mouth(0.5 * L) - np.interp(0.45 + 0.17 * j, [0, 0.4, 1], Hd['jaw_depth']) * 0.9), -HUP - HT * 0.35 + XAX * sgn * 0.2, 0.12, 1.1 - 0.25 * j, 'glass', 'jaw', sides=5, tip=0.6)
         for j in range(3):   # a fan of crystals behind the jaw hinge
             prism(f'head_cheek{sgn}{j}', to_world(0.12 * L, sgn * width(0.12 * L) * 0.95, mouth(0.12 * L) + 0.25 * j), XAX * sgn * (1.0 - 0.2 * j) - HT * 0.8 + HUP * (0.25 * j - 0.1), 0.17 - 0.03 * j, 1.5 - 0.3 * j, 'glass', 'head', sides=5, tip=0.5)
     # the crown: tall clear crystals in a fan over the back of the skull
