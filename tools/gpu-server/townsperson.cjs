@@ -22,6 +22,8 @@ const { execFileSync } = require('child_process');
   }
   // MOVING=1: wait (up to 60 s more) until she walks or runs, so the clip shows her moving
   if (process.env.MOVING) for (let i = 0; i < 120; i++) { const v = await p.evaluate((k) => window.__ftf.town.scene.townsfolk.byKey.get(k).plan.speed, key).catch(() => 0); if (v > 0.5) break; await p.waitForTimeout(500); }
+  // VARY=<idle variety clip> (e.g. phone): she plays that idle variety now, for 6 s (QA: the plan's own seeded pick, forced)
+  if (process.env.VARY) await p.evaluate(([k, c]) => { const q = window.__ftf.town.scene.townsfolk.byKey.get(k).plan; q.varClip = c; q.varEnd = q.t + 6; q.varNext = q.t + 60; }, [key, process.env.VARY]);
   console.log('state', JSON.stringify(st), 'after', ((Date.now() - t0) / 1000).toFixed(1), 's');
   await p.evaluate(() => { for (const el of document.querySelectorAll('body *')) if (/What should the town call you/.test(el.textContent || '') && el.children.length < 8) { let n = el; while (n.parentElement && getComputedStyle(n).position !== 'fixed' && n.parentElement !== document.body) n = n.parentElement; n.style.display = 'none'; } });
   await p.evaluate((k) => { const F = window.__ftf, r = F.renderer, q = F.town.scene.townsfolk.byKey.get(k), cam = F.camera.clone(), at = q.root.position.clone();

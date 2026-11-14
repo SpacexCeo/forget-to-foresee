@@ -83,23 +83,24 @@ export const CLIP_FALLBACK = Object.freeze({
   play: ['play_instrument', 'idle_look', 'idle_shift', 'idle'], counter: ['counter', 'counter_loop', 'think', 'idle'],
   sit: ['sit', 'sit_loop', 'idle'], think: ['idle_look', 'think', 'idle'],
   // the Wayfarers' own one-shots (art/townsfolk/tf_anim.py EXTRA)
-  take_photo: ['take_photo', 'think', 'idle'], haggle: ['haggle', 'talk', 'idle'],
+  // a standing phone first: the pack's play_mobile_game sits on the ground (owner 14.11: too much sitting)
+  take_photo: ['make_a_call_02', 'take_photo', 'think', 'idle'], haggle: ['haggle', 'talk', 'idle'],
   // the Tripo pack's social clips (townsfolk.js PACK_CLIPS, loaded after the town is on screen; until then the older ones)
   greet: ['greet_04', 'wave', 'gesture_offer', 'talk', 'idle'], laugh: ['laugh_01', 'nod', 'idle'],
   idle_look: ['idle_look', 'idle_shift', 'idle'], scratch: ['scratch', 'idle_shift', 'idle'], arms_folded: ['think', 'idle_shift', 'idle'],
   angry: ['angry_01', 'haggle', 'talk', 'idle'], laugh_b: ['laugh_02', 'laugh_01', 'nod', 'idle'],
-  clap: ['clap', 'nod', 'idle'], cheer: ['cheer', 'clap', 'wave', 'idle'], goodbye: ['wave_goodbye_01', 'wave', 'idle'],
-  phone: ['make_a_call_01', 'idle_shift', 'idle'], phone_game: ['take_photo', 'idle_shift', 'idle'], dance: ['dance_03', 'idle_shift', 'idle'],
+  clap: ['clap', 'nod', 'idle'], cheer: ['cheer', 'clap', 'wave', 'idle'], goodbye: ['wave', 'idle'], // the pack's wave_goodbye clips are seated
+  phone: ['make_a_call_02', 'idle_shift', 'idle'], relax: ['standing_relax', 'idle_shift', 'idle'], dance: ['dance_03', 'idle_shift', 'idle'],
 });
 
 /** The Tripo townsfolk pack (art/townsfolk/pack_index.json, art/tools/glb_town_pack.mjs): one file for every body,
  * retargeted at load (anim-library.js townsfolkClips) once the town is on screen. */
 export const PACK_FILE = 'townsfolk_pack';
 export const PACK_CLIPS = Object.freeze(['idle_look', 'wave', 'greet_04', 'nod', 'talk', 'talk_b', 'laugh_01', 'haggle', 'think', 'scratch',
-  'angry_01', 'clap', 'cheer', 'laugh_02', 'make_a_call_01', 'take_photo', 'sit', 'dance_03', 'wave_goodbye_01']);
+  'angry_01', 'clap', 'cheer', 'laugh_02', 'make_a_call_02', 'standing_relax', 'sit', 'dance_03']); // sit: only the elder's bench
 /** A standing idle now and then turns into one of these for a few seconds (seeded per person); near the musician
  * while she plays, a dance instead (DANCE_RADIUS). */
-export const IDLE_VARIETY = Object.freeze(['idle_look', 'scratch', 'arms_folded', 'phone', 'phone_game']);
+export const IDLE_VARIETY = Object.freeze(['idle_look', 'scratch', 'arms_folded', 'phone', 'relax']); // all standing (owner 14.11: no sitting in the idles)
 export const DANCE_RADIUS = 7;
 /** Two townsfolk talking take turns every TALK_TURN seconds: the talker's and the listener's clips cycle through these
  * (the talker's first is the step's own talk clip). */
@@ -421,7 +422,7 @@ export class PersonPlan {
       }
     } else {
       this.clip = st.clip; this.sit = st.sit || 0;
-      // a standing idle turns now and then into a look around, a scratch of the head, folded arms or the phone for a few
+      // a standing idle turns now and then into a look around, a scratch of the head, folded arms, the phone or a relaxed stance (all standing) for a few
       // seconds; near the musician while she plays, a dance
       if (!st.sit && (st.clip === 'idle' || st.clip === 'idle_shift')) {
         if (this.t >= this.varNext) { const mu = this.key !== 'musician' && ctx.others && ctx.others.get('musician'); const music = mu && mu.clip === 'play' && Math.abs(mu.y - this.y) < 1.2 && Math.hypot(mu.x - this.x, mu.z - this.z) < DANCE_RADIUS;
