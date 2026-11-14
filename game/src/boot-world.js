@@ -19,6 +19,7 @@ import { lookFor, mixStats } from './render/sky.js';
 import { CameraRig } from './render/camera-rig.js';
 import { cueShot, cueState, stepCue } from './render/dialogue-camera.js';
 import { on as onBus } from './sprint/bus.js';
+import { setIntroHud } from './ui/intro-hud.js';
 import { fixedSteps, rayCast, moveCapsule, MASK_PLAYER } from './physics/collision.js';
 import { PHYSICS_DT, steerTo, clickStuck } from './physics/character.js';
 import { damp } from './physics/motion.js';
@@ -69,7 +70,7 @@ import { createCompanion } from './scenes/companion.js';
 import { COMPANIONS_ENABLED, companionsToShow } from './scenes/companion-rules.js';
 import { createDoorGlow } from './scenes/door-glow.js';
 import { cue, cueAt, MOB_SOUNDS } from './audio/town-audio.js';
-import { expectOnboarding, blocksWindows } from './ui/onboarding-queue.js';
+import { expectOnboarding, blocksWindows, onOnboarding } from './ui/onboarding-queue.js';
 
 /**
  * Builds the renderer, the island, the camera and the frame loop (the heavy chunk: three.js, scenes, render,
@@ -161,6 +162,9 @@ const input = new Input(renderer.domElement);
 installTouchCopy(ctx.i18n, () => !!input.touchControls); // on touch, no keyboard keys in any text (ui/touch-copy.js)
 const hud = new DevHud(document.getElementById('hud'));
 const promptEl = document.getElementById('prompt');
+let npeLocked = false; // set by the intro through the sprint ctx (lockControls)
+// a failed intro never leaves the town locked: the lock ends with the intro's turn in the onboarding queue
+onOnboarding((id) => { if (id !== 'intro' && npeLocked) { npeLocked = false; setIntroHud(document, false); } });
 let lastPromptHtml = null; // the prompt's last written HTML (frame() writes it only on a change)
 // The lobby (title, language, settings, the Foresight Exchange) opens only from the pause menu now: the game starts in
 // the town (ui/loading.js bootPlan). Entering from it returns to the world.
@@ -572,7 +576,7 @@ if (townMode.town) {
   mountCasting();
   // The player HUD (ui/player-hud.js): portrait frame, level, health, the silk wallet and the toast stack, town only.
   if (!window.__ftfJudgePath && /[?&]judge=1(&|$)/.test(location.search)) window.__ftfJudgePath = import('./ui/judge-path.js').then((m) => import('./sprint/first-seen.js').then((f) => m.mountJudgePath({ t: (k, a) => ctx.i18n.t(k, a), touch: f.isTouch(document) }))).catch(() => null); // ?judge=1: the 90-second guided route (docs: README Judge path)
-  if (!window.__ftfSprint) window.__ftfSprint = mountSprint({ THREE, scene, camera, renderer, player, ledger: townLedger, town, chests: chestBag, t: (k, a) => ctx.i18n.t(k, a), toast: (s) => toast(s), reduced: () => lookdev.reducedMotion, storage: ctx.storage, keys: input, flags: featureFlags, i18n: ctx.i18n, active: () => inTown, mobs: () => townMobs, base: import.meta.env.BASE_URL, floatNumber: numbersHook, stamina, openSettings: (tab) => openSettings(tab), skin: () => (irisAvatar ? irisAvatar.hero.id : startHero.id) }); // sprint seam (src/sprint, docs/sprint/CTX.md)
+  if (!window.__ftfSprint) window.__ftfSprint = mountSprint({ lockControls: (on) => { npeLocked = !!on; setIntroHud(document, npeLocked); if (on) { moveTarget = null; marker.visible = false; } }, THREE, scene, camera, renderer, player, ledger: townLedger, town, chests: chestBag, t: (k, a) => ctx.i18n.t(k, a), toast: (s) => toast(s), reduced: () => lookdev.reducedMotion, storage: ctx.storage, keys: input, flags: featureFlags, i18n: ctx.i18n, active: () => inTown, mobs: () => townMobs, base: import.meta.env.BASE_URL, floatNumber: numbersHook, stamina, openSettings: (tab) => openSettings(tab), skin: () => (irisAvatar ? irisAvatar.hero.id : startHero.id) }); // sprint seam (src/sprint, docs/sprint/CTX.md)
   if (!playerHud) playerHud = createPlayerHud({ t: (k, a) => ctx.i18n.t(k, a), ledger: townLedger, chests: chestBag, base: import.meta.env.BASE_URL,
     nickname: () => loadDay1(ctx.storage).nickname || null, skin: () => (irisAvatar ? irisAvatar.hero.id : startHero.id),
     onSkin: () => toggleSkin(), canSwap: () => { const o = skinsOwned(); return !!(o.elise || o.sheriffchenko); },
@@ -1209,6 +1213,7 @@ function handleInput(dt) {
   const playOn = play && !inTown; // back in the town after Return to town: the season waits, its keys sleep
   if (!playOn && !townOn) { navigateGamepadMenu(uiRoot, pad); return false; }
   if (townFlow && townFlow.busy) return false; // the registration sequence holds Iris and the camera
+  if (npeLocked) return false; // the intro (prologue, dialogue, "What waits for you") owns the keys: E never reaches the town under it (QA pass 2 #1)
   if (photo && townOn && input.hit('KeyP')) photo.toggle();
   if (photo && photo.on) { // photo mode: Iris holds still, the camera orbits freely, a click saves nothing (the bar's button does)
     if (input.hit('Escape') || pad.hit(PAD.cancel)) photo.toggle(false);
@@ -1486,7 +1491,7 @@ function frame() {
     if (questMarkers) questMarkers.update(clock.elapsedTime);
     if (townPortal) { if (!townPortal.grounded) { const g = town.groundAt(townPortal.root.position.x, townPortal.root.position.z); if (g != null) { townPortal.root.position.y = g; townPortal.grounded = true; } } townPortal.update(dt, clock.elapsedTime); }
     if (townBoard) { if (!townBoard.grounded) { const g = town.groundAt(townBoard.root.position.x, townBoard.root.position.z); if (g != null) { townBoard.root.position.y = g; townBoard.grounded = true; } } townBoard.update(player.pos, clock.elapsedTime); }
-    if (townBarks) townBarks.update(player.pos, !(photo && photo.on) && !day1Open() && entered && !townFlow.busy && !townFlow.talking && !(townShops && townShops.inside) && !introOn);
+    if (townBarks) townBarks.update(player.pos, !npeLocked && !(photo && photo.on) && !day1Open() && entered && !townFlow.busy && !townFlow.talking && !(townShops && townShops.inside) && !introOn);
     if (marketScene) {
       const free = !(photo && photo.on) && !day1Open() && entered && !(townShops && townShops.inside) && !introOn;
       marketScene.update(player.pos, free && !townFlow.talking);
