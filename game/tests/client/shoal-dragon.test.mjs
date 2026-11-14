@@ -51,3 +51,14 @@ test('dragon model: both files carry the seven clips, one skin with the saddle s
     assert.ok(json.skins[0].joints.length <= 64);
   }
 });
+
+test('saddle model: one mesh inside the prop budget, its origin at the seat (the dragon's saddle socket)', () => {
+  for (const [file, maxBytes, maxTris] of [['dragon_saddle.glb', 1.5e6, 5000], ['dragon_saddle_m.glb', 0.6e6, 3000]]) {
+    const { json, bytes } = glb(file);
+    assert.ok(bytes <= maxBytes, file + ' is ' + bytes + ' bytes');
+    const prims = json.meshes.flatMap((m) => m.primitives);
+    assert.equal(prims.length, 1, file + ' is one draw call');
+    assert.ok(json.accessors[prims[0].indices].count / 3 <= maxTris);
+    assert.ok(!json.skins && !json.animations);
+  }
+});

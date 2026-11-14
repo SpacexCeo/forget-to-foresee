@@ -197,3 +197,88 @@ def beauty(prefix, objs, views=('q34', 'behind', 'below'), res=1100, samples=48,
         cam.rotation_euler = (-d).to_track_quat('-Z', 'Y').to_euler()
         s.render.filepath = f'{prefix}_{v}.jpg'; bpy.ops.render.render(write_still=True); out_files.append(s.render.filepath)
     bpy.data.objects.remove(cam); bpy.data.objects.remove(sun); return out_files
+
+
+def proc_material(name, col_a, col_b=None, scale=6.0, rough=0.6, metal=0.0, bump=0.3, bump_scale=40.0, emission=None, emission_strength=0.0, detail='noise'):
+    """A procedural source material for self_bake: two colours mixed by noise, a noise or voronoi bump. The numbers
+    are kept on the material (custom properties) so the roughness/metallic/emissive bakes can read them."""
+    m = bpy.data.materials.new(name); m.use_nodes = True; nt = m.node_tree; b = nt.nodes['Principled BSDF']
+    tc = nt.nodes.new('ShaderNodeTexCoord'); n1 = nt.nodes.new('ShaderNodeTexNoise'); n1.inputs['Scale'].default_value = scale; n1.inputs['Detail'].default_value = 6
+    nt.links.new(tc.outputs['Object'], n1.inputs['Vector'])
+    mix = nt.nodes.new('ShaderNodeMix'); mix.data_type = 'RGBA'; mix.inputs['A'].default_value = (*col_a, 1); mix.inputs['B'].default_value = (*(col_b or col_a), 1)
+    ramp = nt.nodes.new('ShaderNodeMapRange'); ramp.inputs['From Min'].default_value = 0.35; ramp.inputs['From Max'].default_value = 0.65
+    nt.links.new(n1.outputs['Fac'], ramp.inputs['Value']); nt.links.new(ramp.outputs['Result'], mix.inputs['Factor']); nt.links.new(mix.outputs['Result'], b.inputs['Base Color'])
+    if bump > 0:
+        if detail == 'voronoi':
+            n2 = nt.nodes.new('ShaderNodeTexVoronoi'); n2.inputs['Scale'].default_value = bump_scale; n2.feature = 'DISTANCE_TO_EDGE'; h = n2.outputs['Distance']
+        else:
+            n2 = nt.nodes.new('ShaderNodeTexNoise'); n2.inputs['Scale'].default_value = bump_scale; n2.inputs['Detail'].default_value = 8; h = n2.outputs['Fac']
+        nt.links.new(tc.outputs['Object'], n2.inputs['Vector'])
+        bp = nt.nodes.new('ShaderNodeBump'); bp.inputs['Strength'].default_value = bump; bp.inputs['Distance'].default_value = 0.02
+        nt.links.new(h, bp.inputs['Height']); nt.links.new(bp.outputs['Normal'], b.inputs['Normal'])
+    b.inputs['Roughness'].default_value = rough; b.inputs['Metallic'].default_value = 0.0   # metallic stays 0 for the colour bake
+    m['rough'] = rough; m['metal'] = metal; m['emit'] = list(emission) if emission else [0, 0, 0]; m['emit_strength'] = emission_strength
+    return m
+
+
+def self_bake(obj, N, margin=6, ao_samples=64, normal_from=None):
+    """Bake an object's procedural materials into its own UVs: base colour, tangent normals (material bumps, or the
+    surface of `normal_from` = a high poly object, selected to active), roughness, metallic, emissive, AO.
+    Returns float arrays (rows run up): bc, nrm (N, N, 3), rough, metal, ao (N, N), emit (N, N, 3)."""
+    cycles_gpu(samples=8); active(obj)
+    img = bpy.data.images.new('selfbake', N, N, alpha=False, float_buffer=True)
+    nodes = []
+    for m in obj.data.materials:
+        n = m.node_tree.nodes.new('ShaderNodeTexImage'); n.image = img; m.node_tree.nodes.active = n; nodes.append((m, n))
+    bk = bpy.context.scene.render.bake; bk.use_selected_to_active = False; bk.margin = margin; bk.use_clear = True
+    bk.use_pass_direct = bk.use_pass_indirect = False; bk.use_pass_color = True
+    def grab():
+        a = np.empty(N * N * 4, np.float32); img.pixels.foreach_get(a); return a.reshape(N, N, 4)[:, :, :3].copy()
+    out = {}
+    img.colorspace_settings.name = 'Non-Color'
+    bpy.ops.object.bake(type='DIFFUSE'); lin = grab(); out['bc'] = np.where(lin <= 0.0031308, lin * 12.92, 1.055 * np.maximum(lin, 1e-9) ** (1 / 2.4) - 0.055)
+    if normal_from is not None:
+        bpy.ops.object.select_all(action='DESELECT'); normal_from.select_set(True); obj.select_set(True); bpy.context.view_layer.objects.active = obj
+        bk.use_selected_to_active = True; bk.cage_extrusion = float(obj.get('cage', 0.08)); bk.max_ray_distance = float(obj.get('ray', 0.3))
+    bk.normal_space = 'TANGENT'; bpy.ops.object.bake(type='NORMAL'); out['nrm'] = grab()
+    bk.use_selected_to_active = False; active(obj)
+    # roughness / metallic / emissive: constants per material through an emission bake
+    saved = []
+    for m, n in nodes:
+        nt = m.node_tree; outn = next(x for x in nt.nodes if x.type == 'OUTPUT_MATERIAL' and x.is_active_output); old = outn.inputs['Surface'].links[0].from_socket
+        em = nt.nodes.new('ShaderNodeEmission'); nt.links.new(em.outputs[0], outn.inputs['Surface']); saved.append((nt, outn, old, em))
+    for nt_, outn, old, em in saved:
+        mat = next(m for m, n in nodes if m.node_tree == nt_); em.inputs['Color'].default_value = (0, mat['rough'], mat['metal'], 1)
+    bpy.ops.object.bake(type='EMIT'); rm = grab(); out['rough'] = rm[:, :, 1]; out['metal'] = rm[:, :, 2]
+    for nt_, outn, old, em in saved:
+        mat = next(m for m, n in nodes if m.node_tree == nt_); e = mat['emit']; k = mat['emit_strength']; em.inputs['Color'].default_value = (e[0] * k, e[1] * k, e[2] * k, 1)
+    bpy.ops.object.bake(type='EMIT'); out['emit'] = np.clip(grab(), 0, 1)
+    for nt_, outn, old, em in saved: nt_.links.new(old, outn.inputs['Surface']); nt_.nodes.remove(em)
+    bpy.context.scene.cycles.samples = ao_samples; bpy.ops.object.bake(type='AO'); out['ao'] = grab()[:, :, 0]
+    for m, n in nodes: m.node_tree.nodes.remove(n)
+    bpy.data.images.remove(img); return out
+
+
+def write_png(path, rgb, colorspace):
+    N = rgb.shape[0]; name = os.path.splitext(os.path.basename(path))[0]
+    img = bpy.data.images.new(name, N, N, alpha=False); img.colorspace_settings.name = colorspace
+    a = np.concatenate([np.clip(rgb, 0, 1).astype(np.float32), np.ones((N, N, 1), np.float32)], -1); img.pixels.foreach_set(a.ravel())
+    ensure(os.path.dirname(path)); img.filepath_raw = path; img.file_format = 'PNG'; img.save(); return img
+
+
+def uv_unwrap(obj, angle=66, margin=0.006):
+    active(obj)
+    if not obj.data.uv_layers: obj.data.uv_layers.new(name='UVMap')
+    bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.uv.smart_project(angle_limit=math.radians(angle), island_margin=0.0, area_weight=0.0, correct_aspect=True, scale_to_bounds=False)
+    bpy.ops.uv.select_all(action='SELECT'); bpy.ops.uv.pack_islands(margin=margin, rotate=True); bpy.ops.object.mode_set(mode='OBJECT')
+
+
+def finish_textures(root, name, baked, emissive=False, emissive_strength=1.0, double_sided=True):
+    """Write <name>_{basecolor,normal,orm[,emissive]}.png from self_bake arrays and return the final glTF material."""
+    bad = baked['nrm'][:, :, 2] < 0.5; baked['nrm'][bad] = (0.5, 0.5, 1.0)
+    ibc = write_png(f'{root}/out/tex/{name}_basecolor.png', baked['bc'], 'sRGB')
+    inr = write_png(f'{root}/out/tex/{name}_normal.png', baked['nrm'], 'Non-Color')
+    iorm = write_png(f'{root}/out/tex/{name}_orm.png', np.stack([np.clip(0.35 + 0.65 * baked['ao'], 0, 1), baked['rough'], baked['metal']], -1), 'Non-Color')
+    iem = write_png(f'{root}/out/tex/{name}_emissive.png', baked['emit'], 'sRGB') if emissive else None
+    return pbr_material(name, ibc, inr, iorm, double_sided=double_sided, emissive=iem, emissive_strength=emissive_strength)
