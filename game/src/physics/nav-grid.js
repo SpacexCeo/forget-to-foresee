@@ -89,7 +89,11 @@ export function createNav({ ray, cell = 1, step = 0.6, drop = 0.9, heights = [0.
     const t0 = typeof performance !== 'undefined' ? performance.now() : Date.now();
     fresh();
     const s = startNode(from); if (!s) return null;
-    const [gx, gz] = cellOf(to);
+    let [gx, gz] = cellOf(to), goalPt = to;
+    // over the warmed grid a click into a wall, a house or the void snaps to the nearest walkable cell first: the search
+    // then ends there at once instead of spending its whole budget looking for a way in
+    const snap = snapGoal(gx, gz, to[1]);
+    if (snap && (snap.ix !== gx || snap.iz !== gz)) { gx = snap.ix; gz = snap.iz; goalPt = [snap.ix * cell, snap.y, snap.iz * cell]; }
     const h = (n) => Math.hypot(gx - n.ix, gz - n.iz) * cell;
     const heap = [], push = (n) => { heap.push(n); let i = heap.length - 1; while (i) { const p = (i - 1) >> 1; if (heap[p].f <= heap[i].f) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; } };
     const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < heap.length && heap[l].f < heap[m].f) m = l; if (r < heap.length && heap[r].f < heap[m].f) m = r; if (m === i) break; [heap[m], heap[i]] = [heap[i], heap[m]]; i = m; } } return top; };
@@ -103,7 +107,7 @@ export function createNav({ ray, cell = 1, step = 0.6, drop = 0.9, heights = [0.
       const cur = pop();
       if (cur.g > (seen.get(cur.k) ?? Infinity)) continue;
       if (h(cur) < h(best)) best = cur;
-      if (cur.ix === gx && cur.iz === gz && Math.abs(cur.y - to[1]) < 2.5) { goal = cur; break; }
+      if (cur.ix === gx && cur.iz === gz && Math.abs(cur.y - goalPt[1]) < 2.5) { goal = cur; break; }
       for (let d = 0; d < 8; d++) {
         const nb = neighbour(cur.ix, cur.iz, cur.y, d); if (!nb) continue;
         const k = nodeKey(nb.ix, nb.iz, nb.y), g = cur.g + Math.hypot(DIRS[d][0], DIRS[d][1]) * cell;
@@ -124,9 +128,28 @@ export function createNav({ ray, cell = 1, step = 0.6, drop = 0.9, heights = [0.
       kept.push(corners[j]); i = j;
     }
     const path = kept.slice(1).map((c) => [c.ix * cell, c.y, c.iz * cell]);
-    if (goal) { if (path.length) path[path.length - 1] = [to[0], goal.y, to[2]]; else path.push([to[0], goal.y, to[2]]); }
+    if (goal) { const g = [goalPt[0], goal.y, goalPt[2]]; if (path.length) path[path.length - 1] = g; else path.push(g); }
     const ms = (typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0;
     return { path, reached: !!goal, ms, nodes: n };
+  }
+
+  /**
+   * The walkable cell nearest (ix, iz) at about height y, from the finished warm flood (rings outward, up to 25 m);
+   * null when the flood is not done (the plan then searches as it is).
+   */
+  function snapGoal(ix, iz, y) {
+    if (!flood || !flood.done) return null;
+    const at = (x, z) => { const ys = flood.cells.get(x * 100003 + z); if (!ys) return null; let b = null; for (const v of ys) if (Math.abs(v - y) < 2.5 && (b == null || Math.abs(v - y) < Math.abs(b - y))) b = v; return b; };
+    for (let r = 0; r <= 25; r++) {
+      let best = null, bd = Infinity;
+      for (let dx = -r; dx <= r; dx++) for (let dz = -r; dz <= r; dz++) {
+        if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue; // this ring only
+        const v = at(ix + dx, iz + dz); if (v == null) continue;
+        const d = Math.hypot(dx, dz); if (d < bd) { bd = d; best = { ix: ix + dx, iz: iz + dz, y: v }; }
+      }
+      if (best) return best;
+    }
+    return null;
   }
 
   /**
@@ -136,7 +159,7 @@ export function createNav({ ray, cell = 1, step = 0.6, drop = 0.9, heights = [0.
   let flood = null;
   function warm(from, { radius: R = 140, sliceMs = 6, cap = 60000 } = {}) {
     fresh();
-    if (!flood) { const s = startNode(from); if (!s) return true; flood = { q: [s], qi: 0, seen: new Set([nodeKey(s.ix, s.iz, s.y)]), o: s, done: false }; }
+    if (!flood) { const s = startNode(from); if (!s) return true; flood = { q: [s], qi: 0, seen: new Set([nodeKey(s.ix, s.iz, s.y)]), cells: new Map([[s.ix * 100003 + s.iz, [s.y]]]), o: s, done: false }; }
     if (flood.done) return true;
     const t0 = performance.now();
     while (flood.qi < flood.q.length && performance.now() - t0 < sliceMs) {
@@ -146,6 +169,7 @@ export function createNav({ ray, cell = 1, step = 0.6, drop = 0.9, heights = [0.
         const k = nodeKey(nb.ix, nb.iz, nb.y);
         if (flood.seen.has(k) || Math.hypot(nb.ix - flood.o.ix, nb.iz - flood.o.iz) * cell > R || flood.seen.size > cap) continue;
         flood.seen.add(k); flood.q.push(nb);
+        const ck = nb.ix * 100003 + nb.iz, ys = flood.cells.get(ck); if (ys) ys.push(nb.y); else flood.cells.set(ck, [nb.y]);
       }
     }
     if (flood.qi >= flood.q.length) flood.done = true;

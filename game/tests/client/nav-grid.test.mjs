@@ -97,3 +97,15 @@ test('nav: the journal\'s "walk to" follows the same route (auto-walk with the t
   assert.equal(crossesWall(route, pos), false);
   walker.dispose();
 });
+
+test('nav: over the warmed grid a click into a solid thing snaps to the nearest walkable cell and is reached at once', () => {
+  const nav = createNav({ ray });
+  while (!nav.warm([-5, 0, 0], { radius: 40, sliceMs: 50 })) { /* slices */ }
+  const r = nav.plan([10, 0, -8], [6, 0, -4]); // the crate's middle
+  assert.ok(r.reached, 'snapped and reached');
+  const end = r.path[r.path.length - 1];
+  assert.ok(Math.hypot(end[0] - 6, end[2] + 4) <= 1.6, 'next to the crate: ' + end);
+  assert.ok(r.nodes < 200, 'a short search: ' + r.nodes);
+  const off = nav.plan([10, 0, -8], [45, 0, -8]);
+  assert.ok(off.reached && off.nodes < 1000, 'the void 15 m beyond the edge snaps to the edge too');
+});
