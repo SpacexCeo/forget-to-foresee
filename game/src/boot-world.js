@@ -713,6 +713,32 @@ function returnToTown() {
   if (townBoard) townBoard.setActive(true);
   if (questMarkers) questMarkers.setActive(true);
   townFlow.reenter();
+  showSeasonLoot();
+}
+/**
+ * Back from the Tournament (owner 14.11): what this trip gave her, from the town ledger and the chest bag compared with
+ * the snapshot taken as she left (play/season-loot.js) plus her shard NFTs from the season. A finished season always
+ * gets the card; a trip that changed nothing in an unfinished season gets none.
+ */
+let seasonLootBefore = null;
+function takeLootSnapshot() { chestBag.reload(); return import('./play/season-loot.js').then((m) => { seasonLootBefore = m.lootSnapshot({ ledger: townLedger, chests: chestBag }); }).catch((e) => console.warn('[loot]', e)); }
+function showSeasonLoot() {
+  const before = seasonLootBefore; if (!before) return;
+  seasonLootBefore = null;
+  const facts = play && play.ui && play.ui.seasonFacts ? play.ui.seasonFacts() : null;
+  Promise.all([import('./play/season-loot.js'), import('./play/season-loot-ui.js')]).then(([m, ui]) => {
+    chestBag.reload();
+    const rows = m.seasonLoot(before, m.lootSnapshot({ ledger: townLedger, chests: chestBag }), { shards: facts && facts.over ? facts.shards : [] });
+    if (!rows.length && !(facts && facts.over)) return;
+    const open = () => {
+      if (!inTown) return;
+      if ((townFlow && townFlow.busy) || document.querySelector('dialog[open]') || blocksWindows()) { setTimeout(open, 400); return; }
+      clearWorldInput();
+      ui.openSeasonLoot({ rows, outcome: facts && facts.over ? facts.outcome : null, t: (k, a) => ctx.i18n.t(k, a), base: import.meta.env.BASE_URL, reduced: lookdev.reducedMotion, onClose: clearWorldInput });
+      cue('gift_chime');
+    };
+    setTimeout(open, 900); // the town settles in first
+  }).catch((e) => console.warn('[loot]', e));
 }
 /** Start over: a new local season (the judge link rebuilds the same fixed season). */
 function startOver() { location.reload(); }
@@ -738,6 +764,7 @@ async function leaveTown() {
   player.teleport(SPAWN.slice(), islandStart.heading);
   restoreCamera(); rig.reset();
   lookdev.setAtmosphereFloor(null);
+  takeLootSnapshot(); // what she has as she leaves: the card on her return shows the difference
   await startSeason();
 }
 
@@ -760,6 +787,7 @@ function startSeason() {
       iris: irisAvatar, // the town already attached her model (null on the paths that skip the town)
     } });
     window.__ftf.play = play;
+    if (town && play.ui && play.ui.setReturnTown) play.ui.setReturnTown(() => returnToTown()); // the Biography's way home (owner 14.11)
     setTimeout(() => { try { play.shell.preload(); } catch { /* the first visit loads them */ } }, 2500); // the Guests' model, ahead of the first flight
     // Volume sliders in the scene settings dialog (the audio module loads lazily: the getter resolves it later).
     mountAudioSettings(controls.dialog, { audio: () => (play && play.hooks.audio) || null, i18n: ctx.i18n, storage: ctx.storage });
