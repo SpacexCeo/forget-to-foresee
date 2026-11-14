@@ -92,6 +92,8 @@ export function nftItemAt(position) {
 const tierFromTitle = (title) => { const m = /\((legendary|rare|uncommon|common|epic)\)\s*$/.exec(String(title || '')); return m ? m[1] : null; };
 
 /** Painted NFT art (assets/items/icons/nft_<item>_256.webp) exists for every item in the NFT part of the deck. */
+/** The pale-gold seal: the picture of a loot NFT whose item is not known (owner-supplied painting). */
+export const NFT_SEAL = 'icons/nft_seal_256.webp';
 export const nftArt = (id) => (id && NFT_DECK.some((t) => t.items.includes(id)) ? `icons/nft_${id}_256.webp` : null);
 /** The painted chest box of a tier (assets/items/icons/chest_<tier>_128.webp). */
 export const chestArt = (tier) => `icons/chest_${tier === 'legendary' || tier === 'rare' ? tier : 'common'}_128.webp`;
@@ -102,7 +104,7 @@ const REWARD_ART = Object.freeze({ silk: [5, 10, 25], xp: [10, 25] });
  */
 export function rewardArt(o, size = 128) {
   if (!o) return null;
-  if (o.kind === 'nft') { const a = nftArt(o.id || o.item); return a ? a.replace('_256', '_' + size) : null; }
+  if (o.kind === 'nft') return (nftArt(o.id || o.item) || NFT_SEAL).replace('_256', '_' + size);
   const steps = REWARD_ART[o.kind]; if (!steps) return null;
   const n = Number(o.amount) || 0, pick = [...steps].reverse().find((x) => n >= x) || steps[0];
   return `icons/reward_${o.kind}_${pick}_${size}.webp`;
@@ -111,7 +113,7 @@ export function rewardArt(o, size = 128) {
 /**
  * The picture of a loot NFT {item?, tier?, position?, title?} from the item manifest list [{id, icon, icon128, rarity,
  * nameKey}]: {src (relative to assets/items/) or null, item id or null, nameKey or null, rarity, exact}. `exact` is
- * false when no item is known and the card shows the rarity frame alone.
+ * false when no item is known and the card shows the seal in its rarity frame.
  */
 export function nftImage(nft, manifest = []) {
   const at = nft && nft.position != null ? nftItemAt(nft.position) : null;
@@ -121,5 +123,5 @@ export function nftImage(nft, manifest = []) {
   const art = nftArt(id);
   if (art) return { src: art, item: id, nameKey: (m && m.nameKey) || 'item.' + id, rarity, exact: true };
   if (m) return { src: m.icon128 || m.icon || null, item: id, nameKey: m.nameKey || 'item.' + id, rarity, exact: !!(m.icon128 || m.icon) };
-  return { src: null, item: id, nameKey: id ? 'item.' + id : null, rarity, exact: false };
+  return { src: NFT_SEAL, item: id, nameKey: id ? 'item.' + id : null, rarity, exact: false };
 }
