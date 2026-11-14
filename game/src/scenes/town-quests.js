@@ -387,6 +387,10 @@ export function createTownQuests({ scene = null, hudToast = null, storage, townL
   const onGuideKey = (e) => { const tag = e && e.target && e.target.tagName; if (tag === 'INPUT' || tag === 'TEXTAREA') return; if (e.code === 'KeyR') feedGuide('camera'); else if (e.code === 'KeyI') feedGuide('bag'); else if (e.code === 'KeyB') feedGuide('market'); };
   const onDrag = (e) => { if (e && e.buttons && e.target && e.target.tagName === 'CANVAS') feedGuide('camera'); };
   const onPortal = () => feedGuide('portal'), onHit = () => feedGuide('hit');
+  // the loot step also completes when a chest is really picked up (owner P0 14.11): a new sealed chest in the bag
+  let sealedSeen = chests && chests.sealed ? chests.sealed().length : 0;
+  const onChests = () => { const n = chests && chests.sealed ? chests.sealed().length : 0; if (n > sealedSeen) feedGuide('bag'); sealedSeen = n; };
+  const offChests = useGuide && chests && chests.subscribe ? chests.subscribe(onChests) : null;
   const onWindow = (e) => { const id = e && e.detail && e.detail.id; if (id === 'bag' || id === 'market' || id === 'journal') feedGuide(id); }; // the rpg HUD stops its keys, so the guide hears the window instead
   if (useGuide) { win.addEventListener('keydown', onGuideKey); win.addEventListener('pointermove', onDrag); win.addEventListener('ftf:portal-near', onPortal); win.addEventListener('ftf:mob-killed', onHit); win.addEventListener('ftf:mob-hit', onHit); win.addEventListener('ftf:window-open', onWindow); }
   function autoTrack() { // newly accepted quests are tracked while fewer than three are
@@ -460,7 +464,7 @@ export function createTownQuests({ scene = null, hudToast = null, storage, townL
     openLog, closeLog, toggleLog, get logOpen() { return !!logPanel || !!(journal && journal.isOpen); },
     get guide() { return guide; }, feedGuide, publishMarkers,
     get journal() { return journal; }, get tracker() { return tracker; }, get walker() { return walker; }, walkTo, get tracked() { return tracked.slice(); },
-    dispose() { offWindow(); unSilk(); setMarkers('quests', []); if (trail) trail.dispose(); if (waypoint) waypoint.dispose(); if (journal) journal.close(); if (tracker) tracker.dispose(); if (walker) { walker.dispose(); setAutoWalker(null); } if (doc.body && doc.body.classList) doc.body.classList.remove('ftf-tracker-on'); closeTalk(); closeLog(); logBtn.remove(); line.remove(); win.removeEventListener('ftf:mob-killed', onKill); win.removeEventListener('ftf:journal-toggle', toggleLog); win.removeEventListener('keydown', onKey); win.removeEventListener('keydown', onGuideKey); win.removeEventListener('ftf:window-open', onWindow); win.removeEventListener('pointermove', onDrag); win.removeEventListener('ftf:portal-near', onPortal); win.removeEventListener('ftf:mob-killed', onHit); win.removeEventListener('ftf:mob-hit', onHit); },
+    dispose() { if (offChests) offChests(); offWindow(); unSilk(); setMarkers('quests', []); if (trail) trail.dispose(); if (waypoint) waypoint.dispose(); if (journal) journal.close(); if (tracker) tracker.dispose(); if (walker) { walker.dispose(); setAutoWalker(null); } if (doc.body && doc.body.classList) doc.body.classList.remove('ftf-tracker-on'); closeTalk(); closeLog(); logBtn.remove(); line.remove(); win.removeEventListener('ftf:mob-killed', onKill); win.removeEventListener('ftf:journal-toggle', toggleLog); win.removeEventListener('keydown', onKey); win.removeEventListener('keydown', onGuideKey); win.removeEventListener('ftf:window-open', onWindow); win.removeEventListener('pointermove', onDrag); win.removeEventListener('ftf:portal-near', onPortal); win.removeEventListener('ftf:mob-killed', onHit); win.removeEventListener('ftf:mob-hit', onHit); },
   };
 }
 

@@ -152,6 +152,8 @@ export async function runArrival({ doc = document, t, mint, flyIn = null, reduce
  * One hint at a time at the bottom; each has a Next button and optional extra buttons. Resolves after the last.
  * @param {{doc?: Document, t: Function, steps: Array<{key: string, buttons?: Array<{key: string, fn: Function}>, when?: () => boolean}>}} o
  */
+/** How long a tip stays before the tour moves on by itself: a plain one, one with buttons (ms). */
+export const HINT_MS = 12000, HINT_BUTTONS_MS = 30000;
 export async function runHints({ doc = document, t, steps }) {
   ensureStyle(doc);
   for (const s of steps) {
@@ -165,7 +167,10 @@ export async function runHints({ doc = document, t, steps }) {
       for (const b of s.buttons || []) box.append(btn(doc, t(b.key), async () => { gone = true; clearTimeout(timer); box.remove(); await b.fn(); resolve(); }));
       box.append(btn(doc, t('day1.hint.next'), next, !!(s.buttons && s.buttons.length)));
       // a plain tip also goes with a tap anywhere on it, or by itself after 12 s (owner 12.11: a tip could not be closed)
-      if (!(s.buttons && s.buttons.length)) { box.addEventListener('click', next); timer = setTimeout(next, 12000); }
+      // a plain tip also goes with a tap anywhere on it, or by itself after 12 s (owner 12.11: a tip could not be closed);
+      // one with buttons goes by itself after 30 s, so the tour never stalls on an ignored tip (owner P0 14.11)
+      if (!(s.buttons && s.buttons.length)) box.addEventListener('click', next);
+      timer = setTimeout(next, s.buttons && s.buttons.length ? HINT_BUTTONS_MS : HINT_MS);
       doc.body.append(box);
     });
   }
