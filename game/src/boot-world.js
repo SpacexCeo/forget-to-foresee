@@ -645,7 +645,11 @@ function combatSound(k, mob, ev) {
   else if (k === 'strike3') { cue('strike_swing'); heavyUntil = performance.now() + 350; }
   else if (k === 'dash') cue('dash_whoosh');
   else if (k === 'super') { cue('strike_heavy'); heavyUntil = performance.now() + 350; }   // quiet: the sound layer adds its own on ftf:iris-action
+  // the casts land with their own element (night 14.11): frost a glassy shatter, the snare a bite of current
+  else if (k === 'hit' && ev && ev.src === 'lance') { cueAt('hit_frost', at); cueAt(S.hurt, at, 0.8); }
+  else if (k === 'hit' && ev && ev.src === 'snare') { cueAt('hit_storm', at); cueAt(S.hurt, at, 0.8); }
   else if (k === 'hit') { cueAt(performance.now() < heavyUntil || (ev && ev.crit) ? 'strike_heavy' : 'strike_impact', at); cueAt(S.hurt, at, 0.8); }
+  else if (k === 'super_release') cue('dash_whoosh'); // the gathered blow leaves with a rush of air; strike_heavy lands with it
   else if (k === 'attack') cueAt(S.attack, at);
   else if (k === 'kill') cueAt('mob_death', at);
   else if (k === 'hurt') cue('iris_hurt');
@@ -669,6 +673,7 @@ function mountMobs() {
       camera, irisModel: () => (irisAvatar && irisAvatar.irisModel ? irisAvatar.irisModel.model : null), irisMove: (n) => { if (irisAvatar) irisAvatar.holdWhile = () => !!townMobs && townMobs.charging != null; if (!(irisAvatar && irisAvatar.combat(n))) return false; if (n === 'strike3' || n === 'strike_super') for (const d of companions) d.flourish(lookdev.reducedMotion); const c = irisAvatar.irisModel && irisAvatar.irisModel.combat; return c && c.name === n && c.impact != null ? c.impact : true; }, irisEnd: () => irisAvatar && irisAvatar.endAction(),
       moveIris: (d) => { const r = moveCapsule(T.world, player.pos, [d[0], -Math.hypot(d[0], d[1]) - 0.02, d[1]], { radius: player.radius, height: player.height, mask: MASK_PLAYER }); player.pos = r.pos; player.grounded = r.grounded; player.settled = null; },
       onFeedback: (k, mob, ev) => combatSound(k, mob, ev), floatNumber: numbersHook });
+    loadFloatNumbers(); // ahead of the first hit
     // stamina (game/stamina.js): a dash costs a chunk and is refused when she is winded; strikes cost a little but are
     // never refused (the first fight stays fair)
     const rawDash = townMobs.dash.bind(townMobs), rawUp = townMobs.attackUp ? townMobs.attackUp.bind(townMobs) : null, rawStrike = townMobs.strike.bind(townMobs);
@@ -909,12 +914,22 @@ fitView();
 let toastTimer = 0;
 // Floating numbers (flag damageNumbers; ui/float-numbers.js): damage and crits from the mobs, XP from kills, silk gained
 // and spent from the town ledger. Off: the old per-module numbers stay exactly as they were.
-let floatNumbers = null, floatLoading = false, lastSilk = null;
+let floatNumbers = null, floatLoading = null, lastSilk = null;
+const floatQueue = []; // numbers sent while the layer loads (night 14.11: the first hit of a session showed the old way, and a first XP or taken number was lost)
+function loadFloatNumbers() {
+  if (floatNumbers || floatLoading || !featureFlags.on('damageNumbers')) return floatLoading;
+  floatLoading = import('./ui/float-numbers.js').then((m) => {
+    floatNumbers = m.createFloatNumbers({ camera, THREE, reduced: () => lookdev.reducedMotion, xpUnit: () => 'XP' });
+    for (const ev of floatQueue.splice(0)) floatNumbers.push(ev);
+  }).catch(() => { floatLoading = null; floatQueue.length = 0; });
+  return floatLoading;
+}
 function numbersHook(ev) {
   if (!featureFlags.on('damageNumbers')) return false;
   if (floatNumbers) { floatNumbers.push(ev); return true; }
-  if (!floatLoading) { floatLoading = true; import('./ui/float-numbers.js').then((m) => { floatNumbers = m.createFloatNumbers({ camera, THREE, reduced: () => lookdev.reducedMotion, xpUnit: () => 'XP' }); }).catch(() => { floatLoading = false; }); }
-  return false; // the first number of a session shows the old way while the layer loads
+  loadFloatNumbers();
+  if (floatQueue.length < 24) floatQueue.push(ev);
+  return true; // held for the layer (a few frames); it is loaded ahead when the hillside fight mounts
 }
 townLedger.subscribe(() => {
   const s = townLedger.silk; const prev = lastSilk; lastSilk = s;
@@ -1352,6 +1367,7 @@ function frame() {
   }
   rig.update(dt, focus, lookdev.reducedMotion ? null : player.vel); // no camera look-ahead under reduced motion
   if (townMobs && townMobs.shake > 0) { const k = townMobs.shake * 0.08; camera.position.x += (Math.random() - 0.5) * k; camera.position.y += (Math.random() - 0.5) * k; } // heavy hits (off with reduced motion)
+  if (townMobs && townMobs.kick) camera.position.add(townMobs.kick); // the blows' camera kick along their direction (render/hit-fx.js; still under reduced motion)
   if (glassShoal && glassShoal.owns() && glassShoal.shakeCamera) glassShoal.shakeCamera(camera, dt); // the Shoal's ultimate (scaled down under reduced motion)
   streamer.update(dt, focus);
   warmup.update();

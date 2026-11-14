@@ -982,6 +982,98 @@ def cast_release_frost(r, i):
     return fades(reverb(y, make_ir(1.4, rng=r, bright=1.3), wet=0.3), 0.0005, 0.2)
 
 
+@variants("hit_frost", 3, "sfx", target=(-18, "short"))
+def hit_frost(r, i):
+    """A Frost Lance shard landing on a creature: a crisp crack, a short glassy shatter, a breath of frost."""
+    D = 0.42
+    n = ns(D)
+    t = taxis(n)
+    crack = highpass(noise(n, r), 3500) * np.exp(-t / 0.003) * 1.1
+    shard = strike(D, r.uniform(2800, 3600), GLASS_RATIOS, [1, 0.6, 0.4, 0.25], [0.12, 0.08, 0.05, 0.04], r, click=0.6, click_lp=12000) * 0.5
+    tinkle = np.zeros(n)
+    for tt in poisson_times(r, 90, 0.12):
+        tinkle[min(n - 1, ns(0.01 + tt))] += r.uniform(-1, 1)
+    tinkle = bandpass(tinkle, 5000, 12000) * np.exp(-t / 0.08) * 0.7
+    thud = membrane(D, 210, 90, 0.01, 0.05, r, 0.2, 900) * 0.5
+    y = soft_clip(crack + shard + tinkle + thud, 1.3)
+    return fades(reverb(to_stereo(y), make_ir(0.6, rng=r, bright=1.4), wet=0.2)[:, :n], 0.0005, 0.06)
+
+
+@variants("hit_storm", 3, "sfx", target=(-18, "short"))
+def hit_storm(r, i):
+    """A Storm Snare arc biting a creature: a sharp snap, a short electric buzz, a few crackles."""
+    D = 0.36
+    n = ns(D)
+    t = taxis(n)
+    snap = np.zeros(n)
+    for k in range(r.integers(2, 4)):
+        at = ns(r.uniform(0, 0.02))
+        L = ns(r.uniform(0.002, 0.008))
+        snap[at:at + L] += noise(L, r) * r.uniform(0.6, 1.1)
+    snap = highpass(snap, 1500) * 1.2
+    buzz = wavetable(r.uniform(110, 140), n, cutoff=4000, rng=r) * np.exp(-t / 0.07) * 0.45
+    crackle = np.zeros(n)
+    for tt in poisson_times(r, 120, 0.18):
+        crackle[min(n - 1, ns(0.01 + tt))] += r.uniform(-1, 1)
+    crackle = bandpass(crackle, 2500, 10000) * np.exp(-t / 0.1) * 0.7
+    y = soft_clip(snap + buzz + crackle, 1.3)
+    return fades(reverb(to_stereo(y), make_ir(0.5, rng=r), wet=0.15)[:, :n], 0.0005, 0.05)
+
+
+@variants("ember_cast", 2, "sfx", target=(-21, "short"))
+def ember_cast(r, i):
+    """Elise's Ember Palms leaving her hands: a soft fiery puff that rushes forward."""
+    D = 0.38
+    whoosh = sweep_noise(r, D, r.uniform(700, 900), r.uniform(1800, 2400), r.uniform(500, 700), 0.05, 0.5, rise=1.4, fall=0.14)
+    n = ns(D)
+    t = taxis(n)
+    roar = lowpass(brown(n, r), 600) * np.minimum(t / 0.02, 1) * np.exp(-t / 0.12) * 1.6
+    crack = np.zeros(n)
+    for tt in poisson_times(r, 50, 0.25):
+        crack[min(n - 1, ns(tt))] += r.uniform(-1, 1)
+    crack = bandpass(crack, 1500, 6000) * 0.5
+    return fades(whoosh * 0.8 + to_stereo(roar + crack), 0.002, 0.06)
+
+
+@variants("ember_hit", 3, "sfx", target=(-18, "short"))
+def ember_hit(r, i):
+    """An Ember Palm bursting on a target: a dull thump, a bloom of flame, embers crackling away."""
+    D = 0.6
+    n = ns(D)
+    t = taxis(n)
+    thump = membrane(D, r.uniform(120, 150), 50, 0.015, 0.08, r, 0.25, 700) * 0.9
+    bloom = lowpass(brown(n, r), 900) * np.minimum(t / 0.01, 1) * np.exp(-t / 0.16) * 1.8
+    embers = np.zeros(n)
+    for tt in poisson_times(r, 70, 0.45, weight=np.exp(-taxis(n) / 0.2)):
+        embers[min(n - 1, ns(0.02 + tt))] += r.uniform(-1, 1)
+    embers = bandpass(embers, 2000, 8000) * 0.6
+    y = soft_clip(thump + bloom + embers, 1.3)
+    return fades(reverb(to_stereo(y), make_ir(0.7, rng=r), wet=0.2)[:, :n], 0.0005, 0.1)
+
+
+@variants("gale_cast", 2, "sfx", target=(-21, "short"))
+def gale_cast(r, i):
+    """Elise's Gale Discs thrown: a bright spinning whoosh."""
+    D = 0.45
+    y = sweep_noise(r, D, r.uniform(3000, 3800), r.uniform(1200, 1600), r.uniform(400, 520), 0.04, 0.5, rise=1.2, fall=0.16, colour="white")
+    n = ns(D)
+    t = taxis(n)
+    spin = 0.6 + 0.4 * np.sin(2 * np.pi * r.uniform(16, 22) * t)
+    p = np.linspace(-0.6, 0.6, n) * (1 if i % 2 else -1)
+    return fades(np.stack([y[0] * spin * (1 - p), y[1] * spin * (1 + p)]) * 0.8, 0.001, 0.05)
+
+
+@variants("gale_hit", 3, "sfx", target=(-18, "short"))
+def gale_hit(r, i):
+    """A Gale Disc cutting into a target: a thin slicing hiss over a light impact."""
+    D = 0.4
+    n = ns(D)
+    t = taxis(n)
+    slice_ = bandpass(noise(n, r), 3000, 9000) * np.minimum(t / 0.002, 1) * np.exp(-t / 0.05) * 1.0
+    body = impact(r, 0.7, D) * 0.6
+    return fades(to_stereo(slice_) + body, 0.0005, 0.06)
+
+
 @asset("cast_charge_storm", "sfx", target=(-22, "short"))
 def cast_charge_storm(r):
     D = 0.42  # the wind-up: the release frame comes 0.42 s after the click (claude/iris-anim)

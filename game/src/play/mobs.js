@@ -13,6 +13,8 @@
 import { emit as busEmit } from '../sprint/bus.js';
 import { onField } from '../scenes/town-outside.js';
 import { CASTS } from '../scenes/town-casting-fx.js';
+import { IMPACT, KILL, impactOf } from '../render/hit-fx-core.js';
+import { createHitFx } from '../render/hit-fx.js';
 
 /** Per type: health, speeds (m/s), the ground speed each clip's stride was built for (`clip` [walk, run], from
  * art/mobs/mobs.json: the clip is time-scaled to the actual speed so the feet do not slide), ranges (m), attack timing. */
@@ -150,12 +152,18 @@ export class MobBrain {
   /** Town-local check: a world point lies on the field beyond the walls. */
   outside(p) { return onField(p[0] - this.origin[0], p[2] - this.origin[2]); }
 
-  /** Damage to one monster (from a cast). */
-  damage(m, amount, events, { root = 0 } = {}) {
+  /**
+   * Damage to one monster. `src` names the blow (render/hit-fx-core.js IMPACT: lance, snare, strike, strike3, super):
+   * its hit-stop, and whether it is a crit (the combo's third blow and the super strike; owner night 14.11: a crit on
+   * every Lance hit meant nothing). A finishing blow holds the creature a little longer before it falls.
+   */
+  damage(m, amount, events, { root = 0, src = 'strike' } = {}) {
     if (m.state === 'dead' || m.state === 'gone') return;
-    m.hp -= amount; m.freeze = HIT_STOP_SECONDS; m.root = Math.max(m.root, root);
-    events.push({ kind: 'hit', mob: m, amount, crit: amount >= 26 });
-    if (m.hp <= 0) { m.hp = 0; m.state = 'dead'; m.t = 0; events.push({ kind: 'death', mob: m }); return; }
+    const I = IMPACT[src] || IMPACT.strike;
+    m.hp -= amount; m.freeze = Math.max(HIT_STOP_SECONDS, I.stop); m.root = Math.max(m.root, root);
+    const kill = m.hp <= 0;
+    events.push({ kind: 'hit', mob: m, amount, crit: I.crit, src, kill });
+    if (kill) { m.hp = 0; m.state = 'dead'; m.t = 0; m.freeze = Math.max(m.freeze, KILL.stop); events.push({ kind: 'death', mob: m }); return; }
     m.provoked = true; m.lost = 0; m.reset = false;                               // any hit, any distance: it comes for her
     if (m.state === 'idle' || m.state === 'recover') { m.state = 'chase'; m.t = 0; m.goal = null; }
     if (m.T.stagger && m.state !== 'windup') { m.state = 'stagger'; m.t = 0; }
@@ -171,7 +179,7 @@ export class MobBrain {
       if (d > A.reach + m.T.radius) continue;
       let a = Math.atan2(dx, dz) - heading; while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI) a += Math.PI * 2;
       if (Math.abs(a) > A.arc && d > m.T.radius + 0.3) continue;
-      this.damage(m, amount, events);
+      this.damage(m, amount, events, { src: knock ? 'strike3' : 'strike' });
       if (!m.T.heavy && m.state !== 'dead' && d > 1e-3) {
         const k = (knock ? 0.7 : HIT_SHOVE) / d, nx = m.pos[0] + dx * k, nz = m.pos[2] + dz * k;
         if (this.outside([nx, 0, nz]) && Math.hypot(nx - m.pack.home[0], nz - m.pack.home[2]) < LEASH) { m.pos[0] = nx; m.pos[2] = nz; }
@@ -190,7 +198,7 @@ export class MobBrain {
       if (d > A.reach + m.T.radius) continue;
       let a = Math.atan2(dx, dz) - heading; while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI) a += Math.PI * 2;
       if (Math.abs(a) > A.arc && d > m.T.radius + 0.3) continue;
-      this.damage(m, amount, events);
+      this.damage(m, amount, events, { src: 'super' });
       events.push({ kind: 'super', mob: m });
       if (m.state !== 'dead') m.freeze = A.freeze;
       if (!m.T.heavy && m.state !== 'dead' && d > 1e-3) {
@@ -220,13 +228,13 @@ export class MobBrain {
       for (const m of this.mobs) {
         if (m.state === 'dead' || m.state === 'gone') continue;
         const { along, across } = alongLine(from, dir, m.pos);
-        if (along > -m.T.radius && along < c.range + m.T.radius && across < c.width / 2 + m.T.radius) this.pending.push({ at: Math.max(0, along) / LANCE_SPEED, mob: m, amount: CAST_DAMAGE.lance, root: 0 });
+        if (along > -m.T.radius && along < c.range + m.T.radius && across < c.width / 2 + m.T.radius) this.pending.push({ at: Math.max(0, along) / LANCE_SPEED, mob: m, amount: CAST_DAMAGE.lance, root: 0, src: 'lance' });
       }
     } else if (id === 'snare') {
       const c = CASTS.snare;
       for (const m of this.mobs) {
         if (m.state === 'dead' || m.state === 'gone') continue;
-        if (dist2(m.pos, point) < c.radius + m.T.radius) this.pending.push({ at: SNARE_DELAY, mob: m, amount: CAST_DAMAGE.snare, root: SNARE_ROOT_SECONDS });
+        if (dist2(m.pos, point) < c.radius + m.T.radius) this.pending.push({ at: SNARE_DELAY, mob: m, amount: CAST_DAMAGE.snare, root: SNARE_ROOT_SECONDS, src: 'snare' });
       }
     }
   }
@@ -237,7 +245,7 @@ export class MobBrain {
   step(dt, iris, ground = (x, z, y) => y) {
     const ev = [];
     for (const p of this.pending) p.at -= dt;
-    for (const p of this.pending.filter((q) => q.at <= 0)) this.damage(p.mob, p.amount, ev, { root: p.root });
+    for (const p of this.pending.filter((q) => q.at <= 0)) this.damage(p.mob, p.amount, ev, { root: p.root, src: p.src });
     this.pending = this.pending.filter((q) => q.at > 0);
     for (const m of this.mobs) this.think(m, dt, iris, ground, ev);
     for (const pack of this.packs) {                                             // a pack comes back after its last one fell
@@ -398,6 +406,8 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
   let shake = 0;
   const numbers = [];
   const shots = [], shotLog = [];   // shotLog: the last seeds (QA: where from, where to, closest pass)
+  // impact effects and the camera kick (render/hit-fx.js): one pooled set for the whole hillside
+  const hitFx = createHitFx({ THREE, parent: scene, doc, scale: phone ? 0.6 : 1 });
   let disposed = false;
 
   if (doc && !doc.getElementById('ftf-mobs-style')) { const st = doc.createElement('style'); st.id = 'ftf-mobs-style'; st.textContent = CSS; doc.head.append(st); }
@@ -409,23 +419,10 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
   const ringGeo = new THREE.RingGeometry(0.75, 1, 40); ringGeo.rotateX(-Math.PI / 2);
   const ringMat = new THREE.MeshBasicMaterial({ color: 0xff5a3c, transparent: true, opacity: 0.0, depthWrite: false });
   const fillGeo = new THREE.CircleGeometry(0.75, 40); fillGeo.rotateX(-Math.PI / 2);
-  // Hit sparks (owner 12.11: no ground arc; a light, simple effect where the blow lands): a small additive flash and a
-  // faint dust puff on the struck creature at fist height, gone in 0.2 s. Camera-facing sprites, nothing on the ground.
-  const sparkTex = (() => {
-    const doc2 = doc || (typeof document !== 'undefined' ? document : null); if (!doc2) return null;
-    const c = doc2.createElement('canvas'); c.width = c.height = 64; const g = c.getContext && c.getContext('2d'); if (!g) return null;
-    const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.35, 'rgba(255,240,210,0.55)'); gr.addColorStop(1, 'rgba(255,220,170,0)');
-    g.fillStyle = gr; g.fillRect(0, 0, 64, 64); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
-  })();
-  const sparks = [];
-  function hitSpark(m, big = false) {
+  /** Where a blow lands on a creature: the side facing her, at its chest. */
+  function hitPoint(m) {
     const y = m.pos[1] + Math.min(1.1, 0.35 + m.T.radius * 0.9), dx = m.pos[0] - player.pos[0], dz = m.pos[2] - player.pos[2], l = Math.hypot(dx, dz) || 1;
-    const at = [m.pos[0] - dx / l * m.T.radius * 0.7, y, m.pos[2] - dz / l * m.T.radius * 0.7];   // the side facing her
-    for (const kind of ['flash', 'dust']) {
-      const mat = new THREE.SpriteMaterial({ map: sparkTex, color: kind === 'flash' ? 0xfff2d8 : 0xb9a58a, transparent: true, opacity: kind === 'flash' ? 0.9 : 0.35, depthWrite: false, blending: kind === 'flash' ? THREE.AdditiveBlending : THREE.NormalBlending });
-      const sp = new THREE.Sprite(mat); sp.position.set(at[0], at[1] - (kind === 'dust' ? 0.15 : 0), at[2]); sp.renderOrder = 4; group.add(sp);
-      sparks.push({ sp, kind, t: 0, dur: kind === 'flash' ? 0.14 : 0.2, s0: (kind === 'flash' ? 0.35 : 0.3) * (big ? 1.6 : 1), s1: (kind === 'flash' ? 0.7 : 0.75) * (big ? 1.6 : 1) });
-    }
+    return [m.pos[0] - dx / l * m.T.radius * 0.7, y, m.pos[2] - dz / l * m.T.radius * 0.7];
   }
   // the super strike: a ring that gathers under her while she charges, then a ground ring and a shock arc in her colour
   const SUPER_TINT = 0xffc36b;
@@ -513,9 +510,10 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
     v.holder.position.set(m.pos[0], m.pos[1], m.pos[2]); v.holder.rotation.y = m.heading;
   }
 
-  function number(m, amount, crit) {
+  const NUMBER_TINT = Object.freeze({ lance: '#bfe9ff', snare: '#d9c2ff' });
+  function number(m, amount, crit, src) {
     // the floating-numbers layer (flag damageNumbers, ui/float-numbers.js) takes the number when it is on
-    if (floatNumber && floatNumber({ kind: crit ? 'crit' : 'damage', amount, target: m, pos: [m.pos[0], m.pos[1] + 0.6 + m.T.radius * 1.2, m.pos[2]] })) return;
+    if (floatNumber && floatNumber({ kind: crit ? 'crit' : 'damage', amount, target: m, tint: NUMBER_TINT[src] || null, pos: [m.pos[0], m.pos[1] + 0.6 + m.T.radius * 1.2, m.pos[2]] })) return;
     if (!doc || reduced() || !camera) return;
     const el = doc.createElement('div'); el.className = 'ftf-dmg' + (crit ? ' crit' : ''); el.textContent = String(Math.round(amount)); doc.body.append(el);
     numbers.push({ el, p: [m.pos[0] + (Math.random() - 0.5) * 0.4, m.pos[1] + 0.6 + m.T.radius * 1.2, m.pos[2]], t: 0 });
@@ -550,12 +548,16 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
         shots.push({ s, vel: to.clone().sub(from).normalize().multiplyScalar(9), life: 2.2, damage: e.damage || e.mob.T.damage, min: 99, log: { from: from.toArray().map((x) => +x.toFixed(2)), to: to.toArray().map((x) => +x.toFixed(2)) } });
       }
       else if (e.kind === 'hit' && v) {
-        v.fx.hit(); number(e.mob, e.amount, e.crit); if (!reduced()) hitSpark(e.mob, false); if (onFeedback) onFeedback('hit', e.mob, e);
-        if (e.crit || e.mob.T.heavy) shake = Math.max(shake, e.crit ? 0.35 : 0.2);
+        v.fx.hit(); number(e.mob, e.amount, e.crit, e.src); if (onFeedback) onFeedback('hit', e.mob, e);
+        // the blow's own look where it lands: frost shards, storm arcs, strike sparks (render/hit-fx-core.js); the
+        // flash and the fragments stay under reduced motion (they say it hit), the camera stays still
+        const imp = impactOf(e.src, { radius: e.mob.T.radius, heavy: !!e.mob.T.heavy, kill: !!e.kill, reduced: reduced() });
+        const at = hitPoint(e.mob), dx = e.mob.pos[0] - player.pos[0], dz = e.mob.pos[2] - player.pos[2], l = Math.hypot(dx, dz) || 1;
+        hitFx.impact(at, [dx / l, dz / l], imp, e.mob.pos[1]);
+        shake = Math.max(shake, imp.shake);
         if (e.mob.state === 'stagger' && v.actions.hit) { play(v, 'hit', 0.06); v.oneShot = v.actions.hit; }
         v.ring.visible = v.ring.visible && e.mob.state === 'windup';
       }
-      else if (e.kind === 'super' && v && !reduced()) hitSpark(e.mob, true);   // the super's spark, a little bigger
       else if (e.kind === 'death' && v) { v.ring.visible = false; play(v, 'death', 0.1); if (onFeedback) onFeedback('kill', e.mob); }
       else if (e.kind === 'killed') {
         if (v) v.fx.die();
@@ -574,6 +576,8 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
     /** Iris's cast (scenes/town-casting.js onFire). */
     cast(c) { brain.cast(c); },
     get shake() { return reduced() ? 0 : shake; },
+    /** The camera kick of the blows this frame (render/hit-fx.js): add it to the camera after the rig. Zero under reduced motion. */
+    get kick() { return hitFx.kick; },
     get actions() { return { strikeCd: act.strikeCd, dashCd: act.dashCd, combo: act.combo, iframes: iris.iframes }; },
     get charging() { return act.charge ? act.charge.t : null; },
     /** Which source turned the last strike: 'lock' | 'cursor' | 'move' | 'facing' (QA). */
@@ -686,15 +690,10 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
           const S = act.superAt; act.superAt = null;
           const ev = []; brain.superStrike(player.pos, player.heading, S.amount, ev); handle(ev);
           shake = Math.max(shake, 0.55 + 0.35 * S.k);
+          hitFx.shock([player.pos[0] + Math.sin(player.heading) * 1.2, player.pos[1], player.pos[2] + Math.cos(player.heading) * 1.2], IMPACT.super.color, 2.2 + 1.4 * S.k);
           if (moveIris) moveIris([Math.sin(player.heading) * 0.45, Math.cos(player.heading) * 0.45]);
           if (onFeedback) onFeedback('super', null, { hits: ev.filter((e) => e.kind === 'super').length, charge: S.k });
         }
-      }
-      for (let i = sparks.length - 1; i >= 0; i--) {
-        const k = sparks[i]; k.t += dt; const u = Math.min(1, k.t / k.dur);
-        k.sp.scale.setScalar(k.s0 + (k.s1 - k.s0) * (1 - (1 - u) * (1 - u))); k.sp.material.opacity = (k.kind === 'flash' ? 0.9 : 0.35) * (1 - u);
-        if (k.kind === 'dust') k.sp.position.y += dt * 0.4;
-        if (u >= 1) { group.remove(k.sp); k.sp.material.dispose(); sparks.splice(i, 1); }
       }
       iris.iframes = Math.max(0, iris.iframes - dt); shake = Math.max(0, shake - dt * 2.5);
       iris.calm += dt;
@@ -728,9 +727,11 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
       const sdt = Math.min(acc, 0.1); acc = 0;
       handle(brain.step(sdt, iris, ground));
       animate(dt);
+      if (reduced()) hitFx.still();
+      hitFx.update(dt);
     },
     dispose() {
-      disposed = true; scene.remove(group);
+      disposed = true; scene.remove(group); hitFx.dispose();
       for (const v of views.values()) v.mixer.stopAllAction();
       if (hpEl) { hpEl.remove(); vignette.remove(); }
       for (const n of numbers) n.el.remove();
@@ -771,9 +772,10 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
       const k = Math.min(1, dt * 1.2); s.vel.lerp(want, k).setLength(9);
       s.s.position.addScaledVector(s.vel, dt);
       const p = s.s.position;
+      s.wake = (s.wake || 0) - dt; if (s.wake <= 0) { s.wake = phone ? 0.05 : 0.025; hitFx.trail([p.x, p.y, p.z], IMPACT.seed.color); }
       const dIris = Math.hypot(p.x - player.pos[0], p.y - (player.pos[1] + 1.0), p.z - player.pos[2]); s.min = Math.min(s.min, dIris);
       if (iris.alive && dIris < 0.75) { hurt(s.damage); s.life = 0; s.hit = true; }
-      if (s.life <= 0) { group.remove(s.s); shotLog.push({ ...s.log, min: +s.min.toFixed(2), hit: !!s.hit }); if (shotLog.length > 20) shotLog.shift(); }
+      if (s.life <= 0) { hitFx.burst([p.x, p.y, p.z], IMPACT.seed.color, s.hit ? 7 : 4, s.hit ? 0.6 : 0.35); group.remove(s.s); shotLog.push({ ...s.log, min: +s.min.toFixed(2), hit: !!s.hit }); if (shotLog.length > 20) shotLog.shift(); }
     }
     for (let i = shots.length - 1; i >= 0; i--) if (shots[i].life <= 0) shots.splice(i, 1);
   }

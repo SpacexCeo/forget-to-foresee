@@ -18,6 +18,8 @@ export const KIND = Object.freeze({
   xp: { life: 900, pop: 1.1, size: 14, color: '#b06cff', rise: 40 },
   miss: { life: 700, pop: 1.0, size: 14, color: '#aab1c5', rise: 24 },
 });
+/** The colour a number shows: its tint for plain damage, else its kind's colour. */
+export const colorOf = (n) => (n.kind === 'damage' && n.tint) || (KIND[n.kind] || KIND.damage).color;
 /** Numbers of other players are smaller. */
 export const OTHER_SIZE = Object.freeze({ normal: 14, crit: 20 });
 
@@ -53,7 +55,8 @@ export function mergeOrAdd(live, ev, now) {
       return m;
     }
   }
-  const n = { kind: ev.kind, family, target: ev.target ?? null, amount: ev.amount, pos: ev.pos, other: !!ev.other, born: now, lastAt: now, merges: 0, grow: 1 };
+  // `tint`: a plain damage number in the blow's element (the casts: ice blue, storm violet); crits stay gold
+  const n = { kind: ev.kind, family, target: ev.target ?? null, amount: ev.amount, pos: ev.pos, other: !!ev.other, born: now, lastAt: now, merges: 0, grow: 1, tint: ev.tint || null };
   live.push(n);
   while (live.length > POOL) live.shift();
   return n;

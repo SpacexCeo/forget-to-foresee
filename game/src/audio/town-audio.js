@@ -14,7 +14,9 @@ export const TOWN_CUES = Object.freeze(['ui_click', 'ui_confirm', 'ui_notify', '
   'strike_swing', 'strike_impact', 'strike_heavy', 'dash_whoosh',
   'cast_charge_frost', 'cast_release_frost', 'cast_charge_storm', 'cast_release_storm',
   'mob_skitter_attack', 'mob_hulker_slam', 'mob_veilbell_seed', 'mob_crownrift_blade', 'mob_hurt_small', 'mob_hurt_big', 'mob_death',
-  'iris_hurt', 'iris_down']);
+  'iris_hurt', 'iris_down',
+  // night 14.11: the casts land with their element; Elise's Ember Palms and Gale Discs in the Glass Shoal
+  'hit_frost', 'hit_storm', 'ember_cast', 'ember_hit', 'gale_cast', 'gale_hit']);
 /** Footstep surfaces (six soft variations each). */
 export const STEP_SURFACES = Object.freeze(['stone', 'wood', 'grass']);
 /** The monsters' sounds by type (play/mobs.js types): attack / telegraph, hurt, death. */

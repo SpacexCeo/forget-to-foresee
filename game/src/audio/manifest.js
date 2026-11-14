@@ -169,6 +169,76 @@ export const AUDIO_MANIFEST = {
       "samples": 20160,
       "channels": 2
     },
+    "ember_cast_1": {
+      "file": "ember_cast_1.ogg",
+      "kind": "sfx",
+      "dur": 0.38,
+      "samples": 18240,
+      "channels": 2
+    },
+    "ember_cast_2": {
+      "file": "ember_cast_2.ogg",
+      "kind": "sfx",
+      "dur": 0.38,
+      "samples": 18240,
+      "channels": 2
+    },
+    "ember_hit_1": {
+      "file": "ember_hit_1.ogg",
+      "kind": "sfx",
+      "dur": 0.6,
+      "samples": 28800,
+      "channels": 2
+    },
+    "ember_hit_2": {
+      "file": "ember_hit_2.ogg",
+      "kind": "sfx",
+      "dur": 0.6,
+      "samples": 28800,
+      "channels": 2
+    },
+    "ember_hit_3": {
+      "file": "ember_hit_3.ogg",
+      "kind": "sfx",
+      "dur": 0.6,
+      "samples": 28800,
+      "channels": 2
+    },
+    "gale_cast_1": {
+      "file": "gale_cast_1.ogg",
+      "kind": "sfx",
+      "dur": 0.45,
+      "samples": 21600,
+      "channels": 2
+    },
+    "gale_cast_2": {
+      "file": "gale_cast_2.ogg",
+      "kind": "sfx",
+      "dur": 0.45,
+      "samples": 21600,
+      "channels": 2
+    },
+    "gale_hit_1": {
+      "file": "gale_hit_1.ogg",
+      "kind": "sfx",
+      "dur": 0.3974,
+      "samples": 19077,
+      "channels": 2
+    },
+    "gale_hit_2": {
+      "file": "gale_hit_2.ogg",
+      "kind": "sfx",
+      "dur": 0.4,
+      "samples": 19200,
+      "channels": 2
+    },
+    "gale_hit_3": {
+      "file": "gale_hit_3.ogg",
+      "kind": "sfx",
+      "dur": 0.3993,
+      "samples": 19168,
+      "channels": 2
+    },
     "gift_chime": {
       "file": "gift_chime.ogg",
       "kind": "sfx",
@@ -289,6 +359,48 @@ export const AUDIO_MANIFEST = {
       "rolloff": 1.0,
       "stroke": "spike",
       "strokeDur": 1.2
+    },
+    "hit_frost_1": {
+      "file": "hit_frost_1.ogg",
+      "kind": "sfx",
+      "dur": 0.42,
+      "samples": 20160,
+      "channels": 2
+    },
+    "hit_frost_2": {
+      "file": "hit_frost_2.ogg",
+      "kind": "sfx",
+      "dur": 0.42,
+      "samples": 20160,
+      "channels": 2
+    },
+    "hit_frost_3": {
+      "file": "hit_frost_3.ogg",
+      "kind": "sfx",
+      "dur": 0.42,
+      "samples": 20160,
+      "channels": 2
+    },
+    "hit_storm_1": {
+      "file": "hit_storm_1.ogg",
+      "kind": "sfx",
+      "dur": 0.36,
+      "samples": 17280,
+      "channels": 2
+    },
+    "hit_storm_2": {
+      "file": "hit_storm_2.ogg",
+      "kind": "sfx",
+      "dur": 0.36,
+      "samples": 17280,
+      "channels": 2
+    },
+    "hit_storm_3": {
+      "file": "hit_storm_3.ogg",
+      "kind": "sfx",
+      "dur": 0.36,
+      "samples": 17280,
+      "channels": 2
     },
     "iris_down": {
       "file": "iris_down.ogg",
@@ -854,6 +966,34 @@ export const AUDIO_MANIFEST = {
       "dash_whoosh_1",
       "dash_whoosh_2",
       "dash_whoosh_3"
+    ],
+    "ember_cast": [
+      "ember_cast_1",
+      "ember_cast_2"
+    ],
+    "ember_hit": [
+      "ember_hit_1",
+      "ember_hit_2",
+      "ember_hit_3"
+    ],
+    "gale_cast": [
+      "gale_cast_1",
+      "gale_cast_2"
+    ],
+    "gale_hit": [
+      "gale_hit_1",
+      "gale_hit_2",
+      "gale_hit_3"
+    ],
+    "hit_frost": [
+      "hit_frost_1",
+      "hit_frost_2",
+      "hit_frost_3"
+    ],
+    "hit_storm": [
+      "hit_storm_1",
+      "hit_storm_2",
+      "hit_storm_3"
     ],
     "iris_hurt": [
       "iris_hurt_1",

@@ -2,7 +2,7 @@
 // cap, crits, the curve with and without reduced motion, the pool limit and the texts.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mergeOrAdd, curve, textOf, sizeOf, alive, POOL, MERGE_MS, KIND } from '../../src/ui/float-numbers-core.js';
+import { mergeOrAdd, curve, textOf, sizeOf, alive, POOL, MERGE_MS, KIND, colorOf } from '../../src/ui/float-numbers-core.js';
 
 const P = [0, 0, 0];
 
@@ -67,4 +67,15 @@ test('numbers (plan 5.13): XP merges within 400 ms into one growing number; late
   mergeOrAdd(live, { kind: 'xp', amount: 15, pos: P }, 300 + XP_MERGE_MS + 1);
   assert.equal(live.length, 2);
   const r = curve('taken', 400, true); assert.equal(r.rise, 0); assert.equal(r.scale, 1);
+});
+
+test('tint: a cast\'s plain damage shows in its element; a crit stays gold, other kinds keep their colour', () => {
+  const live = [];
+  const a = mergeOrAdd(live, { kind: 'damage', amount: 40, target: 'm1', pos: [0, 0, 0], tint: '#bfe9ff' }, 0);
+  assert.equal(colorOf(a), '#bfe9ff');
+  const b = mergeOrAdd(live, { kind: 'damage', amount: 9, target: 'm2', pos: [0, 0, 0] }, 0);
+  assert.equal(colorOf(b), KIND.damage.color);
+  mergeOrAdd(live, { kind: 'crit', amount: 26, target: 'm1', pos: [0, 0, 0] }, 100);
+  assert.equal(a.kind, 'crit'); assert.equal(colorOf(a), KIND.crit.color, 'the merged crit turns gold');
+  assert.equal(colorOf({ kind: 'xp', tint: '#fff' }), KIND.xp.color);
 });
