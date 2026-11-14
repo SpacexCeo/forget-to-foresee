@@ -48,3 +48,10 @@ test('a hold (the Glass Shoal owns the screen) keeps every first-time card back 
   assert.equal(ran, true, 'and shows once the fight is over');
   _resetOnboarding();
 });
+
+test('boot-world: the Shoal holds the queue, and the town keys stay asleep under the name card and the free card pick (jury path 14.11)', async () => {
+  const { readFileSync } = await import('node:fs');
+  const src = readFileSync(new URL('../../src/boot-world.js', import.meta.url), 'utf8');
+  assert.match(src, /setOnboardingHold\(\(\) => \{ const owns = !!\(glassShoal && glassShoal\.owns && glassShoal\.owns\(\)\);/);
+  assert.match(src, /if \(day1Open\(\) \|\| blocksWindows\(\)\) return false;/);
+});

@@ -25,7 +25,7 @@ const CSS = `.ftf-loom { position: fixed; left: calc(12px + env(safe-area-inset-
 .ftf-loom > button { white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 /* the game HUD's bottom-left band (rpg/hud-style.js): one plain line above the room chip, never on top of it (jury path 14.11) */
 @media (min-width: 900px) {
-  html.rpg-on .ftf-loom { left: calc(var(--rpg-k, 1px) * 40) !important; bottom: calc(var(--rpg-k, 1px) * 144 + 34px) !important; max-width: calc(var(--rpg-k, 1px) * 440); }
+  html.rpg-on .ftf-loom { left: calc(var(--rpg-k, 1px) * 40) !important; bottom: calc(var(--rpg-k, 1px) * 144 + 34px) !important; max-width: min(620px, 48vw); }
   html.rpg-on .ftf-loom > button { min-height: 0; padding: 2px 0; border: 0; border-radius: 0; background: none; font-weight: 500; text-shadow: 0 1px 2px rgba(0,0,0,.9), 0 0 6px rgba(0,0,0,.5); }
   html.rpg-on .ftf-loom.fed > button { box-shadow: none; color: #ffe2a3; }
 }

@@ -961,7 +961,7 @@ function introFly(ms = 6500) {
     try { if (ctx.storage) ctx.storage.setItem(INTRO_KEY, '1'); } catch { /* memory only */ }
     let t0 = 0; const turn = (2 * Math.PI) / 3, startYaw = rig.yaw; // t0: the first frame (a slow first frame must not eat the flight)
     const skip = document.createElement('button'); skip.type = 'button'; skip.className = 'ftf-town-prompt'; skip.textContent = ctx.i18n.t('intro.skip');
-    skip.style.cssText = 'position:fixed;right:16px;bottom:16px;left:auto;transform:none;z-index:31';
+    skip.style.cssText = 'position:fixed;right:16px;bottom:76px;left:auto;transform:none;z-index:31'; // above the HUD tray (it covered the Settings button)
     document.body.append(skip);
     let done = false, last = 0; introOn = true;
     const end = () => {
