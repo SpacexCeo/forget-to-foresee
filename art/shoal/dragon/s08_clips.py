@@ -37,16 +37,16 @@ LAND, TAKE = 2.4, 1.3
 FLY_Z = 0.14        # the flight clips sit this much above the root plane: the trailing paws stay over it (review A pass 5)
 
 
-# ---- the folded wing: the arm back along the flank, the forearm forward again, the fingers back in a fan that
+# ---- the folded wing (lowered 14.11 so the back stays clear for the saddle): the arm back along the flank, the forearm forward again, the fingers back in a fan that
 # hangs along the flank (finger 1 on top, finger 4 lowest), so the membranes between them stand as pleats
 def _folded():
-    F = [[float(v) for v in d.split(',')] for d in str(A.get('fold', '0.2,0.975,0.09;0.02,-0.99,-0.13;0,1,0.055;0,1,0.012;0,1,-0.02;0,1,-0.042')).split(';')]
+    F = [[float(v) for v in d.split(',')] for d in str(A.get('fold', '0.40,0.89,-0.2;0.02,-0.99,-0.13;0,1,0.055;0,1,0.012;0,1,-0.02;0,1,-0.042')).split(';')]
     p = Pose(); sk.aim(p, 'wing_arm.L', F[0]); sk.aim(p, 'wing_fore.L', F[1])
     for i, d in enumerate(F[2:]):
         a, b = f'wing_f{i + 1}a.L', f'wing_f{i + 1}b.L'; sk.aim(p, a, d, vec=sk.tail[b] - sk.head[a])
     # the closed fan still has slack membrane between the fingers: roll the whole wing about the body's long axis
     # so that slack hangs down the flank like a cloak instead of standing out sideways
-    p['wing_arm.L'] = q(y=float(A.get('drape', 50))) @ p['wing_arm.L']; return p
+    p['wing_arm.L'] = q(y=float(A.get('drape', 35))) @ p['wing_arm.L']; return p
 
 
 FOLD = _folded()

@@ -72,13 +72,13 @@ ridge = lambda ang: 0.03 + 0.07 * math.exp(-(ang / 0.22) ** 2)   # the pad stand
 
 
 # 1. blanket: over the back, a scalloped hem with a gold border
-hem = lambda u: 1.0 + 0.07 * math.cos(u * math.pi * 10)
+hem = lambda u: 0.78 + 0.06 * math.cos(u * math.pi * 10)        # the blanket stays on the back, above the folded wing
 grid('blanket', lambda u, v: onbody((v * 2 - 1) * hem(u), Y0 - 0.72 + 1.48 * u, ridge((v * 2 - 1) * hem(u))), 22, 20, 'cloth')
 for sgn in (1, -1):
     grid(f'blanket_trim{sgn}', lambda u, v, sgn=sgn: onbody(sgn * (hem(u) * (0.93 + 0.08 * v)), Y0 - 0.72 + 1.48 * u, 0.04), 22, 1, 'trim')
 # 2. side flaps under the seat
 for sgn in (1, -1):
-    grid(f'flap{sgn}', lambda u, v, sgn=sgn: onbody(sgn * (0.16 + 0.70 * v * (0.8 + 0.2 * math.sin(u * math.pi))), Y0 - 0.46 + 0.92 * u, 0.055 + 0.07 * math.exp(-((0.16 + 0.70 * v) / 0.3) ** 2)), 8, 6, 'leather_dark')
+    grid(f'flap{sgn}', lambda u, v, sgn=sgn: onbody(sgn * (0.16 + 0.48 * v * (0.8 + 0.2 * math.sin(u * math.pi))), Y0 - 0.46 + 0.92 * u, 0.055 + 0.07 * math.exp(-((0.16 + 0.48 * v) / 0.3) ** 2)), 8, 6, 'leather_dark')
 # 3. two girths: closed loops on the body's own cross-section, with brass buckles on both sides
 GIRTHS = (Y0 - 0.40, Y0 - 0.06)        # both on the barrel, in front of the thighs
 for k, gy in enumerate(GIRTHS):
