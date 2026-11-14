@@ -63,10 +63,11 @@ def canon(name):
     return None
 
 
-TAGS = [('combat', r'(attack|strike|slash|punch|kick|combo|cast|spell|block|parry|dodge|roll|dash|hit|hurt|damage|death|die|defeat|sword|weapon|shoot|throw|charge|super|jump_attack|stab|skill|power)'),
-        ('locomotion', r'(walk|run|jog|sprint|strafe|turn|jump|land|fall|climb|crouch|sneak|skid|step|move|fly|hover|swim)'),
-        ('social', r'(talk|wave|greet|nod|shake|point|laugh|cry|angry|happy|sad|clap|cheer|celebrat|bow|shrug|think|gesture|argu|agree|disagree|surpris|scare|fear|excite|dance|offer|understand|listen|salute|yes|no_|emot|react|register)'),
-        ('idle', r'(idle|stand|breath|wait|rest|look)')]
+TAGS = [('combat', r'(attack|strike|slash|punch|kick|combo|cast|spell|block|parry|dodge|roll|dash|hit_|hurt|damage|death|die|defeat|sword|weapon|shoot|fire|throw|charge|super|stab|skill|power|box|dive|flip|fall)'),
+        ('locomotion', r'(walk|run|jog|sprint|strafe|turn|jump|land|climb|crouch|sneak|skid|step|move|fly|hover|swim|flee|swagger)'),
+        ('social', r'(talk|wave|greet|nod|shake|point|laugh|cry|sob|angry|happy|sad|clap|cheer|celebrat|bow|shrug|think|gesture|argu|agree|complain|disagree|surpris|scare|afraid|fright|fear|excite|offer|understand|listen|salute|emot|react|register|hug|heart|depress|frustrat|freaky|call|haggle|photo|scratch|sing|dance)'),
+        ('idle', r'(idle|stand|breath|wait|rest|look|relax|fold|sit)'),
+        ('activity', r'(dig|shovel|chop|lift|carry|press|warm_up|rope|ball|dribble|catch|pass|save|pitch|volley|surf|mobile|video_game)')]
 
 
 def tag_of(name):
@@ -115,7 +116,7 @@ def hips_of(arm):
 
 
 def clean(n):
-    n = n.split('|')[-1]; n = re.sub(r'([a-z])([A-Z])', r'\1_\2', n).lower()
+    n = re.sub(r'\.\d{3}$', '', n.split('|')[-1]);   # Blender's duplicate suffix (walk.001) n = re.sub(r'([a-z])([A-Z])', r'\1_\2', n).lower()
     return re.sub(r'[^a-z0-9]+', '_', n).strip('_') or 'clip'
 
 

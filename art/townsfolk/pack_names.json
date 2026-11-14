@@ -1,0 +1,17 @@
+{
+ "_": "The Tripo townsfolk pack (townsfolk_anim_pack.glb, 97 clips) -> the names the townsfolk code plays (play/townsfolk-plan.js CLIP_FALLBACK). Unmapped clips keep their own names (greet_02, laugh_01, angry_01 ...) and are tagged in the index.",
+ "idle.001": {"name": "idle", "tag": "idle"},
+ "wait.001": {"name": "idle_shift", "tag": "idle"},
+ "look_around.001": {"name": "idle_look", "tag": "idle"},
+ "walk.001": {"name": "walk", "tag": "locomotion"},
+ "run.001": {"name": "run", "tag": "locomotion"},
+ "greet_01.001": {"name": "wave", "tag": "social"},
+ "agree.001": {"name": "nod", "tag": "social"},
+ "complain_01.001": {"name": "talk", "tag": "social"},
+ "complain_02.001": {"name": "talk_b", "tag": "social"},
+ "bow.001": {"name": "salute", "tag": "social"},
+ "sit.001": {"name": "sit", "tag": "idle"},
+ "play_mobile_game.001": {"name": "take_photo", "tag": "social"},
+ "frustrated_01.001": {"name": "haggle", "tag": "social"},
+ "fold_arms.001": {"name": "think", "tag": "idle"}
+}

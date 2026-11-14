@@ -84,7 +84,20 @@ export const CLIP_FALLBACK = Object.freeze({
   sit: ['sit', 'sit_loop', 'idle'], think: ['idle_look', 'think', 'idle'],
   // the Wayfarers' own one-shots (art/townsfolk/tf_anim.py EXTRA)
   take_photo: ['take_photo', 'think', 'idle'], haggle: ['haggle', 'talk', 'idle'],
+  // the Tripo pack's social clips (townsfolk.js PACK_CLIPS, loaded after the town is on screen; until then the older ones)
+  greet: ['greet_04', 'wave', 'gesture_offer', 'talk', 'idle'], laugh: ['laugh_01', 'nod', 'idle'],
+  idle_look: ['idle_look', 'idle_shift', 'idle'], scratch: ['scratch', 'idle_shift', 'idle'], arms_folded: ['think', 'idle_shift', 'idle'],
 });
+
+/** The Tripo townsfolk pack (art/townsfolk/pack_index.json, art/tools/glb_town_pack.mjs): one file for every body,
+ * retargeted at load (anim-library.js townsfolkClips) once the town is on screen. */
+export const PACK_FILE = 'townsfolk_pack';
+export const PACK_CLIPS = Object.freeze(['idle_look', 'wave', 'greet_04', 'nod', 'talk', 'talk_b', 'laugh_01', 'haggle', 'think', 'scratch']);
+/** A standing idle now and then turns into one of these for a few seconds (seeded per person). */
+export const IDLE_VARIETY = Object.freeze(['idle_look', 'scratch', 'arms_folded']);
+/** Two townsfolk talking take turns every TALK_TURN seconds: the talker's and the listener's clips cycle through these. */
+export const TALK_TURN = 5.5;
+export const TALKER_CLIPS = Object.freeze(['talk', 'haggle', 'talk_b']), LISTENER_CLIPS = Object.freeze(['listen', 'nod', 'laugh']);
 
 /** The first clip of the chain that the list of available names has (or null). */
 export function pickClip(names, want) {
@@ -317,6 +330,8 @@ export class PersonPlan {
     this.index = -1; this.t = 0; this.until = 0; this.s = 0; this.len = 0; this.side = 0;
     this.meeting = false; this.waited = 0; this.greeted = false; this.greetUntil = 0; this.yielding = false;
     this._p = { x: 0, y: 0, z: 0, dx: 0, dz: 1, corner: 0 };
+    // the idle variety and the greeting's choice run on their own seeded stream: the step timing stays as it was
+    this.vrng = seededRng(seed + ':variety:' + def.key); this.varNext = 0; this.varEnd = 0; this.varClip = null; this.greets = 0;
     this.next();
   }
 
@@ -327,6 +342,7 @@ export class PersonPlan {
     if (this.current.restore) { this.program = this.current.restore; this.index = -1; return this.next(); } // back home: the own loop again
     const st = this.current;
     this.t = 0; this.s = 0; this.meeting = false; this.waited = 0;
+    this.varEnd = 0; this.varNext = 4 + 6 * this.vrng();
     if (st.walk) this.len = polyLength(st.walk);
     else if (st.stay) this.until = st.stay * (0.85 + 0.3 * this.rng());
   }
@@ -411,17 +427,23 @@ export class PersonPlan {
       if (there && !this.meeting) { this.meeting = true; this.t = 0; }
       if (!this.meeting) { this.waited += dt; this.clip = 'idle_shift'; if (this.waited > 75) this.next(); }
       else {
-        // take turns: one talks while the other listens, swapping every few seconds (the lower key starts)
-        const mine = (Math.floor(this.t / 5.5) % 2 === 0) === (this.key < st.meet);
-        this.clip = mine ? st.clip : 'listen';
+        // take turns: one talks while the other listens, swapping every few seconds (the lower key starts); each round
+        // the talk changes (talk, a complaint, the other talk) and so does the listening (listen, agree, laugh)
+        const turn = Math.floor(this.t / TALK_TURN), mine = (turn % 2 === 0) === (this.key < st.meet), k = Math.floor(turn / 2) % 3;
+        this.clip = mine ? (k === 0 ? st.clip : k === 1 ? TALKER_CLIPS[1] : (st.clip === 'talk' ? 'talk_b' : 'talk')) : LISTENER_CLIPS[k];
         if (this.t >= st.seconds) this.next();
       }
     } else {
       this.clip = st.clip; this.sit = st.sit || 0;
-      // greet Iris once each time she comes close
-      if (st.greet && dIris < 4.2 && !this.greeted) { this.greeted = true; this.greetUntil = this.t + 2.6; }
+      // a standing idle turns now and then into a look around, a scratch of the head or folded arms for a few seconds
+      if (!st.sit && (st.clip === 'idle' || st.clip === 'idle_shift')) {
+        if (this.t >= this.varNext) { this.varClip = IDLE_VARIETY[Math.floor(this.vrng() * IDLE_VARIETY.length)]; this.varEnd = this.t + 4 + 2 * this.vrng(); this.varNext = this.varEnd + 8 + 8 * this.vrng(); }
+        if (this.t < this.varEnd) this.clip = this.varClip;
+      }
+      // greet Iris once each time she comes close (a wave, the next time the pack's greeting)
+      if (st.greet && dIris < 4.2 && !this.greeted) { this.greeted = true; this.greetUntil = this.t + 2.6; this.greetClip = st.greet === 'wave' && this.greets++ % 2 ? 'greet' : st.greet; }
       if (dIris > 8) this.greeted = false;
-      if (this.t < this.greetUntil) { if (!st.sit) { this.clip = st.greet; if (iris) face = iris; } } // seated people greet with their look only: the greeting clips stand
+      if (this.t < this.greetUntil) { if (!st.sit) { this.clip = this.greetClip || st.greet; if (iris) face = iris; } } // seated people greet with their look only: the greeting clips stand
       else this.greetUntil = 0;
       if (this.key === 'guard' && dIris < 5 && !this.saluted) { this.saluted = true; this.greetUntil = this.t + 2.4; this._salute = true; }
       if (this.key === 'guard') { if (dIris > 9) this.saluted = false; if (this.t < this.greetUntil && this._salute) this.clip = 'salute'; else this._salute = false; }
