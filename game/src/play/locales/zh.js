@@ -1781,6 +1781,7 @@ export default {
   'set.acc.privacy': "隐私",
   'set.acc.local': "进度、设置和访客密钥只保存在此设备上。清除后无法撤销，没有密钥将无法再使用该访客账户。",
   'set.acc.clear': "清除本地数据",
+  'set.acc.signin': "登录或绑定钱包",
   'set.acc.confirm': "删除本游戏在此设备上保存的所有内容，包括访客密钥？此操作无法撤销。",
   'set.leave': "返回主菜单",
   'set.leaveConfirm': "离开小镇返回主菜单？进度会保留。",

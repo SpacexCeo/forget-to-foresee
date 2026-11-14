@@ -203,6 +203,16 @@ export function createSettingsPopup({ doc = globalThis.document, t: tGame, i18n,
       const dl = el('dl');
       dl.append(el('dt', null, t('set.acc.name')), el('dd', null, d.nickname || '—'), el('dt', null, t('set.acc.account')), el('dd', null, g.account_id || t('set.acc.none')), el('dt', null, t('set.acc.token')), el('dd', null, g.token_id || '—'));
       const out = [el('h3', null, t('set.acc.title')), dl, el('p', 'ftf-set-note', t('set.acc.note'))];
+      // sign-in methods (owner 14.11: a tab of its own): the linked methods, Link an email, Sign in with email
+      // (ui/account-methods.js over net/account-email.js, from hooks.accountEmail), and the wallet sign-in panel
+      if (hooks.accountEmail) {
+        const slot = el('div'); slot.append(el('p', 'ftf-set-note', t('acct.busy')));
+        out.push(slot);
+        Promise.all([hooks.accountEmail(), import('./account-methods.js')]).then(([mail, m]) => {
+          slot.replaceChildren(m.mountAccountMethods({ doc, t, mail, onSignedIn: () => { if (dialog.open) render(); } }));
+        }).catch(() => { slot.replaceChildren(el('p', 'ftf-set-note', t('acct.email.off'))); });
+      }
+      if (hooks.openAccount) out.push(btn('set.acc.signin', () => { dialog.close(); hooks.openAccount(); }));
       out.push(el('h3', null, t('set.acc.privacy')), el('p', null, t('set.acc.local')));
       out.push(btn('set.acc.clear', () => { if (globalThis.confirm && globalThis.confirm(t('set.acc.confirm'))) { if (hooks.clearData) hooks.clearData(); } }));
       return out;

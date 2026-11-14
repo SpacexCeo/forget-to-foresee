@@ -179,6 +179,9 @@ export function createIdentityStore(file) {
   return {
     get: (id) => data.identities[id] || null,
     set(id, rec) { data.identities[id] = rec; save(); return rec; },
+    /** Every [id, record] (the account's linked methods are listed from it). */
+    all: () => Object.entries(data.identities),
+    remove(id) { const had = Object.hasOwn(data.identities, id); delete data.identities[id]; if (had) save(); return had; },
     get size() { return Object.keys(data.identities).length; },
   };
 }

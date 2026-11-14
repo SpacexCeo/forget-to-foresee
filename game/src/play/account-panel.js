@@ -31,7 +31,7 @@ function ensureStyle(doc) {
  *   wallets: net/wallets.js (injected for tests)
  * @returns {{close: Function, el: Element, done: Promise<object>}} done resolves {status: 'guest'|'linked'|'restored'|...}
  */
-export function openAccountPanel({ doc = document, t, makeLogin, wallets = null, nickname = null, onDone = null }) {
+export function openAccountPanel({ doc = document, t, makeLogin, makeEmail = null, wallets = null, nickname = null, onDone = null }) {
   ensureStyle(doc);
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const root = el('div', 'acct'); root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-label', t('acct.title'));
@@ -112,6 +112,14 @@ export function openAccountPanel({ doc = document, t, makeLogin, wallets = null,
     const sol = w.discoverSolana();
     if (sol.length) { solBtn.textContent = t('acct.sol', { name: sol[0].name }); for (const extra of sol.slice(1)) add(t('acct.sol', { name: extra.name }), () => run(w.solanaProvider(extra))); }
   }).catch(() => {});
+
+  // email and the linked methods (ui/account-methods.js, also in Settings → Account): built after the panel shows
+  if (makeEmail) {
+    Promise.all([makeEmail(), import('../ui/account-methods.js')]).then(([mail, m]) => {
+      if (closed) return;
+      card.insertBefore(m.mountAccountMethods({ doc, t, mail, say, onSignedIn: (r) => setTimeout(() => close(r), 1600) }), status);
+    }).catch(() => {});
+  }
 
   doc.body.append(root);
   guest.focus({ preventScroll: true });

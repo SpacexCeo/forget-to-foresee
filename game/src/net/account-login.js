@@ -58,7 +58,7 @@ export async function deviceKeyFromSignature(sig) {
   return { secretKey: 'ed25519:' + b58(new Uint8Array([...seed, ...pub])), publicKey: 'ed25519:' + b58(pub) };
 }
 
-async function edSigner(secretKey) {
+export async function edSigner(secretKey) {
   const { b58decode } = await import('./near-tx.js');
   const sk = b58decode(String(secretKey).replace(/^ed25519:/, ''));
   const key = await subtle().importKey('pkcs8', new Uint8Array([...PKCS8_PREFIX, ...sk.slice(0, 32)]), { name: 'Ed25519' }, false, ['sign']);
