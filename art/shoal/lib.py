@@ -85,7 +85,7 @@ def workbench(res=768, texture=True):
     s.world.color = (0.72, 0.73, 0.75)
 
 
-VIEW_DIRS = dict(front=(0, -1, 0), back=(0, 1, 0), side=(1, 0, 0), top=(0, 0, 1), q34=(0.62, -0.62, 0.42), below=(0.35, 0.55, -0.75), behind=(0.25, 0.8, 0.5))
+VIEW_DIRS = dict(front_lo=(0.25, -0.9, 0.12), front=(0, -1, 0), back=(0, 1, 0), side=(1, 0, 0), top=(0, 0, 1), q34=(0.62, -0.62, 0.42), below=(0.35, 0.55, -0.75), behind=(0.25, 0.8, 0.5))
 
 
 def ortho_views(prefix, objs, views=('front', 'side', 'back', 'top'), res=768, texture=True, pad=1.08, engine=None, box=None):

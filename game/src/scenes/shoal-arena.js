@@ -8,7 +8,8 @@
 // pose with a bob, a lean and a bank; the casts reuse the strike clips.
 import * as R from '../game/shoal-rules.js';
 import { shoalSkillsFor, shoalExtrasFor, comboStep } from '../rpg/shoal-skills.js';
-import { hasModelFile, fetchGltf } from '../render/assets.js';
+import { hasModelFile, fetchGltf, getModelVariant } from '../render/assets.js';
+import { bossAnimStep, freshBossAnim, fadeWeights, BOSS_ANIM } from '../game/shoal-boss-anim.js';
 
 const CSS = `
 .sa-boss{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 14px);transform:translateX(-50%);width:min(520px,calc(100vw - 32px));z-index:14;color:#f3ead2;font:600 14px/1.2 "Atkinson Hyperlegible",system-ui,sans-serif;text-align:center;text-shadow:0 1px 3px #000;pointer-events:none}
@@ -79,7 +80,21 @@ export function createShoalArena(o) {
   const crestMat = new THREE.MeshStandardMaterial({ color: 0x9fdcff, emissive: 0x2a6cff, emissiveIntensity: 0.6, roughness: 0.2 });
   const crest = new THREE.Mesh(new THREE.ConeGeometry(1.2, 3.2, 6), crestMat); boss.add(crest);
   look.crest = crestMat;
-  if (hasModelFile('hollow_tide')) fetchGltf('hollow_tide').then(({ gltf }) => { for (const s of segs) s.visible = false; boss.add(gltf.scene); }).catch(() => {});
+  // the model `hollow_tide` (art/shoal/boss): its clips follow the fight through game/shoal-boss-anim.js
+  let bossModel = null, bossMixer = null, bossActions = null, bossAnim = freshBossAnim(), bossGlow = [];
+  const bossW = {};
+  if (hasModelFile('hollow_tide')) {
+    const lite = 'hollow_tide' + getModelVariant();
+    fetchGltf(hasModelFile(lite) ? lite : 'hollow_tide').then(({ gltf }) => {
+      for (const s of segs) s.visible = false; crest.visible = false;
+      bossModel = gltf.scene; boss.add(bossModel);
+      bossModel.traverse((o) => { if (o.isMesh) { o.frustumCulled = false; o.castShadow = true; if (o.material && o.material.emissiveMap) bossGlow.push({ m: o.material, base: o.material.emissiveIntensity }); } });
+      if (gltf.animations.length) {
+        bossMixer = new THREE.AnimationMixer(bossModel); bossActions = {};
+        for (const c of gltf.animations) { const a = bossMixer.clipAction(c); a.setEffectiveWeight(0); a.play(); a.paused = true; bossActions[c.name] = a; }
+      }
+    }).catch(() => {});
+  }
   // telegraphs: the ground ring (slam), the band (sweep), the charge line (lunge)
   const teleMat = () => new THREE.MeshBasicMaterial({ color: 0xff7a3a, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide });
   const ring = new THREE.Mesh(new THREE.RingGeometry(0.1, 1, 48), teleMat()); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.05; ring.visible = false; root.add(ring);
@@ -167,7 +182,7 @@ export function createShoalArena(o) {
     B = won ? { ...R.freshBoss(2), hp: 0, dead: true } : R.freshBoss(0); H = R.freshHero(); timers = {}; FL = R.freshFlight();
     me3.x = R.ARENA.landing[0]; me3.z = R.ARENA.landing[1]; me3.heading = Math.PI; me3.lift = 0;
     ultT = 0; stopT = 0; shakeT = 0; landing = false; spiral.visible = false;
-    chest.visible = won; chestOpen = false; boss.visible = !won;
+    chest.visible = won; chestOpen = false; boss.visible = !won; bossAnim = freshBossAnim(won);
     bossName.textContent = say('shoal.boss') + ' · ' + say('shoal.phase', { n: B.phase + 1 });
     if (elise() && !won) { hint.textContent = say(mobile ? 'shoal.flyHintTouch' : 'shoal.flyHint'); hint.hidden = false; hintT = 14; }
   }
@@ -180,7 +195,7 @@ export function createShoalArena(o) {
     const r = R.hitBoss(B, amount, R.BOSS, opts); B = r.boss;
     if (!opts.noCharge) charge(r.dealt, 0);
     if (r.phaseUp) { flash(say(B.phase === 1 ? 'shoal.phase2' : 'shoal.phase3')); }
-    if (B.dead && !won) { won = true; boss.visible = false; chest.visible = true; for (const m of addMeshes.values()) m.removeFromParent(); addMeshes.clear(); B = { ...B, adds: [] }; flash(say('shoal.victory'), 3.5); onWin(); }
+    if (B.dead && !won) { won = true; boss.visible = !!bossModel; /* the model falls and sinks first (draw hides it) */ chest.visible = true; for (const m of addMeshes.values()) m.removeFromParent(); addMeshes.clear(); B = { ...B, adds: [] }; flash(say('shoal.victory'), 3.5); onWin(); }
     return r.dealt;
   };
   const hurt = (amount) => { const r = R.hitHero(H, amount); H = r.hero; if (r.taken) charge(0, r.taken); return r; };
@@ -371,7 +386,18 @@ export function createShoalArena(o) {
     // the serpent's arc: a hump that rises over the plain, its head toward her
     const rise = won ? 0 : 1, sway = red ? 0 : Math.sin(tt * 0.8) * 0.4;
     const toMe = Math.atan2(me3.x - R.ARENA.boss[0], me3.z - R.ARENA.boss[1]);
-    boss.rotation.y = toMe;
+    if (!won) boss.rotation.y = toMe;
+    if (bossModel) {
+      bossAnim = bossAnimStep(bossAnim, B, red ? 0 : sdt, R.BOSS.phases[B.phase].telegraph, won);
+      if (red && bossAnim.clip === 'rise') bossAnim = { ...bossAnim, clip: 'idle', time: 0 }; // reduced motion: it is simply there
+      if (won && bossAnim.time >= BOSS_ANIM.len.death) boss.visible = false;
+      if (bossMixer) {
+        fadeWeights(bossW, bossAnim.clip, red ? 1 : sdt);
+        for (const name in bossActions) { const a = bossActions[name]; a.setEffectiveWeight(bossW[name] || 0); if (name === bossAnim.clip) a.time = Math.min(bossAnim.time, a.getClip().duration - 1e-3); }
+        bossMixer.update(0);
+      }
+      for (const g of bossGlow) g.m.emissiveIntensity = g.base * (B.exposed > 0 ? 1.8 + 0.6 * Math.sin(tt * 12) : won ? Math.max(0, 1 - bossAnim.time / 2) : 1);
+    }
     const coil = B.state === 'telegraph' ? 0.8 : B.state === 'active' ? -0.6 : 0;
     segs.forEach((s, i) => { const k = i / (segs.length - 1); s.position.set(Math.sin(k * 3 + tt * 0.6) * sway * 2, rise * (Math.sin(k * Math.PI) * 9 + k * 6 - coil * k * 3), (k - 0.5) * 6 - coil * k * 2); });
     const head = segs[segs.length - 1].position; crest.position.set(head.x, head.y + 2, head.z);
