@@ -25,7 +25,7 @@ export function isTouch(doc) {
     return !!(win.matchMedia && win.matchMedia('(pointer: coarse)').matches);
   } catch { return false; }
 }
-export function _reset() { registry.clear(); queue.length = 0; showing = null; }
+export function _reset() { registry.clear(); queue.length = 0; showing = null; if (drainTimer) { clearInterval(drainTimer); drainTimer = null; } }
 
 /** registerTip({id, trigger, anchor, title, body}): trigger = bus event name (fires the tip once) or null (manual). */
 export function registerTip(tip) {
@@ -36,7 +36,18 @@ export function registerTip(tip) {
 export function resetTips() { save({ seen: {}, off: false }); }
 export function skipTips() { const v = load(); v.off = true; save(v); hideCurrent(); queue.length = 0; }
 
-const blocked = (doc) => !!(state.get('npe.active') || (doc && (doc.getElementById && doc.getElementById('ftf-modal-open') || (doc.body && doc.body.classList.contains('ftf-modal-open')))));
+// a tip waits while the intro runs or a window is open (the game menu, a chest reveal, a Day-1 card): it never pops over one (jury path 14.11)
+const blocked = (doc) => !!(state.get('npe.active') || (doc && (doc.getElementById && doc.getElementById('ftf-modal-open') || (doc.body && doc.body.classList.contains('ftf-modal-open')) || (doc.querySelector && doc.querySelector('.gm, .co, .cb, .d1-panel, .d1-card, .ftf-portal-panel, dialog[open]')))));
+
+// a tip held back by an open window shows once the window closes (checked every 1.5 s while one waits)
+let drainTimer = null;
+function drainLater(doc) {
+  if (drainTimer || typeof setInterval !== 'function') return;
+  drainTimer = setInterval(() => {
+    if (!queue.length) { clearInterval(drainTimer); drainTimer = null; return; }
+    if (!showing && !blocked(doc)) { clearInterval(drainTimer); drainTimer = null; showTip(queue.shift()); }
+  }, 1500);
+}
 
 /** Shows (or queues) a tip. {force: true} ignores seen/off (the "?" handle). Returns true when shown or queued. */
 export function showTip(id, { force = false } = {}) {
@@ -48,7 +59,7 @@ export function showTip(id, { force = false } = {}) {
   if (showing) { if (showing.id !== id && !queue.includes(id)) queue.push(id); return true; }
   const doc = docRef || globalThis.document;
   if (!doc || !doc.body) return false;
-  if (!force && blocked(doc)) { if (!queue.includes(id)) queue.push(id); return true; }
+  if (!force && blocked(doc)) { if (!queue.includes(id)) queue.push(id); drainLater(doc); return true; }
   render(doc, tip);
   return true;
 }
@@ -65,7 +76,7 @@ function done(markSeen) {
 
 function render(doc, tip) {
   const el = doc.createElement('div'); el.className = 'ftf-tip'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', tip.title || 'Tip');
-  el.style.cssText = 'position:fixed;z-index:var(--z-tooltip,60);max-width:min(calc(320 * var(--u, 1px) + 40px), calc(100vw - 32px));box-sizing:border-box;padding:12px 14px;'
+  el.style.cssText = 'position:fixed;z-index:var(--z-coach,35);max-width:min(calc(320 * var(--u, 1px) + 40px), calc(100vw - 32px));box-sizing:border-box;padding:12px 14px;'
     + 'background:var(--ftf-panel-solid,#0e1018);border:1px solid var(--ftf-gold,#f6c860);border-radius:var(--radius,10px);color:var(--ftf-text,#eef0f6);'
     + 'font:var(--fs-sm,14px)/1.4 var(--font-ui,system-ui,sans-serif);box-shadow:var(--shadow,0 8px 32px rgba(0,0,0,.55));overflow-wrap:anywhere';
   const h = doc.createElement('div'); h.style.cssText = 'font-weight:700;color:var(--ftf-gold,#f6c860);margin-bottom:4px'; h.textContent = tip.title || '';

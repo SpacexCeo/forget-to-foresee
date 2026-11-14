@@ -4,7 +4,7 @@
 // dialogue layer shows the subtitles and plays the voice. Skippable: skip() snaps to the end within 1.2 s.
 import * as THREE from 'three';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
-import { buildLab } from '../../scenes/lab/index.js';
+import { buildLab, LAB_MODELS } from '../../scenes/lab/index.js';
 import { buildVortexDisk, buildTunnel } from './vortex.js';
 import { createLabAudio } from './lab-audio.js';
 import { createIrisPoses } from './iris-poses.js';
@@ -33,12 +33,23 @@ async function loadIris(phone) {
   } catch (e) { if (globalThis.console) globalThis.console.warn('[prologue] Iris not loaded', e); return null; }
 }
 
+/** The owner's lab room and device models: {room, device} scenes (either null when missing or failed). */
+async function loadLabModels(phone) {
+  try {
+    const [{ fetchGltf }, { MODEL_FILES }] = await Promise.all([import('../../render/assets.js'), import('virtual:model-list')]);
+    const one = (name) => { const n = phone && MODEL_FILES[name + '_m'] ? name + '_m' : name; return MODEL_FILES[n] ? fetchGltf(n).then((r) => r.gltf.scene, () => null) : Promise.resolve(null); };
+    const [room, device] = await Promise.all([one(LAB_MODELS.room), one(LAB_MODELS.device)]);
+    return { room, device };
+  } catch { return { room: null, device: null }; }
+}
+
 /** @param {object} ctx the sprint ctx (bus, reduced, ...); every field optional */
 export function createPrologue(ctx = {}) {
   const emit = (name, payload) => { try { if (ctx.bus && ctx.bus.emit) ctx.bus.emit(name, payload); } catch { /* the film goes on */ } };
   const phone = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
   let live = null; // the running film: {timeline}
   const irisP = loadIris(phone); // starts with the module: ready by the time she enters (3 s in)
+  const labModelsP = loadLabModels(phone); // the room is shown from 1 s in: fetched with the module too
 
   async function playLabPrologue({ reduced = false } = {}) {
     if (live) return 'done';
@@ -58,6 +69,7 @@ export function createPrologue(ctx = {}) {
     const resize = () => { const w = host.clientWidth || innerWidth, h = host.clientHeight || innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); };
     resize(); addEventListener('resize', resize);
     const lab = buildLab(); scene.add(lab.root);
+    labModelsP.then((m) => { if (live) lab.attachModels(m); });
     const disk = buildVortexDisk(); disk.mesh.position.set(DEVICE.x - 0.08, DEVICE.y, DEVICE.z); disk.mesh.rotation.y = -Math.PI / 2; scene.add(disk.mesh);
     const tunnel = buildTunnel({ phone }); tunnel.root.position.set(0, -300, 0); scene.add(tunnel.root);
     const audio = createLabAudio({ reduced, musicUrl: ((import.meta.env && import.meta.env.BASE_URL) || '/') + 'assets/audio/mus_lab.ogg' });
@@ -105,7 +117,7 @@ export function createPrologue(ctx = {}) {
           const k9 = ss(26.5, 31, t), face = t >= 12.0 && t < 15.9 ? Math.atan2(2.2 - ir.x, -3.4 - ir.z) : t >= 23.2 && t < 26.5 ? Math.atan2(DEVICE.x - ir.x, DEVICE.z - ir.z) : ir.heading;
           let dh = face - iris.model.rotation.y; dh = Math.atan2(Math.sin(dh), Math.cos(dh)); iris.model.rotation.y += dh * Math.min(1, dt * 7);
           if (cam.tunnel) { const kt = (t - 31) / 4.5; iris.model.position.set(Math.sin(t * 0.7) * 0.5, -300 - 0.9 + Math.cos(t * 0.9) * 0.4, -7 - kt * 5); iris.model.rotation.set(t * 1.1, t * 0.7, t * 0.4); iris.model.scale.setScalar(0.55); }
-          else { iris.model.position.set(ir.x, 0.25 * k9 * k9 + (reduced ? 0 : Math.sin(t * 9) * 0.01 * k9), ir.z); iris.model.rotation.x = 0; iris.model.rotation.z = 0; if (k9 > 0) iris.model.rotation.y = face + (reduced ? 0 : 2.79 * k9); iris.model.scale.setScalar(1 - 0.75 * ss(30.2, 31, t)); }
+          else { iris.model.position.set(ir.x, lab.floorAt(ir.x, ir.z) + 0.25 * k9 * k9 + (reduced ? 0 : Math.sin(t * 9) * 0.01 * k9), ir.z); iris.model.rotation.x = 0; iris.model.rotation.z = 0; if (k9 > 0) iris.model.rotation.y = face + (reduced ? 0 : 2.79 * k9); iris.model.scale.setScalar(1 - 0.75 * ss(30.2, 31, t)); }
           iris.poses.apply({ lean: ss(12.0, 12.6, t) * (1 - ss(15.4, 15.9, t)), reach: ss(12.3, 12.9, t) * (1 - ss(14.3, 15.0, t)), raise: ss(22.6, 23.4, t) * (1 - ss(24.6, 25.2, t)), startle: cam.tunnel ? 0.6 : ss(24.6, 24.85, t) * (0.45 + 0.55 * ss(26.5, 27.5, t)) });
         }
       }
