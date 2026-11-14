@@ -14,7 +14,7 @@ import { interruptLocomotion, canMove, STRIKE_ROOT } from './physics/interrupt.j
 import { createIslandScene } from './scenes/island.js';
 import { LookDev } from './render/lookdev.js';
 import { detectTier, tierForPreference } from './render/quality.js';
-import { cycleLook, KEYS as CYCLE_KEYS, startPhase, weatherTimeline, WEATHER_FADE } from './render/daycycle.js';
+import { cycleLook, cycleAt, KEYS as CYCLE_KEYS, startPhase, weatherTimeline, WEATHER_FADE } from './render/daycycle.js';
 import { lookFor, mixStats } from './render/sky.js';
 import { CameraRig } from './render/camera-rig.js';
 import { fixedSteps, rayCast, moveCapsule, MASK_PLAYER } from './physics/collision.js';
@@ -354,6 +354,7 @@ function hatchPet() {
       .then((r) => { if (r && r.ok) { refreshCompanions(); setTimeout(refreshCompanions, 4000); } return r; }),
   };
 } // the Hatchkeeper by the lower-lane stalls (scenes/hatchkeeper.js, live, owner 13.11)
+let townTales = null; // town tales (flag tales): scenes/town-tales.js, game/tales.js
 let townQuests = null, townPortal = null, townBoard = null, expeditionSync = null, questMarkers = null; // the Expedition (?story=1): scenes/town-quests.js, town-portal.js
 let glassShoal = null, shoalLoading = false;
 let shoalArt = null, shoalArtLoading = false; // the Shoal's look for the fight (render/shoal-arena-look.js), loaded when the arena first opens
@@ -427,7 +428,7 @@ if (townMode.town) {
       townBoard = bm.createTownBoard({ scene, position: townToWorld(bm.BOARD_TOWN), facing: Math.PI / 2, i18n: ctx.i18n, log: () => townQuests.ledger.log,
         load: () => bm.loadSnapshot({ base: import.meta.env.BASE_URL, relayer }) });
       spots.push(...townQuests.spots, townPortal.spot, townBoard.spot);
-      questMarkers = mm.createQuestMarkers({ scene, markers: () => [...townQuests.markers(), ...errandMarkers()], folkAt, reducedMotion: lookdev.reducedMotion }); // gold ! and ? over the givers
+      questMarkers = mm.createQuestMarkers({ scene, markers: () => [...townQuests.markers(), ...errandMarkers(), ...(townTales ? townTales.markers() : [])], folkAt, reducedMotion: lookdev.reducedMotion }); // gold ! and ? over the givers
       // the log goes up to the relayer for the endgame pass (Q4): signed by the Day 1 guest key; quiet without a guest or relayer
       import('./net/expedition-sync.js').then((m) => { if (townQuests && !expeditionSync) expeditionSync = m.createExpeditionSync({ ledger: townQuests.ledger, storage: ctx.storage }); }).catch((e) => console.warn('[story] sync', e));
       // the first boss down (a crownrift kill in the log): the log goes up first, then the second dragon is claimed
@@ -438,6 +439,12 @@ if (townMode.town) {
       }).catch(() => {});
     }).catch((e) => console.warn('[story]', e));
   }
+  // Town tales (owner 14.11 night, flag tales): the Scribe's lost words, told by townsfolk who give no other quests
+  if (featureFlags.on('tales') && !townTales) import('./scenes/town-tales.js').then((m) => {
+    if (townTales || !inTown) return;
+    townTales = m.createTownTales({ t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage, ledger: townLedger, chests: chestBag, folkAt, dark: afterDark, toast: (s) => toast(s), sound: (n) => cue(n) });
+    spots.push(...townTales.spots);
+  }).catch((e) => console.warn('[tales]', e));
   townProps = createTownProps({ scene, town, ledger: townLedger, i18n: ctx.i18n, mobile: mobileDevice });
   // the mirror and the notice board: the two spots the town files do not model get an object (owner 12.11)
   if (!hatchLoading) { hatchLoading = true; import('./scenes/hatchkeeper.js').then((m) => { hatchkeeper = m.createHatchkeeper({ pet: hatchPet(), scene, t: (k, a) => ctx.i18n.t(k, a), groundAt: (x, z) => town.groundAt(x, z), mobile: mobileDevice, reduced: () => lookdev.reducedMotion }); spots.push(hatchkeeper.spot); }).catch((e) => console.warn('[hatchkeeper]', e)); }
@@ -1246,6 +1253,12 @@ let movingState = false, animSpeed = 0, lean = 0, firstFrameDone = false, progre
 // timeline (?wseed=<n> pins that).
 const dayCycle = !judge && !params.has('tod') && !params.has('weather') && params.get('cycle') !== 'off'
   ? (() => { const t = params.has('cycle') ? Number(params.get('cycle')) || 0 : startPhase(); return { t, t0: t, weather: null, ready: false, timeline: weatherTimeline(params.has('wseed') ? Number(params.get('wseed')) | 0 : (Math.random() * 2 ** 31) | 0) }; })() : null;
+/** After dark in the town (the tales' night step): dusk, twilight or night on the cycle; a fixed hour by ?tod=; else never blocks. */
+function afterDark() {
+  if (dayCycle) return ['dusk', 'twilight', 'night'].includes(cycleAt(dayCycle.t, dayCycle.timeline, dayCycle.t0).a);
+  const tod = params.get('tod');
+  return tod ? ['dusk', 'twilight', 'night', 'evening'].includes(tod) : true;
+}
 function prepareDayCycle() {
   if (!dayCycle || dayCycle.ready || lookdev.location !== 'town') return;
   lookdev.prepareCycle('town', CYCLE_KEYS.map((k) => k[0]));
@@ -1385,6 +1398,7 @@ function frame() {
     }
     if (photo) photo.setAvailable(entered && !townFlow.busy && !introOn && !(townShops && townShops.busy));
     if (townQuests) townQuests.update(player.pos);
+    if (townTales) townTales.update(player.pos);
     if (hatchkeeper) hatchkeeper.update(dt, inTown ? player.pos : null);
     if (questMarkers) questMarkers.update(clock.elapsedTime);
     if (townPortal) { if (!townPortal.grounded) { const g = town.groundAt(townPortal.root.position.x, townPortal.root.position.z); if (g != null) { townPortal.root.position.y = g; townPortal.grounded = true; } } townPortal.update(dt, clock.elapsedTime); }
