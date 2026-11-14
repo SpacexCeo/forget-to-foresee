@@ -416,9 +416,9 @@ export function createShoalArena(o) {
         if (Math.hypot(wx, wz) > 0.4 && ultT <= 0) me3.heading = Math.atan2(wx, wz);
       } else if (wl > 0) { const sp = R.HERO.speed * (heavyT > 0 ? 0.2 : 1); wx *= sp; wz *= sp; me3.heading = Math.atan2(wx, wz); }
       let nx = me3.x + wx * sdt, nz = me3.z + wz * sdt;
-      // the body blocks her
+      // the body blocks her at its radius (at 1.5 m inside it she vanished into the serpent's spines; GPU bench 14.11)
       const bd = Math.hypot(nx - R.ARENA.boss[0], nz - R.ARENA.boss[1]);
-      if (!won && bd < R.BOSS.contact - 1.5) { const k = (R.BOSS.contact - 1.5) / (bd || 1); nx = R.ARENA.boss[0] + (nx - R.ARENA.boss[0]) * k; nz = R.ARENA.boss[1] + (nz - R.ARENA.boss[1]) * k; }
+      if (!won && bd < R.BOSS.contact) { const k = R.BOSS.contact / (bd || 1); nx = R.ARENA.boss[0] + (nx - R.ARENA.boss[0]) * k; nz = R.ARENA.boss[1] + (nz - R.ARENA.boss[1]) * k; }
       [me3.x, me3.z] = R.clampToArena(nx, nz);
       me3.speed = Math.hypot(wx, wz);
       if (R.airborne(FL)) me3.lift = FL.y;
