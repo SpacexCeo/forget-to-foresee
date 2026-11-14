@@ -14,6 +14,7 @@ import { NET } from './network.js';
 export const proofMessage = (action, accountId, detail, at) => `Forget to Foresee account\nAction: ${action}\nAccount: ${accountId}\nDetail: ${detail}\nAt: ${at}\nThis proves you control this game account on ${NET.label}. It sends no transaction.`;
 /** The same normalization as the relayer's: lower case, trimmed, a plain address; null otherwise. */
 export function normEmail(s) { const e = String(s == null ? '' : s).trim().toLowerCase(); return e.length <= 254 && /^[a-z0-9._%+-]{1,64}@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,24}$/.test(e) ? e : null; }
+export const PREV_KEY = 'ftf.day1.prev.v1'; // the same list net/account-login.js keeps
 export const validCode = (c) => /^\d{6}$/.test(String(c || '').trim());
 
 const enc = (s) => new TextEncoder().encode(s);
@@ -24,7 +25,7 @@ const b64 = (u8) => { let s = ''; for (const b of u8) s += String.fromCharCode(b
  *          newKey: () => Promise<{publicKey, secretKey}>, fetch?: Function, now?: () => number}} o
  *   mint: play/day1-mint.js api (record, setRecord); client: net/near-tx.js createTxClient (addKey, accessKey, view)
  */
-export function createAccountEmail({ relayer, mint, client, guests = null, signerFor, newKey, fetch = globalThis.fetch, now = () => Date.now() }) {
+export function createAccountEmail({ relayer, mint, client, guests = null, signerFor, newKey, storage = null, fetch = globalThis.fetch, now = () => Date.now() }) {
   const base = String(relayer || '').replace(/\/$/, '');
   const post = async (path, body) => {
     try { const r = await fetch(base + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) }); return { status: r.status, body: await r.json().catch(() => ({})) }; }
@@ -42,6 +43,11 @@ export function createAccountEmail({ relayer, mint, client, guests = null, signe
   }
   const fail = (r, fallback) => ({ status: 'error', error: (r.body && r.body.error) || fallback || 'http_' + r.status });
   let pendingLink = null; // the email being linked and its key, between the two steps
+  /** A browser that signs in to another account keeps its own record (key included) under PREV_KEY, as a wallet sign-in does. */
+  const keepPrevious = (r) => {
+    if (!storage || !r || !r.playerKey) return;
+    try { const list = JSON.parse(storage.getItem(PREV_KEY) || '[]'); list.push({ ...r, kept_at: new Date(now()).toISOString() }); storage.setItem(PREV_KEY, JSON.stringify(list.slice(-10))); } catch { /* memory only */ }
+  };
 
   return {
     /** This browser has an account it can prove (it may link methods). */
@@ -74,7 +80,24 @@ export function createAccountEmail({ relayer, mint, client, guests = null, signe
       return { status: 'linked', hint: r.body.hint, account: r.body.account_id };
     },
 
-    /** Sign in by email, step 1: a code (the answer is the same for an unknown email). */
+    /**
+     * Register by email, step 1 (owner 14.11). A browser with no account first asks whether the address is free (so a
+     * typo'd or taken address never makes an account), then makes the free Day-1 account with a key made here
+     * (mint.mint: create_guest through the relayer), then asks for the link code. With an account it is linkStart.
+     * {status: 'sent', email} | {status: 'error', error: 'email_in_use' | 'mint_failed' | ...}
+     */
+    async registerStart(raw, { nickname = null } = {}) {
+      const email = normEmail(raw); if (!email) return { status: 'error', error: 'bad_email' };
+      if (!current()) {
+        const q = await post('/api/auth/email/start', { email, purpose: 'register' });
+        if (q.status !== 200) return fail(q);
+        let m; try { m = await mint.mint(nickname || rec().nickname || undefined); } catch (e) { m = { phase: 'failed', reason: String((e && e.message) || e).slice(0, 60) }; }
+        if (!m || m.phase !== 'minted' || !current()) return { status: 'error', error: (m && m.reason) || 'mint_failed' };
+      }
+      return this.linkStart(email);
+    },
+
+    /** Sign in by email, step 1: a code; an address with no account answers {status: 'error', error: 'no_account'}. */
     async loginStart(raw) {
       const email = normEmail(raw); if (!email) return { status: 'error', error: 'bad_email' };
       const r = await post('/api/auth/email/start', { email, purpose: 'login' });
@@ -89,6 +112,7 @@ export function createAccountEmail({ relayer, mint, client, guests = null, signe
       const key = { publicKey: r.body.key.public_key, secretKey: r.body.key.secret_key }, account = r.body.account_id;
       if ((await client.accessKey(account, key.publicKey)) !== 'FullAccess') return { status: 'error', error: 'key_not_on_account' };
       const prev = rec().guest || null;
+      if (prev && prev.account_id !== account) keepPrevious(rec()); // this browser's own account is not thrown away
       // the guest record (its Day-1 mint) comes back from the chain when the guests contract is given
       const back = guests ? await client.view(guests, 'guest_of', { public_key: key.publicKey }).catch(() => null) : null;
       if (back && back.account_id === account) { mint.setRecord({ playerKey: key, guest: back, minted: !!back.minted, login: { kind: 'email', address: email.replace(/^(.).*@/, '$1***@') } }); return { status: 'restored', account }; }

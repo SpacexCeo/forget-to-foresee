@@ -915,7 +915,7 @@ const day1Mint = createDay1Mint({ storage: ctx.storage });
 // email sign-in and the linked methods (net/account-email.js; owner 14.11): the account panel and Settings → Account
 function makeAccountEmail() {
   return Promise.all([import('./net/account-email.js'), import('./net/account-login.js'), import('./net/near-tx.js'), import('./net/day1-deployment.js'), import('./net/near-deployment.js')])
-    .then(([e, a, n, d, nd]) => e.createAccountEmail({ relayer: d.DAY1_DEPLOYMENT.relayer, guests: d.DAY1_DEPLOYMENT.guests, mint: day1Mint, client: n.createTxClient({ rpcUrls: nd.NEAR_DEPLOYMENT.rpcUrls }), signerFor: a.edSigner, newKey: n.generateKeyPair }));
+    .then(([e, a, n, d, nd]) => e.createAccountEmail({ relayer: d.DAY1_DEPLOYMENT.relayer, guests: d.DAY1_DEPLOYMENT.guests, mint: day1Mint, client: n.createTxClient({ rpcUrls: nd.NEAR_DEPLOYMENT.rpcUrls }), signerFor: a.edSigner, newKey: n.generateKeyPair, storage: ctx.storage }));
 }
 // Sign in / create account (flag accountLogin, docs/account-login.md): panel, flow and wallets load on the first tap.
 const openAccount = (nickname = null) => import('./play/account-panel.js').then((m) => m.openAccountPanel({

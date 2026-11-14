@@ -6,7 +6,8 @@
 // it, adds it to the account on chain (AddKey, signed by the account's own key) and hands it over; the relayer keeps it
 // encrypted (AES-256-GCM, FTF_EMAIL_KEY_SECRET) and gives it back to whoever proves the email with a one-time code.
 //   - codes: 6 digits, 10 minutes, 5 tries, only sha256(salt, email, code) is kept, in memory; 5 codes an hour per email;
-//   - the answer to "send me a code" is the same for a known and an unknown email (no account discovery);
+//   - Sign in says when an email has no account (owner 14.11: the panel then offers Register); every such answer is
+//     counted against the email's hourly limit and the per-IP limit, so addresses cannot be swept;
 //   - an account proof (a message signed by a full-access key of the account, 5 minutes) guards link, list and unlink;
 //   - no password exists anywhere; the stored key is useless without the env secret.
 // Testnet only: the key holds testnet NEAR and game items with no real value; that custody is stated in the docs.
@@ -59,6 +60,12 @@ export function createCodes({ now = () => Date.now(), rand = () => randomInt(0, 
       codes.set(email, { hash: hash(email, code), purpose, bind, exp: t + EMAIL.codeTtlMs, tries: 0 });
       return { code };
     },
+    /** Counts one question about this email (does it have an account?) toward its hourly limit; no code is made. */
+    touch(email) {
+      const t = now(), times = (sent.get(email) || []).filter((x) => t - x < 3600_000);
+      if (times.length >= EMAIL.perEmailPerHour) return { error: 'too_many_codes' };
+      times.push(t); sent.set(email, times); return { ok: true };
+    },
     take(email, code, purpose) {
       const c = codes.get(email);
       if (!c || c.exp <= now() || c.purpose !== purpose) return { ok: false, error: 'code_expired' };
@@ -89,6 +96,11 @@ function dbCodes(d, { now, rand }) {
       const code = String(rand()).padStart(6, '0');
       d.codes.set(id, { hash: hash(email, code), purpose, bind, exp: t + EMAIL.codeTtlMs, tries: 0 });
       return { code };
+    },
+    touch(email) {
+      const t = now(), id = emailId(email);
+      if (d.codes.sentSince(id, t - 3600_000) >= EMAIL.perEmailPerHour) return { error: 'too_many_codes' };
+      d.codes.sent(id, t); return { ok: true };
     },
     take(email, code, purpose) {
       const id = emailId(email), c = d.codes.get(id);
@@ -144,14 +156,24 @@ export function createEmailAuth({ store, codes, mailer, accessKey, key, now = ()
       if (!ready()) return { status: 503, body: { error: 'email_not_configured' } };
       const email = normEmail(b && b.email);
       if (!email) return { status: 400, body: { error: 'bad_email' } };
-      const purpose = b.purpose === 'link' ? 'link' : 'login';
+      const purpose = b.purpose === 'link' ? 'link' : b.purpose === 'register' ? 'register' : 'login';
       let bind = null;
+      // Sign in / Register (owner 14.11, overriding the earlier "never say whether an email is known"): a sign-in with
+      // an email that has no account says so, and Register asks first whether the address is free. Each such answer
+      // counts toward the email's hourly limit (and the handler's per-IP limit), so the check cannot be used to sweep.
+      const known = !!store.get(emailId(email));
+      if (purpose === 'register' || (purpose === 'login' && !known)) {
+        const lim = codes.touch ? codes.touch(email) : { ok: true };
+        if (lim.error) return { status: 429, body: { error: lim.error } };
+        if (purpose === 'register') return known ? { status: 409, body: { error: 'email_in_use' } } : { status: 200, body: { status: 'free' } };
+        return { status: 404, body: { error: 'no_account' } };
+      }
       if (purpose === 'link') {
         const p = await proof(b.account, 'link-email', email); if (!p.ok) return { status: 401, body: { error: p.error } };
         const cur = store.get(emailId(email));
         if (cur && cur.account !== b.account.account_id) return { status: 409, body: { error: 'email_in_use' } };
         bind = b.account.account_id;
-      } else if (!store.get(emailId(email))) return { status: 200, body: { status: 'sent' } }; // unknown email: the same answer, nothing sent
+      }
       const c = codes.issue(email, purpose, bind);
       if (c.error) return { status: 429, body: { error: c.error } };
       try { await mailer.send(email, c.code, purpose); } catch { return { status: 502, body: { error: 'send_failed' } }; }

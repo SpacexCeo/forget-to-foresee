@@ -119,8 +119,9 @@ test('Settings → Account (owner 14.11): the linked methods or Sign in with ema
     for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 0));
     const body = pop.dialog.all((n) => n.className === 'ftf-set-body')[0];
     const heads = ids(body);
-    if (canLink) { assert.ok(heads.includes('acct.methods') && heads.includes('acct.email.link'), heads.join()); assert.ok(body.textContent.includes('a***@b.co')); }
-    else assert.ok(heads.includes('acct.email.title') && !heads.includes('acct.methods'), heads.join());
+    const tabsOf = body.all((n) => n.tagName === 'BUTTON' && String(n.className).startsWith('acct-tab')).map((b) => b.textContent);
+    if (canLink) { assert.ok(heads.includes('acct.methods') && heads.includes('acct.email.title'), heads.join()); assert.ok(body.textContent.includes('a***@b.co')); assert.deepEqual(tabsOf, ['acct.email.signin', 'acct.email.link'], 'with an account: Sign in / Link email'); }
+    else { assert.ok(heads.includes('acct.email.title') && !heads.includes('acct.methods'), heads.join()); assert.deepEqual(tabsOf, ['acct.email.signin', 'acct.email.register'], 'without one: Sign in / Register'); }
     const signin = body.all((n) => n.tagName === 'BUTTON' && n.textContent === 'set.acc.signin')[0];
     assert.ok(signin, 'the wallet sign-in button'); for (const fn of signin.listeners.click) fn(); assert.equal(opened, 1); assert.equal(pop.dialog.open, false, 'the panel replaces the settings');
   }

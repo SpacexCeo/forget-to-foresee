@@ -69,13 +69,13 @@ test('link an email: proof by the account key, a code to that email, the email k
   assert.ok(!file.includes(emailKey.secretKey.slice(8, 30)), 'the secret key is never stored in clear'); assert.ok(!file.includes('ann@gmail.com'), 'nor the address');
 });
 
-test('sign in by email: the same answer for unknown emails, the key back for a proven email, nothing once the key is off the account', async () => {
+test('sign in by email: an unknown email is told so (no mail), the key back for a proven email, nothing once the key is off the account', async () => {
   const r = await rig();
   const emailKey = await generateKeyPair(); r.onChain.get(ACC).add(emailKey.publicKey);
   await r.email.start({ email: 'ann@gmail.com', purpose: 'link', account: await r.proof('link-email', 'ann@gmail.com') });
   await r.email.link({ email: 'ann@gmail.com', code: r.outbox[0].code, account: await r.proof('link-email', 'ann@gmail.com|' + emailKey.publicKey), email_key: snake(emailKey) });
   const unknown = await r.email.start({ email: 'bob@gmail.com', purpose: 'login' });
-  assert.deepEqual(unknown.body, { status: 'sent' }); assert.equal(r.outbox.length, 1, 'no mail to an unknown address');
+  assert.equal(unknown.status, 404); assert.deepEqual(unknown.body, { error: 'no_account' }); assert.equal(r.outbox.length, 1, 'no mail to an unknown address');
   await r.email.start({ email: 'ann@gmail.com', purpose: 'login' });
   const code = r.outbox.at(-1).code;
   assert.equal((await r.email.login({ email: 'ann@gmail.com', code: '000000' === code ? '000001' : '000000' })).body.error, 'wrong_code');
@@ -127,8 +127,23 @@ test('HTTP: the routes go through api/auth.js (CORS, rate limit, JSON), no addre
   const r = await rig(), lines = [];
   const h = authHandler({ env: { FTF_DATA_DIR: r.dir }, email: r.email, linker: async () => ({ status: 200, body: {} }), log: (l) => lines.push(l) });
   const call = async (url, body) => { const res = { headers: {}, setHeader(k, v) { this.headers[k] = v; }, end(b) { this.body = b; } }; await h({ method: 'POST', headers: {}, url, body }, res); return { status: res.statusCode, body: JSON.parse(res.body) }; };
-  assert.deepEqual((await call('/api/auth/email/start', { email: 'ann@gmail.com', purpose: 'login' })).body, { status: 'sent' });
+  assert.deepEqual((await call('/api/auth/email/start', { email: 'ann@gmail.com', purpose: 'login' })).body, { error: 'no_account' });
+  assert.deepEqual((await call('/api/auth/email/start', { email: 'ann@gmail.com', purpose: 'register' })).body, { status: 'free' });
   assert.equal((await call('/api/auth/email/login', { email: 'ann@gmail.com', code: '123456' })).status, 401);
   assert.equal((await call('/api/auth/nope', {})).status, 404);
   assert.ok(lines.every((l) => !l.includes('ann@') && !/\d{6}/.test(l)), lines.join('\n'));
+});
+
+test('Sign in / Register: is the address free, is there an account; the questions are counted per email (no sweeping)', async () => {
+  const r = await rig();
+  const emailKey = await generateKeyPair(); r.onChain.get(ACC).add(emailKey.publicKey);
+  assert.deepEqual((await r.email.start({ email: 'new@gmail.com', purpose: 'register' })).body, { status: 'free' });
+  await r.email.start({ email: 'ann@gmail.com', purpose: 'link', account: await r.proof('link-email', 'ann@gmail.com') });
+  await r.email.link({ email: 'ann@gmail.com', code: r.outbox[0].code, account: await r.proof('link-email', 'ann@gmail.com|' + emailKey.publicKey), email_key: snake(emailKey) });
+  const taken = await r.email.start({ email: 'ann@gmail.com', purpose: 'register' });
+  assert.equal(taken.status, 409); assert.deepEqual(taken.body, { error: 'email_in_use' }); assert.equal(r.outbox.length, 1, 'a question sends no mail');
+  assert.equal((await r.email.start({ email: 'ann@gmail.com', purpose: 'login' })).body.status, 'sent', 'a known email still gets its sign-in code');
+  let last; for (let i = 0; i < EMAIL.perEmailPerHour + 1; i++) last = await r.email.start({ email: 'ghost@gmail.com', purpose: 'login' });
+  assert.equal(last.status, 429, 'the sixth question about one address in an hour'); assert.equal(last.body.error, 'too_many_codes');
+  r.adv(3600_001); assert.equal((await r.email.start({ email: 'ghost@gmail.com', purpose: 'login' })).body.error, 'no_account');
 });

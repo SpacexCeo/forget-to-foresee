@@ -95,8 +95,14 @@ by signing in with it while this account is open. A browser with no account sees
   `POST /api/auth/email/link`. The relayer checks that the key is on the account and stores it **encrypted**
   (AES-256-GCM, `FTF_EMAIL_KEY_SECRET`) under `email:<sha256>`; the address itself is never stored (only a hint like
   `a***@gmail.com`).
-- **Sign in with email**: `POST /api/auth/email/start` (the same answer for a known and an unknown address; no mail to
-  an unknown one), then `POST /api/auth/email/login` with the code returns the account and its email key while that key
+- **Sign in / Register** (owner 14.11; this replaced the earlier "never say whether an email is known"): the panel has
+  two tabs. Sign in with an address that has no account answers 404 `no_account`; the panel says so and switches to
+  Register with the address kept. Register asks first whether the address is free (`purpose: "register"` → `free` or 409
+  `email_in_use`), then a browser with no account makes the free Day-1 account (the key is made in the browser,
+  `create_guest` through the relayer) and links the email to it by the code; a browser that has an account links the
+  email to that account. Every such question counts toward the address's hourly limit (5) and the per-IP limit, so
+  addresses cannot be swept. The code step has "Change email" (the address kept) and "Resend code" after 30 s.
+- **Sign in with email**: `POST /api/auth/email/start` (no mail to an unknown address), then `POST /api/auth/email/login` with the code returns the account and its email key while that key
   is still on the account. The browser plays as that account: mints and transfers go there, as with every login.
 - Codes: 10 minutes, 5 tries, one use, 5 an hour per address, kept only as salted hashes in memory. No passwords exist.
 - `POST /api/auth/methods` and `POST /api/auth/unlink` (each with a fresh proof). Unlinking an email destroys its stored
