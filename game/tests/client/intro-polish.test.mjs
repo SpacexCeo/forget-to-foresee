@@ -37,3 +37,34 @@ test('the townsfolk barks wait while the intro runs', () => {
 test('a failed intro never leaves the town locked: the lock ends with the intro\'s turn in the onboarding queue', () => {
   assert.match(src, /onOnboarding\(\(id\) => \{ if \(id !== 'intro' && npeLocked\) \{ npeLocked = false; setIntroHud\(document, false\); \} \}\);/);
 });
+
+test('Iris\'s voice lines play: every voiced prologue cue names a shipped line, and the intro plays it on the cue (QA pass 2 #7)', async () => {
+  const { VOICE_LINES, voiceId } = await import('../../src/npe/voice.js');
+  const shots = readFileSync(new URL('../../src/cinematic/prologue/shots.js', import.meta.url), 'utf8');
+  const keys = [...shots.matchAll(/voice: '([a-z_]+)'/g)].map((m) => m[1]);
+  assert.ok(keys.length >= 1, 'the prologue has voiced cues');
+  for (const k of keys) assert.ok(VOICE_LINES[voiceId(k)], `${k} is a shipped voice line`);
+  assert.equal(voiceId('voice_iris_oh_no'), 'iris_oh_no', 'the audio manifest prefix is tolerated');
+  const { installDom } = await import('../lib/mini-dom.mjs');
+  const { memoryStorage } = await import('../../src/ui/storage.js');
+  const dom = () => { const { doc } = installDom(); doc.getElementById = doc.getElementById || (() => null); doc.addEventListener = doc.addEventListener || (() => {}); doc.removeEventListener = doc.removeEventListener || (() => {}); return doc; };
+  const tick = (n = 1) => new Promise((r) => { let k = n; const go = () => (--k <= 0 ? r() : setTimeout(go, 0)); setTimeout(go, 0); });
+  const handlers = new Map(); const played = [];
+  const bus = { emit: () => {}, on: (n, fn) => { handlers.set(n, fn); return () => handlers.delete(n); } };
+  const { runIntro } = await import('../../src/npe/index.js');
+  const run = runIntro({ doc: dom(), t: (k) => k, storage: memoryStorage(), toast: () => {}, bus, reduced: () => true, search: '', voice: { play: (id) => { played.push(id); return Promise.resolve('file'); } },
+    prologue: { playLabPrologue: async () => { handlers.get('prologue.cue')({ id: 'oh_no', speaker: 'Iris', text: 'Oh no...', durMs: 1400, voice: 'iris_oh_no' }); handlers.get('prologue.cue')({ id: 'x', text: 'no voice' }); return 'done'; }, playWakeUp: async () => {} } });
+  await tick(3);
+  assert.deepEqual(played, ['iris_oh_no']);
+  run.skip(); await tick(3); run.skip(); await tick(3); run.skip();
+});
+
+test('the wake-up crowd stays through the whole first talk and leaves with the intro (QA pass 2 #3)', () => {
+  const pro = readFileSync(new URL('../../src/cinematic/prologue/index.js', import.meta.url), 'utf8');
+  const keep = pro.slice(pro.indexOf('function keepRing(ring)'), pro.indexOf('async function playWakeUp'));
+  assert.doesNotMatch(keep, /setTimeout\(stop, 120000\)/, 'no two-minute timer: 19 lines take a reader longer than that');
+  assert.match(pro, /export const RING_SAFETY_MS = 15 \* 60 \* 1000;/);
+  assert.match(keep, /\['npe\.completed', 'npe\.skipped'\]\.map\(\(n\) => ctx\.bus\.on\(n, stop\)\)/);
+  assert.match(keep, /onOnboarding\(\(id\) => \{ if \(id !== 'intro'\) stop\(\); \}\)/, 'and when the intro\'s turn ends whatever happened');
+  assert.match(keep, /if \(stopped\) return; stopped = true;/, 'stopping twice is harmless');
+});

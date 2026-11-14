@@ -9,6 +9,8 @@ export const VOICE_LINES = Object.freeze({
   iris_gasp: { file: 'assets/audio/voice/iris_gasp.ogg', text: 'Ah!' },
   iris_hmm: { file: 'assets/audio/voice/iris_hmm.ogg', text: 'Hmm...' },
 });
+/** A cue's voice key as VOICE_LINES names it (shots may write it with the audio manifest's 'voice_' prefix). */
+export const voiceId = (v) => String(v || '').replace(/^voice_/, '');
 export const FEMALE = /female|zira|samantha|aria|jenny|libby|sonia|google uk english female/i;
 
 /** The voice to use for the fallback: a female English voice if the browser has one, else any English voice, else null. */
@@ -49,7 +51,7 @@ export function createVoice({ base = '/', storage = globalThis.localStorage, Aud
   return {
     /** Plays a line by id; resolves 'file' | 'speech' | 'silent'. */
     async play(id) {
-      const line = VOICE_LINES[id]; if (!line) return 'silent';
+      const line = VOICE_LINES[voiceId(id)]; if (!line) return 'silent';
       if (await viaFile(String(base).replace(/\/?$/, '/') + line.file)) return 'file';
       return viaSpeech(line.text);
     },

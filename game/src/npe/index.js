@@ -12,6 +12,7 @@ import { state as busState } from '../sprint/bus.js';
 import * as firstSeen from '../sprint/first-seen.js';
 import { registerTips } from './tips.js';
 import { runOnboarding } from '../ui/onboarding-queue.js';
+import { createVoice, voiceId } from './voice.js';
 
 const fmt = (s, a) => String(s).replace(/\{(\w+)\}/g, (m, k) => (a && a[k] != null ? String(a[k]) : m));
 /** The game's t() with the English sprint strings as the fallback (the locale import lines are the integrator's). */
@@ -66,7 +67,9 @@ export function runIntro(ctx) {
     let how = 'done';
     try {
       if (pro && pro.playLabPrologue) {
-        const off = ctx.bus && ctx.bus.on ? ctx.bus.on('prologue.cue', (c) => { if (c && c.text) subs.show(c.text, c.speaker || null, c.durMs || 0); }) : null;
+        // a cue with a voice line plays it (QA pass 2 #7: the files shipped but nothing called npe/voice.js); never waits on it
+        const voice = ctx.voice || createVoice({ base: ctx.base || '/', storage: ctx.storage });
+        const off = ctx.bus && ctx.bus.on ? ctx.bus.on('prologue.cue', (c) => { if (c && c.text) subs.show(c.text, c.speaker || null, c.durMs || 0); if (c && c.voice) voice.play(voiceId(c.voice)); }) : null;
         current = { skip: () => { if (pro.skip) pro.skip(); } };
         // Esc (or the Skip button) skips the 3D prologue, and never reaches the game's menu meanwhile (R10)
         const onEsc = (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); if (e.stopImmediatePropagation) e.stopImmediatePropagation(); current.skip(); } };
