@@ -1609,6 +1609,7 @@ export default {
   'companion.account': "Хранится на собственном аккаунте героини {account}",
   'town.cast.strike': "Удар",
   'town.cast.dash': "Рывок",
+  'town.cast.dodged': "Уклонение",
   'menu.achOverall': "Общий прогресс",
   'menu.unlocked': "Открыто",
   'menu.locked': "Закрыто",

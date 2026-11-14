@@ -17,6 +17,7 @@ export const MOB_GLOW = Object.freeze({ skitter: 0x7fe6d6, veilbell: 0x7fe6d6, h
 export const HIT_SECONDS = 0.18;
 export const DISSOLVE_SECONDS = 1.1;
 export const SINK = 0.12;           // metres the body settles while it dissolves
+export const FALL_SECONDS = 0.45;   // the procedural collapse of a creature without a death clip
 const EMBERS = 28;
 
 const NOISE = /* glsl */`
@@ -73,17 +74,21 @@ export class MobFx {
     const box = new THREE.Box3().setFromObject(model);
     this.span0 = box.isEmpty() ? [0, 1] : [box.min.y - model.position.y, Math.max(0.2, box.max.y - box.min.y)];
     this.embers = null;
-    this.hitT = 0; this.dieT = -1; this.done = false;
+    this.hitT = 0; this.hitK = 1; this.dieT = -1; this.done = false; this.fallT = -1; this.fallDir = 1;
     this.inner = model.children[0] || model;          // the recoil moves the inner node: the combat code owns the root
-    this.innerBase = this.inner.position.clone();
+    this.innerBase = this.inner.position.clone(); this.innerRot = this.inner.rotation.clone();
     model.traverse((o) => {
       if (!o.isMesh || !o.material) return;
       o.material = Array.isArray(o.material) ? o.material.map((m) => mobMaterial(m, this.u)) : mobMaterial(o.material, this.u);
     });
   }
 
-  /** A hit landed: flash and a small push back (along its local -Z, its back), for HIT_SECONDS. */
-  hit() { if (this.dieT < 0) this.hitT = HIT_SECONDS; }
+  /** A hit landed: flash, a push back (along its local -Z, its back) and a rock of the head, for HIT_SECONDS.
+   *  `k` is the blow's weight (1 a plain blow; a crit or a finishing blow more). */
+  hit(k = 1) { if (this.dieT < 0) { this.hitT = HIT_SECONDS; this.hitK = k; } }
+
+  /** It is dying and has no death clip: it tips over onto its side and settles (FALL_SECONDS), before the dissolve. */
+  fall() { if (this.fallT < 0) { this.fallT = 0; this.fallDir = Math.random() < 0.5 ? -1 : 1; } }
 
   /** Starts the dissolve (call when the death clip has reached its last frame). */
   die() {
@@ -112,10 +117,19 @@ export class MobFx {
     if (this.hitT > 0) {
       this.hitT = Math.max(0, this.hitT - dt);
       const k = this.hitT / HIT_SECONDS;                 // 1 -> 0
-      this.u.flash.value = k * k;
-      this.inner.position.copy(this.innerBase).z -= this.recoil * Math.sin(Math.PI * k);
-    } else if (this.dieT < 0) { this.u.flash.value = 0; this.inner.position.copy(this.innerBase); }
+      this.u.flash.value = k * k * Math.min(1.5, this.hitK);
+      const s = Math.sin(Math.PI * k) * this.hitK;
+      this.inner.position.copy(this.innerBase).z -= this.recoil * s;
+      if (this.fallT < 0) this.inner.rotation.x = this.innerRot.x - 0.16 * s;          // the flinch: the head rocks back
+    } else if (this.dieT < 0) { this.u.flash.value = 0; this.inner.position.copy(this.innerBase); if (this.fallT < 0) this.inner.rotation.x = this.innerRot.x; }
     else this.u.flash.value = 0;
+    if (this.fallT >= 0) {                                                          // the collapse: a quick tip onto its side, a small bounce, then still
+      this.fallT += dt;
+      const t = Math.min(1, this.fallT / FALL_SECONDS), e = t < 1 ? t * t * (3 - 2 * t) : 1, bounce = t >= 1 ? 0 : 0.08 * Math.sin(Math.PI * Math.max(0, (t - 0.7) / 0.3));
+      this.inner.rotation.z = this.innerRot.z + this.fallDir * (1.25 * e - bounce);
+      this.inner.rotation.x = this.innerRot.x + 0.2 * e;
+      if (this.dieT < 0) this.inner.position.y = this.innerBase.y - 0.05 * e;
+    }
     m.updateWorldMatrix(true, false);
     this.u.span.value.set(m.matrixWorld.elements[13] + this.span0[0] * m.matrixWorld.elements[5] - (this.dieT >= 0 ? SINK * this.u.dissolve.value ** 2 : 0), this.span0[1] * m.matrixWorld.elements[5]);
     if (this.dieT >= 0 && !this.done) {

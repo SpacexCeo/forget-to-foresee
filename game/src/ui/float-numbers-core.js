@@ -8,6 +8,10 @@ export const POOL = 24;
 export const MERGE_MS = 250;
 export const RISE_PX = 40;
 export const XP_MERGE_MS = 400;
+/** Numbers born within LANE_MS and LANE_M of a live one take the next lane (LANE_PX higher, to alternate sides). */
+export const LANE_MS = 450, LANE_M = 1.6, LANES = 4, LANE_PX = 20;
+/** Screen offset [x, y] px of a number's lane: 0 in place, then up a step and alternately right and left. */
+export const laneOffset = (lane = 0) => (lane ? [(lane % 2 ? 1 : -1) * 16, -lane * LANE_PX] : [0, 0]);
 export const KIND = Object.freeze({
   damage: { life: 700, pop: 1.15, size: 18, color: '#ffffff', rise: 40 },
   crit: { life: 1100, pop: 'bounce', size: 26, color: '#f6c860', rise: 40, jitter: 4, jitterMs: 200 },
@@ -17,6 +21,7 @@ export const KIND = Object.freeze({
   silk_spend: { life: 900, pop: 1.0, size: 16, color: '#9a9283', rise: 30 },
   xp: { life: 900, pop: 1.1, size: 14, color: '#b06cff', rise: 40 },
   miss: { life: 700, pop: 1.0, size: 14, color: '#aab1c5', rise: 24 },
+  dodge: { life: 750, pop: 1.2, size: 16, color: '#c9bfff', rise: 34 },
 });
 /** The colour a number shows: its tint for plain damage, else its kind's colour. */
 export const colorOf = (n) => (n.kind === 'damage' && n.tint) || (KIND[n.kind] || KIND.damage).color;
@@ -34,6 +39,7 @@ export function textOf(kind, amount, xpUnit = 'XP', words = {}) {
   if (kind === 'taken') return '−' + Math.round(a);
   if (kind === 'heal') return '+' + Math.round(a);
   if (kind === 'miss') return words.miss || 'Miss';
+  if (kind === 'dodge') return words.dodge || 'Dodged';
   return String(Math.round(a));
 }
 
@@ -56,7 +62,10 @@ export function mergeOrAdd(live, ev, now) {
     }
   }
   // `tint`: a plain damage number in the blow's element (the casts: ice blue, storm violet); crits stay gold
-  const n = { kind: ev.kind, family, target: ev.target ?? null, amount: ev.amount, pos: ev.pos, other: !!ev.other, born: now, lastAt: now, merges: 0, grow: 1, tint: ev.tint || null };
+  // a lane per fresh number near another one still rising (a pack hit at once, a hit and its XP): it is set a step
+  // higher and to the side, so numbers never pile up on one spot
+  const lane = live.filter((o) => now - o.born < LANE_MS && Math.hypot(o.pos[0] - ev.pos[0], o.pos[1] - ev.pos[1], o.pos[2] - ev.pos[2]) < LANE_M).length % LANES;
+  const n = { kind: ev.kind, family, target: ev.target ?? null, amount: ev.amount, pos: ev.pos, other: !!ev.other, born: now, lastAt: now, merges: 0, grow: 1, tint: ev.tint || null, lane };
   live.push(n);
   while (live.length > POOL) live.shift();
   return n;

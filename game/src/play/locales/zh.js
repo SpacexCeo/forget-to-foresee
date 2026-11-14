@@ -1610,6 +1610,7 @@ export default {
   'companion.account': "由女主角自己的账户 {account} 持有",
   'town.cast.strike': "打击",
   'town.cast.dash': "冲刺",
+  'town.cast.dodged': "闪避",
   'menu.achOverall': "总体进度",
   'menu.unlocked': "已解锁",
   'menu.locked': "未解锁",

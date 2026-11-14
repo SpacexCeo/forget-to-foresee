@@ -761,6 +761,7 @@ function combatSound(k, mob, ev) {
   if (k === 'strike') cue('strike_swing');
   else if (k === 'strike3') { cue('strike_swing'); heavyUntil = performance.now() + 350; }
   else if (k === 'dash') cue('dash_whoosh');
+  else if (k === 'dodge') cue('dodge_whiff'); // a blow passed through the roll's i-frames: a light tick (audio/haptics.js)
   else if (k === 'super') { cue('strike_heavy'); heavyUntil = performance.now() + 350; }   // quiet: the sound layer adds its own on ftf:iris-action
   // the casts land with their own element (night 14.11): frost a glassy shatter, the snare a bite of current
   else if (k === 'hit' && ev && ev.src === 'lance') { cueAt('hit_frost', at); cueAt(S.hurt, at, 0.8); }
@@ -1139,7 +1140,7 @@ const floatQueue = []; // numbers sent while the layer loads (night 14.11: the f
 function loadFloatNumbers() {
   if (floatNumbers || floatLoading || !featureFlags.on('damageNumbers')) return floatLoading;
   floatLoading = import('./ui/float-numbers.js').then((m) => {
-    floatNumbers = m.createFloatNumbers({ camera, THREE, reduced: () => lookdev.reducedMotion, xpUnit: () => 'XP' });
+    floatNumbers = m.createFloatNumbers({ camera, THREE, reduced: () => lookdev.reducedMotion, xpUnit: () => 'XP', words: () => ({ dodge: ctx.i18n.t('town.cast.dodged') }) });
     for (const ev of floatQueue.splice(0)) floatNumbers.push(ev);
   }).catch(() => { floatLoading = null; floatQueue.length = 0; });
   return floatLoading;
@@ -1683,7 +1684,7 @@ function frame() {
     }
   }
   rig.update(dt, focus, lookdev.reducedMotion ? null : player.vel); // no camera look-ahead under reduced motion
-  if (townMobs && townMobs.shake > 0) { const k = townMobs.shake * 0.08; camera.position.x += (Math.random() - 0.5) * k; camera.position.y += (Math.random() - 0.5) * k; } // heavy hits (off with reduced motion)
+  if (townMobs && townMobs.shake > 0) { const k = townMobs.shake * townMobs.shake * 0.16 + townMobs.shake * 0.04; camera.position.x += (Math.random() - 0.5) * k; camera.position.y += (Math.random() - 0.5) * k; } // heavy hits (off with reduced motion)
   // the cast's wind-up (night 14.11): motes of its element gather at her hand until the release frame
   if (castWindup) {
     castWindup.t += dt;
@@ -1706,7 +1707,7 @@ function frame() {
   movingState = movingState ? speed > 0.08 : speed > 0.25;
   void moving;
   if (play && !inTown) play.update(dt, { focus, moving: movingState, speed, running: player.run && movingState });
-  else if (irisAvatar) irisAvatar.update(dt, movingState, avatar, clock.elapsedTime, speed, player.run && movingState, lookdev.reducedMotion, null); // the town: her gait before the season
+  else if (irisAvatar) irisAvatar.update(townMobs && townMobs.hitStop > 0 ? dt * 0.05 : dt, movingState, avatar, clock.elapsedTime, speed, player.run && movingState, lookdev.reducedMotion, null); // the town: her gait before the season
   // the sword in her hand: after the mixer, so the closed fist sits on top of every clip
   if (heldBlade) heldBlade.update(dt, lookdev.reducedMotion);
   strikeTrail.update(dt, lookdev.reducedMotion); // after the mixer and the grip: the trail follows the pose drawn this frame

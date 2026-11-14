@@ -18,6 +18,8 @@ export const PATTERNS = Object.freeze({
   cast_release_frost: Object.freeze([[22], 0.45, 70]),
   cast_release_storm: Object.freeze([[30, 25, 20], 0.7, 150]),
   mob_hulker_slam: Object.freeze([[25], 0.5, 90]),
+  mob_death: Object.freeze([[20, 15, 12], 0.5, 90]),
+  dodge_whiff: Object.freeze([[8], 0.2, 30]),
 });
 
 /** Whether haptics are on for this browser. */

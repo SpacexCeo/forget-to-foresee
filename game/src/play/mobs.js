@@ -108,6 +108,8 @@ export function pickLock(mobs, from, fwd, range = ACTIONS.lock, front = ACTIONS.
   return best;
 }
 
+/** The heavy-hit hold: ~4 frames at 60 fps where her pose freezes on impact (a crit holds 1.4x longer). */
+export const HIT_STOP = Object.freeze({ hold: 0.065 });
 export const REGEN = Object.freeze({ delay: 4, perSecond: 8 });   // her health comes back out of combat
 const LANCE_SPEED = 20;             // the fracture front of the Frost Lance (m/s): a monster far along the line is hit later
 const SNARE_DELAY = 0.35;           // the leash reaches the point, the ring snaps open
@@ -452,7 +454,7 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
   const views = new Map(), templates = {};
   const iris = { pos: player.pos, alive: true, outside: false, hp: IRIS_HP, hurtT: 0, calm: 0, iframes: 0 };
   const act = { lunge: null, strikeCd: 0, combo: 0, comboT: 0, dashCd: 0, dash: null, twist: 0, twistDir: 1, charge: null, superCd: 0, superAt: null, flinch: 0, flinchMax: 1, flinchAmp: 0, blows: [] };
-  let shake = 0;
+  let shake = 0, stopT = 0;   // stopT: the world hit-stop of a heavy blow or a crit (her pose holds a few frames)
   const numbers = [];
   const shots = [], shotLog = [];   // shotLog: the last seeds (QA: where from, where to, closest pass)
   // impact effects and the camera kick (render/hit-fx.js): one pooled set for the whole hillside
@@ -568,7 +570,15 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
     numbers.push({ el, p: [m.pos[0] + (Math.random() - 0.5) * 0.4, m.pos[1] + 0.6 + m.T.radius * 1.2, m.pos[2]], t: 0 });
   }
 
+  let dodgeAt = -1;
+  /** A blow passed through her i-frames: a "Dodged" word over her head and a light whiff cue (throttled). */
+  function dodged() {
+    const t = performance.now(); if (t - dodgeAt < 400) return; dodgeAt = t;
+    if (floatNumber) floatNumber({ kind: 'dodge', amount: 0, target: 'iris-dodge', pos: [player.pos[0], player.pos[1] + 2.1, player.pos[2]] });
+    if (onFeedback) onFeedback('dodge');
+  }
   function hurt(amount, heavy = false) {
+    if (iris.alive && iris.iframes > 0 && !immune()) dodged();                     // the roll beat the blow: say so
     if (!iris.alive || iris.iframes > 0 || immune()) return; // immune: the dragon ride and the Glass Shoal own her (owner 13.11)
     iris.calm = 0; if (heavy) shake = Math.max(shake, 0.6);
     iris.hp = Math.max(0, iris.hp - amount); iris.hurtT = 0.3;
@@ -585,7 +595,7 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
 
   function handle(ev) {
     for (const e of ev) {
-      if (e.kind === 'killed' && e.mob.noLoot) { const v0 = views.get(e.mob); if (v0) v0.fx.die(); continue; } // a shared spider another player won: it dissolves, the kill is theirs
+      if (e.kind === 'killed' && e.mob.noLoot) { const v0 = views.get(e.mob); if (v0) { if (v0.fx.fall) v0.fx.fall(); v0.fx.die(); } continue; } // a shared spider another player won: it dissolves, the kill is theirs
       if (e.kind === 'hit' || e.kind === 'killed') busEmit(e.kind === 'hit' ? 'mob.hit' : 'mob.killed', { type: e.mob.type, id: e.mob.id, dmg: e.amount, crit: !!e.crit }); // sprint bus (A5 seam)
       const v = views.get(e.mob);
       if (e.kind === 'attack' && v) { if (v.actions.attack) { play(v, 'attack', 0.1); v.oneShot = v.actions.attack; } v.ring.visible = !(e.ranged || e.mob.T.ranged); if (onFeedback) onFeedback('attack', e.mob); }
@@ -598,17 +608,23 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
         shots.push({ s, vel: to.clone().sub(from).normalize().multiplyScalar(9), life: 2.2, damage: e.damage || e.mob.T.damage, min: 99, log: { from: from.toArray().map((x) => +x.toFixed(2)), to: to.toArray().map((x) => +x.toFixed(2)) } });
       }
       else if (e.kind === 'hit' && v) {
-        v.fx.hit(); number(e.mob, e.amount, e.crit, e.src); if (onFeedback) onFeedback('hit', e.mob, e);
+        v.fx.hit(e.kill ? 1.8 : e.crit ? 1.5 : 1); number(e.mob, e.amount, e.crit, e.src); if (onFeedback) onFeedback('hit', e.mob, e);
         // the blow's own look where it lands: frost shards, storm arcs, strike sparks (render/hit-fx-core.js); the
         // flash and the fragments stay under reduced motion (they say it hit), the camera stays still
         const imp = impactOf(e.src, { radius: e.mob.T.radius, heavy: !!e.mob.T.heavy, kill: !!e.kill, reduced: reduced() });
         const at = hitPoint(e.mob), dx = e.mob.pos[0] - player.pos[0], dz = e.mob.pos[2] - player.pos[2], l = Math.hypot(dx, dz) || 1;
         hitFx.impact(at, [dx / l, dz / l], imp, e.mob.pos[1]);
-        shake = Math.max(shake, imp.shake);
+        shake = Math.max(shake, imp.shake * (e.crit ? 1.6 : 1) * (e.kill ? 1.3 : 1));   // the weight of the blow: crits and finishers shake more
+        if (!reduced() && (e.crit || e.kill || imp.stop >= 0.08)) stopT = Math.max(stopT, HIT_STOP.hold * (e.crit ? 1.4 : 1));
         if (e.mob.state === 'stagger' && v.actions.hit) { play(v, 'hit', 0.06); v.oneShot = v.actions.hit; }
         v.ring.visible = v.ring.visible && e.mob.state === 'windup';
       }
-      else if (e.kind === 'death' && v) { v.ring.visible = false; play(v, 'death', 0.1); if (onFeedback) onFeedback('kill', e.mob); }
+      else if (e.kind === 'death' && v) {
+        v.ring.visible = false; if (v.fx.hit) v.fx.hit(1.8);                         // a last white flash as it goes down
+        if (v.actions.death) play(v, 'death', 0.1);
+        else { if (v.fx.fall) v.fx.fall(); v.fallT = 1.2; }                       // no death clip: it collapses, lies a moment, then dissolves
+        if (onFeedback) onFeedback('kill', e.mob);
+      }
       else if (e.kind === 'killed') {
         if (v) v.fx.die();
         if (win) { e.mob.lives = (e.mob.lives || 0) + 1; win.dispatchEvent(new CustomEvent('ftf:mob-killed', { detail: { type: e.mob.type, pos: e.mob.pos.slice(), elite: !!e.mob.T.elite, killId: `${SESSION}:${e.mob.id}#${e.mob.lives}` } })); }   // killId: stable per creature and life (salvage, quests)
@@ -626,6 +642,8 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
     /** Iris's cast (scenes/town-casting.js onFire). */
     cast(c) { brain.cast(c); },
     get shake() { return reduced() ? 0 : shake; },
+    /** Seconds left of the hit-stop (a heavy blow or a crit): her animation holds while it runs. Zero under reduced motion. */
+    get hitStop() { return reduced() ? 0 : stopT; },
     /** The camera kick of the blows this frame (render/hit-fx.js): add it to the camera after the rig. Zero under reduced motion. */
     get kick() { return hitFx.kick; },
     /** The pooled impact effects (render/hit-fx.js), for the casts' wind-up motes at her hand. */
@@ -747,7 +765,7 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
           if (onFeedback) onFeedback('super', null, { hits: ev.filter((e) => e.kind === 'super').length, charge: S.k });
         }
       }
-      iris.iframes = Math.max(0, iris.iframes - dt); shake = Math.max(0, shake - dt * 2.5);
+      iris.iframes = Math.max(0, iris.iframes - dt); shake = Math.max(0, shake - dt * 2.5); stopT = Math.max(0, stopT - dt);
       iris.calm += dt;
       if (iris.alive && iris.calm > REGEN.delay && iris.hp < IRIS_HP) { iris.hp = Math.min(IRIS_HP, iris.hp + REGEN.perSecond * dt); if (hpFill) hpFill.style.width = (100 * iris.hp / IRIS_HP).toFixed(1) + '%'; }
       if (act.dash && moveIris) {
@@ -801,6 +819,7 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
         else if (v.current) v.current.timeScale = v.current === v.actions.idle ? v.idleRate : 1;
         v.mixer.update(dt);
       }
+      if (v.fallT > 0 && (v.fallT -= dt) <= 0) { const ev = []; brain.fallen(m, ev); handle(ev); }
       v.fx.update(dt);
       place(m, v);
       // an idle creature glances aside every few seconds (a visual turn on top of the brain's heading)

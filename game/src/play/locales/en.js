@@ -1613,6 +1613,7 @@ const EN = {
   'companion.account': "Held by the heroine's own account {account}",
   'town.cast.strike': "Strike",
   'town.cast.dash': "Dash",
+  'town.cast.dodged': "Dodged",
   'menu.achOverall': "Overall progress",
   'menu.unlocked': "Unlocked",
   'menu.locked': "Locked",
