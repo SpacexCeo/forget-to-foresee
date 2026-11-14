@@ -177,6 +177,7 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
 
   function renderText() {
     objective.textContent = i18n.t(state.ready ? (state.resume ? 'town.objective.resume' : quest ? quest.objective : 'town.objective') : 'town.loading');
+    prompt.dataset.cursor = talkNpc ? 'talk' : 'interact'; // the game cursor over the prompt (ui/game-cursor.js)
     promptText.textContent = spotNear && !talkNpc ? spotNear.prompt ? spotNear.prompt() : i18n.t(onDoor && DOORS.has(spotNear.id) ? 'town.shop.enter.' + spotNear.id : 'spot.' + spotNear.id) : talkNpc ? i18n.t('quest.talk', { name: i18n.t((talkKind === 'quest' ? 'quest.name.' : 'folk.name.') + talkNpc) }) : i18n.t(state.resume ? 'town.altar.resume' : 'town.altar.prompt');
     if (onProfile && ledger) { const lv = ledger.level; profileBtn.textContent = i18n.t('profile.button', { level: lv.level }); }
     if (quest) {

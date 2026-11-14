@@ -1174,6 +1174,16 @@ const mouseAim = createMouseAim({ target: renderer.domElement, input,
   onAction: mouseKey,
   // the browser took Esc to free the pointer: the page gets the Esc it never saw (the cast is put away, a panel closes, else the menu)
   onEscape: () => { for (const type of ['keydown', 'keyup']) document.body.dispatchEvent(new KeyboardEvent(type, { code: 'Escape', key: 'Escape', bubbles: true })); } });
+/**
+ * The game cursor over the scene (ui/game-cursor.js; owner 14.11): grab while the camera turns, attack on a locked target,
+ * talk / interact while a prompt is up; null = the plain pointer.
+ */
+function cursorScene() {
+  if (input.dragPointer != null) return 'grab';
+  if (townMobs && townMobs.locked) return 'attack';
+  const p = document.querySelector('.ftf-town-prompt:not([hidden])');
+  return p ? p.dataset.cursor || 'interact' : null;
+}
 function strikeNow() { if (townMobs && townMobs.strike(strikeAimInput())) interruptMove(STRIKE_ROOT); }
 let inspecting = null;
 let accumulator = 0;
@@ -1660,7 +1670,7 @@ window.__ftf = {
   } : null,
 };
 requestAnimationFrame(frame);
-return { enterWorld, signIn: () => openAccount(), world3d, player, rig, lookdev, renderer, streamer, get play() { return play; }, town, townMode, 
+return { enterWorld, signIn: () => openAccount(), cursorScene, world3d, player, rig, lookdev, renderer, streamer, get play() { return play; }, town, townMode, 
   /** The first town view is complete: ground under Iris, every street piece real and warmed, her own model in (main.js gates the loading screen on it). */
   get townReady() { return !town || !inTown || (town.shown && townGrounded && (!irisLoad.hasModel || irisLoad.loaded || (irisLoad.failed && import.meta.env.DEV))); } };
 }

@@ -74,7 +74,7 @@ if (gl.software) showSoftwareNote(document);
 const ctxP = retryImport(() => import('./play/i18n.js')).then((m) => { chunksDone++; marks.ui = Math.round(performance.now() - t0); report(town ? 'Loading the town' : 'Loading the island'); return m.createPlayContext({ locale: params.get('lang') || undefined }); });
 let shellUi = null, worldP = null;
 const startWorld = (ctx) => (worldP ||= retryImport(() => import('./boot-world.js')).then((m) => {
-  worldP.then((w) => { worldHandle = w; }, () => {});
+  worldP.then((w) => { worldHandle = w; if (w.cursorScene) { cursorHooks.scene = w.cursorScene; cursorHooks.canvas = () => (w.renderer ? w.renderer.domElement : null); } }, () => {});
   chunksDone++; marks.world = Math.round(performance.now() - t0); report();
   return m.createWorld({ params, ctx, uiRoot, onProgress, lobbyOpen: () => !!shellUi, closeLobby: () => { if (shellUi) { shellUi.destroy(); shellUi = null; } },
     onFirstFrame: () => { firstFrame = true; marks.firstFrame = Math.round(performance.now() - t0); } });
@@ -146,6 +146,13 @@ function fullscreenHint(ctx) {
     busy: () => { const a = q.onboardingActive(); return a === 'name' || a === 'intro' || !!document.querySelector('.npe-gl-wrap, .npe-dim, .ftf-replay'); },
   })).catch((e) => console.warn('[fs-hint]', e));
 }
+
+/**
+ * The game's own cursor (ui/game-cursor.js; flag gameCursor): installed as soon as the flags answer, so the loading screen
+ * already shows it; the world tells it what is under the mouse once it is there.
+ */
+const cursorHooks = { scene: () => null, canvas: () => null };
+features.load().then(() => { if (features.on('gameCursor')) return import('./ui/game-cursor.js').then((m) => m.installGameCursor({ base: import.meta.env.BASE_URL, sceneState: () => cursorHooks.scene(), canvas: () => cursorHooks.canvas() })); }).catch((e) => console.warn('[cursor]', e));
 
 ctxP.then(async (ctx) => {
   loading.setTranslator((k) => ctx.i18n.t(k));
