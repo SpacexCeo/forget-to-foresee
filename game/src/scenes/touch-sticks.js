@@ -112,7 +112,7 @@ export function createTouchControls({ doc = document, input, t, base = '/', stor
 
   // ---- left stick ----
   const zone = el('div', 'ts-zone'); const baseEl = el('div', 'ts-base'); const knob = el('i', 'ts-knob'); baseEl.append(knob); zone.append(baseEl);
-  const rest = () => { const r = zone.getBoundingClientRect ? zone.getBoundingClientRect() : { width: 300, height: 300 }; baseEl.style.left = '96px'; baseEl.style.top = Math.max(80, (r.height || 300) - 110) + 'px'; };
+  const rest = () => { const r = zone.getBoundingClientRect ? zone.getBoundingClientRect() : { width: 300, height: 300 }; baseEl.style.left = '96px'; baseEl.style.top = Math.max(70, (r.height || 300) - 190) + 'px'; }; // clear of the bottom bar and the players pill
   let stick = null;
   const setStick = (dx, dy) => {
     const v = stickVector(dx, dy);
@@ -227,6 +227,9 @@ export function createTouchControls({ doc = document, input, t, base = '/', stor
     if (e.target && e.target.tagName === 'CANVAS') { dismissed = true; c.classList.add('ts-dismissed'); }
   }, true);
   rest();
+  const view = doc.defaultView || null; // a phone turned sideways: the resting stick follows the zone's new height (else it sits below the screen)
+  const onResize = () => { if (!stick) rest(); };
+  if (view && view.addEventListener) view.addEventListener('resize', onResize);
   let visible = false, touch = false;
   return {
     root,
@@ -238,7 +241,7 @@ export function createTouchControls({ doc = document, input, t, base = '/', stor
       doc.body.classList.toggle('ts-touch', touch);
       if (touch) sheet();
       const v = touch && mode === 'sticks' && active;
-      if (v !== visible) { visible = v; root.hidden = !v; doc.body.classList.toggle('ts-on', v); if (!v) endStick(); }
+      if (v !== visible) { visible = v; root.hidden = !v; doc.body.classList.toggle('ts-on', v); if (!v) endStick(); else if (!stick) rest(); }
       if (!v) return;
       const c = casting(), m = mobs(), f = flow();
       const field = !!(c && c.field);
@@ -248,6 +251,6 @@ export function createTouchControls({ doc = document, input, t, base = '/', stor
       if (c && c.cooldownOf) { lance.cd.style.setProperty('--cd', String(c.cooldownOf('lance'))); snare.cd.style.setProperty('--cd', String(c.cooldownOf('snare'))); }
       use.hidden = !(f && f.promptVisible);
     },
-    dispose() { root.remove(); doc.body.classList.remove('ts-on', 'ts-touch'); input.stickMove = null; input.stickRun = false; },
+    dispose() { if (view && view.removeEventListener) view.removeEventListener('resize', onResize); root.remove(); doc.body.classList.remove('ts-on', 'ts-touch'); input.stickMove = null; input.stickRun = false; },
   };
 }
