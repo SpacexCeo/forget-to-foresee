@@ -85,17 +85,19 @@ const startWorld = (ctx) => (worldP ||= retryImport(() => import('./boot-world.j
 // button joins it. The screen keeps its real progress the whole time.
 const SLOW_MS = 30000, RETRY_MS = 90000;
 let slowShown = false, retryShown = false;
+let bootI18n = null; // the locale once it is in (ctxP below): the slow-link lines follow the chosen language
+const bootT = (k, en) => { const v = bootI18n ? bootI18n.t(k) : null; return v && v !== k ? v : en; };
 function slowLink(w, waited) {
   if (!slowShown && waited > SLOW_MS) {
     slowShown = true;
-    loading.setSub('Slow connection: loading the light assets…');
+    loading.setSub(bootT('loading.slow', 'Slow connection: loading the light assets…'));
     try { if (w && w.streamer) w.streamer.upgrade = false; } catch { /* keep going */ }
   }
   if (!retryShown && waited > RETRY_MS) {
     retryShown = true;
     const root = document.getElementById('boot');
     if (root) {
-      const b = document.createElement('button'); b.type = 'button'; b.className = 'boot-retry'; b.textContent = 'Reload';
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'boot-retry'; b.textContent = bootT('loading.reload', 'Reload');
       b.addEventListener('click', () => location.reload());
       const sub = root.querySelector('.boot-sub'); if (sub && sub.after) sub.after(b); else root.append(b);
     }
@@ -155,7 +157,7 @@ const cursorHooks = { scene: () => null, canvas: () => null };
 features.load().then(() => { if (features.on('gameCursor')) return import('./ui/game-cursor.js').then((m) => m.installGameCursor({ base: import.meta.env.BASE_URL, sceneState: () => cursorHooks.scene(), canvas: () => cursorHooks.canvas() })); }).catch((e) => console.warn('[cursor]', e));
 
 ctxP.then(async (ctx) => {
-  loading.setTranslator((k) => ctx.i18n.t(k));
+  loading.setTranslator((k) => ctx.i18n.t(k)); bootI18n = ctx.i18n;
   // ?replay=r1.…: replay a linked season and show its NEAR root check over whatever loads beneath (net/replay.js)
   if (params.has('replay')) import('./ui/replay-view.js').then((m) => m.openReplayView({ param: params.get('replay'), i18n: ctx.i18n })).catch((e) => console.warn('[replay]', e));
   if (plan.lobby) {

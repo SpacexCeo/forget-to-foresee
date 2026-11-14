@@ -1394,6 +1394,8 @@ export default {
   'loading.log.code': "Читаем знаки Гостей…",
   'loading.log.terrain': "Кладём камни города…",
   'loading.log.houses': "Поднимаем дома и улицы…",
+  'loading.slow': "Медленное соединение: загружаем облегчённые файлы…",
+  'loading.reload': "Перезагрузить",
   'loading.log.shrine': "Зажигаем святилище…",
   'loading.log.altar': "Открываем алтарь…",
   'loading.log.sky': "Подвешиваем небесные острова…",

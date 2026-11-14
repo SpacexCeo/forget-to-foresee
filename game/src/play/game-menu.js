@@ -77,8 +77,10 @@ const CSS = `
 .gm-head h2 { margin: 0; flex: 1; font: 600 19px/1.1 "Cormorant Garamond", Georgia, serif; letter-spacing: .08em; text-transform: uppercase; color: var(--ftf-text, #eef0ea); }
 .gm-head h2::before { content: '✧'; color: var(--ftf-gold, #c5a469); margin-right: 10px; }
 .gm-x { width: 44px; height: 44px; border-radius: 50%; border: 0; background: rgba(233, 230, 220, .08); font: 500 20px/1 system-ui; color: var(--ftf-text, #eef0ea); cursor: pointer; }
+@media (max-width: 480px) { .gm-head { padding-right: 64px; flex-wrap: wrap; } .gm-head [data-acct] { order: 3; flex: 1 0 100%; margin-left: 0 !important; } } /* after the base .gm-head rule, which used to win: the close button sat on the sign-in button and the title broke mid-word (UI fit 14.11) */
 .gm-tabs { display: flex; gap: 8px; padding: 4px 16px 10px; overflow-x: auto; scrollbar-width: none; }
 .gm-tab { flex: 0 0 auto; min-height: 44px; padding: 8px 16px; border-radius: 10px; border: 1px solid rgba(214, 226, 214, .14); background: transparent; color: rgba(233, 230, 220, .7); font: 600 14px/1 system-ui; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: transform .12s ease, background .12s ease; }
+@media (max-width: 480px) { .gm-tabs { flex-wrap: wrap; overflow-x: visible; gap: 6px; } .gm-tab { flex: 1 0 calc(25% - 6px); min-width: 0; padding: 6px 4px; font-size: 11.5px; text-align: center; } } /* every tab visible on a phone: four per row instead of a strip cut at the edge (UI fit 14.11) */
 .gm-tab:hover { transform: translateY(-2px); } .gm-tab:active { transform: scale(.96); }
 .gm-tab[aria-selected="true"] { background: rgba(197, 164, 105, .14); border-color: rgba(197, 164, 105, .7); color: var(--ftf-gold, #c5a469); }
 .gm-body { overflow-y: auto; padding: 4px 18px 18px; }

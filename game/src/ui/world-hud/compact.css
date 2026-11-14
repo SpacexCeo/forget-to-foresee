@@ -55,15 +55,15 @@ body.wh-compact .wh-root .wh-quest__line { display: none; margin: 0; }
 body.wh-compact .wh-root .wh-quest__line:first-child { display: inline; }
 body.wh-compact .wh-root .wh-quest__line:first-child::before { content: '·'; margin: 0 calc(14 * var(--wh-px)); color: var(--wh-gold, #e4c272); }
 
-/* ---------------------------------------------------------------- toast: one line, the full text on hover or focus */
+/* ---------------------------------------------------------------- toast: up to three lines (UI fit 14.11: one line cut every sign reading), all of it on hover or focus */
 body.wh-compact .wh-root .wh-toast {
   top: var(--whc-top); right: var(--whc-side);
   max-width: min(26vw, calc(460 * var(--wh-px))); min-height: var(--whc-pill); border-radius: calc(21 * var(--wh-px));
   pointer-events: auto;
 }
-body.wh-compact .wh-root .wh-toast__text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.wh-compact .wh-root .wh-toast__text { white-space: normal; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; }
 body.wh-compact .wh-root .wh-toast:hover .wh-toast__text,
-body.wh-compact .wh-root .wh-toast:focus-within .wh-toast__text { white-space: normal; }
+body.wh-compact .wh-root .wh-toast:focus-within .wh-toast__text { white-space: normal; -webkit-line-clamp: unset; line-clamp: none; }
 
 /* ---------------------------------------------------------------- the Shell row under the status */
 body.wh-compact .hub-host .hub-dock {
@@ -138,7 +138,8 @@ body.wh-compact .wh-root .wh-dialogue__line { border-radius: 999px; }
 body.wh-compact .pl-badge {
   left: 50%; right: auto; bottom: 4px; transform: translateX(-50%); width: auto; max-width: 40vw;
   padding: 0 8px; background: none; border: 0; box-shadow: none;
-  font-size: 11px; line-height: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .9; text-shadow: 0 1px 2px rgba(0,0,0,.6);
+  font-size: 11px; line-height: 14px; text-align: center; opacity: .9; text-shadow: 0 1px 2px rgba(0,0,0,.6);
+  white-space: normal; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; /* ru/uk wrap, never cut */
 }
 
 /* the recap button is round like the Chronicle one */

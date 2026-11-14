@@ -1398,6 +1398,8 @@ const EN = {
   'loading.log.code': "Reading the Guests’ signs…",
   'loading.log.terrain': "Laying the town’s stones…",
   'loading.log.houses': "Raising houses and streets…",
+  'loading.slow': "Slow connection: loading the light assets…",
+  'loading.reload': "Reload",
   'loading.log.shrine': "Lighting the shrine…",
   'loading.log.altar': "Opening the altar…",
   'loading.log.sky': "Hanging the sky islands…",
