@@ -66,3 +66,24 @@ test('the arena drives the tells and the serpent\'s effects', () => {
   assert.match(src, /sfx\.update\(sdt, red\)/);
   assert.match(src, /sfx\.dispose\(\)/);
 });
+
+test('the boss tells are frost cracks, not flat shapes: no fill, shards and mist rise on the front, the serpent glows on its wind-up (owner 14.11)', async () => {
+  const { crackMaterial } = await import('../../src/render/serpent-fx.js');
+  const m = crackMaterial(THREE, { axis: 1, inner: 0, outer: 26, seed: 3 });
+  assert.equal(m.uniforms.uOuter.value, 26); assert.equal(m.uniforms.uAxis.value, 1); assert.equal(m.depthWrite, false);
+  assert.match(m.fragmentShader, /edge\(vW\.xz/, 'cracks are cell edges in world space');
+  assert.doesNotMatch(m.fragmentShader, /0\.3 \* fill|stripe/, 'no filled area, no stripes');
+  setTele(m, 0.4, 0.8, 1); assert.ok(m.uniforms.uK.value > 0 && m.uniforms.uK.value < 1);
+  let seed = 9; const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const sfx = createSerpentFx({ THREE, parent: new THREE.Group(), rand });
+  for (const [kind, g] of [['ring', { at: [0, 0, 0], r: 6 }], ['band', { at: [0, 0, 0], r0: 7, r1: 17 }], ['strip', { at: [0, 0, 0], dir: [0, 1], len: 30, width: 5 }], ['cone', { at: [0, 0, 0], dir: [0, 1], half: 0.4, len: 26 }]]) {
+    const before = sfx.live; for (let i = 0; i < 20; i++) { sfx.tellFrame(kind, g, 0.5, 1 / 60); sfx.update(1 / 60); }
+    assert.ok(sfx.live > before, `${kind}: shards rise on the front`);
+  }
+  const src = readFileSync(new URL('../../src/scenes/shoal-arena.js', import.meta.url), 'utf8');
+  assert.equal((src.match(/crackMaterial\(THREE/g) || []).length, 4, 'all four tells');
+  assert.doesNotMatch(src, /telegraphMaterial\(/, 'no flat tell left');
+  assert.doesNotMatch(src, /RingGeometry\(0\.5, 0\.65/, 'the aim is a soft glow, not a ring');
+  assert.match(src, /\/\/ the wind-up glow/);
+  assert.equal((src.match(/sfx\.tellFrame\(/g) || []).length, 5);
+});
