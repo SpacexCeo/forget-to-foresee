@@ -2,14 +2,14 @@
 // the clips of her shipped clip file (assets/anim/<hero>.glb, the same 1x locomotion scale as the game), every
 // 'ftf:foot' event (the footstep sound) logged with its time. Prints the step times, the step interval and the stride
 // the feet cover between two landings of the same foot (it should equal the ground covered: no sliding).
-//   node tools/gait-steps.mjs <hero> [speed m/s, default the player's run] [seconds, default 5]   (run in game/)
+//   node game/tools/gait-steps.mjs <hero> [speed m/s, default the player's run] [seconds, default 5]
 import * as THREE from 'three';
 import { readFileSync } from 'node:fs';
-import { GaitLayer } from '../game/src/play/gait.js';
+import { GaitLayer } from '../src/play/gait.js';
 
 const [hero = 'iris', speedArg, secsArg] = process.argv.slice(2);
 const speed = Number(speedArg) || 1.7 * 2.6, secs = Number(secsArg) || 5;
-const b = readFileSync(new URL(`../game/public/assets/anim/${hero}.glb`, import.meta.url));
+const b = readFileSync(new URL(`../public/assets/anim/${hero}.glb`, import.meta.url));
 const json = JSON.parse(b.subarray(20, 20 + b.readUInt32LE(12)).toString());
 // the clips the gait needs: their names, durations (from the key times) and extras
 const clips = json.animations.map((a) => { const c = new THREE.AnimationClip(a.name, Math.max(...a.samplers.map((s) => json.accessors[s.input].max[0])), []); c.userData = { ...(a.extras || {}) }; return c; });
