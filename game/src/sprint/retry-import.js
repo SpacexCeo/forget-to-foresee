@@ -29,6 +29,7 @@ export function guardedReload({ win = globalThis.window, store = (() => { try { 
   if (!canReload(store, now)) { banner(doc, 'Some parts could not load. Check your connection and', true); return false; }
   try { if (store) store.setItem(RELOAD_KEY, String(now)); } catch { /* blocked storage: reload anyway, once */ }
   banner(doc, 'A new version is available. Reloading…', false);
+  try { win.__ftfReloadPending = true; } catch { /* */ }
   setTimeout(() => { try { const u = new URL(win.location.href); u.searchParams.set('v', String(now)); win.location.replace(u.toString()); } catch { win.location.reload(); } }, delayMs);
   return true;
 }
@@ -48,6 +49,17 @@ export async function retryImport(fn, { retries = 3, delaysMs = [300, 900, 2000]
   }
   try { reload(); } catch { /* the banner is best effort */ }
   throw last;
+}
+
+/**
+ * The boot's last catch (main.js): a chunk that failed to load (a Pages redeploy swapped the hashed chunks) gets ONE
+ * guarded page reload before the "Something went wrong" screen; the sessionStorage guard (canReload) means it never
+ * loops. Returns 'reload' (a reload is scheduled or already pending: keep the loading screen) or 'fail' (show it).
+ */
+export function bootFailure(err, { win = globalThis.window, reload = guardedReload, store, now } = {}) {
+  if (!CHUNK_ERROR.test(String((err && err.message) || err))) return 'fail';
+  if (win && win.__ftfReloadPending) return 'reload';
+  try { return reload({ win, store, now }) ? 'reload' : 'fail'; } catch { return 'fail'; } // undefined -> guardedReload's defaults
 }
 
 /** Installs the vite:preloadError handler once (main.js). */

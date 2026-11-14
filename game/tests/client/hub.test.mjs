@@ -12,8 +12,11 @@ import { PLAY_MESSAGES, createPlayI18n } from '../../src/play/i18n.js';
 const JUDGE = 'cc161d308faa67539af44205b56b6d4f';
 const noPause = async () => {};
 
+// The room's clock is simulated: it moves only when the session waits for a walk, so a season plays the same on any
+// machine and under any load (a real clock made the season flaky: a walk could still be under way at the next command).
 async function setup(seedHex = JUDGE) {
-  const s = new PlaySession({ transport: createLocalTransport({ seedHex }) });
+  let now = 1.7e12;
+  const s = new PlaySession({ transport: createLocalTransport({ seedHex, clock: () => now }), sleep: async (ms) => { now += ms; } });
   await s.start();
   s.flags.hub = true; s.recompute();
   return { s, hub: new ShellHub({ session: s, sleep: noPause, pauseMs: 0 }) };

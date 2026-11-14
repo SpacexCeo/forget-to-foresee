@@ -19,7 +19,7 @@ import { logKeysFromStats } from './ui/loading.js';
 import { detectWebGL, appendNoGpuLinks, showSoftwareNote, NO_GL_TEXT } from './ui/webgl-guard.js';
 import { showPremise } from './ui/premise.js';
 import { features } from './features.js';
-import { retryImport, installPreloadGuard } from './sprint/retry-import.js';
+import { retryImport, installPreloadGuard, bootFailure } from './sprint/retry-import.js';
 
 const params = new URLSearchParams(location.search);
 installPreloadGuard(window); // a stale chunk after a deploy: one guarded reload, never the broken-load screen (sprint 8.3)
@@ -74,7 +74,7 @@ if (gl.software) showSoftwareNote(document);
 const ctxP = retryImport(() => import('./play/i18n.js')).then((m) => { chunksDone++; marks.ui = Math.round(performance.now() - t0); report(town ? 'Loading the town' : 'Loading the island'); return m.createPlayContext({ locale: params.get('lang') || undefined }); });
 let shellUi = null, worldP = null;
 const startWorld = (ctx) => (worldP ||= retryImport(() => import('./boot-world.js')).then((m) => {
-  worldP.then((w) => { worldHandle = w; }, () => {});
+  worldP.then((w) => { worldHandle = w; if (w.cursorScene) { cursorHooks.scene = w.cursorScene; cursorHooks.canvas = () => (w.renderer ? w.renderer.domElement : null); } }, () => {});
   chunksDone++; marks.world = Math.round(performance.now() - t0); report();
   return m.createWorld({ params, ctx, uiRoot, onProgress, lobbyOpen: () => !!shellUi, closeLobby: () => { if (shellUi) { shellUi.destroy(); shellUi = null; } },
     onFirstFrame: () => { firstFrame = true; marks.firstFrame = Math.round(performance.now() - t0); } });
@@ -116,6 +116,44 @@ const premise = (ctx) => showPremise(document, (k) => ctx.i18n.t(k), {
   params, reducedMotion: !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches),
 });
 
+/**
+ * The entry gate (ui/entry-gate.js; owner 14.11): everything is loaded, the screen shows one "Enter the world" button,
+ * then the language and the account panel over the same screen; the screen lifts after that. Never blocks on a failure.
+ */
+async function entryGate(ctx, w) {
+  try {
+    const m = await retryImport(() => import('./ui/entry-gate.js'));
+    await features.load();
+    const rec = m.readEntry(ctx.storage);
+    const p = m.entryPlan({ entry: params.get('entry'), webdriver: !!navigator.webdriver, skipLink: m.isSkipLink(params), flag: features.on('entryGate'), seen: !!rec });
+    if (!p.gate) return;
+    clearInterval(slowTimer); // everything is in: no slow-link note or Reload while the player reads the gate
+    loading.set(1);
+    const r = await m.runEntryGate({
+      t: (k) => ctx.i18n.t(k), steps: p.steps,
+      locale: params.get('lang') || m.preferredLocale(ctx.prefs.get().locale, navigator.languages || [navigator.language]),
+      setLocale: (l) => ctx.prefs.set({ locale: l }),
+      signIn: features.on('accountLogin') && w.signIn ? () => w.signIn() : null,
+    });
+    if (p.steps) m.saveEntry(ctx.storage, { locale: r.locale, at: Date.now() });
+  } catch (e) { console.warn('[entry]', e); }
+}
+
+/** "Press F11 for fullscreen" (ui/fullscreen-hint.js; owner 14.11): desktop only, quiet while a first-time film or card runs. */
+function fullscreenHint(ctx) {
+  Promise.all([import('./ui/fullscreen-hint.js'), import('./ui/onboarding-queue.js')]).then(([m, q]) => m.mountFullscreenHint({
+    t: (k) => ctx.i18n.t(k), params,
+    busy: () => { const a = q.onboardingActive(); return a === 'name' || a === 'intro' || !!document.querySelector('.npe-gl-wrap, .npe-dim, .ftf-replay'); },
+  })).catch((e) => console.warn('[fs-hint]', e));
+}
+
+/**
+ * The game's own cursor (ui/game-cursor.js; flag gameCursor): installed as soon as the flags answer, so the loading screen
+ * already shows it; the world tells it what is under the mouse once it is there.
+ */
+const cursorHooks = { scene: () => null, canvas: () => null };
+features.load().then(() => { if (features.on('gameCursor')) return import('./ui/game-cursor.js').then((m) => m.installGameCursor({ base: import.meta.env.BASE_URL, sceneState: () => cursorHooks.scene(), canvas: () => cursorHooks.canvas() })); }).catch((e) => console.warn('[cursor]', e));
+
 ctxP.then(async (ctx) => {
   loading.setTranslator((k) => ctx.i18n.t(k));
   // ?replay=r1.…: replay a linked season and show its NEAR root check over whatever loads beneath (net/replay.js)
@@ -155,10 +193,15 @@ ctxP.then(async (ctx) => {
     });
     await entered.catch(() => {});
     marks.gate = Math.round(performance.now() - t0);
+    if (town) await entryGate(ctx, w);
     await loading.finish();
-    if (town) premise(ctx);
+    if (town) { premise(ctx); fullscreenHint(ctx); }
   }
   clearInterval(slowTimer);
   marks.done = Math.round(performance.now() - t0);
   window.__ftfBootMarks = marks;
-}).catch((e) => { console.error('[boot] failed', e); loading.fail('Something went wrong while loading. Reload the page.'); });
+}).catch((e) => {
+  console.error('[boot] failed', e);
+  if (bootFailure(e, { win: window }) === 'reload') return; // a stale chunk after a deploy: one guarded reload first
+  loading.fail('Something went wrong while loading. Reload the page.');
+});

@@ -244,6 +244,81 @@ test('NEAR through NEAR Connect: the wallet signs NEP-413 twice; the relayer che
   assert.equal((await bestNearProvider({ connector: async () => { throw new Error('offline'); } })).id, 'mynearwallet');
 });
 
+test('HOT Wallet through NEAR Connect: one approval connects and signs the device-key text; the nonce travels as a plain array; an implicit account links the guest', async () => {
+  const { nearConnectProvider, signedOf, nonceFor } = await import('../../src/net/wallets.js');
+  const { nep413Hash } = await import('../../../relayer/lib/auth.js');
+  const { importSecretKey, b58decode } = await import('../../src/net/near-tx.js');
+  const chain = fakeChain(), rel = fakeRelayer(chain);
+  const hotKey = await generateKeyPair(), signer = await importSecretKey(hotKey.secretKey);
+  const implicit = Buffer.from(b58decode(hotKey.publicKey.replace('ed25519:', ''))).toString('hex'); // a HOT account: 64 hex of its key
+  const signed = async ({ message, recipient, nonce }) => ({ accountId: implicit, publicKey: hotKey.publicKey, signature: Buffer.from(await signer.sign(nep413Hash(message, Buffer.from(nonce), recipient))).toString('base64') });
+  const asked = [];
+  /** HOT's executor: every request is JSON on its way to the wallet, so only a plain-array nonce survives. */
+  const hot = {
+    manifest: { id: 'hot-wallet' },
+    async signMessage(p) { asked.push('signMessage'); const sent = JSON.parse(JSON.stringify(p)); if (!Array.isArray(sent.nonce)) return new Promise(() => {}); return signed(sent); },
+  };
+  const connector = () => {
+    const on = {};
+    return {
+      on(ev, cb) { on[ev] = cb; },
+      async connect(input) { // signInAndSignMessage: HOT answers flat, [{accountId, publicKey, signature}]
+        asked.push('connect'); assert.equal(input.signMessageParams.recipient, 'forget-to-foresee'); assert.equal(input.signMessageParams.nonce.length, 32);
+        on['wallet:signInAndSignMessage']({ wallet: hot, accounts: [await signed(input.signMessageParams)], success: true });
+        return hot;
+      },
+    };
+  };
+  const b = browser(chain, 'owner'); await b.mint.mint('Owner');
+  const c1 = connector();
+  const r = await loginFor(b, chain, rel).signIn(nearConnectProvider({ connector: async () => c1 }));
+  assert.deepEqual([r.status, r.account, r.deviceKeyAdded], ['linked', 'owner0.guests.testnet', true]);
+  assert.deepEqual(asked, ['connect', 'signMessage']); // two wallet approvals in all, not three
+  assert.equal(rel.store.get('near:' + implicit).account, 'owner0.guests.testnet');
+  assert.equal(b.mint.record.login.address, implicit);
+  // the device key is the same whichever step signed its text: another browser (a wallet that only connects) restores the account
+  const plain = { manifest: { id: 'hot-wallet' }, signMessage: hot.signMessage };
+  const phone = browser(chain, 'phone');
+  const r2 = await loginFor(phone, chain, rel).signIn(nearConnectProvider({ connector: async () => ({ connect: async () => plain }) }));
+  assert.deepEqual([r2.status, r2.account], ['restored', 'owner0.guests.testnet']);
+  // the answer shapes wallets give
+  assert.deepEqual(signedOf({ accountId: 'a.near', publicKey: 'ed25519:k', signedMessage: { accountId: 'a.near', publicKey: 'ed25519:k', signature: 'c2ln' } }), { accountId: 'a.near', publicKey: 'ed25519:k', signature: 'c2ln' });
+  assert.deepEqual(signedOf({ account_id: 'a.near', public_key: 'ed25519:k', signature: [1, 2, 3] }), { accountId: 'a.near', publicKey: 'ed25519:k', signature: 'AQID' });
+  assert.equal(signedOf({ accountId: 'a.near', publicKey: 'ed25519:k' }), null); // connected, nothing signed
+  assert.equal(signedOf(null), null);
+  const n = new Uint8Array([1, 2]);
+  assert.deepEqual(nonceFor(hot, n), [1, 2]);
+  assert.equal(nonceFor({ manifest: { id: 'meteor-wallet' } }, n), n);
+});
+
+test('while a wallet is being asked the panel stays: a tap outside or Esc does not drop the sign-in; the Continue step is one clear button', async () => {
+  const { doc } = installDom(); let onKey = null; doc.addEventListener = (ev, cb) => { if (ev === 'keydown') onKey = cb; }; doc.removeEventListener = () => {};
+  const { openAccountPanel } = await import('../../src/play/account-panel.js');
+  const i18n = createPlayI18n('en');
+  let finish; const steps = [];
+  const login = { signIn: async (provider, { gesture }) => { await gesture('connect'); steps.push('connected'); await gesture('sign'); steps.push('signed'); return new Promise((r) => { finish = r; }); } };
+  const wallets = { discoverEvm: async () => [], discoverSolana: () => [], bestNearProvider: async () => ({ kind: 'near' }) };
+  const p = openAccountPanel({ doc, t: (k, a) => i18n.t(k, a), makeLogin: async () => login, wallets });
+  const nearBtn = [...p.el.querySelectorAll('.acct-row .acct-btn')].find((x) => x.textContent === i18n.t('acct.near'));
+  nearBtn.dispatchEvent({ type: 'click', target: nearBtn });
+  await new Promise((r) => setTimeout(r, 5));
+  assert.deepEqual(steps, ['connected']);
+  const go = p.el.querySelector('.acct-status .acct-go');
+  assert.equal(go.textContent, 'Continue in your wallet');
+  p.el.dispatchEvent({ type: 'pointerdown', target: p.el }); // a stray tap on the way back from the wallet
+  if (onKey) onKey({ key: 'Escape', stopPropagation() {} });
+  assert.ok(p.el.querySelector('.acct-card'), 'still open');
+  go.dispatchEvent({ type: 'click', target: go });
+  await new Promise((r) => setTimeout(r, 5));
+  assert.deepEqual(steps, ['connected', 'signed']);
+  assert.equal(p.el.querySelector('.acct-status').textContent, 'Waiting for your wallet…');
+  finish({ status: 'error', error: 'wallet_closed' });
+  await new Promise((r) => setTimeout(r, 5));
+  assert.match(p.el.querySelector('.acct-status').textContent, /wallet_closed/);
+  p.el.dispatchEvent({ type: 'pointerdown', target: p.el }); // idle again: a tap outside closes
+  assert.deepEqual(await p.done, { status: 'guest' });
+});
+
 // ---------- passkeys: the real provider (src/net/wallets.js) against a fake authenticator and the real linker ----------
 /** A synced passkey: one P-256 key and PRF secret shared by every "device" (as iCloud Keychain / Google Password Manager). */
 async function fakePasskey({ prf = true, origin = 'https://spacexceo.github.io' } = {}) {

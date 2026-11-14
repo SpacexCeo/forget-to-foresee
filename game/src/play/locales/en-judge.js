@@ -6,7 +6,7 @@ export default {
   'judge.next': 'Next', 'judge.back': 'Back', 'judge.skip': 'Skip', 'judge.open': 'Judge path', 'judge.proof': 'Proof',
   'judge.done': 'Done. Every step is also in the README, with how to check it yourself.',
   'judge.s1': 'You are in the hill town. No wallet and no gas prompt.',
-  'judge.s2': 'The market ticker at the top shows scripted traders. Each trade is a NEAR testnet transaction.',
+  'judge.s2': 'The market ticker at the top shows scripted traders. Its “Open the Town Ledger” button (or the game menu’s Town tab) shows every trader’s own NEAR account, the reason for each price, the testnet transaction.',
   'judge.s3': 'Open Profile → NFTs → Holder access → Try the demo account: the minted shards, agent card and Elise of a testnet account.',
   'judge.s4': 'Walk up to the Tournament altar, press E, then V: revealed signs are checked against the root fixed before trial 1.',
   'judge.s5': 'Talk to a townsperson (E). The line comes from a model on NEAR AI Cloud in a TEE, or the scripted line if it does not answer.',

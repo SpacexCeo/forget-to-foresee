@@ -15,8 +15,11 @@ const JUDGE = 'cc161d308faa67539af44205b56b6d4f';
 const LOCALES = ['en', 'uk', 'ru', 'it', 'zh'];
 const noPause = async () => {};
 
+// The room's clock is simulated (it moves only when the session waits for a walk), so the season plays the same under
+// any load; with a real clock a flight could start while the previous walk was still under way.
 async function hubSeason() {
-  const s = new PlaySession({ transport: createLocalTransport({ seedHex: JUDGE }) });
+  let now = 1.7e12;
+  const s = new PlaySession({ transport: createLocalTransport({ seedHex: JUDGE, clock: () => now }), sleep: async (ms) => { now += ms; } });
   await s.start();
   s.flags.hub = true; s.recompute();
   return { s, hub: new ShellHub({ session: s, sleep: noPause, pauseMs: 0 }) };

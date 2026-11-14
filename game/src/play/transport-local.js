@@ -45,5 +45,7 @@ export function createLocalTransport({ rules, timeScale = 1000, seedHex, name = 
     subscribe: (fn) => api.subscribe(sessionId, token, fn),
     /** Real milliseconds a simulated walk of `seconds` takes in this session. */
     realDelayMs: (seconds) => Math.ceil((Math.max(0, seconds) / timeScale) * 1000),
+    /** The room's clock (ms): the command bus waits on it for a walk to arrive (src/play/commands.js). */
+    now: clock || (() => Date.now()),
   };
 }

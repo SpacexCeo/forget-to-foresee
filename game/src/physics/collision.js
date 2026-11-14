@@ -351,7 +351,18 @@ export function sweepSphere(world, from, to, radius, mask = MASK_CAMERA, iterati
   const dir = sub(to, from);
   const r2 = radius * radius;
   let best = 1;
+  const dd = len2(dir), bx = world.box;
   for (const id of ids) {
+    // Cheap reject first (no allocation): the sphere around the triangle's box is farther than the radius from the
+    // still-open part of the sweep. A long camera boom crosses many cells; most candidates end here.
+    const o = id * 6;
+    const cx = (bx[o] + bx[o + 3]) / 2, cy = (bx[o + 1] + bx[o + 4]) / 2, cz = (bx[o + 2] + bx[o + 5]) / 2;
+    const hx = (bx[o + 3] - bx[o]) / 2, hy = (bx[o + 4] - bx[o + 1]) / 2, hz = (bx[o + 5] - bx[o + 2]) / 2;
+    const px = cx - from[0], py = cy - from[1], pz = cz - from[2];
+    const u = dd > EPS ? Math.min(best, Math.max(0, (px * dir[0] + py * dir[1] + pz * dir[2]) / dd)) : 0;
+    const ex = px - dir[0] * u, ey = py - dir[1] * u, ez = pz - dir[2] * u;
+    const reach = radius + Math.sqrt(hx * hx + hy * hy + hz * hz);
+    if (ex * ex + ey * ey + ez * ez >= reach * reach) continue;
     const [a, b, c] = world.tri(id);
     if (closestSegmentTriangle(from, add(from, scale(dir, best)), a, b, c).d2 >= r2) continue;
     if (len2(sub(closestPointTriangle(from, a, b, c), from)) < r2) return 0;

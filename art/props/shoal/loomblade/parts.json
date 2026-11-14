@@ -1,0 +1,27 @@
+{
+  "_doc": "Loomblade, Iris's sword. Numbers before geometry: metres, Blender Z up = towards the tip, X = blade width, Y = blade thickness, origin at the centre of the grip (the right-hand socket). Total length 1.100. Every part lists what it attaches to; s01 prints the gap to that part (must be 0).",
+  "length": 1.100,
+  "budget_tris": 3000,
+  "parts": {
+    "pearl":       {"attach": "collar",      "color": "pearl",         "center_z": -0.137, "radius": 0.019},
+    "collar":      {"attach": "ferrule_bot", "color": "brass",         "profile_rz": [[0.0125, -0.100], [0.0138, -0.106], [0.0112, -0.113], [0.0146, -0.121], [0.0162, -0.129], [0.0150, -0.133], [0.0100, -0.128], [0.0060, -0.118]], "squash_y": 0.9},
+    "claws":       {"attach": "collar",      "color": "brass",         "count": 4, "radius": 0.0010, "from_z": -0.127, "to_z": -0.150, "hp_only": true},
+    "ferrule_bot": {"attach": "grip",        "color": "brass",         "profile_rz": [[0.0120, -0.104], [0.0150, -0.102], [0.0156, -0.097], [0.0150, -0.092], [0.0120, -0.090]], "squash_y": 0.88},
+    "grip":        {"attach": "ferrule_top", "color": "leather",       "z0": -0.100, "z1": 0.095, "radius_x": 0.0125, "swell": 0.0015, "squash_y": 0.86},
+    "wrap":        {"attach": "grip",        "color": "gold thread",   "turns": 5, "radius": 0.0008, "z0": -0.090, "z1": 0.083, "hp_only": true},
+    "ferrule_top": {"attach": "shuttle",     "color": "brass",         "profile_rz": [[0.0120, 0.081], [0.0152, 0.083], [0.0160, 0.090], [0.0152, 0.097], [0.0120, 0.099]], "squash_y": 0.88},
+    "shuttle":     {"attach": "ring",        "color": "brass",         "half_length": 0.095, "half_height": 0.014, "half_thick": 0.015, "center_z": 0.109, "upturn": 0.012},
+    "bobbins":     {"attach": "shuttle",     "color": "gold thread, glowing", "at_x": 0.046, "size": [0.022, 0.003, 0.0055], "hp_only": true},
+    "ring":        {"attach": "habaki",      "color": "brass",         "center_z": 0.150, "major": 0.030, "minor": 0.0055},
+    "studs":       {"attach": "ring",        "color": "pearl",         "count": 12, "radius": 0.0021, "hp_only": true},
+    "warp":        {"attach": "habaki",      "color": "gold thread, glowing", "count": 5, "spread_bottom": 0.018, "spread_top": 0.0081, "z0": 0.121, "z1": 0.173, "radius": 0.0011, "radius_low": 0.0014},
+    "habaki":      {"attach": "blade",       "color": "brass",         "z0": 0.170, "z1": 0.192, "half_width": [0.0315, 0.0302], "half_thick": [0.0065, 0.0052]},
+    "blade":       {"attach": "habaki",      "color": "woven pale gold, pearl-steel edges", "z0": 0.176, "z1": 0.944,
+                    "width_keys_u_w": [[0.0, 0.0290], [0.40, 0.0230], [0.80, 0.0185]], "tip_from_u": 0.80, "tip_power": 1.6,
+                    "half_thick_base": 0.0035, "half_thick_end": 0.0022,
+                    "fuller_half_width": 0.0076, "fuller_depth": 0.0016, "fuller_u": [0.03, 0.06, 0.76, 0.80]},
+    "braid":       {"attach": "blade",       "color": "gold thread, glowing", "strands": 3, "radius": 0.0018, "amp_x": 0.0046, "amp_y": 0.0007, "periods": 22, "u0": 0.045, "u1": 0.785, "hp_only": true}
+  },
+  "sockets": {"socket_grip": [0, 0, 0], "socket_guard": [0, 0, 0.150], "socket_tip": [0, 0, 0.944]},
+  "bake": {"size": 4096, "out": 1024, "out_m": 512, "cage": 0.003, "samples_ao": 64, "emissive_strength": 2.5}
+}

@@ -7,7 +7,7 @@ LOOP_XFADE seconds are crossfaded (equal power) with the first ones and the loop
 end flows into the start without a seam. Writes game/public/assets/audio/<name>.ogg (Opus, stereo) and
 game/src/audio/music-manifest.js (merged into the sound manifest by src/audio/audio.js).
 
-Usage: python3 art/audio/build_music.py
+Usage: python3 art/audio/build_music.py [name ...]   (names: rebuild only those beds; the others keep their manifest rows)
 """
 import json
 import re
@@ -37,6 +37,7 @@ PICKS = {
     "mus_outside": km("Floating Cities"),                                     # beyond the walls, the hunt
     "mus_boss": sb("Legionnaire", "2022/04/sb_legionnaire2022.mp3"),          # the elite fight, the season finale
     "mus_chapter_done": km("Frozen Star"),                                    # after a chapter (season) is passed
+    "mus_lab": sb("Computations in a Snowstorm", "2019/01/sb_computations.mp3"),  # the lab prologue (owner pick 13.11)
 }
 
 
@@ -62,18 +63,24 @@ def seamless(x, xf):
     return y
 
 
-def encode(y, out):
+def encode(y, out, bitrate=BITRATE):
     with tempfile.TemporaryDirectory() as td:
         wav = Path(td) / "m.wav"
         wavfile.write(wav, SR, y.astype(np.float32))
-        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(wav), "-c:a", "libopus", "-b:a", BITRATE,
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(wav), "-c:a", "libopus", "-b:a", bitrate,
                         "-vbr", "on", "-compression_level", "10", "-application", "audio", "-map_metadata", "-1",
                         "-fflags", "+bitexact", "-flags:a", "+bitexact", str(out)], check=True)
 
 
 def main():
+    only = set(sys.argv[1:])
     entries = {}
+    if only and MANIFEST.exists():   # keep the rows of the beds not rebuilt this time
+        old = json.loads(re.search(r"= (\{.*\});", MANIFEST.read_text(), re.S).group(1))["sounds"]
+        entries = {k: v for k, v in old.items() if k not in only}
     for name, src in PICKS.items():
+        if only and name not in only:
+            continue
         path = fetch(src)
         x = decode(path)
         # trim the silent head and tail so the loop has no gap
@@ -85,7 +92,7 @@ def main():
         pk = np.max(np.abs(y))
         if pk > 10 ** (-1 / 20):
             y *= 10 ** (-1 / 20) / pk
-        encode(y, OUT / f"{name}.ogg")
+        encode(y, OUT / f"{name}.ogg", "80k" if len(y) / SR > 340 else BITRATE)   # long pieces stay under the 4.5 MB budget
         entries[name] = {"file": f"{name}.ogg", "kind": "music", "dur": round(len(y) / SR, 4), "samples": len(y),
                          "channels": 2, "loop": True, "title": src["title"], "artist": src["artist"],
                          "licence": src["licence"], "source": src["url"], "credit": src["credit"]}

@@ -1,6 +1,6 @@
 // Floating numbers, the DOM part (flag `damageNumbers`, src/features.js): a pool of 24 elements projected from world to
 // screen each frame; transform and opacity only. Fed through push({kind, amount, pos: [x, y, z] world, target?, other?}).
-import { POOL, KIND, mergeOrAdd, curve, textOf, sizeOf, alive } from './float-numbers-core.js';
+import { POOL, KIND, mergeOrAdd, curve, textOf, sizeOf, alive, colorOf } from './float-numbers-core.js';
 
 const CSS = `
 .fn { position: fixed; left: 0; top: 0; z-index: 6; pointer-events: none; font: 800 18px/1 system-ui, sans-serif; white-space: nowrap;
@@ -34,7 +34,7 @@ export function createFloatNumbers({ camera, THREE, doc = globalThis.document, w
         const text = textOf(n.kind, n.amount, xpUnit());
         if (e.textContent !== text) e.textContent = text;
         e.className = 'fn' + (n.kind === 'crit' && !red ? ' crit' : '');
-        e.style.color = k.color; e.style.fontSize = sizeOf(n) + 'px';
+        e.style.color = colorOf(n); e.style.fontSize = sizeOf(n) + 'px';
         e.style.transform = `translate(${((v3.x + 1) / 2 * w + jx + (c.drift || 0)).toFixed(1)}px, ${((1 - v3.y) / 2 * h - c.rise).toFixed(1)}px) translate(-50%, -50%) scale(${(c.scale * n.grow).toFixed(3)})`;
         e.style.opacity = c.opacity.toFixed(3);
       }

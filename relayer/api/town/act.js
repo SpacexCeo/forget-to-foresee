@@ -71,10 +71,11 @@ export function townActHandler(opts = {}) {
     const configured = !!(gcfg.coord && gcfg.coordKey);
     if (req.method === 'GET') {
       const q = new URL(req.url, 'http://x').searchParams, acc = q.get('account_id') || '', trader = q.get('trader');
-      if (!/^[a-z0-9._-]{2,64}$/.test(acc)) return json(res, 400, { error: 'bad_account' });
+      // a stall's state needs no account (the stall window before the Day 1 mint); the player's own state does
+      if (!(trader && !acc) && !/^[a-z0-9._-]{2,64}$/.test(acc)) return json(res, 400, { error: 'bad_account' });
       if (trader != null && !/^[a-z0-9._-]{2,64}$/.test(trader)) return json(res, 400, { error: 'bad_trader' });
       try {
-        if (trader) return json(res, 200, { ...(await stallState(client, gcfg.town, trader, acc)), configured, contract: gcfg.town });
+        if (trader) return json(res, 200, { ...(await stallState(client, gcfg.town, trader, acc || null)), configured, contract: gcfg.town });
         return json(res, 200, { ...(await actState(client, gcfg.town, acc)), configured, contract: gcfg.town });
       } catch { return json(res, 502, { error: 'rpc' }); }
     }

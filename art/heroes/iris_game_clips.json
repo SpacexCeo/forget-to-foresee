@@ -1,0 +1,186 @@
+{
+ "_": "The new Iris (the owner's Tripo iris_anim_pack FBX, Tripo rig with BoneRoot; converted by art/heroes/fbx2glb.py): the game's hero clip names cut from the pack's clips (art/tools/glb_game_clips.mjs). window: [start, end] seconds of the pack clip; the extras are what play/iris-avatar.js reads (impact_s, release_s, step_s: the window starts just before the hand or foot speed peak, art/heroes/peaks.py, so a strike lands within 0.13-0.18 s, a cast lets go at 0.1 s and slash1 hits at 0.3 s like the game's old keyed moves). Walk: one stride of the pack walk (its clip holds two). Run: one stride of flee_01 (owner 14.11: the pack run is a sprint and read terribly fast at our 3.3 m/s; flee_01 is a jog with bent arms), its window shifted so the left foot lands in the same phase as in the walk (the gait blends both on one stride phase). Speed: the hips travel over the window in the pack (art/heroes/runmeasure.py); contact: each foot's landing as a fraction of the stride (the footstep events). The pack run is not a clean cycle: the window is the closest-pose pair (14 deg at worst, the same pack timing as Elise's, art/heroes/loopcut2.py).",
+ "idle": {
+  "from": "idle",
+  "extras": {
+   "loop": true
+  }
+ },
+ "idle_look": {
+  "from": "idle_look",
+  "extras": {
+   "loop": false
+  }
+ },
+ "walk": {
+  "from": "walk",
+  "window": [
+   0,
+   1.2083
+  ],
+  "extras": {
+   "loop": true,
+   "speed": 1.229,
+   "contact": {
+    "L": [
+     0.586,
+     0.586
+    ],
+    "R": [
+     0.103,
+     0.103
+    ]
+   }
+  }
+ },
+ "run": {
+  "from": "flee_01",
+  "window": [
+   1.25,
+   1.9583
+  ],
+  "extras": {
+   "loop": true,
+   "speed": 4.575,
+   "contact": {
+    "L": [
+     0.529,
+     0.529
+    ],
+    "R": [
+     0.059,
+     0.059
+    ]
+   }
+  }
+ },
+ "register": {
+  "from": "salute",
+  "extras": {
+   "loop": false
+  }
+ },
+ "greet": {
+  "from": "wave",
+  "extras": {
+   "loop": false
+  }
+ },
+ "dash": {
+  "from": "dive",
+  "window": [
+   0.55,
+   0.95
+  ],
+  "extras": {
+   "loop": false,
+   "impact_s": null
+  }
+ },
+ "strike1": {
+  "from": "box_03",
+  "window": [
+   0.52,
+   1.1
+  ],
+  "extras": {
+   "loop": false,
+   "impact_s": 0.15,
+   "step_s": 0.15,
+   "step_foot": "L"
+  }
+ },
+ "strike2": {
+  "from": "box_02",
+  "window": [
+   1.97,
+   2.6
+  ],
+  "extras": {
+   "loop": false,
+   "impact_s": 0.15,
+   "step_s": 0.15,
+   "step_foot": "R"
+  }
+ },
+ "strike3": {
+  "from": "front_kick_02",
+  "window": [
+   0.57,
+   1.33
+  ],
+  "extras": {
+   "loop": false,
+   "impact_s": 0.18,
+   "step_s": 0.18,
+   "step_foot": "L"
+  }
+ },
+ "slash1": {
+  "from": "slash",
+  "window": [
+   1.78,
+   2.58
+  ],
+  "extras": {
+   "loop": false,
+   "impact_s": 0.3,
+   "step_s": 0.3,
+   "step_foot": "L"
+  }
+ },
+ "strike_charge": {
+  "from": "slash",
+  "window": [
+   0.95,
+   1.95
+  ],
+  "extras": {
+   "loop": false,
+   "hold": true,
+   "full_s": 1
+  }
+ },
+ "strike_super": {
+  "from": "slash",
+  "window": [
+   1.95,
+   2.6
+  ],
+  "extras": {
+   "loop": false,
+   "impact_s": 0.13,
+   "step_s": 0.13,
+   "step_foot": "L",
+   "from": "strike_charge"
+  }
+ },
+ "cast_lance": {
+  "from": "cast_a_spell",
+  "window": [
+   2.32,
+   3
+  ],
+  "extras": {
+   "loop": false,
+   "release_s": 0.1,
+   "hand": "R",
+   "step_s": 0.1,
+   "step_foot": "L"
+  }
+ },
+ "cast_snare": {
+  "from": "cast_a_spell",
+  "window": [
+   1.07,
+   1.75
+  ],
+  "extras": {
+   "loop": false,
+   "release_s": 0.1,
+   "hand": "R",
+   "step_s": 0.1,
+   "step_foot": "R"
+  }
+ }
+}

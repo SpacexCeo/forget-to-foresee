@@ -54,13 +54,13 @@ export function parseArgs(argv, now = Date.now()) {
   return { ...o, from, to, accounts: o.accounts || ACCOUNTS };
 }
 
-async function getJson(fetchFn, url, tries = 5) {
+async function getJson(fetchFn, url, tries = 12) {
   for (let i = 0; ; i++) {
     let res;
     try { res = await fetchFn(url); } catch (e) { if (i >= tries) throw e; }
     if (res && res.ok) return res.json();
     if (i >= tries) throw new Error(`HTTP ${res ? res.status : 'error'} for ${url}`);
-    await new Promise((r) => setTimeout(r, Math.min(30000, 1000 * 2 ** i))); // 429 or a hiccup: back off
+    await new Promise((r) => setTimeout(r, Math.min(60000, 1000 * 2 ** i))); // 429 or a hiccup: back off (NearBlocks rate-limits a full day for minutes)
   }
 }
 

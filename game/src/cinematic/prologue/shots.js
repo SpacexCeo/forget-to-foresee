@@ -14,34 +14,47 @@ export const SHOTS = Object.freeze([
   { id: 'P4', t0: 10.0, t1: 13.5, p0: [0.1, 1.55, -1.6], p1: [0.9, 1.5, -2.2], l0: [2.2, 1.3, -3.4], l1: [2.2, 1.3, -3.4], f0: 32, f1: 32, ease: true },
   { id: 'P5', t0: 13.5, t1: 15.5, p0: [2.55, 1.05, -2.55], p1: [2.55, 1.05, -2.55], l0: [2.9, 0.84, -3.1], l1: [2.9, 0.84, -3.1], f0: 28, f1: 28, shake: 0.004 },
   { id: 'P6', t0: 15.5, t1: 19.5, p0: [-1.2, 1.7, 2.8], p1: [0.4, 1.6, 1.6], l0: [3.2, 1.5, 0.4], l1: [3.2, 1.5, 0.4], f0: 38, f1: 34, ease: true },
-  { id: 'P7', t0: 19.5, t1: 23.5, p0: [-1.2, 1.0, 2.2], p1: [0.2, 1.1, 1.9], l0: [3.2, 1.3, 0.4], l1: [3.2, 1.3, 0.4], f0: 34, f1: 34 },
-  { id: 'P8', t0: 23.5, t1: 26.5, p0: [3.0, 1.6, 0.95], p1: [2.95, 1.6, 0.85], l0: [2.2, 1.55, 0.5], l1: [2.2, 1.55, 0.5], f0: 30, f1: 30 },
+  // P7 at eye level and back (QA pass 2 #4): the old low camera 1.8 m from her path looked up at her raised arms, which filled the
+  // frame and, lit from below, read as another outfit; now she crosses the room to the device in a full-figure shot
+  { id: 'P7', t0: 19.5, t1: 23.5, p0: [-1.9, 1.55, 2.9], p1: [-0.6, 1.5, 2.7], l0: [1.4, 1.15, 0.5], l1: [3.0, 1.25, 0.4], f0: 38, f1: 36, ease: true },
+  { id: 'P8', t0: 23.5, t1: 26.5, p0: [3.15, 1.65, 2.1], p1: [3.1, 1.65, 1.95], l0: [2.2, 1.55, 0.5], l1: [2.2, 1.55, 0.5], f0: 42, f1: 42 }, // her startle whole, hands in frame (QA 14.11: the QA rig's '19.6 s' frame was this shot)
   { id: 'P9', t0: 26.5, t1: 31.0, p0: [0.6, 1.55, 1.1], p1: [1.2, 1.5, 0.7], l0: [3.2, 1.5, 0.4], l1: [3.2, 1.5, 0.4], f0: 45, f1: 72, shake: 0.12, roll: 4 },
   { id: 'P10', t0: 31.0, t1: 35.5, tunnel: true, f0: 80, f1: 80, roll: 25 },
   { id: 'P11', t0: 35.5, t1: 38.0, tunnel: true, f0: 80, f1: 80 },
 ]);
 
-/** Cues (9.5): id, time, and what the dialogue layer shows. Emitted on the bus as `prologue.cue`. */
+/**
+ * Cues (9.5): id, time, and what the dialogue layer shows. Emitted on the bus as `prologue.cue`. `voice` names Iris's
+ * line in npe/voice.js VOICE_LINES; the intro plays it with the subtitle (npe/index.js).
+ */
 export const CUES = Object.freeze([
   { id: 'title', t: 0.0, text: 'FORGET TO FORESEE', durMs: 2800, card: true },
   { id: 'year', t: 3.0, text: "2048. Dr. Iris's laboratory.", durMs: 3800 },
+  { id: 'hmm', t: 9.9, speaker: 'Iris', text: 'Hmm...', durMs: 500, voice: 'iris_hmm' },
   { id: 'check', t: 10.4, speaker: 'Iris', text: 'One more check on the signal...', durMs: 2800 },
   { id: 'key_press', t: 14.0 },
   { id: 'device_on', t: 15.8 },
-  { id: 'oh_no', t: 24.3, speaker: 'Iris', text: 'Oh no...', durMs: 1400, voice: 'voice_iris_oh_no' },
+  { id: 'oh_no', t: 24.3, speaker: 'Iris', text: 'Oh no...', durMs: 1400, voice: 'iris_oh_no' },
   { id: 'vortex_start', t: 26.5 },
+  { id: 'gasp', t: 26.7, speaker: 'Iris', text: 'Ah!', durMs: 900, voice: 'iris_gasp' },
   { id: 'tunnel', t: 31.0 },
   { id: 'whiteout', t: 34.6 },
 ]);
 export const WAKE_CUES = Object.freeze([{ id: 'eyes_open', t: 0.0 }, { id: 'crowd', t: 3.0 }, { id: 'sit_up', t: 6.0 }]);
 
-/** Iris: where she is and which clip plays. [t0, t1, from [x, z], to [x, z], clip]; she stands at `to` afterwards. */
+/**
+ * Iris: where she is and which clip plays. [t0, t1, from [x, z], to [x, z], clip]; she stands at `to` afterwards.
+ * She only ever walks, at an unhurried pace (owner, 14.11: "only a slow animation"): no segment is faster than
+ * WALK_MAX m/s, and the prologue plays the walk clip at her actual speed so the feet never slide.
+ */
+export const WALK_SPEED = 1.25;   // m/s at which the walk clip plays at its own rate
+export const WALK_MAX = 1.4;
 export const IRIS_PATH = Object.freeze([
   [3.0, 3.6, [-3, 5.5], [-3, 5.5], 'idle'],            // behind the door while it opens
-  [3.6, 7.4, [-3, 5.5], [-2.6, 1.6], 'run'],
-  [7.4, 9.6, [-2.6, 1.6], [0.6, -2.4], 'walk'],
-  [9.6, 10.6, [0.6, -2.4], [0.6, -2.4], 'idle'],
-  [10.6, 12.0, [0.6, -2.4], [1.9, -2.75], 'walk'],     // to the desk
+  [3.6, 6.6, [-3, 5.5], [-2.6, 1.6], 'walk'],
+  [6.6, 10.5, [-2.6, 1.6], [0.6, -2.4], 'walk'],
+  [10.5, 10.9, [0.6, -2.4], [0.6, -2.4], 'idle'],
+  [10.9, 12.0, [0.6, -2.4], [1.9, -2.75], 'walk'],     // to the desk
   [12.0, 15.9, [1.9, -2.75], [1.9, -2.75], 'idle'],
   [15.9, 19.5, [1.9, -2.75], [-0.3, 0.6], 'walk'],     // she turns and steps back into the room
   [19.5, 23.2, [-0.3, 0.6], [2.2, 0.5], 'walk'],       // toward the device
@@ -74,7 +87,7 @@ export function irisAt(t) {
   for (const s of IRIS_PATH) { if (t < s[1]) { seg = s; break; } const dx = s[3][0] - s[2][0], dz = s[3][1] - s[2][1]; if (Math.hypot(dx, dz) > 1e-3) prevDir = Math.atan2(dx, dz); }
   const [t0, t1, a, b, clip] = seg, k = clamp01((t - t0) / (t1 - t0));
   const dx = b[0] - a[0], dz = b[1] - a[1], moving = Math.hypot(dx, dz) > 1e-3 && t < t1;
-  return { x: lerp(a[0], b[0], k), z: lerp(a[1], b[1], k), heading: moving ? Math.atan2(dx, dz) : prevDir, clip, moving };
+  return { x: lerp(a[0], b[0], k), z: lerp(a[1], b[1], k), heading: moving ? Math.atan2(dx, dz) : prevDir, clip, moving, speed: moving ? Math.hypot(dx, dz) / (t1 - t0) : 0 };
 }
 
 /** The cues that fall in (from, to]. */

@@ -110,4 +110,10 @@ test('act: GET reads the guest\'s row, deeds and limits; POST without a coordina
   const res = { headers: {}, setHeader(k, v) { this.headers[k] = v; }, end(b) { this.body = b; } };
   await h({ method: 'POST', headers: {}, url: '/api/town/act', body: {} }, res);
   assert.equal(res.statusCode, 503);
+  // the stall window before the Day 1 mint: a stall's state without an account; the player's own state still needs one
+  const get = async (url) => { const r = { headers: {}, setHeader(k, v) { this.headers[k] = v; }, end(b) { this.body = b; } }; await h({ method: 'GET', headers: {}, url }, r); return r; };
+  const open = await get('/api/town/act?trader=trader-01.ftf-town.testnet');
+  assert.equal(open.statusCode || 200, 200); assert.equal(JSON.parse(open.body).position, null);
+  assert.equal((await get('/api/town/act')).statusCode, 400, 'no account and no trader');
+  assert.equal((await get('/api/town/act?trader=trader-01.ftf-town.testnet&account_id=BAD!')).statusCode, 400);
 });

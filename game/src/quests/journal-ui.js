@@ -67,6 +67,9 @@ html[data-motion=reduce] .fj.fj-anim{animation:none}
  * @param {(id: string) => void} [o.onAbandon] @param {(tab: string) => void} [o.onOpen] @param {(tab: string) => void} [o.onClose]
  * @param {() => number} [o.now] @param {() => boolean} [o.reduced]
  */
+/** A chest tier's name: journal.tier.<tier>, else the tier id capitalised. */
+const chestTier = (say, t) => { const k = 'journal.tier.' + t, v = say(k); return v && v !== k ? v : t[0].toUpperCase() + t.slice(1); };
+
 export function createJournalUI({ doc, win, say, model, giverName, onWalk, onTrack, onAbandon = () => {}, onOpen = () => {}, onClose = () => {}, now = () => Date.now(), reduced = () => false, trackerShown = null, onTrackerShown = () => {} }) {
   if (!doc.getElementById || !doc.getElementById('fj-css')) { const st = doc.createElement('style'); st.id = 'fj-css'; st.textContent = CSS; (doc.head || doc.body).append(st); }
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -161,7 +164,7 @@ export function createJournalUI({ doc, win, say, model, giverName, onWalk, onTra
     const rw = el('div', 'fj-rewards');
     if (v.rewards.silk) rw.append(el('span', 'fj-rw silk', say('journal.reward.silk', { n: v.rewards.silk })));
     if (v.rewards.xp) rw.append(el('span', 'fj-rw xp', say('journal.reward.xp', { n: v.rewards.xp })));
-    if (v.rewards.chest) rw.append(el('span', 'fj-rw chest', say('journal.reward.chest', { tier: v.rewards.chest[0].toUpperCase() + v.rewards.chest.slice(1) })));
+    if (v.rewards.chest) rw.append(el('span', 'fj-rw chest', say('journal.reward.chest', { tier: chestTier(say, v.rewards.chest) })));
     if (v.rewards.title) rw.append(el('span', 'fj-rw', say('journal.reward.title', { title: v.rewards.title })));
     d.append(rw);
     if (v.hints.length) { d.append(el('div', 'fj-sec', say('journal.howto'))); const ol = el('ol', 'fj-hints'); for (const hnt of v.hints) ol.append(el('li', null, hnt.text)); d.append(ol); }

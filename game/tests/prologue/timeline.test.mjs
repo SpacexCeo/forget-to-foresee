@@ -2,14 +2,14 @@
 // lands within 1.2 s, reduced motion is shorter and calmer.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { SHOTS, CUES, PROLOGUE_S, SKIP_S, REDUCED_S, cameraAt, irisAt, shotAt, reducedTime, IRIS_PATH } from '../../src/cinematic/prologue/shots.js';
+import { SHOTS, CUES, PROLOGUE_S, SKIP_S, REDUCED_S, cameraAt, irisAt, shotAt, reducedTime, IRIS_PATH, WALK_MAX } from '../../src/cinematic/prologue/shots.js';
 import { createTimeline } from '../../src/cinematic/prologue/timeline.js';
 
 test('the shots tile 0..38 s without gaps; the cues are in order and inside the film', () => {
   assert.equal(SHOTS[0].t0, 0); assert.equal(SHOTS[SHOTS.length - 1].t1, PROLOGUE_S);
   for (let i = 1; i < SHOTS.length; i++) assert.equal(SHOTS[i].t0, SHOTS[i - 1].t1);
   for (let i = 1; i < CUES.length; i++) assert.ok(CUES[i].t > CUES[i - 1].t);
-  assert.deepEqual(CUES.map((c) => c.id), ['title', 'year', 'check', 'key_press', 'device_on', 'oh_no', 'vortex_start', 'tunnel', 'whiteout']);
+  assert.deepEqual(CUES.map((c) => c.id), ['title', 'year', 'hmm', 'check', 'key_press', 'device_on', 'oh_no', 'vortex_start', 'gasp', 'tunnel', 'whiteout']);
   assert.equal(CUES.find((c) => c.id === 'oh_no').t, 24.3);
   assert.equal(shotAt(24.3).id, 'P8'); assert.equal(shotAt(99).id, 'P11');
 });
@@ -23,10 +23,12 @@ test('the camera interpolates inside a shot; reduced motion has no shake, no rol
   const m = cameraAt(5.0); assert.ok(m.pos[0] < 0.8 && m.pos[0] > 0.2 && m.fov < 42 && m.fov > 38);
 });
 
-test('Iris enters at 3 s, runs in, ends at the device; her path is continuous', () => {
+test('Iris enters at 3 s, walks in, ends at the device; her path is continuous', () => {
   assert.equal(irisAt(1), null);
   for (let i = 1; i < IRIS_PATH.length; i++) { assert.equal(IRIS_PATH[i][0], IRIS_PATH[i - 1][1]); assert.deepEqual(IRIS_PATH[i][2], IRIS_PATH[i - 1][3]); }
-  assert.equal(irisAt(5).clip, 'run'); assert.equal(irisAt(5).moving, true);
+  assert.equal(irisAt(5).clip, 'walk'); assert.equal(irisAt(5).moving, true);
+  // she only walks, never faster than a calm pace (owner, 14.11)
+  for (const [t0, t1, a, b, clip] of IRIS_PATH) { assert.notEqual(clip, 'run'); assert.ok(Math.hypot(b[0] - a[0], b[1] - a[1]) / (t1 - t0) <= WALK_MAX, `${t0}..${t1} s is too fast`); }
   const end = irisAt(25); assert.deepEqual([end.x, end.z, end.clip, end.moving], [2.2, 0.5, 'idle', false]);
   assert.ok(Math.abs(irisAt(25).heading - Math.atan2(2.5, -0.1)) < 1e-9); // still facing the way she walked: the device
 });
@@ -67,5 +69,15 @@ test('wake-up ring: people stand on the circle facing in, with a gap left open',
     assert.ok(Math.hypot(p.x + Math.sin(p.heading) * 0.1, p.z + Math.cos(p.heading) * 0.1) < RING.radius);
     const a = Math.atan2(p.x, p.z), d = Math.abs(Math.atan2(Math.sin(a - RING.gapAt), Math.cos(a - RING.gapAt)));
     assert.ok(d > RING.gap / 2 - 1e-9, 'nobody in the gap');
+  }
+});
+
+test('the startle shot (P8) shows her whole: the camera stands back and her raised hands and her waist are in frame (QA 14.11)', () => {
+  const v = (a, b) => [b[0] - a[0], b[1] - a[1], b[2] - a[2]], len = (a) => Math.hypot(...a), dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  for (let t = 24.6; t < 26.5; t += 0.3) {
+    const cam = cameraAt(t), ir = irisAt(t); assert.equal(cam.id, 'P8');
+    const her = [ir.x, 1.4, ir.z]; assert.ok(len(v(cam.pos, her)) > 1.6, `far enough at ${t.toFixed(1)}`);
+    const fwd = v(cam.pos, cam.look), half = (cam.fov / 2) * Math.PI / 180;
+    for (const y of [2.15, 1.0]) { const d = v(cam.pos, [ir.x, y, ir.z]); const ang = Math.acos(dot(d, fwd) / len(d) / len(fwd)); assert.ok(ang < half, `y ${y} in frame at ${t.toFixed(1)}`); }
   }
 });

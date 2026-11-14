@@ -122,3 +122,23 @@ test('intro: a failing A6 module falls back to the title card; Skip all says how
   assert.deepEqual(grants, []); assert.ok(toasts.includes(NPE['npe.skipped']));
   run.skip(); const s = await run.state; assert.equal(s.rec.cardSeen, false);
 });
+
+test('intro: Iris speaks her prologue lines with their subtitles, only with the sound on; speech stands in only with narration (QA 14.11)', async () => {
+  const { CUES } = await import('../../src/cinematic/prologue/shots.js');
+  const run = async (storage) => {
+    const doc = dom(); const played = []; let onCue = null;
+    const { runIntro } = await import('../../src/npe/index.js');
+    const bus = { emit: () => {}, on: (n, f) => { if (n === 'prologue.cue') onCue = f; return () => { onCue = null; }; } };
+    const voice = { play: async (id, o) => { played.push([id, o.speech]); return 'file'; } };
+    const r = runIntro({ doc, t: (k) => k, storage, bus, voice, reduced: () => true, search: '', noQueueWait: true,
+      prologue: { playLabPrologue: async () => { for (const c of CUES) onCue({ ...c }); return 'done'; }, playWakeUp: async () => {} } });
+    await tick(3); r.skip(); await tick(2); r.skip(); await tick(2); r.skip(); await r.state;
+    return played;
+  };
+  const on = memoryStorage();
+  assert.deepEqual(await run(on), [['iris_hmm', false], ['iris_oh_no', false], ['iris_gasp', false]], 'each voiced cue once, no speech without narration');
+  const narr = memoryStorage(); narr.setItem('ftf.prefs.v1', JSON.stringify({ narration: true }));
+  assert.deepEqual((await run(narr)).map((x) => x[1]), [true, true, true], 'narration on: the speech may stand in');
+  const mute = memoryStorage(); mute.setItem('ftf.audio.v2', JSON.stringify({ master: 0 }));
+  assert.deepEqual(await run(mute), [], 'master at 0: silence');
+});

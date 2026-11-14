@@ -1,0 +1,3 @@
+{
+ "_": "The pack's clip name -> the game's clip name (play/anim-library.js, scenes/*: idle, idle2, walk, run, dash, skid, strike1..3, strike_charge, strike_super, cast_lance, cast_snare, greet, register, celebrate, defeat). Filled in when the Tripo pack lands; unmapped clips keep a snake_case form of their own name."
+}

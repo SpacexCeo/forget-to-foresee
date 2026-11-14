@@ -6,180 +6,198 @@
    "nameKey": "item.shard_pearl_drop",
    "kind": "shard",
    "rarity": "common",
-   "icon": "icons/shard_pearl_drop_256.png",
-   "icon128": "icons/shard_pearl_drop_128.png",
+   "icon": "icons/shard_pearl_drop_256.webp",
+   "icon128": "icons/shard_pearl_drop_128.webp",
    "glb": "shard_pearl_drop.glb",
-   "tris": 712
+   "tris": 712,
+   "icon64": "icons/shard_pearl_drop_64.webp"
   },
   {
    "id": "shard_pearl_tablet",
    "nameKey": "item.shard_pearl_tablet",
    "kind": "shard",
    "rarity": "common",
-   "icon": "icons/shard_pearl_tablet_256.png",
-   "icon128": "icons/shard_pearl_tablet_128.png",
+   "icon": "icons/shard_pearl_tablet_256.webp",
+   "icon128": "icons/shard_pearl_tablet_128.webp",
    "glb": "shard_pearl_tablet.glb",
-   "tris": 568
+   "tris": 568,
+   "icon64": "icons/shard_pearl_tablet_64.webp"
   },
   {
    "id": "shard_teal_twin",
    "nameKey": "item.shard_teal_twin",
    "kind": "shard",
    "rarity": "uncommon",
-   "icon": "icons/shard_teal_twin_256.png",
-   "icon128": "icons/shard_teal_twin_128.png",
+   "icon": "icons/shard_teal_twin_256.webp",
+   "icon128": "icons/shard_teal_twin_128.webp",
    "glb": "shard_teal_twin.glb",
-   "tris": 764
+   "tris": 764,
+   "icon64": "icons/shard_teal_twin_64.webp"
   },
   {
    "id": "shard_teal_octa",
    "nameKey": "item.shard_teal_octa",
    "kind": "shard",
    "rarity": "uncommon",
-   "icon": "icons/shard_teal_octa_256.png",
-   "icon128": "icons/shard_teal_octa_128.png",
+   "icon": "icons/shard_teal_octa_256.webp",
+   "icon128": "icons/shard_teal_octa_128.webp",
    "glb": "shard_teal_octa.glb",
-   "tris": 692
+   "tris": 692,
+   "icon64": "icons/shard_teal_octa_64.webp"
   },
   {
    "id": "shard_violet_cluster",
    "nameKey": "item.shard_violet_cluster",
    "kind": "shard",
    "rarity": "rare",
-   "icon": "icons/shard_violet_cluster_256.png",
-   "icon128": "icons/shard_violet_cluster_128.png",
+   "icon": "icons/shard_violet_cluster_256.webp",
+   "icon128": "icons/shard_violet_cluster_128.webp",
    "glb": "shard_violet_cluster.glb",
-   "tris": 612
+   "tris": 612,
+   "icon64": "icons/shard_violet_cluster_64.webp"
   },
   {
    "id": "shard_violet_spire",
    "nameKey": "item.shard_violet_spire",
    "kind": "shard",
    "rarity": "rare",
-   "icon": "icons/shard_violet_spire_256.png",
-   "icon128": "icons/shard_violet_spire_128.png",
+   "icon": "icons/shard_violet_spire_256.webp",
+   "icon128": "icons/shard_violet_spire_128.webp",
    "glb": "shard_violet_spire.glb",
-   "tris": 560
+   "tris": 560,
+   "icon64": "icons/shard_violet_spire_64.webp"
   },
   {
    "id": "shard_amber_crown",
    "nameKey": "item.shard_amber_crown",
    "kind": "shard",
    "rarity": "legendary",
-   "icon": "icons/shard_amber_crown_256.png",
-   "icon128": "icons/shard_amber_crown_128.png",
+   "icon": "icons/shard_amber_crown_256.webp",
+   "icon128": "icons/shard_amber_crown_128.webp",
    "glb": "shard_amber_crown.glb",
-   "tris": 848
+   "tris": 848,
+   "icon64": "icons/shard_amber_crown_64.webp"
   },
   {
    "id": "shard_amber_blade",
    "nameKey": "item.shard_amber_blade",
    "kind": "shard",
    "rarity": "legendary",
-   "icon": "icons/shard_amber_blade_256.png",
-   "icon128": "icons/shard_amber_blade_128.png",
+   "icon": "icons/shard_amber_blade_256.webp",
+   "icon128": "icons/shard_amber_blade_128.webp",
    "glb": "shard_amber_blade.glb",
-   "tris": 564
+   "tris": 564,
+   "icon64": "icons/shard_amber_blade_64.webp"
   },
   {
    "id": "part_gear",
    "nameKey": "item.part_gear",
    "kind": "part",
    "rarity": "common",
-   "icon": "icons/part_gear_256.png",
-   "icon128": "icons/part_gear_128.png",
+   "icon": "icons/part_gear_256.webp",
+   "icon128": "icons/part_gear_128.webp",
    "glb": "part_gear.glb",
-   "tris": 1172
+   "tris": 1172,
+   "icon64": "icons/part_gear_64.webp"
   },
   {
    "id": "part_spring_coil",
    "nameKey": "item.part_spring_coil",
    "kind": "part",
    "rarity": "common",
-   "icon": "icons/part_spring_coil_256.png",
-   "icon128": "icons/part_spring_coil_128.png",
+   "icon": "icons/part_spring_coil_256.webp",
+   "icon128": "icons/part_spring_coil_128.webp",
    "glb": "part_spring_coil.glb",
-   "tris": 1664
+   "tris": 1664,
+   "icon64": "icons/part_spring_coil_64.webp"
   },
   {
    "id": "part_chain_link",
    "nameKey": "item.part_chain_link",
    "kind": "part",
    "rarity": "common",
-   "icon": "icons/part_chain_link_256.png",
-   "icon128": "icons/part_chain_link_128.png",
+   "icon": "icons/part_chain_link_256.webp",
+   "icon128": "icons/part_chain_link_128.webp",
    "glb": "part_chain_link.glb",
-   "tris": 960
+   "tris": 960,
+   "icon64": "icons/part_chain_link_64.webp"
   },
   {
    "id": "part_rivet_plate",
    "nameKey": "item.part_rivet_plate",
    "kind": "part",
    "rarity": "common",
-   "icon": "icons/part_rivet_plate_256.png",
-   "icon128": "icons/part_rivet_plate_128.png",
+   "icon": "icons/part_rivet_plate_256.webp",
+   "icon128": "icons/part_rivet_plate_128.webp",
    "glb": "part_rivet_plate.glb",
-   "tris": 880
+   "tris": 880,
+   "icon64": "icons/part_rivet_plate_64.webp"
   },
   {
    "id": "part_spindle",
    "nameKey": "item.part_spindle",
    "kind": "part",
    "rarity": "uncommon",
-   "icon": "icons/part_spindle_256.png",
-   "icon128": "icons/part_spindle_128.png",
+   "icon": "icons/part_spindle_256.webp",
+   "icon128": "icons/part_spindle_128.webp",
    "glb": "part_spindle.glb",
-   "tris": 602
+   "tris": 602,
+   "icon64": "icons/part_spindle_64.webp"
   },
   {
    "id": "part_crank",
    "nameKey": "item.part_crank",
    "kind": "part",
    "rarity": "uncommon",
-   "icon": "icons/part_crank_256.png",
-   "icon128": "icons/part_crank_128.png",
+   "icon": "icons/part_crank_256.webp",
+   "icon128": "icons/part_crank_128.webp",
    "glb": "part_crank.glb",
-   "tris": 652
+   "tris": 652,
+   "icon64": "icons/part_crank_64.webp"
   },
   {
    "id": "part_valve",
    "nameKey": "item.part_valve",
    "kind": "part",
    "rarity": "uncommon",
-   "icon": "icons/part_valve_256.png",
-   "icon128": "icons/part_valve_128.png",
+   "icon": "icons/part_valve_256.webp",
+   "icon128": "icons/part_valve_128.webp",
    "glb": "part_valve.glb",
-   "tris": 1044
+   "tris": 1044,
+   "icon64": "icons/part_valve_64.webp"
   },
   {
    "id": "part_gauge",
    "nameKey": "item.part_gauge",
    "kind": "part",
    "rarity": "rare",
-   "icon": "icons/part_gauge_256.png",
-   "icon128": "icons/part_gauge_128.png",
+   "icon": "icons/part_gauge_256.webp",
+   "icon128": "icons/part_gauge_128.webp",
    "glb": "part_gauge.glb",
-   "tris": 1084
+   "tris": 1084,
+   "icon64": "icons/part_gauge_64.webp"
   },
   {
    "id": "part_brass_lens",
    "nameKey": "item.part_brass_lens",
    "kind": "part",
    "rarity": "rare",
-   "icon": "icons/part_brass_lens_256.png",
-   "icon128": "icons/part_brass_lens_128.png",
+   "icon": "icons/part_brass_lens_256.webp",
+   "icon128": "icons/part_brass_lens_128.webp",
    "glb": "part_brass_lens.glb",
-   "tris": 1252
+   "tris": 1252,
+   "icon64": "icons/part_brass_lens_64.webp"
   },
   {
    "id": "part_glyph_cogring",
    "nameKey": "item.part_glyph_cogring",
    "kind": "part",
    "rarity": "legendary",
-   "icon": "icons/part_glyph_cogring_256.png",
-   "icon128": "icons/part_glyph_cogring_128.png",
+   "icon": "icons/part_glyph_cogring_256.webp",
+   "icon128": "icons/part_glyph_cogring_128.webp",
    "glb": "part_glyph_cogring.glb",
-   "tris": 2838
+   "tris": 2838,
+   "icon64": "icons/part_glyph_cogring_64.webp"
   },
   {
    "id": "prop_wheel_of_fortune",

@@ -77,6 +77,10 @@ A phone (coarse pointer) has no lobby and starts in the town directly.
 - Inside a `.glb`: `*_col` meshes become colliders (never rendered); `socket_lamp_*` empties get up to six warm
   point lights without shadows on the six nearest Iris (they fade as they move); `town_sky` is visual only (its colliders,
   if any, are ignored and it casts no shadow).
+- The camera also collides with the drawn `*_plaster` and `*_roof` meshes of every piece (camera-only triangles,
+  `town.cameraShellTriangles`): the `_col` boxes wrap the ground floors, the upper floors lean over the street.
+  `M_Town_Plaster`, `M_Town_Roof`, `M_Town_Stone` and `M_Town_Timber` are drawn on both sides (shadow pass unchanged).
+  Pure part: `render/camera-boom.js`, `tests/client/camera-boom.test.mjs`.
 - `town_altar.glb`: material `M_Altar_Core` (the crystal) is driven by code: `emissiveIntensity` 0.3 asleep, 1.3
   awake (eased from 2.5 radii down to the prompt radius), a slow pulse (steady under reduced motion), and a flare
   during registration. The authored emissive strength is overwritten; colour is kept. The ring glyphs (nodes
@@ -88,6 +92,32 @@ A phone (coarse pointer) has no lobby and starts in the town directly.
   `TOWN_ORIGIN.y − 32` as mist around the hill; the sun, sky and time of day stay. Restored on leaving.
 - `tests/client/assets-budget.test.mjs` checks the town folder too. `TOWN_BLOCKOUT_OK` (now `false`: the final files are in) would tolerate an
   uncompressed blockout round.
+
+## Shop interiors: light and rebuild (14.11)
+
+The three walk-in rooms (`town_shop_exchange`, `town_shop_scribe`, `town_shop_inn`) are lit by one ambient light in
+the client (`SHOP_LIGHT` in `scenes/town-layout.js`), so all their light is baked:
+
+- **Lightmap.** Every large surface carries a second UV set (`TEXCOORD_1`) and the room one texture
+  `lm_<piece>` (baked at 2048², shipped at 1536², 1024² in `_m`), shipped as the material's occlusion map. three.js multiplies ambient light by the
+  occlusion map, so it works as a greyscale lightmap with no client code. Materials that use it are named
+  `<source>_LM_<room>` (`M_Town_Timber_LM_inn`): the `M_Town_` / `M_Shop_` prefixes the client keys on are kept.
+- **Vertex colour** keeps the tint and the hue of the light; small props (under 0.6 m) stay fully per-vertex.
+- **If a room reads too dark or too bright in the game**, change `SHOP_LIGHT.exposure` (stops) first; the bake's own
+  knobs are `TOWN_BAKE_MID` (where the median lit texel lands, default 0.41) and `TOWN_BAKE_GAMMA` (contrast, 2.1).
+- **Closed rooms.** A dark inward-facing shell sits 6 cm behind every wall, the ceiling and the floor.
+- **The hidden grotto** is part of the Exchange's file: an arch in the rear wall (`GROTTO_ARCH`), a rock passage, a
+  cave with shard growths. Sockets `grotto_center`, `socket_lamp_grotto`.
+
+Rebuild on the GPU box (about 2 minutes per room), then compress:
+
+    blender -b -P art/town/build_town.py -- textures        # once: the tiling sets
+    TOWN_PREVIEW=1 blender -b -P art/town/build_town.py -- build town_shop_exchange town_shop_scribe town_shop_inn
+    art/town/compress_shops.sh
+
+`TOWN_PREVIEW=1` writes `docs/art/town/qa/shop_<id>_<view>.jpg` exactly as the game lights the room (base colour x
+vertex colour x lightmap); `TOWN_LM_SUPER=1 TOWN_LM_SAMPLES=256` is the fast setting for iteration. A partial build
+(piece names given) never rewrites `town-data.js`.
 
 ## Ambient life
 

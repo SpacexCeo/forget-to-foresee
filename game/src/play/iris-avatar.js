@@ -161,7 +161,7 @@ export class IrisAvatar {
    * A skill cast (scenes/town-casting.js): `cast_lance`, `cast_snare`. A slow wind-up, the release frame, an overshoot
    * and a settle, played over everything else; she stands still for it (the caller holds her walk until shortly after
    * the release), and a step after that cuts the settle short. Returns the clip's timing in seconds, or null when the
-   * clip is missing (`?anim=v1`, `?anim=classic`): `release` is when the cast leaves her hand.
+   * clip is missing (`?anim=classic`, a heroine without cast clips): `release` is when the cast leaves her hand.
    */
   cast(name) {
     const m = this.irisModel;

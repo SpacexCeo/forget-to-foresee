@@ -124,24 +124,51 @@ export function nearConnector(load = () => import(/* @vite-ignore */ NEAR_CONNEC
 }
 
 /**
+ * A NEAR Connect answer -> {accountId, publicKey, signature}, or null. Wallets differ: the typed shape nests it under
+ * `signedMessage`, HOT's sign-in answers flat, some name the fields in snake case or give the signature as bytes.
+ */
+export function signedOf(a) {
+  if (!a || typeof a !== 'object') return null;
+  const m = a.signedMessage && typeof a.signedMessage === 'object' ? a.signedMessage : a;
+  const accountId = m.accountId || m.account_id || a.accountId || a.account_id;
+  const publicKey = m.publicKey || m.public_key || a.publicKey || a.public_key;
+  let signature = m.signature;
+  if (signature && typeof signature !== 'string') { try { signature = b64(Uint8Array.from(signature.data || signature)); } catch { signature = null; } }
+  return accountId && signature ? { accountId: String(accountId), publicKey: publicKey ? String(publicKey) : undefined, signature } : null;
+}
+/**
+ * The NEP-413 nonce as this wallet takes it. HOT's executor sends the request as JSON, where a Uint8Array turns into
+ * {"0":…,"1":…}; its own sign-in step sends a plain array, so HOT gets one here too.
+ */
+export const nonceFor = (wallet, nonce) => (wallet && wallet.manifest && wallet.manifest.id === 'hot-wallet' ? Array.from(nonce) : nonce);
+
+/**
  * The NEAR provider through NEAR Connect: the player picks HOT, Meteor, Intear, MyNearWallet… in its own chooser.
- * connect() is the device-key signature (it names the account, as with MyNearWallet).
+ * connect() is the device-key signature (it names the account, as with MyNearWallet). It is asked for inside the
+ * wallet's own sign-in step (signInAndSignMessage: one approval, not two); a wallet that connects without signing is
+ * asked once more.
  */
 export function nearConnectProvider({ connector = nearConnector } = {}) {
   let wallet = null, first = null;
-  const sign = async (message, nonce) => wallet.signMessage({ message, recipient: RECIPIENT, nonce, network: 'mainnet' });
+  const sign = async (message, nonce) => signedOf(await wallet.signMessage({ message, recipient: RECIPIENT, nonce: nonceFor(wallet, nonce), network: 'mainnet' }));
   return {
     kind: 'near', id: 'near-connect', name: 'NEAR Connect',
     async connect() {
       const c = await connector();
-      wallet = await c.connect();
-      first = await sign(DEVICE_KEY_TEXT, await deviceKeyNonce());
-      if (!first || !first.accountId || !first.signature) throw new Error('no_account');
+      const nonce = await deviceKeyNonce();
+      let signed = null;
+      const onSigned = (e) => { signed = signedOf(e && e.accounts && e.accounts[0]); };
+      if (typeof c.on === 'function') c.on('wallet:signInAndSignMessage', onSigned);
+      try { wallet = await c.connect({ signMessageParams: { message: DEVICE_KEY_TEXT, recipient: RECIPIENT, nonce } }); }
+      finally { if (typeof c.off === 'function') c.off('wallet:signInAndSignMessage', onSigned); }
+      first = signed || await sign(DEVICE_KEY_TEXT, nonce);
+      if (!first) throw new Error('no_account');
       return { address: first.accountId, publicKey: first.publicKey };
     },
     async signDeviceKey() { if (!first) throw new Error('not_connected'); return sigToBytes(first.signature); },
     async signMessage(text, nonceHex) {
       const r = await sign(text, fromHex(nonceHex));
+      if (!r) throw new Error('no_signature');
       if (!first || r.accountId !== first.accountId) throw new Error('account_changed');
       return r.signature;
     },

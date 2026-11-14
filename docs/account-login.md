@@ -11,6 +11,12 @@ Behind the feature flag `accountLogin` (`game/public/features.json`, off). `?ff=
   NEAR Mobile, Nightly, Hana, NEAR CLI). It runs on mainnet: HOT, MyNearWallet, OKX and Hana declare no testnet support,
   and a NEP-413 signature is free and moves nothing; the game account stays the testnet guest. If NEAR Connect cannot
   load, the row falls back to MyNearWallet directly.
+  The device-key text is signed inside the wallet's own sign-in step (`connect({signMessageParams})`, the wallet's
+  `signInAndSignMessage`), so a NEAR login is two wallet approvals: connect, then the sign-in message after the gold
+  "Continue in your wallet" button. HOT gets the NEP-413 nonce as a plain array (its executor sends JSON, where a
+  `Uint8Array` turns into an object). Wallets answer in different shapes (`signedMessage` nested or flat, snake-case
+  fields, byte signatures): `signedOf` in `net/wallets.js` reads them all. While a wallet is being asked, a tap outside
+  the panel or Esc does not close it. The relayer logs each link outcome (`[auth] link <kind> -> <status> <result>`).
 - **NEAR testnet account (MyNearWallet)**: MyNearWallet's NEP-413 popup on testnet, no library.
 - **EVM wallet (MetaMask and others)**, **Solana wallet (Phantom and others)**. Each EIP-6963 EVM wallet and each
   injected Solana wallet the browser has gets its own row.
@@ -19,8 +25,7 @@ Behind the feature flag `accountLogin` (`game/public/features.json`, off). `?ff=
   testnet. Nothing here has real-world value."
 - **Sign in with a passkey / Create a passkey** (first rows when the browser has WebAuthn): the "email-like" login,
   with Face ID, a fingerprint or the device PIN, no extension and no provider secret. See "Passkeys" below.
-- Email / Google: not built. No project on the owner's machine had it (the reference site uses NEAR wallets only),
-  and wallets shipped first before the feature freeze.
+- **Sign in with email** (no wallet app, e.g. on a phone): see "Email and linked methods" below. Google: not built.
 
 ## How it works
 
@@ -75,6 +80,35 @@ The Day-1 guest account stays the on-chain identity. A login links to it.
 Limits, stated honestly: a wallet whose signatures are not deterministic (some smart-contract or MPC wallets)
 cannot restore the account on a second device; the panel says so (`acct.nokey`). Rate limit: 20 requests a minute
 per IP on `/api/auth/*`. Nonces live in the relayer's memory (one process).
+
+## Email and linked methods (14 Nov)
+
+One canonical account per player: the Day-1 NEAR account every login maps to. In **Settings → Account** and in the
+account panel (the same section, `ui/account-methods.js`) a signed-in
+browser sees **Linked sign-in methods** (each with Unlink), **Link an email**, and a note that another wallet is linked
+by signing in with it while this account is open. A browser with no account sees **Sign in with email**.
+
+- **Link an email** (`net/account-email.js` linkStart / linkFinish; `relayer/lib/email-auth.js`): an account proof (a
+  message signed by a full-access key of the account, used once, 5 minutes) and the email go to
+  `POST /api/auth/email/start`; a 6-digit code is mailed. The browser makes a dedicated **email key**, adds it to the
+  account on chain (AddKey, signed by its own key), then sends the code, the key and a second proof to
+  `POST /api/auth/email/link`. The relayer checks that the key is on the account and stores it **encrypted**
+  (AES-256-GCM, `FTF_EMAIL_KEY_SECRET`) under `email:<sha256>`; the address itself is never stored (only a hint like
+  `a***@gmail.com`).
+- **Sign in with email**: `POST /api/auth/email/start` (the same answer for a known and an unknown address; no mail to
+  an unknown one), then `POST /api/auth/email/login` with the code returns the account and its email key while that key
+  is still on the account. The browser plays as that account: mints and transfers go there, as with every login.
+- Codes: 10 minutes, 5 tries, one use, 5 an hour per address, kept only as salted hashes in memory. No passwords exist.
+- `POST /api/auth/methods` and `POST /api/auth/unlink` (each with a fresh proof). Unlinking an email destroys its stored
+  key; a device that already signed in with it keeps that key until it is removed from the account (DeleteKey is not
+  wired in the panel yet).
+- **Custody, stated plainly:** email sign-in means the relayer holds an encrypted testnet key per linked email. The
+  account holds testnet NEAR and game items with no real-world value.
+- **Configuration (owner):** `RESEND_API_KEY` and `FTF_EMAIL_FROM` (a sender on a domain verified in Resend), and
+  `FTF_EMAIL_KEY_SECRET` (32 random bytes, base64). Without them the email routes answer 503 `email_not_configured`
+  and the panel says "Email sign-in is not available yet"; the methods list works regardless.
+- Tests: `relayer/tests/email-auth.test.mjs`, `game/tests/client/account-email.test.mjs` (a desktop link and a phone
+  sign-in against the real relayer code).
 
 ## Files
 

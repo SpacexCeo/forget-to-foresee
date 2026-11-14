@@ -6,6 +6,7 @@ import { b58encode, importSecretKey } from './near-tx.js';
 import { guestFrom } from './agent-ledger.js';
 import { relayerUrl } from './tee-agent.js';
 import { PASS_DEPLOYMENT } from './pass-deployment.js';
+import { EXPEDITION } from '../game/expedition-config.js';
 
 export const BOARD_SEASON = 1;
 export const NAMED_RE = /^(([a-z\d]+[-_])*[a-z\d]+\.)*([a-z\d]+[-_])*[a-z\d]+$/;
@@ -55,7 +56,10 @@ export function viewModel(ans, { explorerBase = PASS_DEPLOYMENT.explorerBase } =
     out.tokenId = ans.token_id != null ? String(ans.token_id) : null;
     if (typeof ans.tx_hash === 'string' && HASH_RE.test(ans.tx_hash)) { out.hash = ans.tx_hash; out.explorer = explorerBase + ans.tx_hash; }
   }
-  if (status === 'not_eligible') out.args = { earned: Math.floor(+ans.earned || 0).toLocaleString('en-US') };
+  if (status === 'not_eligible') {
+    const fee = Number.isFinite(+ans.needed) && +ans.needed > 0 ? Math.round(+ans.needed) : EXPEDITION.PORTAL_FEE_C / 100;
+    out.args = { earned: Math.floor(+ans.earned || 0).toLocaleString('en-US'), fee: fee.toLocaleString('en-US') };
+  }
   if (status === 'rate_limited') out.args = { n: Math.max(1, Math.ceil((+ans.retry_after_s || 60) / 60)) };
   if (status === 'tx_failed') out.args = { code: String(ans.code || 'tx_failed').replace(/[^A-Z_a-z]/g, '').slice(0, 32) };
   return out;

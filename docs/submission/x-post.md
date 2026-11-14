@@ -13,44 +13,54 @@ the post: the weekly tournament (a UI simulation), any "player-owned" or "live-m
 commitment makes the game impossible to modify (the rules run in the browser; the commitment fixes the Guests'
 events, not silk or outcomes).
 
-## Post 1 (attach the 60 s jury video: `docs/submission/jury-video.md`)
+## Post 1 (attach the jury video: `docs/submission/video-shot-list.md`)
 
-> In most AI games the AI quietly decides the ending.
+> A hill town on NEAR testnet: 20 traders, each with its own account and key, trade on chain all day. Over 21,000 trades on 13 Nov, every price with a readable reason.
 >
-> In Forget to Foresee the future is sealed before you move, rival clans scheme around you, and each prophecy costs a memory: a shard the clans bid for.
+> Play as a guest, no wallet popups.
 >
 > Built at NEAR HACKATHON by @Lambada_eth
 > @NEARProtocol #NEARHackathon
 
-(270 characters as X counts them. Credit @Lambada_eth; the agents and the memory shards up front. "The future is sealed
-before you move" holds for every season: the schedule of the Guests' events is committed to a Merkle root before
-trial 1, locally for live seasons and also on testnet for the judge season.)
+(271 characters as X counts them. Lead with the live economy. "Over 21,000 trades on 13 Nov": the public-indexer recount for the whole UTC day is
+21,233 market trades (`docs/proof/tx-2026-11-13.md`). Credit @Lambada_eth.)
 
 ## Post 2 (reply)
 
-> Why NEAR: our testnet contract holds the judge season's Merkle root, and all 15 of its events were revealed and checked on-chain against it.
+> Watch it live: https://159-195-130-113.sslip.io/api/market/stats
 >
-> Three of its forgotten memories were minted as NEP-171 NFT shards bound to that sealed season.
->
-> https://testnet.nearblocks.io/address/ftf-shards.testnet
+> The Town Ledger in the game shows every trader's account, each trade, its reason and its tx. A model on NEAR AI Cloud sets the clans' strategy once an hour; rules make every trade. Items are NEP-245 tokens.
 
-(261 characters. Only the judge season is on-chain, and the post says so. The reveals and the mints were sent by the
-coordinator script, not during a player's session; the post does not claim otherwise. The link opens the NFT
-contract.)
+(246 characters as X counts them. The stats link is the relayer's public JSON (`today`, `recent[].hash`, `strategy`). The strategy wording follows
+`docs/ai-use.md`: the model sets bounded strategy numbers, the rules engine makes every trade. NEP-245: the item
+contract is deployed; do not say items were minted until `items.ftf-town.testnet` shows supply.)
 
 ## Post 3 (reply)
 
-> Five scripted rival clans trade silk, keep or break pacts and vote. Your own AI agent can play a whole season via our HTTP API.
+> Iris, a doctor-linguist from another planet (2048), pays for prophecy with her memories. Every season is sealed before play (the judge season on NEAR); forgotten memories become NEP-171 shards.
 >
+> A market week in a minute: https://spacexceo.github.io/forget-to-foresee/economy-lab.html
 > Play: https://spacexceo.github.io/forget-to-foresee/
-> Code, 1,000+ tests: https://github.com/SpacexCeo/forget-to-foresee
+
+(275 characters as X counts them. Iris canon (README top, loading tip): a doctor-linguist from another planet, year 2048, who came through the glass.
+The seal holds for every season (local commitment); the judge season is also committed on `ftf-seasons.testnet`.)
+
+## Post 4 (reply)
+
+> Honest scope: NEAR testnet, free to play, no money value; the traders are scripted NPCs, not players. Sign in as a guest, with a wallet or a passkey.
+>
+> Code and tests: https://github.com/SpacexCeo/forget-to-foresee
 >
 > What would you forget to see the future?
 > @NearLegion @NearBuilders
 
-(278 characters. The browser plays its own local room; the HTTP API (`server/`, run locally) runs the same room module
-for agents. "1,000+ tests" = the sum of docs/STATS.md (1,025 on 12.11: game, API, relayer and eight contracts); regenerate with
-`node scripts/stats.mjs --write` and recount before posting.)
+(258 characters as X counts them. Honesty line: testnet, free, no money value, scripted traders. Never "invest", "APY", "profit" or "returns".)
+
+## Optional post 5 (reply, what is new on 14 Nov)
+
+> New today: a painted town map, every blow shows its element, a loot card when you come back from a season, lit shop interiors with a hidden grotto, and two town tales, "The Ink That Remembers" and "The Lost Tourist".
+
+(216 characters. Everything named is on the live page. The level-5 boss fight is on too, but its dragon and boss are placeholder shapes: leave it out until the models land.)
 
 Character counts: X counts each URL as 23 characters; recount after any edit.
 

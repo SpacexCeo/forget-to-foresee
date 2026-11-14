@@ -59,6 +59,7 @@ export function openChestBatch({ doc = document, t, client, chests, count, items
   doc.body.append(root);
   let resolveP, outcome = { ok: false, error: 'closed' }, flipping = [], skipped = false;
   const result = new Promise((r) => { resolveP = r; });
+  let settledP; const settled = new Promise((r) => { settledP = r; }); // the service answered: the open lock waits on this
   const close = () => { for (const h of flipping) timers.clearTimeout(h); root.remove(); resolveP(outcome); };
   root.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Escape') close(); });
   const button = (label, fn, ghost = false) => { const b = el('button', 'cb-btn' + (ghost ? ' cb-ghost' : ''), label); b.type = 'button'; b.addEventListener('click', fn); return b; };
@@ -90,11 +91,11 @@ export function openChestBatch({ doc = document, t, client, chests, count, items
     if (!r.ok) {
       outcome = { ok: false, error: r.error }; cue('ui_error');
       info.replaceChildren(el('p', null, t('chest.err.' + (ERR_KEYS.includes(r.error) ? r.error : 'bad'))), el('p', 'cb-note', t('chest.stillSealed')));
-      return;
+      settledP(outcome); return;
     }
     // settle every opening at once against its own sealed chest: the rewards are safe whatever happens next
     r.openings.forEach((op, i) => { if (chests[i]) onSettled(chests[i], op); });
-    outcome = { ok: true, openings: r.openings, cut: r.cut, batch: r.batch };
+    outcome = { ok: true, openings: r.openings, cut: r.cut, batch: r.batch }; settledP(outcome);
     cue('gift_chime');
     if (reduced) { summary(r); return; }
     // the reveal: cards face down, flipped one by one; a tap anywhere skips to the summary
@@ -106,6 +107,6 @@ export function openChestBatch({ doc = document, t, client, chests, count, items
     btns.replaceChildren(button(t('chest.batch.skipBtn'), skip, true));
     cards.forEach((c, i) => flipping.push(timers.setTimeout(() => { c.classList.remove('cb-back'); }, (i + 1) * FLIP_S * 1000)));
     flipping.push(timers.setTimeout(skip, (cards.length + 1) * FLIP_S * 1000 + 300));
-  }).catch(() => { outcome = { ok: false, error: 'network' }; info.replaceChildren(el('p', null, t('chest.err.network')), el('p', 'cb-note', t('chest.stillSealed'))); });
-  return { result, close, skip: () => root.click && root.click() };
+  }).catch(() => { outcome = { ok: false, error: 'network' }; settledP(outcome); info.replaceChildren(el('p', null, t('chest.err.network')), el('p', 'cb-note', t('chest.stillSealed'))); });
+  return { result, settled, close, skip: () => root.click && root.click() };
 }

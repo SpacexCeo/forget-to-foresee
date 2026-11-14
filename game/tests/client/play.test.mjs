@@ -205,3 +205,20 @@ test('hooks: room events become named cues that exist in the VFX and audio modul
   h.event({ type: 'fx', data: { fx: { type: 'anchor', place: 0, t: 3 } } });
   assert.deepEqual(calls, [['vfx', 'anchor_plant', [1, 2, 3]]]);
 });
+
+test('command bus: a timer that fires early (Node schedules from the loop\'s cached time) still waits for the walk to arrive', async () => {
+  let t = 1e12;
+  const tr = createLocalTransport({ seedHex: SEED, clock: () => t });
+  const slept = [];
+  // every timer returns having moved the room's clock only half of what was asked
+  const bus = new CommandBus(tr, { sleep: async (ms) => { slept.push(ms); t += ms / 2; } });
+  assert.equal((await bus.send('start_season', {})).ok, true);
+  const walk = await bus.send('move', { to: 'anchor_zone:2' });
+  assert.equal(walk.ok, true); assert.ok(walk.body.result.seconds > 0);
+  assert.ok(slept.length > 1, 'it waited again on the room clock');
+  const obs = (await tr.observe()).body.observation;
+  assert.equal(obs.you.walking, null, 'arrived');
+  const next = await bus.send('move', { to: 'camp:moss' });
+  assert.equal(next.ok, true, `the next command is not refused (${next.reason})`);
+  assert.equal(bus.stats().rejections, 0);
+});

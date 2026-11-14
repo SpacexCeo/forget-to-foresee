@@ -6,7 +6,7 @@
 // geometry. The focus the client passes is already interpolated between physics steps (docs/movement.md).
 // Inspect mode orbits a hero object up close (that is when <name>_inspect meshes swap in).
 import * as THREE from 'three';
-import { sweepSphere, MASK_CAMERA } from '../physics/collision.js';
+import { boomDistance, clearFraction } from './camera-boom.js';
 
 const DEG = Math.PI / 180;
 
@@ -35,6 +35,7 @@ export class CameraRig {
     this.followRateY = opts.followRateY ?? 5;         // 1/s, vertical follow (steps, slopes)
     this.snapDistance = opts.snapDistance ?? 6;       // a focus jump beyond this is a teleport: no easing
     this._tmp = new THREE.Vector3();
+    this._center = new THREE.Vector3(); this._dir = new THREE.Vector3(); this._a = [0, 0, 0]; this._b = [0, 0, 0]; // per-frame scratch: update() allocates nothing
     this.actualDist = this.dist;
     this.inspect = null;                         // {center: Vector3, radius, yaw, pitch, dist}
     this.lastSweep = 1;
@@ -150,20 +151,19 @@ export class CameraRig {
       const la = this._tmp.set(vel ? vel[0] : 0, 0, vel ? vel[1] : 0).multiplyScalar(this.lookAheadTime * (1 - 0.6 * this.zoomT(this.dist)));
       if (la.lengthSq() > this.lookAheadMax * this.lookAheadMax) la.setLength(this.lookAheadMax);
       this.lookAhead.lerp(la, 1 - Math.exp(-dt * 3));
-      center = sf.clone().add(this.lookAhead).add(new THREE.Vector3(0, this.focusHeightOverride ?? this.focusHeightFor(this.dist), 0));
+      center = this._center.copy(sf); center.y += this.focusHeightOverride ?? this.focusHeightFor(this.dist);
+      // The look-ahead never carries the look-at point into a wall (the boom would start inside the house).
+      center.addScaledVector(this.lookAhead, clearFraction(this.world, center.toArray(this._a), this.lookAhead.toArray(this._b), this.radius));
       yaw = this.yaw; dist = this.dist; pitch = this.pitchOverride ?? THREE.MathUtils.clamp(this.pitchFor(dist) + this.pitchOffset, this.minPitch, 75 * DEG);
       const fov = this.fovFor(dist);
       if (Math.abs(this.camera.fov - fov) > 0.01) { this.camera.fov = fov; this.camera.updateProjectionMatrix(); }
     }
-    const dir = new THREE.Vector3(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
+    const dir = this._dir.set(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
     // In inspect mode the sweep starts just outside the inspected object's bounding sphere,
     // otherwise its own colliders would pin the camera to the center.
     const start = this.inspect ? Math.min(this.inspect.radius ?? 0, dist * 0.9) : 0;
-    const from = center.clone().addScaledVector(dir, start);
-    const desired = center.clone().addScaledVector(dir, dist);
-    const f = sweepSphere(this.world, from.toArray(), desired.toArray(), this.radius, MASK_CAMERA);
-    this.lastSweep = f;
-    const safe = start + Math.max(0, f * (dist - start) - 0.05);
+    const { safe, fraction } = boomDistance(this.world, center.toArray(this._a), dir.toArray(this._b), dist, this.radius, start);
+    this.lastSweep = fraction;
     // Pull in fast but smoothly (a hard snap on every thin collider made the view jitter), ease back out slowly.
     // A large jump inward (a wall right behind the camera) still snaps so the view never ends up inside geometry.
     if (safe < this.actualDist) this.actualDist = this.actualDist - safe > 2 ? safe : this.actualDist + (safe - this.actualDist) * (1 - Math.exp(-dt * 25));

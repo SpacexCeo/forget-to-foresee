@@ -10,7 +10,16 @@ import { heroById } from '../render/asset-catalog.js';
 import { toonify } from './iris-avatar.js';
 import { townsfolkClips, sidecarClips, mergeClips, sidecarEnabled } from './anim-library.js';
 import { resolveClip } from './behaviour.js';
-import { REMOTE, pickDrawn } from '../net/presence.js';
+import { REMOTE, pickDrawn, CLIP_OF } from '../net/presence.js';
+
+/** The one-shot moves others play over their gait (presence v2): the clip names of CLIP_OF. */
+const ONE_SHOTS = [...new Set(Object.values(CLIP_OF))];
+
+/**
+ * The weight of a one-shot move `t` s into a clip of `dur` s: up in 0.08 s, down over the last 0.15 s; the gait gets
+ * the rest. Pure (tests/client/mp-combat.test.mjs).
+ */
+export function oneShotWeight(t, dur) { if (t < 0 || t >= dur) return 0; return Math.max(0, Math.min(1, t / 0.08, (dur - t) / 0.15)); }
 
 
 function modelFileFor(skin) {
@@ -85,9 +94,10 @@ export function createRemotePlayers({ scene, phone = false, aiLabel = 'AI' }) {
       a.mixer = new THREE.AnimationMixer(model);
       a.acts = {};
       for (const n of ['idle', 'walk', 'run']) { const c = resolveClip(clips, n).clip; if (c) { const act = a.mixer.clipAction(c); act.play(); act.setEffectiveWeight(n === 'idle' ? 1 : 0); a.acts[n] = act; } }
+      a.shots = {}; for (const n of ONE_SHOTS) { const c = clips.find((x) => x.name === n); if (c) a.shots[n] = c; } // her strikes and casts, when the clip set has them
     };
     // a skin of the shared rig carries no clips: the heroine's set is retargeted onto it (once per skin, cached)
-    if (src.hero && src.hero.retarget) townsfolkClips(model, { file: src.hero.sidecar, key: src.hero.model, names: ['idle', 'walk', 'run'] }).then(play).catch(() => {});
+    if (src.hero && src.hero.retarget) townsfolkClips(model, { file: src.hero.sidecar, key: src.hero.model, names: ['idle', 'walk', 'run', ...ONE_SHOTS] }).then(play).catch(() => {});
     else {
       // the heroine's side-car clips replace the model's own, as on the player's avatar: the model's own run still
       // carries the loose ponytail (owner: "her hair bun bounces strangely"); its own clips play until they arrive
@@ -115,9 +125,13 @@ export function createRemotePlayers({ scene, phone = false, aiLabel = 'AI' }) {
       const d = Math.hypot(r.p[0] - from[0], r.p[2] - from[2]);
       a.tag.visible = d < REMOTE.tagFarM;
       if (a.mixer && a.acts) {
+        // a strike or a cast the room relayed: once, over the gait (a new move cuts the old one)
+        if (r.a !== a.lastA) { a.lastA = r.a; const clip = CLIP_OF[r.a] && a.shots && a.shots[CLIP_OF[r.a]]; if (clip && !reducedMotion) { if (a.shot) a.shot.act.stop(); const act = a.mixer.clipAction(clip); act.reset(); act.setLoop(THREE.LoopOnce, 1); act.clampWhenFinished = true; act.play(); a.shot = { act, t: 0, dur: clip.duration }; } }
+        let ow = 0;
+        if (a.shot) { a.shot.t += dt; ow = oneShotWeight(a.shot.t, a.shot.dur); a.shot.act.setEffectiveWeight(ow); if (a.shot.t >= a.shot.dur) { a.shot.act.stop(); a.shot = null; } }
         const target = r.speed > 2.6 ? 'run' : r.speed > 0.25 ? 'walk' : 'idle';
         const k = Math.min(1, dt * 6);
-        for (const n of Object.keys(a.acts)) { a.w[n] += ((n === target || (!a.acts[target] && n === 'idle') ? 1 : 0) - a.w[n]) * k; a.acts[n].setEffectiveWeight(a.w[n]); }
+        for (const n of Object.keys(a.acts)) { a.w[n] += ((n === target || (!a.acts[target] && n === 'idle') ? 1 : 0) - a.w[n]) * k; a.acts[n].setEffectiveWeight(a.w[n] * (1 - ow)); }
         a.mixer.update(reducedMotion ? 0 : dt);
       }
     }

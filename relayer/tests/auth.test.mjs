@@ -276,3 +276,49 @@ test('passkey: a replayed or expired request is refused', async () => {
   assert.equal((await h.link(late)).body.error, 'nonce_used_or_expired');
   assert.equal((await h.link(await pkRequest(h, pk, { expires: '2099-01-01T00:00:00.000Z' }))).body.error, 'expiry_mismatch');
 });
+
+// ---------- HOT Wallet through NEAR Connect: the payload shape the browser forwards ----------
+test('HOT login: an implicit mainnet account (64 hex = its key) links the current guest; a named HOT account is checked on mainnet', async () => {
+  const h = harness();
+  const hot = await edKey();
+  const implicit = Buffer.from(b58decode(hot.publicKey.replace('ed25519:', ''))).toString('hex');
+  const guest = await guestOf(h, 'h1.guests.ftf-coordinator.testnet');
+  const hotLink = async (address, g, sigText = b64) => {
+    const { nonce, expires } = h.nonces.issue();
+    const msg = loginMessage({ kind: 'near', address, account: g ? g.account : null, deviceKey: 'ed25519:dev', nonce, expires });
+    const body = { kind: 'near', address, public_key: hot.publicKey, signature: sigText(await hot.sign(nep413Hash(msg, Buffer.from(nonce, 'hex')))), nonce, expires, device_key: 'ed25519:dev' };
+    if (g) body.account = { account_id: g.account, public_key: g.kp.publicKey, signature: b64(await g.kp.sign(new TextEncoder().encode(msg))), guest_key: g.kp.publicKey };
+    return h.link(body);
+  };
+  // an implicit account needs no RPC: the account id is the key itself
+  const r = await hotLink(implicit, guest);
+  assert.deepEqual([r.status, r.body.status, r.body.account_id], [200, 'linked', guest.account]);
+  assert.equal(h.store.get('near:' + implicit).account, guest.account);
+  assert.equal(JSON.parse(readFileSync(h.file, 'utf8')).identities['near:' + implicit].account, guest.account); // on disk, survives a restart
+  // another device, no guest yet: the same account comes back
+  assert.deepEqual((await hotLink(implicit, null)).body, { status: 'existing', account_id: guest.account, guest_key: guest.kp.publicKey });
+  // a base58 signature (some wallets) verifies the same
+  assert.equal((await hotLink(implicit, null, (s) => b58encode(s))).body.status, 'existing');
+  // someone else's implicit id with this key is refused
+  assert.equal((await hotLink('00'.repeat(32), null)).body.error, 'not_account_key');
+  // a named HOT account (name.tg): the key must be a full-access key of it, looked up by the injected RPC
+  assert.equal((await hotLink('ann.tg', null)).body.error, 'not_full_access_key');
+  h.keys.set('ann.tg', hot.publicKey);
+  assert.equal((await hotLink('ann.tg', null)).body.status, 'new');
+});
+
+test('the auth route logs each link outcome (no signatures, no keys) so a failed sign-in shows in the journal', async () => {
+  const { authHandler } = await import('../api/auth.js');
+  const lines = [];
+  const handler = authHandler({ env: { ALLOWED_ORIGIN: 'https://spacexceo.github.io', FTF_DATA_DIR: mkdtempSync(join(tmpdir(), 'ftf-auth-log-')) }, accessKey: async () => null, log: (l) => lines.push(l) });
+  const call = async (url, body) => {
+    const res = { headers: {}, setHeader(k, v) { this.headers[k] = v; }, end(s) { this.body = s; } };
+    await handler({ method: 'POST', url, headers: { origin: 'https://spacexceo.github.io' }, body, socket: { remoteAddress: '127.0.0.1' } }, res);
+    return { status: res.statusCode, body: JSON.parse(res.body || '{}') };
+  };
+  const n = await call('/api/auth/nonce', {});
+  assert.equal(n.status, 200);
+  const bad = await call('/api/auth/link', { kind: 'near', address: 'ann.tg', public_key: 'ed25519:x', signature: 'AAAA', nonce: n.body.nonce, expires: n.body.expires });
+  assert.equal(bad.status, 401);
+  assert.deepEqual(lines, ['[auth] link near -> 401 bad_public_key']);
+});

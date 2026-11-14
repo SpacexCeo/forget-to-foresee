@@ -15,7 +15,7 @@ proceed, so moving silk between accounts adds nothing. There is one currency, si
 | Q (quests) | one-time points for a quest turned in at trust T2: welcome 40, spiders 100, spare part 80, crown 300; 30 per bounty, 3 after the third bounty of a UTC day |
 | Sk (hunting) | 1 point per 10 silk of kill income; T2 (scripted hunt) at full value, T1 (a real-time kill) at 0.25 and at most 200 points per UTC day |
 | V (receipts) | 10 per distinct on-chain quest receipt, at most 50 |
-| P (portal) | 200 once for paying the full 10,000 silk at the Gate-Loom (a `?portalFee=` demo fee never scores) |
+| P (portal) | 200 once for paying the full Gate-Loom fee (200 silk) (a `?portalFee=` demo fee never scores) |
 | M (variety) | 0.6 + 0.1 per class with at least one scored event among quest, hunt, trade, verify |
 
 `score = round(M × (Q + Sk + V + P))`. Ties go to the account that reached its final score first, then by

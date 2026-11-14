@@ -11,6 +11,7 @@ let active = null;
 const pending = [];
 const subs = new Set();
 let gate = null;   // resolves when the boot has settled, so the earlier steps get the chance to enqueue first
+let hold = () => false;   // something owns the screen (the Glass Shoal ride or fight): no first-time card starts over it
 const expected = new Map();   // id -> deadline (ms): a step announced early (boot knows Day 1 will ask the name) holds back later ones
 
 function notify(win) {
@@ -31,6 +32,7 @@ function settled(win, settleMs) {
 
 async function pump(win) {
   if (active || !pending.length) return;
+  if (hold()) { setTimeout(() => pump(win), 500); return; }   // e.g. a fresh profile opened on the boss link: the name card waits for the fight
   pending.sort((a, b) => rank(a.id) - rank(b.id) || a.seq - b.seq);
   const now = Date.now();
   for (const [id, until] of expected) if (until <= now) expected.delete(id);
@@ -65,8 +67,17 @@ export function expectOnboarding(id, ms = 20000) { expected.set(id, Date.now() +
 export const onboardingActive = () => active;
 /** Listen for changes (the running id or null). Returns an unsubscribe. */
 export const onOnboarding = (fn) => { subs.add(fn); return () => subs.delete(fn); };
-/** Window hotkeys (J, C, N, B, M, I) must not open anything while this is true. */
-export const blocksWindows = () => active != null;
+/**
+ * Steps that are only tips at the foot of the screen, not overlays: the game's windows may open while they show
+ * (owner P0 14.11: the hints tour waits on a button, and while it ran I and the tray Bag did nothing at all, so the
+ * starter guide's "press I to open your bag" step could never complete).
+ */
+export const NON_BLOCKING = Object.freeze(['guide']);
+/** Window hotkeys (J, C, N, B, M, I) must not open anything while this is true (a real overlay runs). */
+export const blocksWindows = () => active != null && !NON_BLOCKING.includes(active);
+
+/** A predicate that holds every first-time card back while it is true (boot-world: the Glass Shoal owns the screen). */
+export function setOnboardingHold(fn) { hold = typeof fn === 'function' ? fn : () => false; }
 
 /** Tests only: forget everything. */
-export function _resetOnboarding() { active = null; pending.length = 0; subs.clear(); gate = null; seq = 0; expected.clear(); }
+export function _resetOnboarding() { hold = () => false; active = null; pending.length = 0; subs.clear(); gate = null; seq = 0; expected.clear(); }

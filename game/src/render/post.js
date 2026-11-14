@@ -24,6 +24,8 @@ import { SMAAPass } from 'three/examples/jsm/postprocessing/SMAAPass.js';
 import { Pass, FullScreenQuad } from 'three/examples/jsm/postprocessing/Pass.js';
 import { LAYER_OVERLAY } from './layers.js';
 
+const _WHITE = new THREE.Color(1, 1, 1), _p = new THREE.Vector3(), _view = new THREE.Vector3(); // per-frame scratch (the shafts' sun)
+
 const COPY_VS = /* glsl */`varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
 
 /** Bloom threshold in linear HDR: diffuse white under the sun stays below it, emissives are above. */
@@ -95,12 +97,12 @@ export class GodRaysPass extends Pass {
   }
 
   /** The shafts take the sun's colour (linear RGB, normalised) so they agree with the sky. */
-  setSunColor(color) { this.color.copy(color).lerp(new THREE.Color(1, 1, 1), 0.25); }
+  setSunColor(color) { this.color.copy(color).lerp(_WHITE, 0.25); }
 
   /** Projects the sun direction; shafts fade out as the sun leaves the frame or goes behind the camera. */
   setSun(sunDirection, camera) {
-    const p = camera.position.clone().addScaledVector(sunDirection, 1000).project(camera);
-    const behind = p.z > 1 || sunDirection.dot(camera.getWorldDirection(new THREE.Vector3())) < 0;
+    const p = _p.copy(camera.position).addScaledVector(sunDirection, 1000).project(camera);
+    const behind = p.z > 1 || sunDirection.dot(camera.getWorldDirection(_view)) < 0;
     this.sunUv.set(p.x * 0.5 + 0.5, p.y * 0.5 + 0.5);
     const margin = 0.35;
     const inside = behind ? 0 : Math.min(
@@ -175,6 +177,13 @@ function createOutputPass() {
   return pass;
 }
 
+/**
+ * The AO buffers' share of the drawing buffer: the tier's aoScale, divided by the supersampling factor. AO is soft and
+ * denoised, so computing it above the screen's own resolution buys nothing; at 2x on an RTX 5090 it cost about 1.5 ms a
+ * frame and most of the 30-40 ms spikes (town, 14.11). Without supersampling (scale <= 1) it is the tier's value. Pure.
+ */
+export function aoScaleFor(aoScale, superScale) { return aoScale / Math.max(1, superScale || 1); }
+
 export class PostStack {
   /** @param {{renderer:THREE.WebGLRenderer, scene:THREE.Scene, camera:THREE.Camera}} o */
   constructor({ renderer, scene, camera }) {
@@ -183,6 +192,7 @@ export class PostStack {
     this.passes = {};
     this.time = 0;
     this.sunColor = new THREE.Color(1, 0.9, 0.75);
+    this.superScale = 1; // the governor's supersampling (render/lookdev.js): the AO stays at the screen's own resolution
   }
 
   /** (Re)builds the chain for a tier config (quality.js); null tears it down for the direct path. */
@@ -206,8 +216,8 @@ export class PostStack {
     composer.addPass(rays);
     let ao = null;
     if (cfg.ao) {
-      const s = cfg.aoScale || 1;
-      ao = new GTAOPass(this.scene, this.camera, Math.max(1, Math.round(size.x * s)), Math.max(1, Math.round(size.y * s)));
+      const s = cfg.aoScale || 1, aoK = () => aoScaleFor(s, this.superScale);
+      ao = new GTAOPass(this.scene, this.camera, Math.max(1, Math.round(size.x * aoK())), Math.max(1, Math.round(size.y * aoK())));
       ao.output = GTAOPass.OUTPUT.Default;
       ao.blendIntensity = 0.8;
       ao.updateGtaoMaterial({ radius: 0.55, distanceExponent: 1.4, thickness: 0.5, scale: 1.0, samples: cfg.aoSlices * 3 || 12, distanceFallOff: 1.0, screenSpaceRadius: false });
@@ -230,7 +240,7 @@ export class PostStack {
       };
       // The AO buffers follow the tier's scale (half res on high), the blend stays full res.
       const aoSetSize = ao.setSize.bind(ao);
-      ao.setSize = (w, h) => aoSetSize(Math.max(1, Math.round(w * s)), Math.max(1, Math.round(h * s)));
+      ao.setSize = (w, h) => aoSetSize(Math.max(1, Math.round(w * aoK())), Math.max(1, Math.round(h * aoK())));
       composer.addPass(ao);
     }
     const bloom = new UnrealBloomPass(new THREE.Vector2(size.x / 2, size.y / 2), BLOOM.strength, BLOOM.radius, BLOOM.threshold);

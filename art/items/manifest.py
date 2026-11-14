@@ -1,4 +1,4 @@
-"""Icons (512 -> 256/128 px, transparent PNG) and manifest.json for game/public/assets/items/.
+"""Icons (512 -> 256/128 px, transparent PNG; painted webp icons already in place are kept) and manifest.json for game/public/assets/items/.
 
 Manifest paths are relative to the manifest's own folder (/assets/items/). nameKey points at the locale
 key `item.<id>` (game/src/locales). Props carry rarity null; glbMobile is the phone variant when present.
@@ -19,11 +19,15 @@ for f in glob.glob(os.path.join(src, "stats_*.json")):
 items = []
 for it in CAT:
     i = it["id"]
-    im = Image.open(os.path.join(src, "icons", i + ".png")).convert("RGBA")
-    for px in (256, 128):
-        im.resize((px, px), Image.LANCZOS).save(os.path.join(dst, "icons", "%s_%d.png" % (i, px)), optimize=True)
-    e = dict(id=i, nameKey="item." + i, kind=it["kind"], rarity=it["rarity"],
-             icon="icons/%s_256.png" % i, icon128="icons/%s_128.png" % i, glb=i + ".glb", tris=stats.get(i))
+    e = dict(id=i, nameKey="item." + i, kind=it["kind"], rarity=it["rarity"], glb=i + ".glb", tris=stats.get(i))
+    if os.path.exists(os.path.join(dst, "icons", i + "_256.webp")):
+        # an owner-supplied painting (docs/art/manifest.md) replaced the render: keep it, never overwrite it
+        e.update(icon="icons/%s_256.webp" % i, icon128="icons/%s_128.webp" % i, icon64="icons/%s_64.webp" % i)
+    else:
+        im = Image.open(os.path.join(src, "icons", i + ".png")).convert("RGBA")
+        for px in (256, 128):
+            im.resize((px, px), Image.LANCZOS).save(os.path.join(dst, "icons", "%s_%d.png" % (i, px)), optimize=True)
+        e.update(icon="icons/%s_256.png" % i, icon128="icons/%s_128.png" % i)
     if os.path.exists(os.path.join(dst, i + "_m.glb")):
         e["glbMobile"] = i + "_m.glb"
         e["trisMobile"] = stats.get(i + "_m")

@@ -6,7 +6,7 @@ Claim API: [`docs/pass-claim-api.md`](pass-claim-api.md).
 
 ## What it is
 
-When a player has earned 10,000 town silk through play and paid it at the Gate-Loom, the game offers a free
+When a player has earned the Gate-Loom fee (200 town silk) through play and paid it at the Gate-Loom, the game offers a free
 **whitelist pass**: a NEAR token sent to the wallet the player types in. No purchase, no wallet connection, no
 signature, no seed phrase. The game's relayer checks the Gate payment by replaying the player's expedition log, then
 mints the pass from a contract with every limit written on chain.
@@ -49,7 +49,7 @@ claim; none makes it zero.
 | Threat | Control | What is left, plainly |
 |---|---|---|
 | One player claims many passes with many guest accounts | one claim per guest (server index and the claim id on chain); one mint per wallet on chain, even after the pass moved | free guests and free implicit wallets exist: a farmer needs a new guest **and** a new wallet per claim |
-| Cheap claims | each claim needs 10,000 silk earned through play and paid at the Gate (story income only, kill income capped), about 90 to 150 minutes of play per account (to verify by a play-test) | a script that plays by the rules at scale; bot labels and cluster flags help, they do not prove |
+| Cheap claims | each claim needs the 200 silk Gate-Loom fee earned through play and paid at the Gate (story income only, kill income capped), about 90 to 150 minutes of play per account (to verify by a play-test) | a script that plays by the rules at scale; bot labels and cluster flags help, they do not prove |
 | Guest-creation floods | per-IP bucket and a daily cap on guest creation; optional captcha (off by default: a third party and a privacy cost) | a patient attacker with many IPs |
 | Claim-rate abuse | per-IP and per-guest limits on the claim endpoint; suspicious claims can be held | as above |
 | Flooding with fresh unfunded wallets | optional setting: implicit accounts must already exist (off by default) | farmers can fund wallets cheaply |

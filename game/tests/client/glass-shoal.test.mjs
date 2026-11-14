@@ -54,8 +54,8 @@ test('the ride stays inside its corridor and lasts 40 to 60 seconds', () => {
 
 test('boss phases follow HP and set their checkpoints', () => {
   assert.equal(R.phaseFor(1), 0); assert.equal(R.phaseFor(0.67), 0); assert.equal(R.phaseFor(0.66), 1);
-  assert.equal(R.phaseFor(0.4), 1); assert.equal(R.phaseFor(0.33), 2); assert.equal(R.phaseFor(0), 2);
-  assert.equal(R.checkpointHp(0), R.BOSS.hp); assert.equal(R.checkpointHp(1), Math.round(0.66 * R.BOSS.hp)); assert.equal(R.checkpointHp(2), Math.round(0.33 * R.BOSS.hp));
+  assert.equal(R.phaseFor(0.4), 1); assert.equal(R.phaseFor(0.3), 1); assert.equal(R.phaseFor(0.25), 2); assert.equal(R.phaseFor(0), 2);
+  assert.equal(R.checkpointHp(0), R.BOSS.hp); assert.equal(R.checkpointHp(1), Math.round(0.66 * R.BOSS.hp)); assert.equal(R.checkpointHp(2), Math.round(0.25 * R.BOSS.hp));
   assert.equal(R.freshBoss(1).hp, R.checkpointHp(1));
 });
 
@@ -229,19 +229,30 @@ test('touch aim: the nearest add in range, else the boss', () => {
   assert.deepEqual(R.autoAim([0, 20], [{ x: 30, z: 20 }]), [...R.ARENA.boss], 'too far: the boss');
 });
 
-test('balance: a scripted average Elise beats the Hollow Tide in about 2.5 to 5 minutes', () => {
+test('balance: a scripted average Elise beats the Hollow Tide in about 1.5 to 3 minutes (owner 14.11: the fight dragged)', () => {
   const runs = []; for (let s = 1; s <= 12; s++) runs.push(simulateElise(s));
   assert.ok(runs.every((r) => r.won), 'every run wins');
   const t = runs.map((r) => r.seconds).sort((a, b) => a - b), median = t[6];
   // the scripted player stands still and never misses a pickup: a real fight adds walking, aiming and flying
-  assert.ok(median >= 150 && median <= 300, `median ${median} s`);
-  assert.ok(runs.reduce((a, r) => a + r.ults, 0) / runs.length >= 2, 'the Tempest comes up a few times a fight');
+  assert.ok(median >= 80 && median <= 180, `median ${median} s`);
+  assert.ok(runs.reduce((a, r) => a + r.ults, 0) / runs.length >= 1.5, 'the Tempest comes up a couple of times a fight');
   // a strong player is faster but still needs a while
   const good = []; for (let s = 1; s <= 8; s++) good.push(simulateElise(s, { aim: 0.8, dodge: 0.7, evade: 0.2 }).seconds);
-  assert.ok(good.sort((a, b) => a - b)[4] >= 75, 'not a melt');
+  assert.ok(good.sort((a, b) => a - b)[4] >= 45, 'not a melt');
 });
 
 test('every Shoal text exists in all five locales', () => {
   const keys = Object.keys(SHOAL_TEXT.en);
   for (const loc of ['ru', 'uk', 'it', 'zh']) for (const k of keys) assert.ok(SHOAL_TEXT[loc][k], `${loc} ${k}`);
+});
+
+test('the boss is a finished episode: home again, a chapter-close card with the real rewards (owner 14.11)', async () => {
+  const { readFileSync } = await import('node:fs');
+  const src = readFileSync(new URL('../../src/scenes/glass-shoal.js', import.meta.url), 'utf8');
+  assert.equal((src.match(/event\('home'\)\) \{ toast\(say\('shoal\.home'\)\); chapterCard\(\); \}/g) || []).length, 2, 'both ways home close the chapter');
+  assert.match(src, /kicker: say\('shoal\.chapter\.kicker'\), heading: say\('shoal\.quest'\)/);
+  const { SHOAL_TEXT } = await import('../../src/locales/shoal.js');
+  for (const l of ['en', 'ru', 'uk', 'it', 'zh']) for (const k of ['shoal.chapter.kicker', 'shoal.chapter.title', 'shoal.chapter.chest', 'shoal.chapter.xp', 'shoal.chapter.continue']) assert.ok(SHOAL_TEXT[l][k], l + ' ' + k);
+  const { lootRowText } = await import('../../src/play/season-loot-ui.js');
+  assert.equal(lootRowText({ kind: 'boss_chest', text: 'A legendary chest' }, (k) => k), 'A legendary chest');
 });

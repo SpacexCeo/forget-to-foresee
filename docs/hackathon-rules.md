@@ -13,7 +13,7 @@ Source: https://nearhackathon.com/HACKATHON.md (re-read before submitting; it ca
   01.11 00:00 UTC to that moment; outside the window the API answers 403.
 - Judging starts 16.11 00:00 UTC; results are announced by 18.11 23:59 UTC (19.11 01:59 Kyiv).
 - The repository must stay public through judging. A hosted demo should stay up until 18.11, ideally 25.11 (Q-012).
-- Our own plan: code freeze 13.11 20:00 Kyiv; 14.11 is buffer and submission (`docs/spec.md` §0).
+- Our own plan: the 13.11 20:00 freeze was dropped (decisions.md, 13.11); the owner sets one stop-merging time on 14.11 so the tagged commit equals what judges load.
 
 ## Required
 - [x] A working prototype, not a pitch (Q-012). Live: https://spacexceo.github.io/forget-to-foresee/ (one entry: the whole game; `?demo=judge` is an alias)
@@ -70,11 +70,13 @@ cross-site, do not retry · 409 repository or email already used, do not change 
 
 ## Tracks we fit (ids for the `tracks` array)
 - **`games`** (Games With Real Economies), the primary track: judged on the game loop, not the token; NPCs with
-  wallets and economies that evolve without a dev patch. Ours: six clans (five computer-run) trade words, silk, trust
-  and memories inside one local season; each clan's "wallet" is an in-game silk balance; the economy is closed
-  in-game silk; the season's events are committed before the first move. The weekly tournament is a UI simulation
+  wallets and economies that evolve without a dev patch. Ours: 20 scripted merchants, each a NEAR testnet account with its own key
+  (`trader-NN.ftf-town.testnet`), trade on `ftf-town.testnet` all day with prices from stock and demand (rules in
+  `relayer/market/prices.js`, a reason on every trade); six clan wallets on the same contract; players pledge, enter
+  the tournament and pay the Gate-Loom through the relayer. Inside a season the six clans still trade words, silk,
+  trust and memories locally, and the season's events are committed before the first move. The weekly tournament is a UI simulation
   and is not part of the judged loop.
-- **`nfts`** (NFTs That Do Something) — claimed (owner, 09.11) for the memory shards only: `contracts/memory-shard`
+- **`nfts`** (NFTs That Do Something) — claimed (owner, 09.11) for the memory shards, and (14.11) for the heroine NFTs that own dragon NFTs (`heroine.` / `companions.ftf-coordinator.testnet`): `contracts/memory-shard`
   (NEP-171) runs as `ftf-shards.testnet` with the judge season's 3 shards, minted by the coordinator script; each
   carries its biography and the season's root, and the game shows them as NFT cards on the judge path. Not claimed:
   a persistent, player-owned agent NFT, live minting per season, wallet-controlled play (future work in the README).

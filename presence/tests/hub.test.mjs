@@ -71,7 +71,18 @@ test('names, validation, filter edge cases', () => {
 
 test('hello may carry the player\'s NEAR account and shown level; others see them; bad values are dropped', async () => {
   const { validate } = await import('../lib/hub.js');
-  assert.deepEqual(validate({ t: 'hello', name: 'a', skin: 'iris', account: 'ann-1.guests.ftf-coordinator.testnet', lv: 7 }), { t: 'hello', name: 'a', skin: 'iris', account: 'ann-1.guests.ftf-coordinator.testnet', lv: 7 });
+  assert.deepEqual(validate({ t: 'hello', name: 'a', skin: 'iris', account: 'ann-1.guests.ftf-coordinator.testnet', lv: 7 }), { t: 'hello', name: 'a', skin: 'iris', account: 'ann-1.guests.ftf-coordinator.testnet', lv: 7, area: 'town' });
   const bad = validate({ t: 'hello', name: 'a', account: 'Not An Account!', lv: 500 });
   assert.equal(bad.account, null); assert.equal(bad.lv, null);
+});
+
+test('the welcome names the acts this server takes; the Gate act is one of them and reaches the room', async () => {
+  const { ACT_KINDS } = await import('../lib/history.js');
+  const { mk } = rig();
+  const a = mk(); a.say({ t: 'hello', name: 'ann' }); const b = mk(); b.say({ t: 'hello', name: 'bob' });
+  assert.deepEqual(a.last('welcome').kinds, Object.keys(ACT_KINDS));
+  assert.ok(a.last('welcome').kinds.includes('gate'));
+  a.say({ t: 'act', k: 'gate' });
+  assert.equal(a.c.closed, null, 'not kicked');
+  assert.equal(b.last('act').k, 'gate'); assert.equal(b.last('act').name, 'ann');
 });

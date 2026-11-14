@@ -71,14 +71,18 @@ export function labelFor({ source, model = null, attestationId = null, reason = 
  * One decision for a clan: the model's bounded parameters when it answers, else the scripted ones.
  * @returns {Promise<object>} the journal record
  */
-export async function decideStrategy(state, { apiKey = '', model = TEE_DEFAULTS.model, base, chat = teeChat, fetch, now = () => Date.now() } = {}) {
+export async function decideStrategy(state, { apiKey = '', model = TEE_DEFAULTS.model, base, chat = teeChat, fetch, now = () => Date.now(), retryMs = 3000, sleep = (ms) => new Promise((res) => setTimeout(res, ms)) } = {}) {
   const req = strategyRequest(state, model);
   const promptHash = sha(JSON.stringify(req));
   const rec = { clan: state.clan, at: now(), state, prompt_hash: promptHash };
   let why = 'no_key';
   if (apiKey) {
     let r = null;
-    try { r = await chat(req, { apiKey, ...(base ? { base } : {}), ...(fetch ? { fetch } : {}), timeoutMs: 20_000 }); } catch (e) { r = { status: 502, body: { error: String(e.message || e).slice(0, 60) } }; }
+    const ask = async () => { try { return await chat(req, { apiKey, ...(base ? { base } : {}), ...(fetch ? { fetch } : {}), timeoutMs: 20_000 }); } catch (e) { return { status: 502, body: { error: String(e.message || e).slice(0, 60) } }; } };
+    r = await ask();
+    // NEAR AI Cloud dropped the connection or timed out (13 Nov 22:25-23:27 UTC every clan fell back this way while the
+    // endpoint answered again minutes later): one more try after a short pause before the scripted fallback
+    if (r && r.body && r.body.error === 'tee_unreachable' && retryMs > 0) { await sleep(retryMs); r = await ask(); }
     if (r && r.status === 200 && r.body && r.body.tee) {
       const params = parseStrategy(r.body.text, state.clan);
       const t = r.body.tee;
@@ -87,7 +91,7 @@ export async function decideStrategy(state, { apiKey = '', model = TEE_DEFAULTS.
           response: r.body.text, response_hash: t.response_hash, request_hash: t.request_hash, signature_check: t.signature_check, params };
       }
       why = !params ? 'unparseable' : 'unattested'; // no verified TEE signature: never labelled LLM
-    } else why = (r && r.body && (r.body.upstream_status ? 'upstream_' + r.body.upstream_status : r.body.error)) || 'no_answer';
+    } else why = (r && r.body && (r.body.upstream_status ? 'upstream_' + r.body.upstream_status : r.body.error === 'tee_unreachable' && /timeout/i.test(r.body.detail || '') ? 'tee_timeout' : r.body.error)) || 'no_answer';
   }
   return { ...rec, source: 'scripted', label: labelFor({ source: 'scripted', reason: why }), model: null, fallback_reason: why, params: scriptedStrategy(state) };
 }

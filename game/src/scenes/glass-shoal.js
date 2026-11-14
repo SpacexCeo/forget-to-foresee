@@ -10,14 +10,23 @@
 // (MODELS: the loaders pick them up by name through render/assets.js).
 import * as R from '../game/shoal-rules.js';
 import { shoalText } from '../locales/shoal.js';
-import { hasModelFile, fetchGltf } from '../render/assets.js';
+import { hasModelFile, fetchGltf, getModelVariant } from '../render/assets.js';
+import { dragonMix, DRAGON_ANIM } from '../game/shoal-dragon-anim.js';
 
 /** Model files the models seat delivers (render/asset-catalog names); placeholders until hasModelFile says yes. */
-export const MODELS = Object.freeze({ dragon: 'shoal_dragon', blade: 'loomblade', boss: 'hollow_tide' });
+export const MODELS = Object.freeze({ dragon: 'shoal_dragon', saddle: 'dragon_saddle', blade: 'loomblade', boss: 'hollow_tide' });
+/** How the Loomblade stands at its marker: metres of blade in the soil, and the grip-to-tip length when the file has no `socket_tip`. */
+export const BLADE_STAND = Object.freeze({ buried: 0.22, tip: 0.944 });
+/** The sword file to load: the light `_m` variant on phones when it ships, the full one otherwise, null when neither does. */
+export function bladeModelFile(mobile, has = hasModelFile) {
+  if (mobile && has(MODELS.blade + '_m')) return MODELS.blade + '_m';
+  return has(MODELS.blade) ? MODELS.blade : null;
+}
 /** Town-local spots: the Loomblade's marker outside the walls, the cliff stone above the Crownrift arena. */
 export const SPOTS = Object.freeze({ blade: Object.freeze([-26, 60]), stone: Object.freeze([24, 106]), radius: 2.6, giver: 3.2 });
 
 const CSS = `
+.ftf-in-shoal .ftf-loom,.ftf-in-shoal .ftf-mk-chip,.ftf-in-shoal .ftf-tip,.ftf-in-shoal .ftf-premise{display:none!important}
 .gs-track{position:fixed;left:calc(env(safe-area-inset-left,0px) + 16px);top:calc(env(safe-area-inset-top,0px) + 96px);max-width:min(340px,calc(100vw - 32px));z-index:12;
  box-sizing:border-box;padding:8px 12px;border-radius:10px;border:1px solid rgba(246,200,96,.6);background:rgba(20,16,8,.72);color:#f6e2a8;font:600 14px/1.35 "Atkinson Hyperlegible",system-ui,sans-serif;
  background-image:linear-gradient(100deg,transparent 30%,rgba(255,226,150,.28) 50%,transparent 70%);background-size:250% 100%;animation:gs-shimmer 3.2s linear infinite,gs-breathe 2.4s ease-in-out infinite;pointer-events:none}
@@ -53,7 +62,10 @@ html[data-motion=reduce] .gs-track{animation:none}
  * @param {() => boolean} o.reduced @param {boolean} o.mobile @param {() => string} o.hero 'iris' | 'elise'
  * @param {(name: string) => void} [o.clip] plays a combat clip on the heroine
  * @param {() => number[]} o.axes the movement axes [x, y] (keys or the stick)
+ * @param {() => {kind: string, pos: object, flourish?: Function}[]} [o.allies] her companion dragons (world positions) that join the fight
  */
+/** The fight's camera distance (metres) and the closest the player may zoom in there. */
+export const ARENA_CAM = Object.freeze({ dist: 17, minDist: 12, rate: 1.6, hold: 2.5 }); // rate: the lock's ease (1/s); hold: seconds it waits after the player turns the camera
 export function createGlassShoal(o) {
   const { THREE, scene, rig, player, toWorld, groundAt, folkAt, ledger, chests = null, storage = null, toast = () => {}, reduced = () => false, mobile = false, hero = () => 'iris', clip = () => {}, axes = () => [0, 0] } = o;
   const say = (k, a) => shoalText(o.locale ? o.locale() : 'en', k, a);
@@ -80,6 +92,17 @@ export function createGlassShoal(o) {
     const guard = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.06, 0.08), new THREE.MeshStandardMaterial({ color: 0xd8b25a, metalness: 0.8, roughness: 0.3 })); guard.position.y = 1.16;
     const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.3, 8), new THREE.MeshStandardMaterial({ color: 0x3b2a1c, roughness: 0.8 })); grip.position.y = 1.34;
     blade.add(b, guard, grip); blade.rotation.z = 0.12; group.add(blade); }
+  // the real sword (art/props/shoal/loomblade): its origin is the grip centre and the blade runs along +Y, so it is
+  // turned tip down and lifted until BLADE_STAND.buried of the blade is in the soil; the placeholder leaves only then
+  const bladeFile = bladeModelFile(mobile, hasModelFile);
+  if (bladeFile) fetchGltf(bladeFile).then(({ gltf }) => {
+    const m = gltf.scene; const tip = m.getObjectByName('socket_tip');
+    const len = tip ? tip.position.y : BLADE_STAND.tip;
+    m.rotation.z = Math.PI; m.position.y = len - BLADE_STAND.buried;
+    m.traverse((n) => { if (n.isMesh) { n.castShadow = true; n.frustumCulled = false; } });
+    for (const c of [...blade.children]) { blade.remove(c); if (c.geometry) c.geometry.dispose(); if (c.material) c.material.dispose(); }
+    blade.add(m);
+  }).catch(() => { /* the placeholder stays */ });
   // the cliff stone: a standing slab with a gold rune
   const stone = new THREE.Mesh(new THREE.BoxGeometry(1.6, 2.6, 0.7), new THREE.MeshStandardMaterial({ color: 0x8a8578, roughness: 0.95, emissive: 0x6a4a10, emissiveIntensity: 0.25 }));
   stone.geometry.translate(0, 1.3, 0); group.add(stone);
@@ -87,7 +110,11 @@ export function createGlassShoal(o) {
   const placeAll = () => { seated = 0; bladeAt = place(blade, SPOTS.blade).clone(); bladeRay.position.copy(bladeAt); stoneAt = place(stone, SPOTS.stone).clone(); stoneRay.position.copy(stoneAt); };
   placeAll();
   const dragon = makeDragon(THREE); dragon.root.visible = false; scene.add(dragon.root);
-  if (hasModelFile(MODELS.dragon)) fetchGltf(MODELS.dragon).then(({ gltf }) => dragon.useModel(gltf.scene)).catch(() => { /* the placeholder stays */ });
+  const variantOf = (name) => (hasModelFile(name + getModelVariant()) ? name + getModelVariant() : name); // phones and the low tier: `_m`
+  if (hasModelFile(MODELS.dragon)) fetchGltf(variantOf(MODELS.dragon)).then(({ gltf }) => {
+    dragon.useModel(gltf.scene, gltf.animations);
+    if (hasModelFile(MODELS.saddle)) fetchGltf(variantOf(MODELS.saddle)).then((r) => dragon.useSaddle(r.gltf.scene)).catch(() => { /* she rides bareback */ });
+  }).catch(() => { /* the placeholder stays */ });
 
   // ---- DOM: the tracker line, the prompt, the offer card, the ride HUD
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -120,8 +147,10 @@ export function createGlassShoal(o) {
 
   function loadArena() {
     if (!arenaLoading) arenaLoading = import('./shoal-arena.js').then((m) => { arena = m.createShoalArena({ THREE, scene, camera: o.camera, center: arenaCenter(), say, toast, reduced, mobile, hero, clip, axes, rig,
-      onWin: () => { if (event('boss_down') && ledger) { ledger.grant({ xp: R.REWARD.xp }); if (chests) try { chests.add({ tier: R.REWARD.chest, source: 'boss' }); } catch { /* the bag is optional */ } } },
-      onDeath: () => event('death'), onHome: () => flyHome() }); return arena; });
+      onWin: () => { try { globalThis.dispatchEvent(new CustomEvent('ftf:feat', { detail: { k: 'boss', v: 'shoal' } })); } catch { /* the room's action feed is optional */ } if (event('boss_down') && ledger) { ledger.grant({ xp: R.REWARD.xp }); if (chests) try { chests.add({ tier: R.REWARD.chest, source: 'boss' }); } catch { /* the bag is optional */ } } },
+      onDeath: () => event('death'), onHome: () => flyHome(), allies: o.allies });
+      // the fight starts with the serpent's own model in (capped: a slow network still gets the fight, with the stand-in)
+      return Promise.race([arena.ready || null, new Promise((r) => setTimeout(r, 12000))]).catch(() => {}).then(() => arena); });
     return arenaLoading;
   }
 
@@ -143,14 +172,26 @@ export function createGlassShoal(o) {
     dragon.root.visible = false; mode = 'arena-wait';
     loadArena().then((a) => { event('landed'); mode = 'arena'; a.enter(save); toast(say('shoal.landed')); }).catch((e) => { console.warn('[shoal] arena', e); mode = 'town'; backToStone(); });
   }
+  /** Back in town: the town's own home spot when the game gives one (o.home: a grounded town point, a short drop above it), else the
+   *  ground beside the cliff stone. Never the stone's height 3 m back: on the slope that was inside the hill (owner 14.11: she fell through). */
   function backToStone() {
-    const w = stoneAt.clone().add(new THREE.Vector3(0, 0.2, -3));
-    player.teleport([w.x, w.y + 0.2, w.z], Math.PI);
+    const h = o.home && o.home();
+    if (h && h.position) { player.teleport(h.position, h.heading ?? Math.PI); return; }
+    const w = stoneAt.clone().add(new THREE.Vector3(0, 0, -3)), g = groundAt(w.x, w.z);
+    player.teleport([w.x, (g == null ? stoneAt.y : g) + 0.6, w.z], Math.PI);
   }
   function flyHome() {
     if (arena) arena.leave();
     mode = 'town'; backToStone();
-    if (event('home')) toast(say('shoal.home') + ' ' + say('shoal.reward', { xp: R.REWARD.xp, title: say('shoal.title.' + R.REWARD.title) }));
+    if (event('home')) { toast(say('shoal.home')); chapterCard(); }
+  }
+  /** The episode's end (owner: the boss as a finished episode, a chapter close): the homecoming card with the rewards. */
+  function chapterCard() {
+    const title = say('shoal.title.' + R.REWARD.title);
+    import('../play/season-loot-ui.js').then((m) => m.openSeasonLoot({ t: (k) => k, base: (import.meta.env && import.meta.env.BASE_URL) || '/', reduced: reduced(),
+      kicker: say('shoal.chapter.kicker'), heading: say('shoal.quest'), line: say('shoal.victory'), cont: say('shoal.chapter.continue'),
+      rows: [{ kind: 'title', text: say('shoal.chapter.title', { title }) }, { kind: 'boss_chest', tier: R.REWARD.chest, text: say('shoal.chapter.chest') }, { kind: 'xp', text: say('shoal.chapter.xp', { xp: R.REWARD.xp }) }] }))
+      .catch((e) => { console.warn('[shoal] chapter card', e); toast(say('shoal.reward', { xp: R.REWARD.xp, title })); });
   }
 
   // ---- per frame
@@ -161,8 +202,36 @@ export function createGlassShoal(o) {
     prompt.textContent = ''; if (!o.touch || !o.touch()) prompt.append(el('kbd', null, 'E')); prompt.append(doc.createTextNode(say(textKey))); prompt.hidden = false;
   }
   let tAcc = 0, seatT = 0, seatedFor = 0, ownedClass = false;
+  let shoalBody = false, camSaved = null, camYaw = 0, camHold = 0;
+  const angDiff = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
+  /** The fight's camera (GPU bench 14.11): behind her and facing the serpent when she lands, far enough out that a
+   *  20 m boss fits the frame at melee range (it filled the screen), and back to the town's camera when she leaves. */
+  function arenaCamera(dt = 0) {
+    const on = mode === 'arena' && !!arena;
+    if (on && !camSaved) {
+      camSaved = { dist: rig.dist, minDist: rig.minDist, pitchOffset: rig.pitchOffset, distTarget: rig.distTarget };
+      rig.minDist = Math.max(rig.minDist || 0, ARENA_CAM.minDist); rig.distTarget = null; rig.dist = ARENA_CAM.dist; rig.pitchOffset = 0;
+      if (rig.rotate) { rig.yaw = rig.baseYaw || 0; rig.rotate(pose.heading + Math.PI - (rig.baseYaw || 0)); } // the camera sits behind her heading
+      camYaw = rig.yaw; camHold = 0;
+    } else if (on && camSaved && rig.rotate && arena.focusYaw) {
+      // a soft lock on the serpent: the camera drifts back behind her, facing it, unless the player turned it lately
+      if (Math.abs(angDiff(rig.yaw, camYaw)) > 1e-4) camHold = ARENA_CAM.hold; // the player (or the mouse aim) turned it
+      if ((camHold -= dt) <= 0) {
+        const want = arena.focusYaw() + (pose.heading - arena.heading()) + Math.PI; // arena frame -> world, behind her
+        const d = angDiff(want, rig.yaw), k = Math.min(1, dt * ARENA_CAM.rate);
+        if (Math.abs(d) > 0.02) rig.rotate(d * k);
+      }
+      camYaw = rig.yaw;
+    } else if (!on && camSaved && mode !== 'arena-wait') {
+      rig.minDist = camSaved.minDist; rig.dist = camSaved.dist; rig.pitchOffset = camSaved.pitchOffset; rig.distTarget = camSaved.distTarget; camSaved = null;
+    }
+  }
   function update(dt, t) {
     tAcc += dt;
+    // on the Shoal (the fight and its load) the town's overlays stay away: the Loom chip, the market chips over the
+    // townsfolk, first-seen tips and the premise card (GPU bench 14.11: they sat over the boss and the win)
+    const onShoal = mode === 'arena' || mode === 'arena-wait';
+    if (onShoal !== shoalBody && doc && doc.body) { shoalBody = onShoal; doc.body.classList.toggle('ftf-in-shoal', onShoal); }
     if (seatedFor < 3 && (seatT += dt) > 0.5) { seatT = 0; placeAll(); if (seated >= 2) seatedFor += 0.5; } // re-seat until the ground answers
     const lv = level();
     const offered = R.questOffered(save, lv), active = R.questActive(save);
@@ -173,8 +242,10 @@ export function createGlassShoal(o) {
     const pulse = reduced() ? 0.35 : 0.22 + 0.16 * (0.5 + 0.5 * Math.sin(tAcc * 2.4));
     for (const r of [giverRay, bladeRay, stoneRay]) r.material.opacity = pulse;
     blade.visible = active && !save.blade && mode === 'town';
+    stone.visible = active; // the placeholder slab stands only once the quest is taken: the first hours of the town stay as they were
     bladeRay.visible = blade.visible;
-    stoneRay.visible = mode === 'town' && active && (save.step === 'reach_stone' || save.step === 'ride');
+    stoneRay.visible = mode === 'town' && active && R.stoneOpen(save);
+    if (mode === 'town' && R.homeDue(save) && event('home')) { toast(say('shoal.home')); chapterCard(); }
     if (!reduced()) blade.rotation.y += dt * 0.6;
     // the tracker line
     const tk = mode === 'town' ? R.trackerKey(save, lv) : null;
@@ -213,6 +284,7 @@ export function createGlassShoal(o) {
       if (ride.done) endRide();
     }
     if (mode === 'arena' && arena) { arena.update(dt, t); arena.pose(pose); }
+    arenaCamera(dt);
     const own = mode === 'ride' || mode === 'arena' || mode === 'arena-wait';
     if (own !== ownedClass) { ownedClass = own; doc.body.classList.toggle('gs-owned', own); }
     void t;
@@ -228,7 +300,11 @@ export function createGlassShoal(o) {
     get mode() { return mode; },
     get save() { return { ...save }; },
     /** True while the ride or the fight owns the heroine (boot-world skips its physics and town input). */
+    /** Whether she has taken the Loomblade (play/held-blade.js puts it in her hand). */
+    hasBlade: () => !!save.blade,
     owns: () => mode === 'ride' || mode === 'arena' || mode === 'arena-wait',
+    /** On the dragon's back (boot-world seats her: the `ride` clip, hips on the saddle). */
+    riding: () => mode === 'ride',
     update, interact,
     /** Input while owned (keys from boot-world's Input). */
     input(input) {
@@ -255,13 +331,14 @@ export function createGlassShoal(o) {
         loadArena().then((a) => { mode = 'arena'; a.enter(save); toast(say('shoal.landed')); }).catch((e) => { console.warn('[shoal] arena', e); mode = 'town'; });
       }
     },
-    dispose() { group.removeFromParent(); dragon.root.removeFromParent(); track.remove(); prompt.remove(); closeCard(); if (arena) arena.dispose(); },
+    dispose() { if (doc && doc.body) doc.body.classList.remove('ftf-in-shoal'); group.removeFromParent(); dragon.root.removeFromParent(); track.remove(); prompt.remove(); closeCard(); if (arena) arena.dispose(); },
   };
 }
 
 const smooth = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
-/** The great pearl dragon: a placeholder body (until MODELS.dragon) with flapping wings and a saddle point. */
+/** The great pearl dragon: the model `shoal_dragon` (seven clips mixed by game/shoal-dragon-anim.js, a `saddle` bone
+ *  as the rider's socket) once it has loaded; until then a placeholder body with flapping wings and a saddle point. */
 function makeDragon(THREE) {
   const root = new THREE.Group(); root.name = 'shoal-dragon';
   const pearl = new THREE.MeshStandardMaterial({ color: 0xeee8f2, roughness: 0.35, metalness: 0.2, emissive: 0x3a3450, emissiveIntensity: 0.25 });
@@ -273,19 +350,51 @@ function makeDragon(THREE) {
   const wingMat = new THREE.MeshStandardMaterial({ color: 0xd9d2ea, roughness: 0.5, side: THREE.DoubleSide, transparent: true, opacity: 0.92 });
   const wing = (s) => { const pivot = new THREE.Group(); pivot.position.set(1.2 * s, 0.8, 0.6); const m = new THREE.Mesh(new THREE.PlaneGeometry(7, 3.4), wingMat); m.rotation.x = -Math.PI / 2; m.position.x = 3.5 * s; pivot.add(m); body.add(pivot); return pivot; };
   const wl = wing(-1), wr = wing(1);
-  let t = 0, model = null;
+  let t = 0, model = null, mixer = null, actions = null, socket = null, socketRest = null, phase = '', phaseT = 0;
   const saddle = new THREE.Object3D(); saddle.position.set(0, 1.25, 0.6); root.add(saddle);
   const tmp = new THREE.Vector3();
   return {
     root,
-    saddle: () => { root.updateMatrixWorld(true); return saddle.getWorldPosition(tmp); },
-    useModel(scene) { model = scene; body.visible = false; root.add(model); },
+    saddle: () => { root.updateMatrixWorld(true); return (socket || saddle).getWorldPosition(tmp); },
+    useModel(scene, clips = []) {
+      model = scene; body.visible = false; root.add(model);
+      model.traverse((o) => { if (o.isMesh) { o.frustumCulled = false; o.castShadow = true; } if (o.name === 'saddle') socket = o; });
+      if (socket) { // the socket bone's rest frame against the model: what keeps the saddle upright on the bone
+        model.updateMatrixWorld(true);
+        const toBone = new THREE.Matrix4().copy(socket.matrixWorld).invert().multiply(model.matrixWorld);
+        const at = new THREE.Vector3().setFromMatrixPosition(new THREE.Matrix4().copy(model.matrixWorld).invert().multiply(socket.matrixWorld));
+        socketRest = toBone.multiply(new THREE.Matrix4().makeTranslation(at.x, at.y, at.z));
+      }
+      if (clips.length) {
+        mixer = new THREE.AnimationMixer(model); actions = {};
+        for (const c of clips) { const a = mixer.clipAction(c); a.enabled = true; a.setEffectiveWeight(0); a.play(); actions[c.name] = a; }
+        for (const one of ['land', 'takeoff']) if (actions[one]) { actions[one].setLoop(THREE.LoopOnce, 1); actions[one].clampWhenFinished = true; }
+      }
+    },
+    /** The saddle model (its origin is the socket, its axes the dragon's): it rides on the `saddle` bone. */
+    useSaddle(scene) {
+      if (!socket || !socketRest) return;
+      scene.traverse((o) => { if (o.isMesh) { o.frustumCulled = false; o.castShadow = true; } });
+      scene.matrixAutoUpdate = false; scene.matrix.copy(socketRest); socket.add(scene);
+    },
     update(dt, reduced, bank, perched) {
       t += dt;
+      if (model) {
+        const next = perched ? 'land' : 'ride';
+        if (next !== phase) { phase = next; phaseT = 0; }
+        // reduced motion: no descent and no strokes, the settled poses only (perched idle, a still glide)
+        phaseT = reduced ? (perched ? 1e3 : DRAGON_ANIM.takeoff + DRAGON_ANIM.beats + 1) : phaseT + dt;
+        const mix = dragonMix(phase, phaseT, bank);
+        model.position.y = -(DRAGON_ANIM.hover * (1 - mix.lift) + DRAGON_ANIM.bodyHeight * mix.lift);
+        if (mixer) {
+          for (const name in actions) { const a = actions[name]; a.setEffectiveWeight(mix.weights[name] || 0); if (name in mix.times) { a.paused = true; a.time = mix.times[name]; } }
+          mixer.update(reduced ? 0 : dt);
+        }
+        return;
+      }
       const flap = reduced ? 0.15 : (perched ? 0.12 * Math.sin(t * 1.4) : 0.55 * Math.sin(t * 3.2));
       wl.rotation.z = flap; wr.rotation.z = -flap;
       if (!reduced && !perched) body.position.y = 0.25 * Math.sin(t * 3.2 + 0.6);
-      void bank; void model;
     },
   };
 }

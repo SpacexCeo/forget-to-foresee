@@ -24,6 +24,8 @@ export const SIDE_STEP = 0.45;
 export const BODY_RADIUS = 0.35, MIN_GAP = 0.6;
 /** How far ahead a walker looks for bodies, and how wide it leans round a standing one. */
 export const LOOK_AHEAD = 2.2, PASS_STEP = 0.75;
+/** Seconds a walker's stop holds at least, and after it the seconds it keeps going past other townsfolk (no stop-go stutter). */
+export const WAIT_HOLD = 0.45, GO_HOLD = 0.8;
 /**
  * The bodies a walker must keep clear of (pure): other townsfolk (ctx.others, a Map of plans), Iris (ctx.iris) and
  * other heroines (ctx.bodies(): [[x, y, z], ...]). Same level only. `oncoming`: walking towards me; `iYield`: of two
@@ -67,7 +69,7 @@ export const TOWNSFOLK = Object.freeze([
   { key: 'sweeper', height: 1.62, walk: 1.20 },
   { key: 'lamplighter', height: 1.70, walk: 1.30 },
   { key: 'courier', height: 1.68, walk: 1.55 },
-  { key: 'child_a', height: 1.32, walk: 1.10, run: 2.6 },
+  { key: 'child_a', height: 1.28, walk: 1.10, run: 2.6 }, // the owner's Tripo girl (14.11, art/townsfolk/tripo_person.py on the agent rig names)
   { key: 'child_b', height: 1.22, walk: 1.20, run: 2.6 },
 ].map((p) => Object.freeze({ ...p, asset: (QUEST_GIVERS.has(p.key) ? 'npc_' : 'townsfolk_') + p.key })));
 
@@ -80,7 +82,32 @@ export const CLIP_FALLBACK = Object.freeze({
   // the musician's lute hangs on her back: no playing pose (the shared `play` clip bows a violin)
   play: ['play_instrument', 'idle_look', 'idle_shift', 'idle'], counter: ['counter', 'counter_loop', 'think', 'idle'],
   sit: ['sit', 'sit_loop', 'idle'], think: ['idle_look', 'think', 'idle'],
+  // the Wayfarers' own one-shots (art/townsfolk/tf_anim.py EXTRA)
+  // a standing phone first: the pack's play_mobile_game sits on the ground (owner 14.11: too much sitting)
+  take_photo: ['make_a_call_02', 'take_photo', 'think', 'idle'], haggle: ['haggle', 'talk', 'idle'],
+  // the Tripo pack's social clips (townsfolk.js PACK_CLIPS, loaded after the town is on screen; until then the older ones)
+  greet: ['greet_04', 'wave', 'gesture_offer', 'talk', 'idle'], laugh: ['laugh_01', 'nod', 'idle'],
+  idle_look: ['idle_look', 'idle_shift', 'idle'], scratch: ['scratch', 'idle_shift', 'idle'], arms_folded: ['think', 'idle_shift', 'idle'],
+  angry: ['angry_01', 'haggle', 'talk', 'idle'], laugh_b: ['laugh_02', 'laugh_01', 'nod', 'idle'],
+  clap: ['clap', 'nod', 'idle'], cheer: ['cheer', 'clap', 'wave', 'idle'], goodbye: ['wave', 'idle'], // the pack's wave_goodbye clips are seated
+  phone: ['make_a_call_02', 'idle_shift', 'idle'], relax: ['standing_relax', 'idle_shift', 'idle'], dance: ['dance_03', 'idle_shift', 'idle'],
 });
+
+/** The Tripo townsfolk pack (art/townsfolk/pack_index.json, art/tools/glb_town_pack.mjs): one file for every body,
+ * retargeted at load (anim-library.js townsfolkClips) once the town is on screen. */
+export const PACK_FILE = 'townsfolk_pack';
+export const PACK_CLIPS = Object.freeze(['idle_look', 'wave', 'greet_04', 'nod', 'talk', 'talk_b', 'laugh_01', 'haggle', 'think', 'scratch',
+  'angry_01', 'clap', 'cheer', 'laugh_02', 'make_a_call_02', 'standing_relax', 'sit', 'dance_03']); // sit: only the elder's bench
+/** A standing idle now and then turns into one of these for a few seconds (seeded per person); near the musician
+ * while she plays, a dance instead (DANCE_RADIUS). */
+export const IDLE_VARIETY = Object.freeze(['idle_look', 'scratch', 'arms_folded', 'phone', 'relax']); // all standing (owner 14.11: no sitting in the idles)
+export const DANCE_RADIUS = 7;
+/** Two townsfolk talking take turns every TALK_TURN seconds: the talker's and the listener's clips cycle through these
+ * (the talker's first is the step's own talk clip). */
+export const TALK_TURN = 5.5;
+export const TALKER_CLIPS = Object.freeze(['talk', 'haggle', 'talk_b', 'angry']), LISTENER_CLIPS = Object.freeze(['listen', 'nod', 'laugh', 'laugh_b']);
+/** A win of Iris's nearby (townsfolk.js: a chest, a feat) makes the townsfolk within REACT_RADIUS clap or cheer. */
+export const REACT_RADIUS = 12, REACT_SECONDS = 4;
 
 /** The first clip of the chain that the list of available names has (or null). */
 export function pickClip(names, want) {
@@ -188,6 +215,7 @@ function programs() {
 const clearOfProps = (progs) => { for (const prog of Object.values(progs)) for (const st of prog.steps || []) if (st.walk) st.walk = detour(st.walk); return progs; };
 export const PROGRAMS = Object.freeze(clearOfProps(programs()));
 
+
 /** Trade slots at the Exchange door: along the front away from the trading board (scenes/town-footprints.js). */
 const EX_SLOT = (slot) => -0.3 - (slot % 5) * 0.8;
 /** The fixed town lines: the jury route Iris walks and the exported NPC routes (loops closed). The lower stroll and the
@@ -236,7 +264,7 @@ export const TRADE_MAX = 3;
  * May `key` walk to the Exchange to trade now (pure)? Never a quest giver: it holds its post, so its marker and its talk stay
  * where the player looks for them (a hired giver keeps its badge). Others only while fewer than TRADE_MAX are there.
  */
-export const mayTrade = (key, tradingNow) => !QUEST_GIVERS.has(key) && tradingNow < TRADE_MAX;
+export const mayTrade = (key, tradingNow) => !QUEST_GIVERS.has(key) && !key.startsWith('wayfarer_') && tradingNow < TRADE_MAX;
 
 /** The temporary program of a hired agent: walk to the Exchange, trade at the door; `back` walks home and resumes. */
 export function tradeProgram(plan, slot = 0) {
@@ -285,6 +313,9 @@ export class PersonPlan {
     this.index = -1; this.t = 0; this.until = 0; this.s = 0; this.len = 0; this.side = 0;
     this.meeting = false; this.waited = 0; this.greeted = false; this.greetUntil = 0; this.yielding = false;
     this._p = { x: 0, y: 0, z: 0, dx: 0, dz: 1, corner: 0 };
+    // the idle variety and the greeting's choice run on their own seeded stream: the step timing stays as it was
+    this.vrng = seededRng(seed + ':variety:' + def.key); this.varNext = 0; this.varEnd = 0; this.varClip = null; this.greets = 0;
+    this.clock = 0; this.reactUntil = 0; this.reactClip = null; this.byeArmed = false;
     this.next();
   }
 
@@ -295,13 +326,17 @@ export class PersonPlan {
     if (this.current.restore) { this.program = this.current.restore; this.index = -1; return this.next(); } // back home: the own loop again
     const st = this.current;
     this.t = 0; this.s = 0; this.meeting = false; this.waited = 0;
+    this.varEnd = 0; this.varNext = 4 + 6 * this.vrng();
     if (st.walk) this.len = polyLength(st.walk);
     else if (st.stay) this.until = st.stay * (0.85 + 0.3 * this.rng());
   }
 
+  /** A short reaction (clap, cheer) for `seconds` while standing, facing Iris (townsfolk.js: her win nearby). */
+  react(clip, seconds = REACT_SECONDS) { this.reactClip = clip; this.reactUntil = this.clock + seconds; }
+
   step(dt, ctx) {
     const st = this.current, iris = ctx.iris;
-    this.speed = 0;
+    this.speed = 0; this.clock += dt;
     const dIris = iris ? Math.hypot(iris[0] - this.x, iris[2] - this.z) + Math.abs(iris[1] - this.y) * 2 : Infinity;
     this.near = dIris;
     if (ctx.reduced) { this.clip = st.stay && st.sit ? st.clip : this.sit ? this.clip : 'idle'; this.side += (0 - this.side) * Math.min(1, dt * 4); return; } // steady: everyone holds still
@@ -317,7 +352,7 @@ export class PersonPlan {
       // the one that yields (the later key) waits until the other has passed; a standing body: lean wider round it.
       // Hard rule: a step that would bring two centres closer than MIN_GAP (and closer than they were) is not taken.
       const bodies = bodiesAround(this, ctx);
-      let sideWant = 0, wait = false;
+      let sideWant = 0, wait = false, slow = false, irisWait = false;
       for (const b of bodies) {
         const rx = b.x - this.x, rz = b.z - this.z, d = Math.hypot(rx, rz);
         const ahead = rx * p.dx + rz * p.dz, across = rx * p.dz - rz * p.dx; // along my way / to my side (centre to centre)
@@ -325,21 +360,39 @@ export class PersonPlan {
         const lean = b.iris ? SIDE_STEP : b.walking ? SIDE_STEP : PASS_STEP, away = b.oncoming ? -lean : (across > 0 ? -lean : lean); // head-on: both keep to the same hand
         if (Math.abs(sideWant) < lean) sideWant = away;
         const clear = Math.abs(across) >= MIN_GAP + 0.05; // already wide enough to pass
-        if (b.iris) { if (d < YIELD_RADIUS) wait = true; } // Iris: always wait for her (and lean a little)
+        if (b.iris) { if (d < YIELD_RADIUS) { wait = true; irisWait = true; } } // Iris: always wait for her (and lean a little)
         else if (b.oncoming) { if (b.iYield && !clear && d < LOOK_AHEAD * 0.8) wait = true; } // the later key waits; the other passes once wide enough
         else if (b.walking) { if (d < MIN_GAP + 0.35 && !clear) wait = true; } // the same way: keep a step behind
-        else if (!clear && d < MIN_GAP + 0.5) wait = true; // a standing body: lean round it first
+        else if (!clear && d < MIN_GAP + 0.5) slow = true; // a standing body: lean round it at a slow walk (stopping to lean slid her sideways in place)
       }
+      // a decision holds for a moment (GPU bench trace 14.11: two walkers meeting at the Exchange door stopped and went
+      // every 0.3 s and slid sideways while stopped): a wait lasts at least WAIT_HOLD; after it, other townsfolk are
+      // passed for GO_HOLD on the lean and the hard MIN_GAP rule below; Iris always stops them
+      if (wait) this.waitUntil = Math.max(this.waitUntil || 0, this.t + WAIT_HOLD);
+      else if (this.t < (this.waitUntil || 0)) wait = true;
+      if (wait && !irisWait && this.t < (this.goUntil || 0)) wait = false;
+      if (!wait && this.wasWaiting) this.goUntil = this.t + GO_HOLD;
+      this.wasWaiting = wait;
       this.yielding = wait;
-      if (wait) v = 0;
+      if (wait) v = 0; else if (slow) v = Math.min(v, top * 0.35);
       if (run || this.len - this.s < 1.5) sideWant = 0; // no lean while running, nor on the last 1.5 m: a walk ends on its own line
       const side0 = this.side;
       this.side += (sideWant - this.side) * Math.min(1, dt * 2.5);
       const ds = Math.min(v * dt, this.len - this.s);
       const s1 = this.s + ds, q = polyAt(st.walk, s1, { x: 0, y: 0, z: 0, dx: 0, dz: 1, corner: 0 });
       const closer = (x1, z1) => bodies.some((b) => { const d1 = Math.hypot(b.x - x1, b.z - z1); return d1 < MIN_GAP && d1 < Math.hypot(b.x - this.x, b.z - this.z) - 1e-6; });
-      let off = easeOffset(this.ox, this.oz, q.dz * this.side, -q.dx * this.side, dt);
-      if (closer(q.x + off[0], q.z + off[1])) off = [this.ox, this.oz]; // the lean may not swing into someone: keep it, try the step alone
+      let off = wait ? [this.ox, this.oz] : easeOffset(this.ox, this.oz, q.dz * this.side, -q.dx * this.side, dt); // no sideways slide while standing
+      if (closer(q.x + off[0], q.z + off[1])) {
+        // the step with the lean comes too close: first the lean alone, where she stands on the line (a side step, walked:
+        // it shows as a step, never a slide), then the step alone
+        const lean = wait ? null : easeOffset(this.ox, this.oz, p.dz * this.side, -p.dx * this.side, dt);
+        if (lean && (lean[0] !== this.ox || lean[1] !== this.oz) && !closer(p.x + lean[0], p.z + lean[1])) {
+          const m = Math.hypot(lean[0] - this.ox, lean[1] - this.oz);
+          this.ox = lean[0]; this.oz = lean[1]; this.x = p.x + this.ox; this.z = p.z + this.oz;
+          this.speed = dt > 0 ? m / dt : 0; this.gait = 'walk'; this.clip = 'idle'; return;
+        }
+        off = [this.ox, this.oz]; // the lean may not swing into someone: keep it, try the step alone
+      }
       if (closer(q.x + off[0], q.z + off[1])) { this.side = side0; this.yielding = true; this.speed = 0; this.clip = 'idle'; return; }
       this.s = s1; this.speed = dt > 0 ? ds / dt : 0; this.gait = run ? 'run' : 'walk';
       polyAt(st.walk, this.s, p);
@@ -361,18 +414,29 @@ export class PersonPlan {
       if (there && !this.meeting) { this.meeting = true; this.t = 0; }
       if (!this.meeting) { this.waited += dt; this.clip = 'idle_shift'; if (this.waited > 75) this.next(); }
       else {
-        // take turns: one talks while the other listens, swapping every few seconds (the lower key starts)
-        const mine = (Math.floor(this.t / 5.5) % 2 === 0) === (this.key < st.meet);
-        this.clip = mine ? st.clip : 'listen';
+        // take turns: one talks while the other listens, swapping every few seconds (the lower key starts); each round
+        // the talk changes (talk, a complaint, the other talk) and so does the listening (listen, agree, laugh)
+        const turn = Math.floor(this.t / TALK_TURN), mine = (turn % 2 === 0) === (this.key < st.meet), k = Math.floor(turn / 2) % TALKER_CLIPS.length;
+        this.clip = mine ? (k === 0 ? st.clip : k === 2 ? (st.clip === 'talk' ? 'talk_b' : 'talk') : TALKER_CLIPS[k]) : LISTENER_CLIPS[k];
         if (this.t >= st.seconds) this.next();
       }
     } else {
       this.clip = st.clip; this.sit = st.sit || 0;
-      // greet Iris once each time she comes close
-      if (st.greet && dIris < 4.2 && !this.greeted) { this.greeted = true; this.greetUntil = this.t + 2.6; }
+      // a standing idle turns now and then into a look around, a scratch of the head, folded arms, the phone or a relaxed stance (all standing) for a few
+      // seconds; near the musician while she plays, a dance
+      if (!st.sit && (st.clip === 'idle' || st.clip === 'idle_shift')) {
+        if (this.t >= this.varNext) { const mu = this.key !== 'musician' && ctx.others && ctx.others.get('musician'); const music = mu && mu.clip === 'play' && Math.abs(mu.y - this.y) < 1.2 && Math.hypot(mu.x - this.x, mu.z - this.z) < DANCE_RADIUS;
+          this.varClip = music ? 'dance' : IDLE_VARIETY[Math.floor(this.vrng() * IDLE_VARIETY.length)]; this.varEnd = this.t + 4 + 2 * this.vrng(); this.varNext = this.varEnd + 8 + 8 * this.vrng(); }
+        if (this.t < this.varEnd) this.clip = this.varClip;
+      }
+      // greet Iris once each time she comes close (a wave, the next time the pack's greeting)
+      if (st.greet && dIris < 4.2 && !this.greeted) { this.greeted = true; this.greetUntil = this.t + 2.6; this.greetClip = st.greet === 'wave' && this.greets++ % 2 ? 'greet' : st.greet; this.byeArmed = st.greet === 'wave'; }
+      // ... and wave goodbye once when she walks off
+      if (this.byeArmed && dIris > 5.5 && this.t >= this.greetUntil) { this.byeArmed = false; this.greetUntil = this.t + 2.6; this.greetClip = 'goodbye'; }
       if (dIris > 8) this.greeted = false;
-      if (this.t < this.greetUntil) { if (!st.sit) { this.clip = st.greet; if (iris) face = iris; } } // seated people greet with their look only: the greeting clips stand
+      if (this.t < this.greetUntil) { if (!st.sit) { this.clip = this.greetClip || st.greet; if (iris) face = iris; } } // seated people greet with their look only: the greeting clips stand
       else this.greetUntil = 0;
+      if (this.clock < this.reactUntil && !st.sit && this.t >= this.greetUntil) { this.clip = this.reactClip; if (iris) face = iris; } // Iris's win nearby
       if (this.key === 'guard' && dIris < 5 && !this.saluted) { this.saluted = true; this.greetUntil = this.t + 2.4; this._salute = true; }
       if (this.key === 'guard') { if (dIris > 9) this.saluted = false; if (this.t < this.greetUntil && this._salute) this.clip = 'salute'; else this._salute = false; }
       if (this.t >= this.until && this.t >= this.greetUntil) this.next();
@@ -390,4 +454,26 @@ export function animStride(distance, { phone = false, visible = true } = {}) {
   if (distance < 45 * k) return 2;
   if (distance < 80 * k) return 4;
   return 0;
+}
+
+/**
+ * The Wayfarers from Kallima (owner 14.11 night): visitors from another world who came "through the glass" like Iris.
+ * Kept apart from TOWNSFOLK (the town's own thirteen, no hire talk, no temperament) and shown only with the flag
+ * `wayfarers`. It wears the model townsfolk_wayfarer (art/townsfolk/cast.py) with its own clips: a springy walk,
+ * an idle that looks around, `take_photo`, `haggle`.
+ * `wayfarer` stands on the main street between the stairs (the Lost Tourist: scenes/wayfarer-tale.js walks them to the
+ * Gate-Loom). One Wayfarer only (owner 14.11: every person on screen is a different character; the three touring
+ * copies are gone).
+ */
+export const WAYFARER_HOME = Object.freeze([1.2, 2.5, 6.6]);
+/** The way down the main street to the Gate-Loom (town-local; the jury route's points, then in front of the portal). */
+export const WAYFARER_TO_GATE = Object.freeze([[0.6, 2.5, 12], [0.4, 0, 18], [0.6, 0, 23.2], [2.7, 0, 24.3]]);
+export const WAYFARERS = Object.freeze([
+  Object.freeze({ key: 'wayfarer', height: 1.9, walk: 1.35, asset: 'townsfolk_wayfarer', visitor: true,
+    program: Object.freeze({ home: WAYFARER_HOME, heading: Math.PI, steps: [stay(14, 'idle', { greet: 'wave' }), stay(3, 'take_photo'), stay(9, 'think'),
+      stay(12, 'idle', { heading: Math.PI * 0.6 }), stay(3.5, 'haggle'), stay(8, 'idle_shift')] }) }),
+]);
+/** A walk from where a visitor stands along `path`, then waiting there (the escort to the Gate-Loom). Pure. */
+export function walkProgram(from, path) {
+  return { home: from.slice(), heading: null, steps: [{ walk: detour([from.slice(), ...path.map((p) => p.slice())]) }, stay(600, 'idle')] }; // clear of the placed props, like every walk
 }

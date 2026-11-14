@@ -18,22 +18,26 @@ import { FADE, findLookBones, applyLookTo } from './gait.js';
 import { townsfolkClips, mergeClips, faceLayerClip } from './anim-library.js';
 const MAX_STEP = 0.45; // the largest ground step a walker takes (play/town-paths.js MAX_STEP; no import: chunk order)
 import { MIN_GAP } from './townsfolk-plan.js';
-import { TOWNSFOLK, PROGRAMS, PersonPlan, tradeProgram, homeProgram, mayTrade, pickClip, animStride, LOOK_RADIUS } from './townsfolk-plan.js';
+import { TOWNSFOLK, PROGRAMS, PersonPlan, tradeProgram, homeProgram, mayTrade, pickClip, animStride, LOOK_RADIUS, WAYFARERS, walkProgram, PACK_FILE, PACK_CLIPS, REACT_RADIUS } from './townsfolk-plan.js';
+import { features } from '../features.js';
+import { smoothState, smoothStep } from './townsfolk-smooth.js';
 
 const SIT_PELVIS_ABOVE = 0.10; // hip joint above the seat top when seated (m, scaled with the body)
 const SIT_PELVIS_Z = -0.07;    // hip joint along the 0.46 m deep seat (bench local, the sitter faces +Z; back rail at -0.26)
 const _pelvis = new THREE.Vector3();
 
 const _sphere = new THREE.Sphere(), _frustum = new THREE.Frustum(), _m = new THREE.Matrix4(), _target = [0, 0, 0], _local = [0, 0, 0];
-const ONE_SHOT = new Set(['wave', 'salute', 'nod', 'gesture_offer', 'understand']);
+const ONE_SHOT = new Set(['wave', 'salute', 'nod', 'gesture_offer', 'understand', 'take_photo', 'haggle']);
 /** Body type of the shared mocap set (anim-library.js townsfolkClips): posture and stride per kind of person. */
+const HOLDS_TOOL = new Set(['sweeper']); // the right hand carries a tool skinned to it (setModel: the arm's walk hold)
 const BODY = { child_a: 'child', child_b: 'child', guard: 'guard' }; // the elder is a grown man, not an old one (owner 13.11): the default body
 
 class Person {
   constructor(def, scene) {
     this.def = def;
-    this.plan = new PersonPlan(def, PROGRAMS[def.key]);
+    this.plan = new PersonPlan(def, def.program || PROGRAMS[def.key]);
     this.root = new THREE.Group();
+    if (def.scale) this.root.scale.setScalar(def.scale); // a placeholder body brought to the visitor's height
     this.root.name = def.asset + '#townsfolk';
     this.root.visible = false;
     scene.add(this.root);
@@ -41,6 +45,7 @@ class Person {
     this.current = null; this.walkAct = null; this.walkName = null; this.moveW = 0;
     this.bones = { head: null, neck: null, eyes: [] };
     this.look = { yaw: 0, pitch: 0, w: 0 };
+    this.smooth = smoothState(); // the shown position (townsfolk-smooth.js)
     this.state = 'absent'; this.file = null; this.acc = 0; this.frame = 0; this.groundY = null; this.groundAtXZ = [1e9, 1e9];
   }
 
@@ -68,15 +73,47 @@ class Person {
       if (face) this.mixer.clipAction(face).play();
       // move at the speed the clips walk at, so the feet never slide; sit at the height the sit clip sits at
       const speedOf = (want) => { const c = this.clips.get(pickClip(this.names, want)); return c && c.userData && c.userData.speed > 0 ? c.userData.speed : 0; };
-      this.clipSpeed = { walk: speedOf('walk') || this.def.walk, run: speedOf('run') || this.def.run || 2.6 };
+      const k = this.def.scale || 1; // a scaled body strides further per cycle
+      this.clipSpeed = { walk: (speedOf('walk') * k) || this.def.walk, run: (speedOf('run') * k) || this.def.run || 2.6 };
       this.plan.walkSpeed = this.clipSpeed.walk; if (this.def.run) this.plan.runSpeed = this.clipSpeed.run;
       const sit = this.clips.get('sit');
       this.sitDrop = sit && sit.userData && sit.userData.pelvis_y ? sit.userData.pelvis_y - 0.10 * (sit.userData.scale || 1) : null;
       // where the sit clip really puts the pelvis on this body is measured once in the pose (sitFix), then the root
       // is moved so the pelvis lands on the seat (owner 11.11: the elder sat on the back rail, legs through the seat)
       this.pelvis = model.getObjectByName('pelvis') || null; this.sitFix = null; this.sitScale = (sit && sit.userData && sit.userData.scale) || 1;
+      this.gltf = gltf; this.packFile = null; // a new body: the pack is retargeted onto it again
+      // A body that carries a tool in its right hand (the Sweeper's broom, skinned to hand_R): while she walks, the right
+      // arm keeps its idle hold instead of swinging, so the broom does not fly out sideways (owner 14.11, P0).
+      this.hold = null;
+      const idle = HOLDS_TOOL.has(this.def.key) && this.clips.get('idle');
+      if (idle) {
+        this.hold = [];
+        for (const n of ['upperarm_R', 'forearm_R', 'hand_R']) {
+          const b = model.getObjectByName(n), t = idle.tracks.find((x) => x.name === n + '.quaternion');
+          if (b && t) this.hold.push({ bone: b, q: new THREE.Quaternion().fromArray(t.values, 0) });
+        }
+      }
       this.state = 'loaded';
     });
+  }
+
+  /**
+   * The Tripo pack's social clips (assets/anim/townsfolk_pack.glb, one file for every body: retargeted here onto this
+   * one from a fresh rest-pose clone). They replace the older clips of the same names; a clip playing now restarts.
+   */
+  async addPack() {
+    const file = this.file, gltf = this.gltf;
+    let pack = [];
+    try { pack = await townsfolkClips(cloneSkinned(gltf.scene), { file: PACK_FILE, key: file, names: PACK_CLIPS, body: BODY[this.def.key] || 'adult' }); } catch (e) { console.warn('[townsfolk] pack failed', e); }
+    if (this.file !== file || this.gltf !== gltf) return; // the body changed meanwhile: the next pump retargets onto the new one
+    this.packFile = file;
+    for (const c of pack) {
+      const old = this.actions.get(c.name);
+      if (old) { old.stop(); this.mixer.uncacheAction(old.getClip()); this.actions.delete(c.name); }
+      if (this.current === c.name) this.current = null;
+      this.clips.set(c.name, c);
+    }
+    this.names = [...this.clips.keys()];
   }
 
   action(name) {
@@ -121,8 +158,9 @@ class Person {
 /**
  * @param {{scene: THREE.Scene, library: {fileFor: Function}, groundAt?: (x:number, z:number, fromY?:number) => (number|null)}} o
  */
-export function createTownsfolk({ scene, library, groundAt = null }) {
-  const people = TOWNSFOLK.map((def) => new Person(def, scene));
+export function createTownsfolk({ scene, library, groundAt = null, visitors = () => features.on('wayfarers') }) {
+  // the town's own people, then the visitors from other worlds (shown only while `visitors()`; a visitor can also be gone)
+  const people = [...TOWNSFOLK, ...WAYFARERS].map((def) => new Person(def, scene));
   const byKey = new Map(people.map((p) => [p.key = p.def.key, p]));
   const plans = new Map(people.map((p) => [p.def.key, p.plan]));
   let extraBodies = () => [];
@@ -152,6 +190,11 @@ export function createTownsfolk({ scene, library, groundAt = null }) {
     const d = (p) => Math.hypot(p.plan.x - playerLocal[0], p.plan.z - playerLocal[2]);
     let next = people.filter((p) => p.state === 'absent' && has(p.def)).sort((a, b) => d(a) - d(b))[0];
     let lite = true;
+    // the pack's social clips once everyone stands in town (never in the first-frame budget): one person per pump
+    if (!next) {
+      const bare = people.filter((p) => p.state === 'loaded' && !p.def.visitor && p.packFile !== p.file).sort((a, b) => d(a) - d(b))[0];
+      if (bare) { loading = true; await bare.addPack(); await new Promise((r) => setTimeout(r, 120)); loading = false; return; }
+    }
     if (!next && !upgraded && !phone()) {
       next = people.filter((p) => p.state === 'loaded' && fileOf(p.def, false) !== p.file).sort((a, b) => d(a) - d(b))[0];
       lite = false;
@@ -176,7 +219,7 @@ export function createTownsfolk({ scene, library, groundAt = null }) {
     ctx.iris = _local; ctx.reduced = reducedMotion;
     irisPush[0] = 0; irisPush[1] = 0;
     for (const p of people) { // a body never overlaps Iris: she is eased out, at most 1.2 m/s
-      if (p.state !== 'loaded' || Math.abs(p.plan.y - _local[1]) > 1.2) continue;
+      if (p.state !== 'loaded' || Math.abs(p.plan.y - _local[1]) > 1.2 || (p.def.visitor && (p.gone || !visitors()))) continue; // a hidden visitor never nudges her
       const dx = _local[0] - p.plan.x, dz = _local[2] - p.plan.z, d = Math.hypot(dx, dz);
       if (d < MIN_GAP && d > 1e-4) { const k = Math.min(MIN_GAP - d, 1.2 * dt) / d; irisPush[0] += dx * k; irisPush[1] += dz * k; }
     }
@@ -201,7 +244,7 @@ export function createTownsfolk({ scene, library, groundAt = null }) {
         const ref = p.groundY === null ? plan.y : p.groundY, tol = p.groundY === null ? 1.3 : MAX_STEP;
         const cast = (gx, gz) => { const g = groundAt(gx + TOWN_ORIGIN[0], gz + TOWN_ORIGIN[2], ref + TOWN_ORIGIN[1] + 1.2); return g === null ? null : g - TOWN_ORIGIN[1]; };
         let gy = cast(plan.x, plan.z);
-        if ((gy === null || Math.abs(gy - ref) > tol) && plan.px !== undefined && (plan.px !== plan.x || plan.pz !== plan.z)) { plan.side = 0; plan.x = plan.px; plan.z = plan.pz; gy = cast(plan.x, plan.z); }
+        if ((gy === null || Math.abs(gy - ref) > tol) && plan.px !== undefined && (plan.px !== plan.x || plan.pz !== plan.z)) { plan.side = 0; plan.ox = 0; plan.oz = 0; plan.x = plan.px; plan.z = plan.pz; gy = cast(plan.x, plan.z); } // the lean goes too, or the next step swings out again (a back-and-forth jitter)
         if (gy !== null && Math.abs(gy - ref) <= tol) p.groundY = gy;
         p.groundAtXZ[0] = plan.x; p.groundAtXZ[1] = plan.z;
       }
@@ -214,11 +257,13 @@ export function createTownsfolk({ scene, library, groundAt = null }) {
         x += Math.sin(plan.yaw) * (SIT_PELVIS_Z - fix.z); z += Math.cos(plan.yaw) * (SIT_PELVIS_Z - fix.z);
       } else if (plan.sit && p.sitDrop !== null && p.sitDrop !== undefined) y += plan.sit - p.sitDrop; // the seat top meets the sitting pelvis
       if (plan.sit && !canSit) { x += Math.sin(plan.yaw) * 0.6; z += Math.cos(plan.yaw) * 0.6; } // no sit clip: stand in front of the bench
-      p.root.position.set(x + TOWN_ORIGIN[0], y + TOWN_ORIGIN[1], z + TOWN_ORIGIN[2]);
+      // shown without jumps: seat offsets, pulled-back side steps and stair heights glide (play/townsfolk-smooth.js)
+      const sm = smoothStep(p.smooth, x, y, z, plan.speed, dt);
+      p.root.position.set(sm.x + TOWN_ORIGIN[0], sm.y + TOWN_ORIGIN[1], sm.z + TOWN_ORIGIN[2]);
       p.root.rotation.y = plan.yaw;
       _sphere.center.set(p.root.position.x, p.root.position.y + 0.9, p.root.position.z); _sphere.radius = 1.4;
       const onScreen = !camera || _frustum.intersectsSphere(_sphere);
-      p.root.visible = onScreen && dist < reach;
+      p.root.visible = onScreen && dist < reach && !(p.def.visitor && (p.gone || !visitors()));
       const stride = animStride(dist, { phone: isPhone, visible: p.root.visible });
       p.acc += dt;
       if (!stride || (frame + i) % stride !== 0) { if (!stride) p.acc = 0; continue; }
@@ -228,6 +273,7 @@ export function createTownsfolk({ scene, library, groundAt = null }) {
       const cur = p.current && p.actions.get(p.current);
       if (cur) cur.paused = reducedMotion; // steady under reduced motion: the pose holds, cross-fades still finish
       p.mixer.update(step);
+      if (p.hold && p.moveW > 0.01) for (const h of p.hold) h.bone.quaternion.slerp(h.q, p.moveW * 0.9); // the tool hand holds still on the move
       if (plan.sit && canSit && !p.sitFix && p.pelvis && p.current === pickClip(p.names, 'sit')) {
         const act = p.actions.get(p.current);
         if (act && act.getEffectiveWeight() > 0.999) {
@@ -272,8 +318,24 @@ export function createTownsfolk({ scene, library, groundAt = null }) {
 
   function setActive(on) { active = !!on; for (const p of people) if (!active) p.root.visible = false; }
 
+  // Iris wins something nearby (a chest picked up or opened, a feat): the townsfolk around clap or cheer (owner 14.11)
+  const onWin = (e) => {
+    if (e.type === 'ftf:chest' && !(e.detail && (e.detail.phase === 'pickup' || e.detail.phase === 'open'))) return;
+    let i = 0;
+    for (const p of people) if (p.state === 'loaded' && p.root.visible && p.plan.near < REACT_RADIUS) p.plan.react(i++ % 2 ? 'clap' : 'cheer');
+  };
+  if (typeof window !== 'undefined' && window.addEventListener) { window.addEventListener('ftf:chest', onWin); window.addEventListener('ftf:feat', onWin); }
+
   return {
     people, byKey, update, setActive, setBadge, sendToTrade, irisPush,
+    /** A visitor walks `path` (town-local points) from where they stand and waits there (scenes/wayfarer-tale.js). */
+    walkAlong(key, path) { const p = byKey.get(key); if (!p) return false; const plan = p.plan; plan.program = walkProgram([plan.x, plan.y, plan.z], path); plan.index = -1; plan.next(); return true; },
+    /** True once a walkAlong walk is done (they wait at its end). */
+    walkDone(key) { const p = byKey.get(key); return !!p && p.plan.program.steps.length === 2 && p.plan.index === 1; },
+    /** A visitor leaves (through the Gate-Loom): hidden; `false` brings them back home. */
+    setGone(key, gone) { const p = byKey.get(key); if (!p) return; p.gone = !!gone; if (!gone) { p.plan.program = p.def.program || PROGRAMS[p.def.key]; p.plan.x = p.plan.program.home[0]; p.plan.y = p.plan.program.home[1]; p.plan.z = p.plan.program.home[2]; p.plan.index = -1; p.plan.next(); } },
+    /** Whether a visitor shows now (the flag on and not gone). */
+    visitorShown(key) { const p = byKey.get(key); return !!p && !!p.def.visitor && !p.gone && visitors(); },
     /** Other heroines (town-local [x, y, z] list) the townsfolk walk round. */
     setBodies(fn) { extraBodies = typeof fn === 'function' ? fn : () => []; },
     /** For QA and the dev HUD: per person key -> state, file, position, clip. */

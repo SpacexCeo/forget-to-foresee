@@ -34,8 +34,12 @@ export function scanModels(dir, { subdirs = MODEL_SUBDIRS } = {}) {
   return { files, dirs };
 }
 
-/** Source of the virtual module. */
-export function modelListSource(dir, o) {
+/** The clip files in public/assets/anim (name -> bytes): their URLs get ?v=<bytes> like the models' (a phone that
+ * cached an old clip file must not pair it with a new model: owner 14.11, the heroines did not move on phones). */
+export function scanAnims(dir) { return scanModels(dir, { subdirs: [] }).files; }
+
+/** Source of the virtual module (the clips sit next to the models: public/assets/anim). */
+export function modelListSource(dir, o, animDir = resolve(dir, '..', 'anim')) {
   const { files, dirs } = scanModels(dir, o);
-  return 'export const MODEL_FILES = ' + JSON.stringify(files) + ';\nexport const MODEL_DIRS = ' + JSON.stringify(dirs) + ';\n';
+  return 'export const MODEL_FILES = ' + JSON.stringify(files) + ';\nexport const MODEL_DIRS = ' + JSON.stringify(dirs) + ';\nexport const ANIM_FILES = ' + JSON.stringify(scanAnims(animDir)) + ';\n';
 }

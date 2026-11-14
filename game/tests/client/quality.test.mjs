@@ -99,8 +99,28 @@ test('desktop governor: steps the tier down once per window, never up, no resolu
   assert.equal(gov.done, true);
   assert.equal(gov.pixelScale, 1);
   const fine = new TierGovernor(GOVERNORS.desktop);
-  assert.deepEqual(run(fine, 'ultra', 15, 3000).changes, [], 'under budget: no change in 45 s');
-  assert.equal(fine.sample(15, 'ultra'), null, 'the tier-only view still works');
+  assert.deepEqual(run(fine, 'high', 15, 3000).changes, [], 'under budget below the top tier: no change in 45 s');
+  assert.equal(fine.sample(15, 'high'), null, 'the tier-only view still works');
+});
+
+test('desktop governor: a strong GPU climbs to 2x supersampling on ultra, steps back once on a slow window and stays locked (owner 14.11)', () => {
+  const g = GOVERNORS.desktop;
+  assert.deepEqual(g.upScales, [1.25, 1.5, 1.75, 2]); assert.equal(g.upRatioMax, 2);
+  assert.deepEqual(GOVERNORS.phone.upScales, undefined, 'phones never supersample');
+  const strong = new TierGovernor(g);
+  assert.deepEqual(run(strong, 'ultra', 15, 3000).changes, [{ pixelScale: 1.25 }, { pixelScale: 1.5 }, { pixelScale: 1.75 }, { pixelScale: 2 }]);
+  assert.equal(strong.pixelScale, 2);
+  const gov = new TierGovernor(g);
+  let r = run(gov, 'ultra', 16, 60 * 15);
+  assert.deepEqual(r.changes, [{ pixelScale: 1.25 }, { pixelScale: 1.5 }], 'vsync-bound 16 ms frames keep the budget: it climbs');
+  r = run(gov, 'ultra', 30, 200);
+  assert.deepEqual(r.changes, [{ pixelScale: 1.25 }], 'one slow window takes back exactly one step');
+  r = run(gov, 'ultra', 16, 2000);
+  assert.deepEqual(r.changes, [], 'locked: no climbing again');
+  r = run(gov, 'ultra', 30, 600);
+  assert.deepEqual(r.changes, [{ pixelScale: 1 }], 'past windowEnd it still steps the supersampling down for a heavy fight');
+  r = run(gov, 'ultra', 30, 2000);
+  assert.deepEqual(r.changes, [], 'back at 1x and past windowEnd: the old rules (no tier step) hold');
 });
 
 test('phone governor: 30 fps budget, a tier step after three bad seconds, then two resolution steps', () => {
@@ -138,4 +158,23 @@ test('the governor keeps a minimum-spec desktop on high (the look-dev stack neve
   tier = 'high';
   for (let i = 0; i < 3000; i++) { const c = free.step(40, tier); if (c?.tier) tier = c.tier; }
   assert.equal(tier, 'low', 'without a floor the old behaviour holds');
+});
+
+test('desktop governor: supersampling never buys resolution with stutter: spikes stop the climb and take a step back (town on an RTX 5090, 14.11)', async () => {
+  const { SPIKES, spikeCount } = await import('../../src/render/quality.js');
+  const g = GOVERNORS.desktop;
+  assert.equal(spikeCount([10, 20, 30, 16], g.budgetMs), 2);
+  // 4 ms frames with a 30 ms frame every 50 (2 %): the 75th percentile is fine, the screen is not
+  const spiky = (gov, n) => { const changes = []; for (let i = 0; i < n; i++) { const c = gov.step(i % 50 === 49 ? 30 : 4, 'ultra'); if (c) changes.push(c); } return changes; };
+  const a = new TierGovernor(g);
+  assert.deepEqual(spiky(a, 6000), [], 'it never climbs while 2 % of the frames drop');
+  // a GPU that is smooth at 1x climbs, then the 2x step starts dropping frames: one step back, locked
+  const b = new TierGovernor(g);
+  const steady = []; for (let i = 0; i < 9000; i++) { const c = b.step(4, 'ultra'); if (c) steady.push(c); }
+  assert.equal(b.pixelScale, 2);
+  const back = spiky(b, 3000);
+  assert.deepEqual(back[0], { pixelScale: 1.75 }, 'a step back once the spikes reach SPIKES.down in SPIKES.window frames');
+  for (let i = 1; i < back.length; i++) assert.ok(back[i].pixelScale < back[i - 1].pixelScale, 'while the spikes go on it keeps stepping down, never up');
+  assert.equal(b.upLocked, true);
+  assert.ok(SPIKES.down / SPIKES.window <= 0.02 + 1e-9);
 });

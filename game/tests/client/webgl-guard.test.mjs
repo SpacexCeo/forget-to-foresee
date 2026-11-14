@@ -41,7 +41,7 @@ test('premise lower-third: shown once on a normal load, off in captures, still w
   assert.deepEqual(P('demo=judge', { reducedMotion: true }), { show: true, animate: false });
   for (const q of ['films=a', 'cinematic=1', 'capture=1', 'replay=r1.x', 'premise=0']) assert.equal(P(q).show, false, q);
   assert.equal(P('', { shown: true }).show, false);
-  assert.match(en['premise.line'], /prophecy/);
+  assert.match(en['premise.line'], /Gate-Loom/, 'the town story, not the old island premise (jury path 14.11)');
   assert.ok(en['premise.hint']);
   const src = readFileSync(new URL('../../src/ui/premise.js', import.meta.url), 'utf8');
   assert.match(src, /pointer-events:none/, 'never takes input');

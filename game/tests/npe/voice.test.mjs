@@ -47,3 +47,21 @@ test('the intro dialogue shows the painted portraits of the elder, the guard and
   assert.equal(introPortrait('elder', '/forget-to-foresee/'), '/forget-to-foresee/assets/ui/portraits/elder_256.webp');
   assert.ok(WAKEUP.some((l) => l.speaker === 'elder'));
 });
+
+test('voice: every voiced prologue cue names a shipped line with the same words; the plan follows the sound settings', async () => {
+  const { CUES } = await import('../../src/cinematic/prologue/shots.js');
+  const { voicePlan, voiceSettings } = await import('../../src/npe/voice.js');
+  const voiced = CUES.filter((c) => c.voice);
+  assert.deepEqual(voiced.map((c) => c.voice), ['iris_hmm', 'iris_oh_no', 'iris_gasp'], 'all three files are used (QA 14.11: none played)');
+  for (const c of voiced) { assert.ok(VOICE_LINES[c.voice], c.voice); assert.equal(c.text, VOICE_LINES[c.voice].text, 'the subtitle says what she says'); assert.equal(c.speaker, 'Iris'); }
+  assert.deepEqual(voicePlan(voiced[0], { master: 0.5, narration: false }), { id: 'iris_hmm', speech: false });
+  assert.equal(voicePlan(voiced[0], { master: 0 }), null); assert.equal(voicePlan({ id: 'title' }), null); assert.equal(voicePlan({ voice: 'nope' }), null);
+  const mem = new Map(); const st = { getItem: (k) => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, v) };
+  assert.deepEqual(voiceSettings(st), { master: 0.8, narration: false });
+  mem.set('ftf.prefs.v1', '{"narration":true}'); mem.set('ftf.audio.v2', '{"master":0.3}');
+  assert.deepEqual(voiceSettings(st), { master: 0.3, narration: true });
+  mem.set('ftf.prefs.v1', '{oops'); assert.equal(voiceSettings(st).narration, false); assert.equal(voiceSettings(null).master, 0.8);
+  // speech: false keeps a missing file silent
+  const v = createVoice({ storage, Audio: fakeAudio('error'), speech: speech([{ name: 'Zira', lang: 'en-US' }]), Utterance: Utt });
+  assert.equal(await v.play('iris_gasp', { speech: false }), 'silent');
+});

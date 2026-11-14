@@ -6,6 +6,7 @@ import { KEY_ACTIONS, KEY_GROUPS, bindings, setBindings, defaultBindings, confli
 import { hudT } from '../rpg/hud-text.js';
 import { loadSettings, saveSettings, SETTINGS_OPTIONS } from './settings-store.js';
 import { controlsDiagram } from './keyboard-map.js';
+import { controlModeCards, CARDS_CSS } from './control-mode-cards.js';
 
 export const TABS = Object.freeze(['graphics', 'controls', 'audio', 'language', 'help', 'account']);
 const LOCALES = [['en', 'English'], ['ru', 'Русский'], ['uk', 'Українська'], ['it', 'Italiano'], ['zh', '中文']];
@@ -67,7 +68,7 @@ const CSS = `
  */
 export function createSettingsPopup({ doc = globalThis.document, t: tGame, i18n, prefs, storage, hooks = {} }) {
   const t = hudT(tGame);                                                          // the HUD strings fall back to English until merged
-  if (!doc.getElementById('ftf-set-css')) { const s = doc.createElement('style'); s.id = 'ftf-set-css'; s.textContent = CSS; doc.head.append(s); }
+  if (!doc.getElementById('ftf-set-css')) { const s = doc.createElement('style'); s.id = 'ftf-set-css'; s.textContent = CSS + CARDS_CSS; doc.head.append(s); }
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const btn = (key, fn, cls = 'ftf-set-btn') => { const b = el('button', cls, t(key)); b.type = 'button'; b.addEventListener('click', fn); return b; };
   let settings = loadSettings(storage);
@@ -131,6 +132,8 @@ export function createSettingsPopup({ doc = globalThis.document, t: tGame, i18n,
         row('set.ctl.sens', range(settings.sensitivity, 0.4, 2, 0.05, (v) => v.toFixed(2) + '×', (v) => setS({ sensitivity: SETTINGS_OPTIONS.sensitivity.reduce((a, b) => (Math.abs(b - v) < Math.abs(a - v) ? b : a)) }), t('set.ctl.sens'))),
         row('set.ctl.invert', toggle(settings.invertY, (v) => setS({ invertY: v }), t('set.ctl.invert')))];
       const touch = hooks.touch && hooks.touch();                                   // (read before any use: the pane threw and showed empty)
+      // the control mode as two picture cards, the chosen one outlined (owner 14.11; ui/control-mode-cards.js)
+      if (!(touch && touch.available)) out.push(el('h3', null, t('set.ctl.modes')), ...controlModeCards({ doc, t, mode: settings.mouseMode, locale: i18n && i18n.locale, base: hooks.base || (import.meta.env && import.meta.env.BASE_URL) || '/', onPick: (m) => { setS({ mouseMode: m }); render(); } }));
       if (!(touch && touch.available)) out.push(row('set.ctl.quick', toggle(loadSettings(storage).quickCast, (v) => setS({ quickCast: v }), t('set.ctl.quick')), 'set.ctl.quickNote'));
       if (touch && touch.available) out.push(row('set.ctl.touch', select([['sticks', t('set.ctl.sticks')], ['tap', t('set.ctl.tap')]], touch.mode, (v) => touch.setMode(v), t('set.ctl.touch'))));
       out.push(el('h3', null, t('set.ctl.keys')));
@@ -200,6 +203,16 @@ export function createSettingsPopup({ doc = globalThis.document, t: tGame, i18n,
       const dl = el('dl');
       dl.append(el('dt', null, t('set.acc.name')), el('dd', null, d.nickname || '—'), el('dt', null, t('set.acc.account')), el('dd', null, g.account_id || t('set.acc.none')), el('dt', null, t('set.acc.token')), el('dd', null, g.token_id || '—'));
       const out = [el('h3', null, t('set.acc.title')), dl, el('p', 'ftf-set-note', t('set.acc.note'))];
+      // sign-in methods (owner 14.11: a tab of its own): the linked methods, Link an email, Sign in with email
+      // (ui/account-methods.js over net/account-email.js, from hooks.accountEmail), and the wallet sign-in panel
+      if (hooks.accountEmail) {
+        const slot = el('div'); slot.append(el('p', 'ftf-set-note', t('acct.busy')));
+        out.push(slot);
+        Promise.all([hooks.accountEmail(), import('./account-methods.js')]).then(([mail, m]) => {
+          slot.replaceChildren(m.mountAccountMethods({ doc, t, mail, onSignedIn: () => { if (dialog.open) render(); } }));
+        }).catch(() => { slot.replaceChildren(el('p', 'ftf-set-note', t('acct.email.off'))); });
+      }
+      if (hooks.openAccount) out.push(btn('set.acc.signin', () => { dialog.close(); hooks.openAccount(); }));
       out.push(el('h3', null, t('set.acc.privacy')), el('p', null, t('set.acc.local')));
       out.push(btn('set.acc.clear', () => { if (globalThis.confirm && globalThis.confirm(t('set.acc.confirm'))) { if (hooks.clearData) hooks.clearData(); } }));
       return out;

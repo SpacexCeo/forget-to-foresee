@@ -108,3 +108,22 @@ test('the rebind screen: Rebind, press a taken key, the swap question, Swap appl
   assert.equal(KB.bindings().strike, 'KeyE'); assert.equal(KB.bindings().interact, 'KeyF');
   KB.setBindings(KB.defaultBindings());
 });
+
+test('Settings → Account (owner 14.11): the linked methods or Sign in with email, and the wallet sign-in button', async () => {
+  const ids = (n) => n.all((x) => x.tagName === 'H3').map((h) => h.textContent);
+  for (const canLink of [true, false]) {
+    const doc = makeDoc(); let opened = 0;
+    const mail = { canLink, methods: async () => ({ status: 'ok', methods: [{ id: 'email:x', kind: 'email', hint: 'a***@b.co' }], email: true }), unlink: async () => ({ status: 'unlinked' }), linkStart: async () => ({ status: 'sent', email: 'a@b.co' }), loginStart: async () => ({ status: 'sent', email: 'a@b.co' }) };
+    const pop = createSettingsPopup({ doc, t, i18n: null, prefs: { get: () => ({ quality: 'auto', motion: 'system' }), set() {} }, storage: memory(), hooks: { day1: () => ({ nickname: 'ann', guest: { account_id: 'ann.guests.testnet' } }), accountEmail: async () => mail, openAccount: () => { opened++; } } });
+    pop.open('account');
+    for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 0));
+    const body = pop.dialog.all((n) => n.className === 'ftf-set-body')[0];
+    const heads = ids(body);
+    if (canLink) { assert.ok(heads.includes('acct.methods') && heads.includes('acct.email.link'), heads.join()); assert.ok(body.textContent.includes('a***@b.co')); }
+    else assert.ok(heads.includes('acct.email.title') && !heads.includes('acct.methods'), heads.join());
+    const signin = body.all((n) => n.tagName === 'BUTTON' && n.textContent === 'set.acc.signin')[0];
+    assert.ok(signin, 'the wallet sign-in button'); for (const fn of signin.listeners.click) fn(); assert.equal(opened, 1); assert.equal(pop.dialog.open, false, 'the panel replaces the settings');
+  }
+  const { PLAY_MESSAGES } = await import('../../src/play/i18n.js');
+  for (const lang of ['en', 'ru', 'uk', 'it', 'zh']) assert.ok(PLAY_MESSAGES[lang]['set.acc.signin'], lang);
+});

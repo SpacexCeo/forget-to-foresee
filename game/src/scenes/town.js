@@ -13,7 +13,8 @@
 //   town_altar_altar_glyph_00..15 (M_Altar_Glyph)  ring glyphs, lit in sequence as Iris approaches; M_Altar_Eye follows dimly
 // Visual only apart from the collision world: no game rule lives in the town.
 import * as THREE from 'three';
-import { CollisionWorld, rayCast, MASK_PLAYER } from '../physics/collision.js';
+import { CollisionWorld, rayCast, MASK_PLAYER, MASK_CAMERA } from '../physics/collision.js';
+import { isShellMesh, isShellMaterial } from '../render/camera-boom.js';
 import { PropInstance, meshesToTriangles } from '../render/assets.js';
 import { createTownsfolk } from '../play/townsfolk.js';
 import { createTownLife } from './town-life.js';
@@ -147,9 +148,29 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
     }
   }
 
+  // The camera's own colliders: the plaster and roof meshes of a piece as they are drawn. The files' colliders are
+  // boxes around the ground floors (right for walking), so upper floors that lean over the street and the roofs
+  // stopped nothing and the camera sat inside them, looking at the timber frame from within (owner, 13.11). The
+  // same materials are drawn on both sides, so an eave or an overhang seen from below is a surface, not a hole.
+  const shellTriangles = new Map(); // piece id -> triangles given to the camera
+  function cameraShell(inst) {
+    const owner = inst.id + ':camera-shell';
+    world.removeOwner(owner); shellTriangles.delete(inst.id);
+    if (!inst.real || !inst.parts) return;
+    const named = (o) => isShellMesh(o.userData.name || o.name) || (o.parent && isShellMesh(o.parent.userData.name || o.parent.name));
+    const meshes = inst.parts.runtime.filter(named);
+    const tris = meshes.length ? meshesToTriangles(meshes) : [];
+    if (tris.length) world.addTriangles(owner, tris, MASK_CAMERA);
+    shellTriangles.set(inst.id, tris.length / 9);
+    for (const o of inst.parts.runtime) for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+      if (m && isShellMaterial(m.name) && m.side !== THREE.DoubleSide) { m.shadowSide = THREE.BackSide; m.side = THREE.DoubleSide; m.needsUpdate = true; } // the shadow pass stays as it was (back faces)
+    }
+  }
+
   /** A piece changed between nothing and its real model (also the light -> full swap): re-read what the file exposes. */
   function onPiece(def, inst) {
     const real = inst.real;
+    if (!def.visualOnly) cameraShell(inst);
     if (def.visualOnly && real) {
       // The archipelago in the sky: no shadows, and no fog on top of its own painted haze (it is about 330 m away).
       real.traverse((o) => {
@@ -342,6 +363,8 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
     get shown() { return shown(); }, get flat() { return state.flat; }, get active() { return state.active; },
     /** Collision triangles laid on the hillside beyond the walls (0 until the terrain is in). */
     get outsideTriangles() { return state.outsideTriangles || 0; },
+    /** Triangles of the houses' drawn shell that only the camera collides with (0 until a block is in). */
+    get cameraShellTriangles() { let n = 0; for (const v of shellTriangles.values()) n += v; return n; },
     get altar() { return state; },
     life, update, setFlare, setActive, setPointLights, groundAt, settled, status, townsfolk,
     /** A ray through the town's colliders (world metres): the hit {point, distance} or null (the path-graph checks). */

@@ -25,7 +25,7 @@ test('tips: the HP rule in the copy matches the game (respawn at the gate, full 
   const mobs = readFileSync(new URL('../../src/play/mobs.js', import.meta.url), 'utf8');
   assert.match(mobs, /if \(respawn\) player\.teleport\(respawn\.slice\(\), player\.heading\); iris\.hp = IRIS_HP;/);
   const boot = readFileSync(new URL('../../src/boot-world.js', import.meta.url), 'utf8');
-  assert.match(boot, /respawn: gate/);
+  assert.match(boot, /respawn: \{ slice: \(\) => \(dropSpawn\(.*gate\)/); // the gate, a short drop above its ground (spawn fix 14.11)
 });
 
 test('tip queue: one at a time, never while busy, 1.5 s after a dismissal, at most three a minute, Skip tips', () => {
@@ -103,5 +103,22 @@ test('first-seen wiring: the intro registers the A4 tips when tips are on, block
   q.click();
   assert.equal(doc.querySelectorAll('.ftf-tip').length, 1, 'the "?" re-shows a seen tip');
   assert.ok(doc.querySelector('.ftf-tip').textContent.includes('Players and agents compete. Agents wear a badge.'));
+  fs._reset();
+});
+
+test('a tip never pops over an open game window, waits under it, and shows once the window closes (jury path 14.11)', async () => {
+  const doc = dom();
+  const fs = await import('../../src/sprint/first-seen.js');
+  const { memoryStorage } = await import('../../src/ui/storage.js');
+  fs._reset(); fs._configure({ storage: memoryStorage(), doc, touch: false });
+  fs.registerTip({ id: 'x_tip', title: 'Experience', body: 'Fights fill this bar.' });
+  const menu = doc.createElement('div'); menu.className = 'gm'; doc.body.append(menu);
+  assert.equal(fs.showTip('x_tip'), true, 'queued');
+  assert.equal(doc.querySelectorAll('.ftf-tip').length, 0, 'not over the open menu');
+  menu.remove();
+  await new Promise((r) => setTimeout(r, 1700));
+  const tip = doc.querySelector('.ftf-tip');
+  assert.ok(tip, 'shown once the menu closed');
+  assert.match(tip.style.cssText, /z-index:var\(--z-coach,35\)/, 'under the game windows (z 40) if one opens later');
   fs._reset();
 });

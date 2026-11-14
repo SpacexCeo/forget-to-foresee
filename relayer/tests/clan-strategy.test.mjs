@@ -75,3 +75,22 @@ test('labelFor (C11): an LLM label needs an attestation id; the fallback names i
   const unsigned = await decideStrategy(clanState('frost', st0()), { apiKey: 'k', chat: async () => ({ status: 200, body: { text: '{"risk":1,"buy":"staples","favour":null,"reason":"x"}', tee: { model: 'm', chat_id: 'c', verified: false } } }) });
   assert.deepEqual([unsigned.source, unsigned.fallback_reason, unsigned.label], ['scripted', 'unattested', 'Scripted (model unavailable: unattested)']);
 });
+
+test('strategy: a dropped or timed-out NEAR AI call is tried once more before the scripted fallback, and says which', async () => {
+  const state = clanState('moss', st0());
+  const answer = { status: 200, body: { text: '{"risk":1,"buy":"balanced","favour":null,"reason":"steady"}', tee: { model: 'm', chat_id: 'chatcmpl-2', verified: true } } };
+  let n = 0, slept = 0;
+  const flaky = async () => (++n === 1 ? { status: 502, body: { error: 'tee_unreachable', detail: 'fetch failed' } } : answer);
+  const r = await decideStrategy(state, { apiKey: 'k', chat: flaky, sleep: async (ms) => { slept = ms; } });
+  assert.deepEqual([r.source, n, slept], ['llm', 2, 3000]);
+  n = 0;
+  const down = async () => { n++; return { status: 502, body: { error: 'tee_unreachable', detail: 'timeout' } }; };
+  const d = await decideStrategy(state, { apiKey: 'k', chat: down, sleep: async () => {} });
+  assert.deepEqual([d.source, d.fallback_reason, d.label, n], ['scripted', 'tee_timeout', 'Scripted (model unavailable: tee_timeout)', 2]);
+  n = 0;
+  const net = await decideStrategy(state, { apiKey: 'k', chat: async () => { n++; return { status: 502, body: { error: 'tee_unreachable', detail: 'ECONNRESET' } }; }, sleep: async () => {} });
+  assert.deepEqual([net.fallback_reason, n], ['tee_unreachable', 2]);
+  n = 0;
+  await decideStrategy(state, { apiKey: 'k', chat: async () => { n++; return { status: 502, body: { error: 'tee_upstream', upstream_status: 402 } }; }, sleep: async () => {} });
+  assert.equal(n, 1, 'no retry when NEAR AI answered (402: credits)');
+});

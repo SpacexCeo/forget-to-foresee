@@ -1,11 +1,11 @@
 {
   "date": "2026-11-13",
-  "commit": "5c2b4246",
+  "commit": "cd0ec404",
   "suites": [
     {
       "name": "game",
       "command": "cd game && npm test",
-      "pass": 1141,
+      "pass": 1262,
       "fail": 0,
       "ok": true
     },
@@ -19,14 +19,14 @@
     {
       "name": "relayer",
       "command": "cd relayer && npm test",
-      "pass": 114,
+      "pass": 141,
       "fail": 0,
       "ok": true
     },
     {
       "name": "presence",
       "command": "cd presence && npm test",
-      "pass": 6,
+      "pass": 15,
       "fail": 0,
       "ok": true
     },
@@ -35,64 +35,73 @@
       "command": "cd contracts/season-commit && cargo test --lib",
       "pass": 56,
       "fail": 0,
-      "ok": true
+      "ok": true,
+      "carried": "5c2b4246"
     },
     {
       "name": "contract memory-shard",
       "command": "cd contracts/memory-shard && cargo test --lib",
       "pass": 21,
       "fail": 0,
-      "ok": true
+      "ok": true,
+      "carried": "5c2b4246"
     },
     {
       "name": "contract agent-card",
       "command": "cd contracts/agent-card && cargo test --lib",
       "pass": 21,
       "fail": 0,
-      "ok": true
+      "ok": true,
+      "carried": "5c2b4246"
     },
     {
       "name": "contract guests",
       "command": "cd contracts/guests && cargo test --lib",
       "pass": 9,
       "fail": 0,
-      "ok": true
+      "ok": true,
+      "carried": "5c2b4246"
     },
     {
       "name": "contract character-nft",
       "command": "cd contracts/character-nft && cargo test --lib",
       "pass": 9,
       "fail": 0,
-      "ok": true
+      "ok": true,
+      "carried": "5c2b4246"
     },
     {
       "name": "contract token-account",
       "command": "cd contracts/token-account && cargo test --lib",
       "pass": 2,
       "fail": 0,
-      "ok": true
+      "ok": true,
+      "carried": "5c2b4246"
     },
     {
       "name": "contract agent-ledger",
       "command": "cd contracts/agent-ledger && cargo test --lib",
       "pass": 12,
       "fail": 0,
-      "ok": true
+      "ok": true,
+      "carried": "5c2b4246"
     },
     {
       "name": "contract loot-chest",
       "command": "cd contracts/loot-chest && cargo test --lib",
       "pass": 12,
       "fail": 0,
-      "ok": true
+      "ok": true,
+      "carried": "5c2b4246"
     },
     {
       "name": "contract skin-nft",
       "command": "cd contracts/skin-nft && cargo test --lib",
       "pass": 5,
       "fail": 0,
-      "ok": true
+      "ok": true,
+      "carried": "5c2b4246"
     }
   ],
-  "distBytes": 471757451
+  "distBytes": 478185428
 }

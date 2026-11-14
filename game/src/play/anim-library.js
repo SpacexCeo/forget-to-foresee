@@ -23,15 +23,58 @@ export function sidecarEnabled(search = typeof location !== 'undefined' ? locati
 
 let loader = null;
 const cache = new Map();
+// Clip file URLs carry ?v=<bytes> like the models' (render/asset-catalog.js versionedModelUrl): a phone that cached an
+// old clip file must never pair it with a new model (owner 14.11: the new heroines did not move on phones). render/assets.js
+// hands over the build's sizes (virtual:model-list ANIM_FILES, render/assets.js puts them on globalThis.__ftfAnimFiles);
+// without them the plain URL is used.
+export function animUrl(name, base = '/', files = globalThis.__ftfAnimFiles || {}) { const n = files[name]; return `${base}assets/anim/${name}.glb` + (n > 0 ? '?v=' + n : ''); }
 const baseUrl = () => (import.meta.env && import.meta.env.BASE_URL) || '/';
+
+/**
+ * Playback speed per clip file (owner 14.11: "speed up the animation of the new models by 30%"): the owner's Tripo pack
+ * clips (the new Iris and Elise, the shared townsfolk pack, the Wayfarer) play this much faster. Applied once at load:
+ * key times shrink, and so do the timing extras the game reads (impact_s, release_s, step_s, full_s), so a strike still
+ * lands on its impact event; `speed` (ground speed the feet match) grows by the same factor, so a walk or run cycles
+ * faster only while the body moves faster (no sliding feet). The old hand-keyed and motion-capture files are left as
+ * they are (iris_agent: Sheriffchenko, townsfolk: the shared town walk). `?animspeed=1` turns it off (QA, before/after).
+ */
+export const CLIP_TIME_SCALE = Object.freeze({ iris: 2, elise: 2, iris_agent: 2, townsfolk_pack: 1.3, townsfolk_wayfarer: 1.3 }); // heroines 2x (owner 14.11: "animation twice as fast, physics as is")
+/**
+ * The heroines' walk and run (clips with a ground `speed`) keep their own rate: the gait layer (play/gait.js) sets their
+ * cadence from the ground speed anyway, and 2x only pushed the run's rate under the gait's floor, so the legs spun
+ * faster than she moved (owner 14.11: the run looked terribly fast).
+ */
+export const LOCOMOTION_TIME_SCALE = Object.freeze({ iris: 1, elise: 1, iris_agent: 1 });
+const TIMING = ['impact_s', 'release_s', 'step_s', 'full_s'];
+export function timeScaleFor(name, search = typeof location !== 'undefined' ? location.search : '') {
+  const o = Number(new URLSearchParams(search).get('animspeed'));
+  return o > 0 ? (CLIP_TIME_SCALE[name] ? o : 1) : (CLIP_TIME_SCALE[name] || 1);
+}
+/** Plays `clips` k times faster (in place; a clip with a ground speed: kMove times): key times, duration and the timing extras shrink, ground speed grows. */
+export function speedUpClips(clips, k, kMove = k) {
+  if (!(k > 0) || (k === 1 && kMove === 1)) return clips;
+  for (const c of clips) {
+    const moves = c.userData && c.userData.speed > 0, f = moves ? kMove : k;
+    if (!(f > 0) || f === 1) continue;
+    for (const t of c.tracks) { const times = new Float32Array(t.times.length); for (let i = 0; i < times.length; i++) times[i] = t.times[i] / f; t.times = times; }
+    c.duration /= f;
+    const u = c.userData || (c.userData = {});
+    for (const n of TIMING) if (typeof u[n] === 'number') u[n] /= f;
+    if (typeof u.speed === 'number') u.speed *= f;
+    u.time_scale = f;
+  }
+  return clips;
+}
 
 function loadFile(name, base) {
   const key = base + name;
   if (!cache.has(key)) {
     loader ||= new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
-    cache.set(key, loader.loadAsync(`${base}assets/anim/${name}.glb`).then((g) => {
+    cache.set(key, loader.loadAsync(animUrl(name, base)).then((g) => {
       const extras = (g.parser.json.animations || []).map((a) => a.extras || {});
       g.animations.forEach((c, i) => { c.userData = { ...extras[i] }; });
+      const k = timeScaleFor(name);
+      speedUpClips(g.animations, k, name in LOCOMOTION_TIME_SCALE && k !== 1 ? LOCOMOTION_TIME_SCALE[name] : k);
       return g;
     }));
   }
@@ -39,10 +82,8 @@ function loadFile(name, base) {
 }
 
 /** The side-car clips of a model ([] when it has none or the file fails: the model's own clips stay). */
-export function sidecarClips(asset, base = baseUrl(), search = typeof location !== 'undefined' ? location.search : '') {
-  let name = SIDECAR[asset];
-  // `?anim=v1`: Iris's clips as they were before the 12.11 animation pass, kept until the owner approves the new ones
-  if (name === 'iris' && new URLSearchParams(search).get('anim') === 'v1') name = 'iris_v1';
+export function sidecarClips(asset, base = baseUrl()) {
+  const name = SIDECAR[asset]; // (`?anim=v1`, the pre-12.11 clips, is gone: they were cut for the old rig and bind to nothing on the Tripo heroines)
   if (!name) return Promise.resolve([]);
   return loadFile(name, base).then((g) => g.animations, (e) => { console.warn('[anim] side-car clips failed', name, e); return []; });
 }
@@ -95,7 +136,8 @@ export const BODY_STYLE = Object.freeze({
  * solved on that very body, its own walking speed in `userData.speed`): assets/anim/<name>.glb. The phone model
  * (`<name>_m`) has the same skeleton and plays the same file.
  */
-export const BAKED_CLIPS = Object.freeze(['npc_guard', 'npc_innkeeper', 'npc_elder', 'npc_lamplighter', 'npc_shardkeeper']);
+export const BAKED_CLIPS = Object.freeze(['npc_guard', 'npc_innkeeper', 'npc_elder', 'npc_lamplighter', 'npc_shardkeeper',
+  'townsfolk_wayfarer']); // the Wayfarer: the owner's Tripo model with the Tripo animation pack (art/townsfolk/pack_clips.json)
 
 /** The baked clip file of a cache key ('npc_guard', 'npc_guard_m', 'npc_guard:check' → 'npc_guard'), or null. */
 export function bakedClipFile(key) {

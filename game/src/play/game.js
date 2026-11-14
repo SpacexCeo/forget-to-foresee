@@ -26,6 +26,8 @@ import { CLAN_ASSET } from './behaviour.js';
 import { ShellHub, signForShell, waitingShells } from './hub.js';
 import { shellBeaconLevels, pointerTarget, pointerPose } from './beacon-plan.js';
 import { ShellBeacons, GoalPointer } from '../render/beacons.js';
+import { ShellAura } from '../render/shell-aura.js';
+import { features } from '../features.js';
 import { warmModel } from '../render/warmup.js';
 import { attachFun, CHAPTER_KEY } from './fun-ui.js';
 import { FIRST_LOOP_KEY } from './objectives.js';
@@ -357,6 +359,9 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
   // Gold light over the Shells with a sign waiting, strongest on the one the goal names (docs/visual-guidance.md).
   const beacons = new ShellBeacons({ shells: world3d.shells || [] });
   for (const it of beacons.items) warmModel(it.group);
+  // The Shells' own life: a glow from within, drifting motes, a slow pulse up the suture (flag `shellAura` is its off switch).
+  const aura = new ShellAura({ shells: world3d.shells || [], lite: lookdev.profile === 'phone' || lookdev.tier === 'low', pixelRatio: renderer.getPixelRatio ? renderer.getPixelRatio() : 1 });
+  for (const it of aura.items) warmModel(it.group);
   // ...and chevrons on the ground at Iris's feet toward that place: from the balcony no Shell is on screen.
   const pointer = new GoalPointer({ scene });
   warmModel(pointer.group);
@@ -382,6 +387,8 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
     state.now += dt;
     syncBeacons(dt);
     beacons.update(dt, lookdev.reducedMotion);
+    aura.setEnabled(features.on('shellAura') && !chapters.playing);
+    aura.update(dt, lookdev.reducedMotion);
     const aim = pointerTarget(session.goal && session.goal.target, pointerPlaces);
     pointer.update(dt, avatar.position.toArray(), pointerPose(player.pos, aim && aim.position, { zone: state.zone, filmPlaying: !!chapters.playing }), lookdev.reducedMotion);
     const pos = player.pos;

@@ -25,6 +25,11 @@ test('ritual: five languages, the same number of lines, English fallback; no num
   for (const l of ['ru', 'uk', 'it', 'zh']) { assert.equal(TIPS[l].length, TIPS.en.length, l); assert.ok(HINTS[l].touch && HINTS[l].keys); }
   assert.equal(langOf('ru-RU'), 'ru'); assert.equal(langOf('de'), 'en'); assert.equal(langOf(undefined), 'en');
   const all = Object.values(TIPS).flat().join(' ');
-  assert.doesNotMatch(all, /\d/, 'no counter is ever made up');
+  assert.doesNotMatch(all.replace(/2048/g, ''), /\d/, 'no counter is ever made up (2048 is the canon year)');
   assert.doesNotMatch(TIPS.en.join(' '), /\b(invest|yield|profit|return|guaranteed|price|airdrop|reward)\b/i);
+});
+
+test('ritual: the lore canon line (Iris, a doctor-linguist from another planet, 2048, through the glass) in all five languages', () => {
+  for (const l of ['en', 'ru', 'uk', 'it', 'zh']) assert.equal(TIPS[l].filter((x) => x.includes('2048')).length, 1, l);
+  assert.ok(TIPS.en.some((x) => /doctor-linguist/.test(x) && /another planet/.test(x) && /through the glass/.test(x)));
 });

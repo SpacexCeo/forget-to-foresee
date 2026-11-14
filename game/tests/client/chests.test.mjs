@@ -102,12 +102,15 @@ test('loot NFTs are read from the chests contract for the guest account; no gues
     assert.equal(body.params.account_id, 'chests.ftf-coordinator.testnet');
     const args = JSON.parse(Buffer.from(body.params.args_base64, 'base64').toString());
     assert.equal(args.account_id, 'cy-8.guests.ftf-coordinator.testnet');
-    const value = [{ token_id: 's1-41', owner_id: args.account_id, metadata: { title: 'Loot NFT #41', extra: '{"item":"part_gauge"}' } }];
+    // the second token carries the contract's real extra {season, index, position, tier}: the position names the item
+    const value = [{ token_id: 's1-41', owner_id: args.account_id, metadata: { title: 'Loot NFT #41', extra: '{"item":"part_gauge"}' } },
+      { token_id: 's1-63', owner_id: args.account_id, metadata: { title: 'Chest loot #63 (uncommon)', extra: '{"season":"s1","index":63,"position":302,"tier":"uncommon"}' } }];
     return { ok: true, status: 200, json: async () => ({ jsonrpc: '2.0', id: body.id, result: { result: [...Buffer.from(JSON.stringify(value))], block_height: 1, block_hash: 'h' } }) };
   };
   const r = await readLootNfts({ owner: 'cy-8.guests.ftf-coordinator.testnet', rpcUrls: ['https://rpc.example'], fetch });
   assert.equal(r.state, 'loaded');
-  assert.deepEqual(r.items[0], { tokenId: 's1-41', title: 'Loot NFT #41', item: 'part_gauge', href: 'https://testnet.nearblocks.io/nft-token/chests.ftf-coordinator.testnet/s1-41' });
+  assert.deepEqual(r.items[0], { tokenId: 's1-41', title: 'Loot NFT #41', item: 'part_gauge', tier: null, position: null, href: 'https://testnet.nearblocks.io/nft-token/chests.ftf-coordinator.testnet/s1-41' });
+  assert.deepEqual([r.items[1].item, r.items[1].tier, r.items[1].position], [null, 'uncommon', 302]);
   assert.equal((await readLootNfts({ owner: 'x', rpcUrls: ['https://rpc.example'], fetch: async () => { throw new Error('down'); } })).state, 'offline');
 });
 
