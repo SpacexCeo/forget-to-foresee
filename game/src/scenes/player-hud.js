@@ -259,8 +259,6 @@ export function createPlayerHud({ doc = document, t, ledger, chests = null, base
   let lastHp = -1;
   return {
     root,
-    /** The locale changed: redraw the rank, the silk pill and the other labels now. */
-    relabel() { renderStatic(); renderSilk(); },
     /** Per frame: visible only in the town phase; health from the combat layer. */
     update({ visible: v, hp: h = 100, maxHp = 100, stamina = null } = {}) {
       if (v !== visible) { visible = v; root.hidden = !v; doc.body.classList.toggle('ph-on', v); if (v) renderStatic(); }

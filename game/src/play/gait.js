@@ -115,7 +115,8 @@ export class GaitLayer {
     const k = this.run && sum > 1e-4 ? this.weights.run / sum : 0;       // 0 = walk stride, 1 = run stride
     const walkT = this.walk ? this.walk.getClip().duration : 1, runT = this.run ? this.run.getClip().duration : walkT;
     const strideT = walkT + (runT - walkT) * k, ref = WALK_REF + (RUN_REF - WALK_REF) * k;
-    const rate = this.run ? Math.min(1.6, Math.max(0.55, Math.max(speed, 0.6) / ref)) : Math.min(2.2, Math.max(0.55, Math.max(speed, 0.6) / WALK_REF));
+    // floor 0.3: a slow walk (a half-pushed stick) still advances the stride at the ground's pace (0.55 slid the feet below 0.94 m/s)
+    const rate = this.run ? Math.min(1.6, Math.max(0.3, Math.max(speed, 0.5) / ref)) : Math.min(2.2, Math.max(0.3, Math.max(speed, 0.5) / WALK_REF));
     const before = this.phase;
     if (sum > 1e-4) this.phase = (this.phase + (dt * rate) / strideT) % 1;
     if (this.onFoot && this.move > 0.5) {
@@ -173,6 +174,7 @@ export function solveTwoBone(upper, lower, end, target) {
 const BANK_GAIN = 0.011, BANK_MAX = 0.13;   // lean into a turn: radians per m/s² of sideways acceleration, and its cap (7.5°)
 const LEAD_GAIN = 0.035, LEAD_MAX = 0.2;    // the chest turns ahead of the hips: radians per rad/s of turn rate, cap
 const BRAKE_DIP = 0.06, BRAKE_PITCH = 0.16; // a stop from a run: the hips sink (m) and the chest tips forward (rad), then recover
+const LAND_DIP = 0.09, LAND_PITCH = 0.12, LAND_FALL = 3; // a drop off a ledge: the knees take the landing (m, rad) once she fell faster than LAND_FALL m/s
 const _ax = new THREE.Vector3(), _qw = new THREE.Quaternion(), _qd = new THREE.Quaternion();
 
 /** Turns a bone about a world axis by `angle`, on top of what the clip gave it (children follow). */
@@ -216,7 +218,7 @@ export class FootPlant {
     this.spine = bone('spine'); this.chest = bone('chest');
     this.baseY = model.position.y; this.baseRoll = model.rotation.z;
     this.prevHeading = null; this.bank = 0; this.lead = 0;
-    this.recent = 0; this.brake = 0; this.braked = false; this.dip = 0; this.tip = 0;
+    this.recent = 0; this.brake = 0; this.braked = false; this.dip = 0; this.tip = 0; this.fall = 0; this.land = 0;
   }
 
   /** @param {THREE.Object3D} group the avatar group (position = the ground point, rotation.y = the game's heading) */
@@ -232,6 +234,13 @@ export class FootPlant {
       this.last.copy(group.position); this.yaw = heading; this.recent = 0;
     }
     if (this.last && dt > 1e-4) this.speed = Math.hypot(group.position.x - this.last.x, group.position.z - this.last.z) / dt;
+    // a landing: she was falling (a ledge, a stair run taken at a sprint) and the ground stopped her
+    if (this.last && dt > 1e-4) {
+      const dy = group.position.y - this.last.y, vy = Math.abs(dy) < 3 ? dy / dt : 0;   // a vertical teleport is no fall
+      if (vy < -1) this.fall = Math.max(this.fall, -vy);
+      else if (this.fall > 0) { if (!reduced && this.fall > LAND_FALL) this.land = Math.max(this.land, clamp((this.fall - 1.5) / 7, 0.35, 1)); this.fall = 0; }
+    }
+    this.land *= Math.exp(-dt * 5);
     (this.last ||= new THREE.Vector3()).copy(group.position);
     const going = Math.min(1 - stand, clamp(this.speed / 1.2, 0, 1));   // 0 = standing (a tap is not a walk), 1 = really moving
     // once the body has stopped, a foot holds its place fully even while the stride's weight is still fading out
@@ -247,8 +256,8 @@ export class FootPlant {
     if (this.speed > 1) this.braked = false;
     if (!reduced && !this.braked && this.speed < 0.3 && this.recent > 2.2) { this.brake = clamp((this.recent - 1.5) / 1.8, 0, 1); this.braked = true; }
     this.brake *= Math.exp(-dt * 4.5);
-    this.dip += (BRAKE_DIP * this.brake - this.dip) * (1 - Math.exp(-13 * dt));
-    this.tip += (BRAKE_PITCH * this.brake - this.tip) * (1 - Math.exp(-11 * dt));
+    this.dip += (BRAKE_DIP * this.brake + LAND_DIP * this.land * Math.max(stand, 0.3) - this.dip) * (1 - Math.exp(-(this.land > 0.05 ? 22 : 13) * dt));
+    this.tip += (BRAKE_PITCH * this.brake + LAND_PITCH * this.land - this.tip) * (1 - Math.exp(-11 * dt));
     this.model.position.y = this.baseY - this.dip;
     this.model.rotation.z = this.baseRoll + this.bank * BANK_SIGN;
     if (Math.abs(this.lead) > 1e-4 || this.tip > 1e-4) {

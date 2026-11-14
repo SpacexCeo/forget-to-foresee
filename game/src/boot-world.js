@@ -570,7 +570,6 @@ if (townMode.town) {
         isDay: () => !['night', 'twilight'].includes(lookdev.look && lookdev.look.name) });
       marketTicker = ui.createMarketTicker({ t, line: (r) => net.tradeLine(t, r), poll: () => net.fetchMarket(), onTrade: (r) => marketScene.onTrade(r),
         onLedger: () => (featureFlags.on('townLedger') ? () => window.dispatchEvent(new CustomEvent('ftf:menu-open', { detail: { tab: 'town' } })) : null) });
-      ctx.i18n.subscribe(() => marketTicker.relabel()); // a language switch redraws the ticker at once
     }).catch((e) => console.warn('[town] market', e));
   }
   if (!loomMeter && (featureFlags.on('loomMeter') || featureFlags.on('presenceChip'))) { // the town's shared hungry object (owner 14.11)
@@ -623,7 +622,6 @@ if (townMode.town) {
     nickname: () => loadDay1(ctx.storage).nickname || null, skin: () => (irisAvatar ? irisAvatar.hero.id : startHero.id),
     onSkin: () => toggleSkin(), canSwap: () => { const o = skinsOwned(); return !!(o.elise || o.sheriffchenko); },
     onProfile: () => openProfileFor(quest), reducedMotion: () => lookdev.reducedMotion });
-  if (!playerHud.relabeled) { playerHud.relabeled = true; ctx.i18n.subscribe(() => playerHud.relabel()); } // a language switch redraws the rank and the silk pill
   // The endgame whitelist pass (story TZ §11; ui/endgame-pass.js), behind ?story=1. The story dispatches window
   // 'ftf:story-onward' after the twist; the relayer decides eligibility. ?passDemo=1 shows the labelled simulation (no hash, no call).
   // 'ftf:pass-open' reopens the modal (HUD / help entry points).
