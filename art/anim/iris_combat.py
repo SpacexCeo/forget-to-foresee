@@ -164,13 +164,13 @@ def slash1():
     # the cut: the chest uncoils to the left and leans in, the arm sweeps down across the body, the left foot steps in
     cut = {'upperarm_L': [('x', -20), ('z', 28)], 'forearm_L': [('x', -40)],
            'spine': [('y', 12), ('x', 6)], 'chest': [('y', 26), ('x', 12)], 'neck': [('y', -14), ('x', -6)],
-           'upperarm_R': [('x', -62), ('z', 34)], 'forearm_R': [('x', -12)], 'hand_R': [('x', -38), ('z', 8)],
+           'upperarm_R': [('x', -62), ('z', 34)], 'forearm_R': [('x', -12)], 'hand_R': [('x', 72), ('z', 18)],   # the wrist breaks forward: the blade leads, edge down
            'thigh_L': [('x', -24)], 'shin_L': [('x', 20)], 'foot_L': [('x', -4)], 'thigh_R': [('x', 10)], 'shin_R': [('x', 12)],
            '_move': [0, -0.06, 0.13]}
     # the follow-through: the blade passes the body line low on her left, the chest keeps turning a little
     follow = {'upperarm_L': [('x', -15), ('z', 30)], 'forearm_L': [('x', -35)],
               'spine': [('y', 15), ('x', 7)], 'chest': [('y', 32), ('x', 12)], 'neck': [('y', -16), ('x', -6)],
-              'upperarm_R': [('x', -35), ('z', 48)], 'forearm_R': [('x', -14)], 'hand_R': [('x', -46), ('z', 12)],
+              'upperarm_R': [('x', -35), ('z', 48)], 'forearm_R': [('x', -14)], 'hand_R': [('x', 96), ('z', 28)],
               'thigh_L': [('x', -24)], 'shin_L': [('x', 22)], 'foot_L': [('x', -4)], 'thigh_R': [('x', 12)], 'shin_R': [('x', 14)],
               '_move': [0, -0.065, 0.14]}
     return [(0.0, IDLE), (0.17, wind), (0.24, wind), (0.30, cut), (0.36, cut), (0.48, follow), (0.80, IDLE)], 0.80
