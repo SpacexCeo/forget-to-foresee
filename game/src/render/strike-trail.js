@@ -11,8 +11,8 @@
 
 /** Per move: colour and how wide the ribbon is drawn (metres across the limb's sweep). Unknown moves use `strike`. */
 export const STRIKE_LOOK = Object.freeze({
-  strike: { color: 0xffd98a, width: 0.32 },
-  strike3: { color: 0xffb35c, width: 0.42 },
+  strike: { color: 0xffb35c, width: 0.42 },   // fists as warm and wide as the kick (owner 14.11: "the kick's effect, on the hands too")
+  strike3: { color: 0xffa04a, width: 0.48 },
   super: { color: 0xffa040, width: 0.55 },
   slash: { color: 0xfff1c9, width: 0.0 },   // the blade: the ribbon spans hilt to tip, no extra width
   cast: { color: 0xa8e4ff, width: 0.26 },

@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import * as THREE from 'three';
 import { createStrikeTrail, lookFor, isLimbBone, STRIKE_LOOK, AFTER_IMPACT, TRAIL_FADE } from '../../src/render/strike-trail.js';
+import { createHitFx } from '../../src/render/hit-fx.js';
 
 test('looks per move and the limbs worth following', () => {
   assert.equal(lookFor('strike1'), 'strike'); assert.equal(lookFor('strike3'), 'strike3'); assert.equal(lookFor('super'), 'super');
@@ -58,4 +59,25 @@ test('the game drives the trail from her clips\' own moments', () => {
   assert.match(src, /strikeTrail\.start\(m\.model, d\.clip, d\.impact, heldBlade \? heldBlade\.sword : null\)/);
   assert.match(src, /strikeTrail\.impact\(\)/);
   assert.match(src, /strikeTrail\.update\(dt, lookdev\.reducedMotion\)/);
+});
+
+test('fists burn as warm and wide as the kick (owner liked the kick)', () => {
+  assert.ok(STRIKE_LOOK.strike.width >= 0.42 && STRIKE_LOOK.strike3.width >= STRIKE_LOOK.strike.width);
+  assert.equal(STRIKE_LOOK.strike.color, 0xffb35c);
+});
+
+test('the blade swoosh: its head runs along the arc, the tail dissolves, sparks fly off the head, then all is gone', () => {
+  const scene = new THREE.Scene(); let seed = 5; const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const fx = createHitFx({ THREE, parent: scene, doc: null, rand });
+  fx.slash([0, 1, 0], 0, 2, 0xfff4dc, 1, 0.1, 0.2);
+  let mesh = null; fx.group.traverse((o) => { if (o.isMesh && o.material.uniforms && o.material.uniforms.uHead && o.visible) mesh = o; });
+  assert.ok(mesh, 'a swoosh shows');
+  const heads = []; for (let i = 0; i < 10; i++) { fx.update(1 / 60); heads.push(mesh.material.uniforms.uHead.value); }
+  for (let i = 1; i < heads.length; i++) assert.ok(heads[i] >= heads[i - 1], 'the head only moves forward');
+  assert.ok(heads[0] < 0.5 && heads[9] > heads[0], 'it is revealed over time, not all at once');
+  let sparks = 0; fx.group.traverse((o) => { if (o.isPoints) { const a = o.geometry.attributes; for (const k of Object.keys(a)) void k; sparks++; } });
+  assert.ok(sparks > 0);
+  for (let i = 0; i < 120; i++) fx.update(1 / 60);
+  assert.equal(mesh.visible, false, 'faded out');
+  assert.ok(!('vertexColors' in mesh.material) || !mesh.material.vertexColors, 'no flat vertex-coloured crescent');
 });

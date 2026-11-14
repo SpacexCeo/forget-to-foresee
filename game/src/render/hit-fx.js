@@ -5,7 +5,8 @@
 //   spark     round sparks, the same physics, quicker (one Points, 160); also the motes of trails
 //   crackle   jagged violet arcs that flicker over the struck creature (one LineSegments)
 //   ring      ground rings that burst outwards (4 at once)
-//   slash     a blade's arc: a flat crescent bright at its leading edge that sweeps and fades (3 at once)
+//   slash     a blade's swoosh: a head races along the arc leaving a long dissolving tail with streaks, soft edges and a
+//             hot outer rim, sparks thrown off the head (3 at once; owner 14.11: the flat crescent read as a placeholder)
 // and the camera kick: a damped spring the blows push along their direction; the caller adds `kick` to the camera.
 //
 //   const fx = createHitFx({ THREE, parent: scene });
@@ -87,16 +88,28 @@ export function createHitFx({ THREE, parent, doc = globalThis.document, rand = M
   }
   let ringNext = 0;
 
-  // ---- slashes: a crescent whose vertex colour rises from the tail to the leading edge (additive: the tail vanishes)
-  const slashGeo = new THREE.RingGeometry(0.62, 1, 28, 2, -SLASH_ARC / 2, SLASH_ARC);
-  { const pa = slashGeo.attributes.position, c = new Float32Array(pa.count * 3);
-    for (let i = 0; i < pa.count; i++) { const a = Math.atan2(pa.getY(i), pa.getX(i)), u = (a + SLASH_ARC / 2) / SLASH_ARC, r = Math.hypot(pa.getX(i), pa.getY(i)), edge = 1 - Math.abs(r - 0.86) / 0.24; const b = Math.pow(Math.max(0, u), 2.2) * (0.45 + 0.55 * Math.max(0, edge)); c[i * 3] = c[i * 3 + 1] = c[i * 3 + 2] = b; }
-    slashGeo.setAttribute('color', new THREE.BufferAttribute(c, 3)); slashGeo.rotateX(-Math.PI / 2); }
+  // ---- slashes: a swoosh. aU runs along the arc (0 = where the cut starts), aR across it (0 inner, 1 outer); the shader
+  // reveals it up to the head and dissolves the tail behind it (no hard ring edges, nothing flat about it)
+  const slashGeo = new THREE.RingGeometry(0.4, 1.08, 56, 6, -SLASH_ARC / 2, SLASH_ARC);
+  { const pa = slashGeo.attributes.position, au = new Float32Array(pa.count), ar = new Float32Array(pa.count);
+    for (let i = 0; i < pa.count; i++) { const a = Math.atan2(pa.getY(i), pa.getX(i)), r = Math.hypot(pa.getX(i), pa.getY(i)); au[i] = (a + SLASH_ARC / 2) / SLASH_ARC; ar[i] = (r - 0.4) / 0.68; }
+    slashGeo.setAttribute('aU', new THREE.BufferAttribute(au, 1)); slashGeo.setAttribute('aR', new THREE.BufferAttribute(ar, 1)); slashGeo.rotateX(-Math.PI / 2); }
+  const SLASH_VERT = 'attribute float aU; attribute float aR; varying float vU; varying float vR; void main(){ vU = aU; vR = aR; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }';
+  const SLASH_FRAG = 'uniform vec3 uColor; uniform float uHead, uFade, uSeed; varying float vU; varying float vR;' +
+    'void main(){ float behind = uHead - vU; if (behind < 0.0) discard;' +
+    ' float tail = exp(-behind * 3.2);' +                                                             // the swoosh thins out behind its head
+    ' float across = pow(clamp(1.0 - abs(vR * 2.0 - 1.0), 0.0, 1.0), 1.6);' +                       // soft edges, no ring outline
+    ' float rim = smoothstep(0.45, 0.95, vR) * (1.0 - smoothstep(0.95, 1.0, vR));' +                  // the blade tip moves fastest: the outer rim is hottest
+    ' float streak = 0.55 + 0.45 * sin(vR * 46.0 + uSeed) * sin(vR * 19.0 - behind * 26.0 + uSeed * 0.7);' + // motion streaks along the cut
+    ' float head = exp(-behind * 28.0);' +
+    ' float a = uFade * tail * (across * (0.45 + 0.55 * streak) + rim * 0.9) + uFade * head * across * 0.8;' +
+    ' gl_FragColor = vec4(mix(uColor, vec3(1.0), clamp(head * 0.8 + rim * tail * 0.5, 0.0, 1.0)), clamp(a, 0.0, 1.0)); }';
   const slashes = [];
   for (let i = 0; i < SLASHES; i++) {
-    const m = new THREE.Mesh(slashGeo, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
-    m.visible = false; m.renderOrder = 5; group.add(m); slashes.push({ m, t: 1, dur: 0.2, yaw: 0, dir: 1, r: 1 });
+    const m = new THREE.Mesh(slashGeo, new THREE.ShaderMaterial({ uniforms: { uColor: { value: new THREE.Color() }, uHead: { value: 0 }, uFade: { value: 0 }, uSeed: { value: 0 } }, vertexShader: SLASH_VERT, fragmentShader: SLASH_FRAG, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+    m.visible = false; m.renderOrder = 5; group.add(m); slashes.push({ m, t: 1, dur: 0.2, yaw: 0, dir: 1, r: 1, color: 0xffffff, spark: 0 });
   }
+  const _head = new THREE.Vector3(), _hp = [0, 0, 0], _hv = [0, 0, 0]; // scratch: the head's sparks allocate nothing
   let slashNext = 0;
 
   // ---- camera kick
@@ -152,7 +165,7 @@ export function createHitFx({ THREE, parent, doc = globalThis.document, rand = M
      */
     slash(at, heading, radius, color, dir = 1, tilt = 0, dur = 0.2) {
       const S = slashes[slashNext]; slashNext = (slashNext + 1) % SLASHES;
-      S.m.position.set(at[0], at[1], at[2]); S.m.material.color.set(color); S.r = radius; S.t = 0; S.dur = dur; S.dir = dir < 0 ? -1 : 1;
+      S.m.position.set(at[0], at[1], at[2]); S.m.material.uniforms.uColor.value.set(color); S.m.material.uniforms.uSeed.value = rand() * 6.28; S.color = color; S.spark = 0; S.r = radius; S.t = 0; S.dur = dur * 1.6; S.dir = dir < 0 ? -1 : 1;
       S.yaw = heading; S.tilt = tilt; S.m.visible = true;
     },
     /** A small burst without a camera kick (a projectile ending, a spark off armour). */
@@ -201,11 +214,13 @@ export function createHitFx({ THREE, parent, doc = globalThis.document, rand = M
       }
       for (const S of slashes) {
         if (!S.m.visible) continue;
-        S.t += dt; const u = Math.min(1, S.t / S.dur), e = 1 - (1 - u) * (1 - u);
-        // the crescent's middle points along +x of its plane: turn it to face `yaw`, then sweep it through the cut
-        S.m.rotation.set(S.tilt, S.yaw - Math.PI / 2 + S.dir * (e - 0.5) * 1.6, 0, 'YXZ');
-        S.m.scale.set(S.r * (0.85 + 0.15 * e), 1, S.dir * S.r * (0.85 + 0.15 * e)); // dir -1 mirrors the crescent across its own axis
-        S.m.material.opacity = u < 0.35 ? 1 : 1 - (u - 0.35) / 0.65;
+        S.t += dt; const u = Math.min(1, S.t / S.dur), headK = Math.min(1, u / 0.45), e = 1 - (1 - headK) * (1 - headK);
+        // the arc's middle points along +x of its plane: turned to face `yaw` and held; the head runs along it (the cut's motion)
+        S.m.rotation.set(S.tilt, S.yaw - Math.PI / 2, 0, 'YXZ');
+        S.m.scale.set(S.r, 1, S.dir * S.r); // dir -1 mirrors the arc across its own axis
+        const U = S.m.material.uniforms; U.uHead.value = e * 1.15; U.uFade.value = u < 0.45 ? 1 : Math.max(0, 1 - (u - 0.45) / 0.55);
+        // sparks thrown off the head while it runs
+        if (headK < 1) { S.spark -= dt; if (S.spark <= 0) { S.spark = 0.016; const a = -SLASH_ARC / 2 + Math.min(1, e) * SLASH_ARC; _head.set(Math.cos(a) * 1.02, 0, -Math.sin(a) * 1.02); S.m.updateMatrixWorld(); _head.applyMatrix4(S.m.matrixWorld); _hp[0] = _head.x; _hp[1] = _head.y; _hp[2] = _head.z; _hv[0] = (rand() - 0.5) * 1.2; _hv[1] = 0.6 + rand(); _hv[2] = (rand() - 0.5) * 1.2; emit(P.spark, _hp, _hv, S.color, FRAG.spark.life * 0.7, FRAG.spark.gravity); } }
         if (u >= 1) S.m.visible = false;
       }
       kickStep(kickState, Math.min(dt, 1 / 30));
