@@ -4,6 +4,7 @@
 // Visual otherwise; a failed download just leaves the spot empty.
 import { fetchGltf, hasModelFile, getModelVariant } from '../render/assets.js';
 import { MASK_PLAYER } from '../physics/collision.js';
+import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { TOWN_DECOR, facing } from './town-decor.js';
 
 /**
@@ -19,8 +20,8 @@ export async function placeTownDecor({ THREE, scene, origin, groundAt, world = n
     const x = d.at[0] + origin[0], z = d.at[2] + origin[2];
     const g = groundAt(x, z, d.at[1] + origin[1] + 2);
     const y = g == null ? d.at[1] + origin[1] : g;
-    const o = src.clone(true); o.name = d.id;
-    const cols = []; o.traverse((m) => { if (m.isMesh) { if (/_col(_|[0-9]|$)/.test(m.name || '')) cols.push(m); else { m.castShadow = true; m.receiveShadow = true; } } });
+    const o = cloneSkinned(src); o.name = d.id; // the banners' cloth is skinned to its own rig: a plain clone stayed bound to the original bones
+    const cols = []; o.traverse((m) => { if (m.isMesh) { if (/_col(_|[0-9]|$)/.test(m.name || '')) cols.push(m); else { m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; } } });
     for (const c of cols) c.removeFromParent();
     o.position.set(x, y, z); o.rotation.y = facing(d.at, d.face);
     group.add(o); n++;
