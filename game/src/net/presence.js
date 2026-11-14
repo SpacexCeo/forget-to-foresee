@@ -20,7 +20,10 @@ export const ACTS = Object.freeze({
   chest: (v) => ['common', 'rare', 'legendary'].includes(v),
   boss: (v) => ['crownrift', 'shoal'].includes(v),
   trade: (v) => v == null,
+  gate: (v) => v == null, // the Gate-Loom was paid: everyone's Loom flares (game/src/ui/loom-meter.js)
 });
+/** The acts every presence server takes (before 14.11 a server named no kinds in its welcome and kicked for any other). */
+export const FIRST_ACTS = Object.freeze(['level', 'quest', 'chest', 'boss', 'trade']);
 export const ACT_EVERY_MS = 3200, ACT_QUEUE = 5, CHAT_KEEP = 90;
 const validAct = (k, v) => typeof k === 'string' && Object.hasOwn(ACTS, k) && ACTS[k](v ?? null);
 /** Drawing limits for the other players (play/remote-players.js). */
@@ -74,7 +77,9 @@ export function createPresence({ url = presenceUrl(), name = '', skin = 'iris', 
   // first; `at` is the server's clock (epoch ms); `old` marks what the room remembered from before we joined
   const chat = [];
   // canAct: this server knows 'act' (it sent 'hist'); an older one would disconnect us for an unknown message
-  let myName = '', lastActAt = -Infinity, idleKicked = false, canAct = false; const actQ = [];
+  let myName = '', lastActAt = -Infinity, idleKicked = false, canAct = false, kinds = null; const actQ = [];
+  // kinds: the acts the server named in its welcome; a server that names none takes only the first five (it kicks for any other)
+  const serverTakes = (k) => (kinds ? kinds.includes(k) : FIRST_ACTS.includes(k));
   let ws = null, id = 0, room = 0, max = 15, status = url && WebSocketImpl ? 'connecting' : 'offline', retries = 0, lastSent = null, lastSendAt = 0, stopped = false, timer = null, sys = null;
   let muted = new Set(); try { muted = new Set(JSON.parse((storage && storage.getItem(MUTE_KEY)) || '[]')); } catch { /* fresh */ }
   const saveMuted = () => { try { storage && storage.setItem(MUTE_KEY, JSON.stringify([...muted].slice(-200))); } catch { /* private mode */ } };
@@ -103,7 +108,7 @@ export function createPresence({ url = presenceUrl(), name = '', skin = 'iris', 
   }
   function handle(m) {
     const t = now();
-    if (m.t === 'welcome') { id = m.id; room = m.room; max = m.max; myName = typeof m.name === 'string' ? m.name : name; canAct = false; actQ.length = 0; players.clear(); for (const p of m.players) add(p); status = 'online'; lastSent = null; emit(); }
+    if (m.t === 'welcome') { id = m.id; room = m.room; max = m.max; myName = typeof m.name === 'string' ? m.name : name; canAct = false; kinds = Array.isArray(m.kinds) ? m.kinds.filter((k) => typeof k === 'string') : null; actQ.length = 0; players.clear(); for (const p of m.players) add(p); status = 'online'; lastSent = null; emit(); }
     else if (m.t === 'join') { add(m.player); emit(); }
     else if (m.t === 'leave') { players.delete(m.id); emit(); }
     else if (m.t === 'snap') {
@@ -161,7 +166,7 @@ export function createPresence({ url = presenceUrl(), name = '', skin = 'iris', 
      * most one per ACT_EVERY_MS (the server's limit), a few wait in a short queue; anything not whitelisted is dropped.
      */
     act(k, v = null) {
-      if (status !== 'online' || !canAct || !validAct(k, v) || actQ.length >= ACT_QUEUE) return false;
+      if (status !== 'online' || !canAct || !validAct(k, v) || !serverTakes(k) || actQ.length >= ACT_QUEUE) return false;
       actQ.push(v == null ? { k } : { k, v }); pump(); return true;
     },
     say(text) { const s = String(text || '').trim().slice(0, 140); if (s && status === 'online') send({ t: 'chat', text: s }); },

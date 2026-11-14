@@ -1623,6 +1623,7 @@ export default {
   'mp.act.boss.crownrift': "{name} перемагає Коронорозлам",
   'mp.act.boss.shoal': "{name} перемагає Порожній Приплив на Скляній Мілині",
   'mp.act.trade': "{name} купує товар на ринку",
+  'mp.act.gate': "{name} нагодував(ла) Ткацьку Браму",
   'set.title': "Налаштування",
   'set.close': "Закрити",
   'set.tab.graphics': "Графіка",

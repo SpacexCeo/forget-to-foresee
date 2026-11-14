@@ -1624,6 +1624,7 @@ export default {
   'mp.act.boss.crownrift': "{name} побеждает Короноразлом",
   'mp.act.boss.shoal': "{name} побеждает Полый Прилив на Стеклянной Отмели",
   'mp.act.trade': "{name} покупает товар на рынке",
+  'mp.act.gate': "{name} накормил(а) Ткацкие Врата",
   'set.title': "Настройки",
   'set.close': "Закрыть",
   'set.tab.graphics': "Графика",

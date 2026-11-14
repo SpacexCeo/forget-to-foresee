@@ -56,6 +56,7 @@ New work ships with its flag on (owner, 14 Nov); a flag is only an off switch.
 | `damageNumbers` | **On** since 14 Nov | Shipped with the night combat pass |
 | `loadRitual` | **On** since 14 Nov | Loading screen only, `tests/client/load-ritual.test.mjs` |
 | `glassShoal` | **On** since 14 Nov | Three dead ends fixed (`tests/client/shoal-ready.test.mjs`); the dragon and the boss are placeholder shapes until their models land |
-| `loomMeter`, `presenceChip`, `tuneOverlay`, `statusBanner`, `register` | No | Defined in `src/features.js`, but nothing in the game reads them: turning them on changes nothing |
+| `loomMeter`, `presenceChip` | Yes (14.11) | The Loom meter chip in the town: silk fed to the Gate-Loom today (relayer gate log, receipts on the explorer; the contract's all-time counters when the relayer is silent) and how many real players are in the valley; the Gate-Loom glows with the day and flares when anyone pays |
+| `tuneOverlay`, `statusBanner`, `register` | No | Defined in `src/features.js`, but nothing in the game reads them: turning them on changes nothing |
 
 The Town works goals and share (`wip/defi-pass`) have no flag: they are part of the window.

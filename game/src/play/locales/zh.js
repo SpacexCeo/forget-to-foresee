@@ -1623,6 +1623,7 @@ export default {
   'mp.act.boss.crownrift': "{name} 击败了王冠裂隙",
   'mp.act.boss.shoal': "{name} 在玻璃浅滩击败了空潮",
   'mp.act.trade': "{name} 在市场买了东西",
+  'mp.act.gate': "{name} 喂饱了织门",
   'set.title': "设置",
   'set.close': "关闭",
   'set.tab.graphics': "画面",

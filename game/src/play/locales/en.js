@@ -1630,6 +1630,7 @@ const EN = {
   'mp.act.boss.crownrift': "{name} defeated the Crownrift",
   'mp.act.boss.shoal': "{name} defeated the Hollow Tide at the Glass Shoal",
   'mp.act.trade': "{name} bought goods at the market",
+  'mp.act.gate': "{name} fed the Gate-Loom",
   'set.title': "Settings",
   'set.close': "Close",
   'set.tab.graphics': "Graphics",

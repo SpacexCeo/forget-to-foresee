@@ -14,6 +14,7 @@ export const ACT_KINDS = Object.freeze({
   chest: (v) => ['common', 'rare', 'legendary'].includes(v),
   boss: (v) => ['crownrift', 'shoal'].includes(v),
   trade: (v) => v == null,
+  gate: (v) => v == null, // the Gate-Loom was paid: everyone's Loom flares (game/src/ui/loom-meter.js)
 });
 
 const NAME_RE = /^[a-z0-9]{1,16}$/, ACCOUNT_RE = /^(?=.{2,64}$)[a-z0-9]+([-_][a-z0-9]+)*(\.[a-z0-9]+([-_][a-z0-9]+)*)*$/;

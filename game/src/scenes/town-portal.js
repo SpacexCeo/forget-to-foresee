@@ -157,7 +157,7 @@ export function createTownPortal({ scene, position, facing = 0, i18n, read, onPa
   }
   scene.add(root);
 
-  let state = 'dormant', panel = null, forced = null;
+  let state = 'dormant', panel = null, forced = null, fed = 0; // fed: how much silk the town gave the Loom today, 0..1 (ui/loom-meter.js)
   const facts = () => read() || { phase: 'off', balanceC: 0, feeC: EXPEDITION.PORTAL_FEE_C, demo: false };
   function setLook(s) {
     if (s === state) return; state = s;
@@ -213,19 +213,23 @@ export function createTownPortal({ scene, position, facing = 0, i18n, read, onPa
       const f = facts();
       setLook(forced || portalState({ on: true, ...f }));
       if (state === 'spent') return;
+      if (glow) { const want = (LOOK[state] || LOOK.dormant).intensity * (1 + 0.5 * fed); glow.intensity += (want - glow.intensity) * Math.min(1, dt * 1.5); } // a flare settles back
       if (!reducedMotion) {
         const L = LOOK[state] || LOOK.dormant, breath = 0.9 + 0.1 * Math.sin(time * 1.3);
         discMat.uniforms.uTime.value = time * (state === 'ready' ? 1.6 : 1); discMat.uniforms.uOpacity.value = L.veil * breath;
         discMat.uniforms.uFlare.value = Math.max(0, discMat.uniforms.uFlare.value - dt * 0.8);
-        poolMat.uniforms.uOpacity.value = L.pool * breath; bandMat.emissiveIntensity = (state === 'ready' ? 2.2 : 1.4) * (0.8 + 0.2 * Math.sin(time * 0.9));
+        poolMat.uniforms.uOpacity.value = L.pool * breath * (1 + 0.6 * fed); bandMat.emissiveIntensity = (state === 'ready' ? 2.2 : 1.4) * (0.8 + 0.2 * Math.sin(time * 0.9)) * (1 + 0.5 * fed);
         if (motes) {                                    // motes rise slowly through the gate and start again at its foot
           const pa = motes.geometry.attributes.position;
-          for (let i = 0; i < pa.count; i++) { let y = pa.getY(i) + dt * (0.12 + 0.2 * motes.userData.seed[i]) * (state === 'ready' ? 2 : 1); if (y > 3.1) y = 0.35; pa.setY(i, y); }
+          for (let i = 0; i < pa.count; i++) { let y = pa.getY(i) + dt * (0.12 + 0.2 * motes.userData.seed[i]) * (state === 'ready' ? 2 : 1) * (1 + fed); if (y > 3.1) y = 0.35; pa.setY(i, y); }
           pa.needsUpdate = true;
         }
       }
     },
-    /** The twist's flare (P5): the disc burns white for a moment. */
+    /** How fed the town's Loom is today, 0..1: the glyphs, the pool and the motes brighten and quicken with it. */
+    setFed(k) { fed = Math.min(1, Math.max(0, Number(k) || 0)); },
+    get fed() { return fed; },
+    /** The twist's flare (P5), and the Loom meter's when anyone in the town pays the Gate: the disc burns white for a moment. */
     flare(k = 1) { discMat.uniforms.uOpacity.value = 1; discMat.uniforms.uFlare.value = Math.min(1, 0.6 + 0.4 * k); if (glow) glow.intensity = 6 * k; },
     closePanel,
     /** QA (art/tools/props_sheet.mjs): hold a look whatever the story says; null lets the story decide again. */

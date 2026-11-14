@@ -164,3 +164,19 @@ test('mp.act.* strings: every kind in five locales, each with the name', async (
   assert.ok(keys.every(Boolean)); assert.equal(new Set(keys).size, 8);
   for (const l of ['en', 'ru', 'uk', 'it', 'zh']) { const m = await load(l); for (const k of keys) { assert.ok(m[k] && m[k].includes('{name}'), `${l} ${k}`); assert.equal(m[k].includes('{n}'), k === 'mp.act.level', `${l} ${k}`); } }
 });
+
+test('the Gate act: never sent to a server that did not name it (an older one kicks for it), sent to one that did; its feed line in five locales', async () => {
+  const old = await online();
+  old.ws.recv({ t: 'hist', chat: [], acts: [] });
+  assert.equal(old.mp.act('gate'), false, 'a welcome with no kinds: only the first five acts');
+  assert.equal(old.mp.act('level', 5), true);
+  const neu = await online();
+  neu.ws.recv({ t: 'welcome', id: 8, name: 'ann', room: 1, max: 15, players: [], kinds: Object.keys(ACT_KINDS) });
+  neu.ws.recv({ t: 'hist', chat: [], acts: [] });
+  assert.equal(neu.mp.act('gate'), true);
+  assert.deepEqual(neu.ws.sent.filter((m) => m.t === 'act').at(-1), { t: 'act', k: 'gate' });
+  assert.equal(neu.mp.act('gate', 'x'), false, 'no value');
+  const { actKey } = await import('../../src/ui/chat-panel.js');
+  assert.equal(actKey({ k: 'gate' }), 'mp.act.gate');
+  for (const loc of ['en', 'ru', 'uk', 'it', 'zh']) { const i18n = createPlayI18n(loc, { onMissing: () => assert.fail(loc) }); assert.match(i18n.t('mp.act.gate', { name: 'ann' }), /ann/); }
+});
