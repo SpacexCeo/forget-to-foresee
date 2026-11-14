@@ -86,4 +86,5 @@ test('the boss tells are frost cracks, not flat shapes: no fill, shards and mist
   assert.doesNotMatch(src, /RingGeometry\(0\.5, 0\.65/, 'the aim is a soft glow, not a ring');
   assert.match(src, /\/\/ the wind-up glow/);
   assert.equal((src.match(/sfx\.tellFrame\(/g) || []).length, 5);
+  assert.doesNotMatch(src, /fx\.shock\(/, 'no flat shock rings on the mirror');
 });
