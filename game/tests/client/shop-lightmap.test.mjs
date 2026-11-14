@@ -79,3 +79,15 @@ test('shop lightmap: the material names keep the town prefixes the client keys o
 test('shop rooms stay inside the interior triangle budget', () => {
   for (const piece of rooms) for (const f of [piece + '.glb', piece + '_m.glb']) assert.ok(lightmapOf(f, piece).tris <= 60000, f);
 });
+
+test('the Exchange keeps its hidden grotto: sockets behind the rear wall, in both variants', () => {
+  // art/town/town_shops.py grotto(): the cave lies north of the room (the rear wall is at z = -5.5 in the piece)
+  for (const f of ['town_shop_exchange.glb', 'town_shop_exchange_m.glb']) {
+    const { json } = readGlb(f);
+    const at = (name) => (json.nodes.find((n) => n.name === name) || {}).translation;
+    const centre = at('grotto_center'), lamp = at('socket_lamp_grotto');
+    assert.ok(centre && lamp, f + ' has the grotto sockets');
+    assert.ok(centre[2] < -8 && lamp[2] < -8, f + ': the grotto is behind the rear wall');
+    assert.ok(Math.abs(centre[1]) < 0.01, f + ': the cave floor is level with the room');
+  }
+});

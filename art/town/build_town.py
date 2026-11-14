@@ -358,7 +358,7 @@ MAT_KEY = {}   # object name -> material key
 BAKE_ALBEDO = {"timber": (0.30, 0.20, 0.13), "stone": (0.42, 0.40, 0.36), "plaster": (0.50, 0.46, 0.40), "cloth": (0.62, 0.60, 0.56),
                "cobble": (0.30, 0.28, 0.25), "foliage": (0.20, 0.30, 0.10), "bronze": (0.55, 0.38, 0.18), "iron": (0.08, 0.08, 0.08),
                "ceramic": (0.8, 0.8, 0.8), "paper": (0.80, 0.74, 0.60), "wax": (0.85, 0.80, 0.70), "ink": (0.03, 0.03, 0.04),
-               "shard": (0.5, 0.4, 0.8), "shard_amber": (0.8, 0.5, 0.2), "altar_metal": (0.5, 0.35, 0.16)}
+               "shard": (0.5, 0.4, 0.8), "shard_amber": (0.8, 0.5, 0.2), "altar_metal": (0.5, 0.35, 0.16), "rock": (0.24, 0.24, 0.27)}
 BAKE_EMIT = {"lamp": ((1.0, 0.62, 0.26), 0.6), "fire": ((1.0, 0.40, 0.08), 1.5), "shard": ((0.55, 0.42, 1.0), 1.5),
              "shard_amber": ((1.0, 0.55, 0.16), 1.5), "window_day": (None, 2.2)}
 BAKE_SKIP = ("lamp", "fire", "window_day", "case_glass", "glass_lit", "glass")   # keep their authored colour
@@ -846,7 +846,13 @@ def preview_interiors(pieces, only=None):
         views = [("door", (0.0, 1.62, d / 2 - 0.35), (0.0, 1.35, -d / 2), 15, None),
                  ("counter", (sp["stand"][0] - 0.5, 1.75, sp["stand"][1] - 0.35), (0.0, 1.0, d / 2), 15, None),
                  ("play", (0.9, 2.6, d / 2 - 2.2), (sp["stand"][0] * 0.6, 1.0, -d / 2 + 2.0), 20, None),
+                 ("game", (0.55, 1.85, d / 2 - 0.9), (sp["stand"][0] * 0.5, 1.15, -d / 2 + 2.2), 21, None),   # about where the game camera sits at the door
                  ("top", (0.0, h - 0.45, 0.0), (0.0, 0.0, -0.001), None, max(w, d) * 1.08)]
+        if sp["id"] == "exchange":   # the hidden grotto behind the rear wall: from the room, from the passage, from the back
+            gx, gz = -1.625, -d / 2 - 1.8 - 3.1
+            views += [("arch", (-0.6, 1.6, -d / 2 + 3.4), (-1.7, 1.15, -d / 2), 20, None),
+                      ("grotto", (-1.625, 1.6, -d / 2 - 1.5), (gx, 0.8, gz - 1.2), 16, None),
+                      ("grotto_back", (gx + 1.4, 1.7, gz - 1.9), (gx - 0.6, 0.7, gz + 1.5), 16, None)]
         for name, loc, tgt, lens, ortho in views:
             if os.environ.get("TOWN_PREVIEW_VIEWS") and name not in os.environ["TOWN_PREVIEW_VIEWS"].split(","):
                 continue
