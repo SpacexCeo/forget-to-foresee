@@ -64,10 +64,10 @@ body.ts-on .ftf-photo-open { top: 40% !important; }
    large, actions and their names live in the lower right, the top keeps one compact column, barks never cover a prompt */
 body.ts-on .ts-zone { width: 52vw; height: 58vh; }
 body.ts-on .ftf-mk { display: none !important; } /* the market's trade count: the Market itself is one tap away */
-body.ts-on .ftf-chat { left: auto !important; right: calc(8px + env(safe-area-inset-right, 0px)) !important; bottom: auto !important;
+html body.ts-on .ftf-chat { left: auto !important; right: calc(8px + env(safe-area-inset-right, 0px)) !important; bottom: auto !important;
   top: calc(140px + env(safe-area-inset-top, 0px)) !important; width: auto !important; max-width: 72vw; display: flex; flex-direction: column-reverse; align-items: flex-end; gap: 6px; }
-body.ts-on .ftf-town-prompt { left: auto !important; right: calc(14px + env(safe-area-inset-right, 0px)) !important; transform: none !important; max-width: 52vw; }
-body.ts-on .ftf-spiders { left: calc(10px + env(safe-area-inset-left, 0px)) !important; right: auto !important; transform: none !important;
+html body.ts-on .ftf-town-prompt { left: auto !important; right: calc(14px + env(safe-area-inset-right, 0px)) !important; transform: none !important; max-width: 52vw; }
+html body.ts-on .ftf-spiders { left: calc(10px + env(safe-area-inset-left, 0px)) !important; right: auto !important; transform: none !important;
   top: calc(176px + env(safe-area-inset-top, 0px)) !important; max-width: 62vw; padding: 3px 10px 3px 4px !important; font-size: 12px !important; }
 body.ts-on .ftf-spiders-hint { display: none !important; }
 body.ts-on .ftf-altar-timer { top: calc(222px + env(safe-area-inset-top, 0px)) !important; }
