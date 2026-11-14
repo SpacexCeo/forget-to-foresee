@@ -150,6 +150,7 @@ def sphere(r, at, m, scale=(1, 1, 1), rot=None, seg=16):
 
 def group(objs, origin, yaw):
     """Turns a set of objects about the vertical through three.js point `origin` (yaw in three.js: +y up)."""
+    bpy.context.view_layer.update()   # the new objects' matrix_world is stale until the view layer updates
     o = P(*origin)
     T = Matrix.Translation(o) @ Matrix.Rotation(yaw, 4, "Z") @ Matrix.Translation(-o)
     for ob in objs:
@@ -352,7 +353,7 @@ def robot(x, z):
 
 
 desk()
-chair(1.0, -3.0, 0.5)
+chair(0.32, -3.2, 0.95)   # rolled back beside the desk end, clear of Iris's path to the desk
 bench()
 west_wall()
 fridge()
