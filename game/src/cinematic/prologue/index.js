@@ -16,7 +16,7 @@ import { installGrade } from '../../render/grade.js';
 import { createLabAudio } from './lab-audio.js';
 import { createIrisPoses } from './iris-poses.js';
 import { createTimeline } from './timeline.js';
-import { cameraAt, irisAt, PROLOGUE_S, WAKE_CUES } from './shots.js';
+import { cameraAt, irisAt, PROLOGUE_S, WAKE_CUES, WALK_SPEED } from './shots.js';
 
 const ss = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const DEVICE = new THREE.Vector3(3.2, 1.5, 0.4);
@@ -156,6 +156,7 @@ export function createPrologue(ctx = {}) {
         iris.model.visible = !!ir && t < 35.4;
         if (ir) {
           for (const n of ['idle', 'walk', 'run']) { const to = ir.moving && ir.clip === n ? 1 : !ir.moving && n === 'idle' ? 1 : 0; iris.w[n] += (to - iris.w[n]) * Math.min(1, dt * 6); if (iris.acts[n]) iris.acts[n].setEffectiveWeight(iris.w[n]); }
+          if (iris.acts.walk) iris.acts.walk.timeScale = ir.moving ? Math.min(1.15, Math.max(0.55, ir.speed / WALK_SPEED)) : 1; // the stride matches her pace
           iris.mixer.update(dt);
           const k9 = ss(26.5, 31, t), face = t >= 12.0 && t < 15.9 ? Math.atan2(2.2 - ir.x, -3.4 - ir.z) : t >= 23.2 && t < 26.5 ? Math.atan2(DEVICE.x - ir.x, DEVICE.z - ir.z) : ir.heading;
           let dh = face - iris.model.rotation.y; dh = Math.atan2(Math.sin(dh), Math.cos(dh)); iris.model.rotation.y += dh * Math.min(1, dt * 7);
