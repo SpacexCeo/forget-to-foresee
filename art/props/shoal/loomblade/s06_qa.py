@@ -88,7 +88,19 @@ def main():
         "hand": ((0.25, -0.55, -0.25), (0, 0, 0.25), 35),
         "back": ((-0.20, 0.42, 0.22), (0, 0, 0.10), 55),
         "tip": ((0.05, -0.22, 0.95), (0, 0, 0.86), 70),
+        # the whole sword, pommel to tip, beside a 1 m bar (3D review point 15), and at about the game camera's distance
+        "whole_front": ((0.0, -3.3, 0.40), (0.06, 0, 0.40), 50),
+        "whole_side": ((3.3, 0.0, 0.40), (0, 0.06, 0.40), 50),
+        "game": ((0.6, -7.0, 0.9), (0, 0, 0.40), 35),
     }
+    # the 1 m bar: white, 1 cm square, standing beside the sword from the pommel's level
+    bpy.ops.mesh.primitive_cube_add(size=1, location=(0.22, 0.0, -0.156 + 0.5))
+    bar = bpy.context.object
+    bar.scale = (0.01, 0.01, 1.0)
+    bm_ = bpy.data.materials.new("bar")
+    bm_.use_nodes = True
+    bm_.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = (0.9, 0.9, 0.9, 1)
+    bar.data.materials.append(bm_)
     only = L.opt("--views")
     for name, (loc, tgt, lens) in views.items():
         if only and name not in only.split(","):

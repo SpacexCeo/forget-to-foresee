@@ -21,6 +21,7 @@ import { groupChests, loadArchive, archiveOpened, outcomeOf, verifyHref, nftImag
 import { cue } from '../audio/town-audio.js';
 import { formatSilkC } from '../net/silk-core.js';
 import { wardrobe, TRY_ON_SECONDS } from './skins.js';
+import { collectionView } from './nft-collection.js';
 
 /** UI-004 tab icons (line art, currentColor). */
 const TAB_ICON = Object.freeze({
@@ -127,6 +128,17 @@ const CSS = `
 .gm-ward-card b { font: 600 13px/1.2 system-ui; } .gm-ward-card small { color: rgba(233, 230, 220, .55); font-size: 11px; }
 .gm-ward-card.gm-worn { border-color: rgba(197, 164, 105, .8); background: linear-gradient(160deg, #2a2716, #1a211b); }
 .gm-ward-card.gm-locked img { filter: saturate(.55) brightness(.8); }
+.gm-coll { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 12px; margin: 4px 0 14px; }
+.gm-coll-card { all: unset; box-sizing: border-box; display: grid; gap: 6px; cursor: zoom-in; text-align: center; }
+.gm-coll-card img { width: 100%; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 12px; box-shadow: 0 8px 22px rgba(0,0,0,.45); transition: transform .18s ease; }
+.gm-coll-card:hover img, .gm-coll-card:focus-visible img { transform: translateY(-3px); }
+.gm-coll-card:focus-visible { outline: 2px solid var(--ftf-gold, #c5a469); outline-offset: 4px; border-radius: 12px; }
+.gm-coll-card.gm-locked img { filter: saturate(.6) brightness(.72); }
+.gm-coll-card b { font: 600 13px/1.2 system-ui; } .gm-coll-card small { color: rgba(233, 230, 220, .6); font-size: 11px; line-height: 1.35; }
+.gm-coll-card .gm-on { color: var(--ftf-gold, #c5a469); font-weight: 700; }
+.gm-coll-big { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 16px; background: rgba(6, 10, 9, .82); cursor: zoom-out; }
+.gm-coll-big img { max-width: min(92vw, 520px); max-height: 88vh; aspect-ratio: 2 / 3; object-fit: contain; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
+@media (prefers-reduced-motion: reduce) { .gm-coll-card img { transition: none; } }
 .gm-agent { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 12px 14px; border-radius: 16px; background: var(--ftf-panel-solid, #101f1a); border: 1px solid rgba(214, 226, 214, .1); margin-bottom: 10px; }
 .gm-agent b { font-size: 15px; }
 .gm-wheelwrap { display: grid; grid-template-columns: minmax(240px, 340px) 1fr; gap: 18px; align-items: start; }
@@ -282,7 +294,7 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
           loot.replaceChildren(el('h3', null, t('chest.lootHeading')), g3);
         }).catch(() => {});
       }
-      return [box, drag, loot, holderSection({ doc, t, storage, owner })];
+      return [box, collectionSection(), drag, loot, holderSection({ doc, t, storage, owner })];
     },
     inventory() {
       return items.then((list) => {
@@ -502,6 +514,33 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
     return box;
   }
   /** No guest yet: one line and the Day-1 free account button (the same mint the arrival runs, play/day1-mint.js). */
+  /**
+   * The cards a player can earn (owner 14.11, the painted card set; play/nft-collection.js): owned ones first, each with
+   * what it takes to earn it; a card opens large on click or Enter and closes on any click.
+   */
+  function collectionSection() {
+    const skins = typeof globalThis.__ftfSkins === 'function' ? globalThis.__ftfSkins() : null;
+    let pass = false; try { pass = !!(storage && JSON.parse(storage.getItem('ftf.pass.v1') || '{}').claimId); } catch { /* none */ }
+    const sec = el('section', 'gm-collection'); sec.append(el('h3', null, t('nft.collection')));
+    const g = el('div', 'gm-coll');
+    for (const c of collectionView({ skins, pet: globalThis.__ftfPet || null, pass })) {
+      const card = el('button', 'gm-coll-card' + (c.owned ? '' : ' gm-locked')); card.type = 'button';
+      const img = el('img'); img.src = base + 'assets/' + c.thumb; img.alt = ''; img.loading = 'lazy';
+      card.append(img, el('b', null, t(c.nameKey)), el('small', c.owned ? 'gm-on' : null, c.owned ? t('nft.owned') : t(c.howKey)));
+      card.setAttribute('aria-label', t(c.nameKey) + ': ' + (c.owned ? t('nft.owned') : t(c.howKey)));
+      card.addEventListener('click', () => {
+        const big = el('div', 'gm-coll-big'); big.setAttribute('role', 'dialog'); big.setAttribute('aria-label', t(c.nameKey));
+        const im = el('img'); im.src = base + 'assets/' + c.art; im.alt = t(c.nameKey); big.append(im);
+        const shut = () => { big.remove(); card.focus(); }; big.tabIndex = -1;
+        big.addEventListener('click', shut);
+        big.addEventListener('keydown', (e) => { if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); shut(); } }); // Escape closes the card, not the menu
+        sec.append(big); if (big.focus) big.focus();
+      });
+      g.append(card);
+    }
+    sec.append(g);
+    return sec;
+  }
   function guestBanner() {
     const wrap = el('div', 'gm-guest'); wrap.style.cssText = 'display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0 10px;padding:10px 12px;border:1px solid rgba(197, 164, 105,.45);border-radius:10px;background:rgba(197, 164, 105,.08)';
     const line = el('p', 'gm-note', t('chest.guest.line')); line.style.margin = '0'; line.style.flex = '1 1 220px';

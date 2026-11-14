@@ -75,6 +75,7 @@ export function runIntro(ctx) {
     let how = 'done';
     try {
       if (pro && pro.playLabPrologue) {
+        // a cue with a voice line plays it with its subtitle (QA pass 2 #7); never waits on it
         const off = ctx.bus && ctx.bus.on ? ctx.bus.on('prologue.cue', (c) => { if (c && c.text) subs.show(c.text, c.speaker || null, c.durMs || 0); speak(c); }) : null;
         current = { skip: () => { if (pro.skip) pro.skip(); } };
         // Esc (or the Skip button) skips the 3D prologue, and never reaches the game's menu meanwhile (R10)

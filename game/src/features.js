@@ -23,6 +23,7 @@ export const DEFAULT_FLAGS = Object.freeze({
   accountLogin: false, // sign in / create account with a NEAR, EVM or Solana wallet (docs/account-login.md)
   wayfarers: false, // the Wayfarers from Kallima: visitors in town (a placeholder body until their model) and the Lost Tourist
   tales: false, // town tales: the Scribe's lost words, a night step with the Sweeper (game/tales.js, scenes/town-tales.js)
+  shellAura: false, // the tournament Shells' glow, drifting motes and suture pulse (render/shell-aura.js)
   townLedger: false, // the Town Ledger: the game menu's Town tab and the market pill's button (docs/plans/track-fit-gaps.md)
 });
 export const FEATURES_TIMEOUT_MS = 3000;

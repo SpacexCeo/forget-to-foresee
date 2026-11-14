@@ -32,6 +32,10 @@ Live since the night of 14 Nov, for the 90 s cut or to swap in (each is on the l
 | 7a | A Frost Lance hit throws ice shards, a Storm Snare flickers violet, damage numbers float up | "Every blow has its element." |
 | 9a | "Return to town" on the Biography, then the loot card in town: new level, the shard NFT, chests | "Back from a season, you see what you brought home." |
 | 9b | Inside a shop with its baked light; through the curtain into the hidden grotto behind the Shard Exchange | "Walk into the shops. One hides a grotto." |
+| 9d | **M**: the painted town map with "!" over the townsfolk who need her | "A town that remembers who needs you." |
+| 9e | Profile → NFTs: "Cards to earn", one marked "Yours", opened large | "NFTs you earn in play." |
+| 9f | The tournament Shells at dusk, the pulse climbing the suture | — |
+| 9g | Level 5: the Loomblade in the soil, the cliff stone, the dragon ride (`?shoal=ride`) | "At level 5 the Shoal calls." Film the ride and the arena only once the dragon and boss models are in main; until then the boss is placeholder shapes |
 | 9c | The Scribe with a gold "!" ("The Ink That Remembers"), or the Wayfarer from Kallima on the main street | "Small stories, told by the townsfolk." |
 
 Cut to 60 s: drop shots 5, 10 and 11 (and trim 9 to 6 s).
