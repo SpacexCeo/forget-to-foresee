@@ -61,10 +61,11 @@ def seg_dist(a, b):
     a = np.array(a); b = np.array(b); ab = b - a; t = np.clip(((P - a) @ ab) / (ab @ ab), 0, 1); return np.linalg.norm(P - (a + t[:, None] * ab), axis=1)
 def chain_dist(prefix, side):
     return np.min([seg_dist(h, t) for n, h, t, p, d in BONES if n.startswith(prefix) and n.endswith(side)], axis=0)
-NEAR = {(pre, sd): 1 - smooth(0.38, 0.62, chain_dist(pre, sd)) for pre in ('leg_f', 'leg_h') for sd in ('.L', '.R')}   # a leg bone only holds its own leg, never the belly between the legs
+NEAR = {(pre, sd): 1 - smooth(0.30, 0.50, chain_dist(pre, sd)) for pre in ('leg_f', 'leg_h') for sd in ('.L', '.R')}   # a leg bone only holds its own leg, never the belly between the legs
 def region(n):
-    if n.startswith('leg_f'): sx = x if n.endswith('.L') else -x; return smooth(0.05, 0.3, sx) * (1 - smooth(2.0, 2.6, z)) * smooth(-4.1, -3.9, y) * (1 - smooth(-2.4, -2.0, y)) * NEAR[('leg_f', n[-2:])]
-    if n.startswith('leg_h'): sx = x if n.endswith('.L') else -x; return smooth(0.05, 0.3, sx) * (1 - smooth(2.0, 2.7, z)) * smooth(-1.6, -1.2, y) * (1 - smooth(0.5, 0.8, y)) * NEAR[('leg_h', n[-2:])]
+    inner = lambda sx: np.where(z > 1.45, smooth(0.30, 0.50, sx), smooth(0.05, 0.3, sx))   # above the elbow / knee the leg starts further out
+    if n.startswith('leg_f'): sx = x if n.endswith('.L') else -x; return inner(sx) * (1 - smooth(2.0, 2.6, z)) * smooth(-4.1, -3.9, y) * (1 - smooth(-2.4, -2.0, y)) * NEAR[('leg_f', n[-2:])]
+    if n.startswith('leg_h'): sx = x if n.endswith('.L') else -x; return inner(sx) * (1 - smooth(2.0, 2.7, z)) * smooth(-1.6, -1.2, y) * (1 - smooth(0.5, 0.8, y)) * NEAR[('leg_h', n[-2:])]
     if n.startswith('tail'): return smooth(-0.3, 0.3, y)
     if n.startswith('neck') or n == 'head': return smooth(2.6, 3.0, z) * (1 - smooth(-2.5, -2.1, y))
     return np.ones(len(P))
@@ -110,6 +111,21 @@ for _ in range(int(A.get('wide', 12))):
     acc = bw.copy(); cnt = np.ones(len(P), np.float32)
     np.add.at(acc, e[:, 0], bw[e[:, 1]]); np.add.at(acc, e[:, 1], bw[e[:, 0]]); np.add.at(cnt, e[:, 0], 1); np.add.at(cnt, e[:, 1], 1)
     bw[wide] = (acc / cnt[:, None])[wide]
+# small separate shells (plates, spikes, frill petals: the source mesh is many parts) ride rigidly on the blend of
+# their own middle: a plate must not be torn between two bones (review A.48)
+par = np.arange(len(P))
+def root_of(i):
+    while par[i] != i: par[i] = par[par[i]]; i = par[i]
+    return i
+for a_, b_ in e:
+    ra, rb = root_of(a_), root_of(b_)
+    if ra != rb: par[ra] = rb
+roots = np.array([root_of(i) for i in range(len(P))]); islands = []
+for r_ in np.unique(roots):
+    idx = np.where(roots == r_)[0]; ext = float(np.ptp(P[idx], axis=0).max())
+    if len(idx) < int(A.get('island', 900)) and ext < float(A.get('island_m', 0.9)) and not soles[idx].any():
+        bw[idx] = bw[idx].mean(0); islands.append((len(idx), round(ext, 2)))
+print('ISLANDS', len(np.unique(roots)), 'rigid', len(islands), sorted(islands)[-12:])
 # at most 4 bones, normalised
 order = np.argsort(-bw, axis=1); keep = np.zeros_like(bw, bool); np.put_along_axis(keep, order[:, :4], True, axis=1); bw[~keep] = 0
 bw[bw < 0.01] = 0; ssum = bw.sum(1, keepdims=True); zero = int((ssum[:, 0] < 1e-6).sum()); bw /= np.maximum(ssum, 1e-9)
@@ -140,8 +156,9 @@ def worldq(pb, axis, deg):
     R = pb.bone.matrix_local.to_3x3().to_quaternion(); return R.inverted() @ Quaternion(axis, math.radians(deg)) @ R
 TEST = {'neck_forward': [('neck1', 'X', 22), ('neck2', 'X', 16), ('neck3', 'X', 8), ('head', 'X', -40)],
         'wings_up': [('wing_arm.L', 'Y', -40), ('wing_arm.R', 'Y', 40), ('wing_fore.L', 'Y', -15), ('wing_fore.R', 'Y', 15)],
-        'legs_tucked': [('leg_h_upper.L', 'X', 62), ('leg_h_upper.R', 'X', 62), ('leg_h_lower.L', 'X', -30), ('leg_h_lower.R', 'X', -30),
-                        ('leg_f_upper.L', 'X', 42), ('leg_f_upper.R', 'X', 42), ('leg_f_lower.L', 'X', -115), ('leg_f_lower.R', 'X', -115), ('leg_f_paw.L', 'X', 62), ('leg_f_paw.R', 'X', 62)],
+        # the flight pose of s08_clips.legs_tucked: hind legs trailing back, forelegs folded under the chest
+        'legs_tucked': [(b + sd, 'X', a) for sd in ('.L', '.R') for b, a in (('leg_h_upper', -28), ('leg_h_lower', 18), ('leg_h_foot', 38), ('leg_h_paw', 15),
+                                                                                ('leg_f_upper', 34), ('leg_f_lower', -72), ('leg_f_paw', 40))],
         'wings_down': [('wing_arm.L', 'Y', 30), ('wing_arm.R', 'Y', -30)],
         'head_turn_60': [(n, 'Z', 12) for n in ('neck1', 'neck2', 'neck3', 'neck4', 'head')],
         'tail_side_45': [(f'tail{i}', 'Z', 9) for i in range(1, 6)],

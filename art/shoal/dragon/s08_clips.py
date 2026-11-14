@@ -57,8 +57,10 @@ def wings_folded(p, k=1.0):
 
 
 def legs_tucked(p, k=1.0):
-    both(p, 'leg_h_upper', q(x=62 * k)); both(p, 'leg_h_lower', q(x=-30 * k)); both(p, 'leg_h_foot', q(x=50 * k)); both(p, 'leg_h_paw', q(x=20 * k))
-    both(p, 'leg_f_upper', q(x=42 * k)); both(p, 'leg_f_lower', q(x=-115 * k)); both(p, 'leg_f_paw', q(x=62 * k)); return p
+    """The flight pose: hind legs trailing back along the tail, forelegs folded under the chest. Moderate angles on
+    purpose: a hard tuck tears the generated skin at the leg roots (s07 pose test `legs_tucked` is this pose)."""
+    both(p, 'leg_h_upper', q(x=-28 * k)); both(p, 'leg_h_lower', q(x=18 * k)); both(p, 'leg_h_foot', q(x=38 * k)); both(p, 'leg_h_paw', q(x=15 * k))
+    both(p, 'leg_f_upper', q(x=34 * k)); both(p, 'leg_f_lower', q(x=-72 * k)); both(p, 'leg_f_paw', q(x=40 * k)); return p
 
 
 def fly_body(p, k=1.0):
@@ -201,8 +203,8 @@ def takeoff(t):
     """1.3 s: crouch with the wings rising (0-0.25 s), the legs push with the first downstroke (the front feet leave
     first, the hind feet last, about 0.48 s), the legs trail and tuck by the second stroke; ends in flap(0)."""
     T = t * TAKE; crouch = sm(0.0, 0.25, T) * (1 - sm(0.25, 0.42, T))
-    p = fly_body(Pose(), sm(0.5, 1.15, T)); trail = sm(0.4, 0.6, T) * (1 - sm(0.7, 1.1, T))
-    for s_ in LR: p.add('leg_h_upper' + s_, q(x=-35 * trail)); p.add('leg_h_lower' + s_, q(x=20 * trail)); p.add('leg_f_upper' + s_, q(x=-20 * trail))
+    p = fly_body(Pose(), sm(0.42, 0.95, T)); trail = sm(0.4, 0.6, T) * (1 - sm(0.7, 1.1, T))
+    for s_ in LR: p.add('leg_h_foot' + s_, q(x=25 * trail)); p.add('leg_h_paw' + s_, q(x=20 * trail))   # the toes point back as the feet leave
     # the first stroke is short and high (the tips must clear the ground), the second one is full
     stroke = wing_stroke(Pose(), (T - TAKE) / 0.6, amp=0.55 + 0.45 * sm(0.55, 0.9, T), base=24 - 14 * sm(0.5, 0.9, T) - 6 * sm(0.9, 1.3, T), fold=FOLDK * sm(0.5, 0.9, T), even=True)
     p.update(blend(wings_folded(Pose()), stroke, sm(0.0, 0.27, T)))
@@ -210,7 +212,7 @@ def takeoff(t):
     for i, a in enumerate(TAIL_FLY): p[f'tail{i + 1}'] = q(x=a * tk)
     p.add('tail1', q(x=16 * sm(0.2, 0.5, T) * (1 - sm(0.8, 1.3, T))))   # the tail stays level while the body pitches up
     p.add('hips', q(x=-16 * sm(0.2, 0.5, T) * (1 - sm(0.8, 1.3, T)))); p.add('neck1', q(x=12 * crouch)); p.add('neck2', q(x=8 * crouch))
-    p.loc = (0, 0, STAND_Z * (1 - sm(0.3, 0.45, T)) - 0.25 * crouch + 0.22 * sm(0.3, 0.5, T) * (1 - sm(0.9, 1.3, T)))
+    p.loc = (0, 0, STAND_Z * (1 - sm(0.3, 0.45, T)) - 0.29 * crouch + 0.22 * sm(0.3, 0.5, T) * (1 - sm(0.9, 1.3, T)))
     kf, kh = 1 - sm(0.36, 0.6, T), 1 - sm(0.48, 0.72, T)
     plant(p, dict(hind_l=kh, hind_r=kh, front_l=kf, front_r=kf)); c = p.contact
     p = blend(p, flap(0), sm(1.05, 1.3, T)); p.contact = c; return p
