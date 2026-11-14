@@ -9,6 +9,7 @@ import { DAY1_DEPLOYMENT } from './day1-deployment.js';
 import { NEAR_DEPLOYMENT } from './near-deployment.js';
 import { guestFrom } from './agent-ledger.js';
 import { relayerUrl } from './tee-agent.js';
+import { recordTx } from './receipts.js';
 import { txUrl } from './network.js';
 
 export const CHEST_DECK_VERSION = 'ftf-chest-1';
@@ -81,6 +82,7 @@ export async function openChest({ storage, deployment = DAY1_DEPLOYMENT, base = 
     const info = await createTxClient({ rpcUrls, fetch }).view(chestContract(deployment), 'season_info', {});
     const check = await checkOpening(ans, info);
     const o = ans.opening;
+    recordTx('chest', ans.tx_hash, { note: ans.outcome && ans.outcome.kind });
     return { ok: true, index: o.index, position: o.position, outcome: ans.outcome, nft: o.nft ? { token_id: o.token_id, contract: chestContract(deployment) } : null,
       tx_hash: ans.tx_hash, explorer: explorer(ans.tx_hash), verified: check.ok, check, proof: { leaf: ans.leaf, proof: ans.proof, root: ans.root, random: o.random, block_random: o.block_random, seed: info && info.seed ? info.seed.seed : null } };
   } catch { return { ok: false, reason: 'network' }; }
@@ -126,6 +128,7 @@ export async function openChests({ storage, count, deployment = DAY1_DEPLOYMENT,
       openings.push({ ok: true, index: full.index, position: full.position, outcome: x.outcome, nft: full.nft ? { token_id: full.token_id, contract } : null,
         tx_hash: x.tx_hash || ans.tx_hash, explorer: explorer(x.tx_hash || ans.tx_hash), verified: !!check.ok, check, proof: { leaf: x.leaf, proof: x.proof, root: x.root, random: full.random, block_random: full.block_random, seed: info && info.seed ? info.seed.seed : null } });
     }
+    recordTx('chest', ans.tx_hash, { note: openings.length + ' chests' });
     return { ok: true, openings, tx_hash: ans.tx_hash, cut: ans.cut || null, batch: true };
   } catch { return { ok: false, reason: 'network' }; }
 }

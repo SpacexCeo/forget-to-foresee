@@ -7,6 +7,7 @@
 import { b58encode, importSecretKey } from './near-tx.js';
 import { guestFrom } from './agent-ledger.js';
 import { relayerUrl } from './tee-agent.js';
+import { recordTx } from './receipts.js';
 
 export const CLAIM_KEY = 'ftf.companion.claims.v1';
 const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
@@ -40,6 +41,7 @@ export async function claimCompanion({ reason = 'welcome', storage, base = relay
     const ans = await r.json().catch(() => ({}));
     if (!r.ok) return { ok: false, reason: ans.error === 'companion_not_configured' ? 'not_configured' : ans.error || 'network' };
     remember(storage, reason, { token_id: ans.token_id, kind: ans.kind, tx: ans.tx_hash || null });
+    if (!ans.already) recordTx('dragon', ans.tx_hash, { note: ans.kind });
     return { ok: true, kind: ans.kind, tokenId: ans.token_id, owner: ans.owner_id, tx: ans.tx_hash || null, already: !!ans.already };
   } catch { return { ok: false, reason: 'network' }; }
 }

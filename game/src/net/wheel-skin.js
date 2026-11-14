@@ -7,6 +7,7 @@ import { NEAR_DEPLOYMENT } from './near-deployment.js';
 import { DAY1_DEPLOYMENT } from './day1-deployment.js';
 import { guestFrom } from './agent-ledger.js';
 import { relayerUrl } from './tee-agent.js';
+import { recordTx } from './receipts.js';
 import { NET, txUrl } from './network.js';
 
 const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
@@ -41,6 +42,7 @@ export async function claimWheelSkin({ storage, wheelId, seed, deployment = DAY1
     if (!ans.token_id && (r.status === 202 || ans.pending === true || ans.status === 'pending' || ans.status === 'recorded' || ans.status === 'mint_pending')) return { ok: false, reason: 'recorded', verified: ans.verified === true, left: Number.isFinite(+ans.left) ? +ans.left : null, claimId: ans.claim_id || ans.id || null };
     if (ans.error === 'already_owned') return { ok: false, reason: 'already_owned', tokenId: ans.token_id || null }; // a retry after the mint: the existing token
     if (!r.ok || !ans.token_id) return { ok: false, reason: r.status === 404 ? 'not_configured' : REASON[ans.error] || (r.status >= 500 ? 'network' : 'failed') };
+    recordTx('skin', ans.tx_hash, { note: ans.token_id });
     return { ok: true, tokenId: ans.token_id, txHash: ans.tx_hash || null, contract: ans.contract || skinContract(deployment), explorer: ans.tx_hash ? txUrl(ans.tx_hash) : null };
   } catch { return { ok: false, reason: 'network' }; }
 }

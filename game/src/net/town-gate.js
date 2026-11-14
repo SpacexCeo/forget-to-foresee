@@ -8,6 +8,7 @@
 import { b58encode, importSecretKey } from './near-tx.js';
 import { guestFrom } from './agent-ledger.js';
 import { relayerUrl } from './tee-agent.js';
+import { recordTx } from './receipts.js';
 
 export const GATE_ID = 'loom';
 export const UNIT = 1_000_000;
@@ -48,7 +49,7 @@ export async function payGate({ storage, base = relayerUrl(), fetch = globalThis
     const signature = b58encode(await key.sign(new TextEncoder().encode(gateMessage(g.accountId, gateId, at))));
     const r = await fetch(base.replace(/\/$/, '') + '/api/town/gate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ account_id: g.accountId, public_key: key.publicKey, at, gate_id: gateId, signature }) });
     let b = {}; try { b = await r.json(); } catch { /* empty */ }
-    if (r.status === 200 && b.paid) return { ok: true, hash: b.tx_hash || null, record: b.gate || null, accountId: g.accountId };
+    if (r.status === 200 && b.paid) { recordTx('gate', b.tx_hash, { note: gateId }); return { ok: true, hash: b.tx_hash || null, record: b.gate || null, accountId: g.accountId }; }
     if (b.error === 'already_paid') return { ok: true, hash: null, record: b.gate || null, accountId: g.accountId };
     return { ok: false, reason: REASON[b.error] || (r.status >= 500 ? 'tx_failed' : 'network'), hash: b.tx_hash || null };
   } catch { return { ok: false, reason: 'network' }; }

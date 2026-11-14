@@ -22,6 +22,7 @@ import { cue } from '../audio/town-audio.js';
 import { formatSilkC } from '../net/silk-core.js';
 import { wardrobe, TRY_ON_SECONDS } from './skins.js';
 import { collectionView, shardCard, dragonCardArt } from './nft-collection.js';
+import { chainSection } from './chain-panel.js';
 import { NET } from '../net/network.js';
 
 /** UI-004 tab icons (line art, currentColor). */
@@ -228,7 +229,8 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
   const views = {
     profile() {
       const holder = loadHolder(storage); // holder access (net/holder.js): cosmetic perks from a read-only NFT check
-      return renderProfileView({ doc, t, ledger, base, nickname, elise: eliseMinted || !!(holder && holder.perks.includes('elise')), holder, titles: wheel.titles, exportKey });
+      // the chain first (lead 14.11): the account, this browser's transactions and the live contracts (play/chain-panel.js)
+      return [chainSection({ doc, t, storage: storage || (() => { try { return globalThis.localStorage; } catch { return null; } })() }), ...renderProfileView({ doc, t, ledger, base, nickname, elise: eliseMinted || !!(holder && holder.perks.includes('elise')), holder, titles: wheel.titles, exportKey })];
     },
     achievements() {
       return items.then((list) => {

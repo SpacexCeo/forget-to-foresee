@@ -2153,6 +2153,25 @@ const EN = {
   "nft.how.wheel": "The grand prize of the Wheel of Fortune",
   "nft.how.hatch": "The Hatchkeeper decides who is ready",
   "nft.how.pass": "Earned at the end of a season",
+  // the on-chain receipts (net/receipts.js, ui/tx-toast.js, the menu's "On NEAR testnet" block)
+  "chain.title": "On NEAR testnet",
+  "chain.note": "Every line below is a real transaction made from this browser. Open any of them in the explorer.",
+  "chain.account": "Game account",
+  "chain.noAccount": "No account yet: it is created on chain when you name your heroine.",
+  "chain.linked": "Linked to a login · {when}",
+  "chain.guestOnly": "Guest account only: link a wallet, a passkey or an email to keep it",
+  "chain.none": "No transactions from this browser yet: open a chest or spin the wheel.",
+  "chain.contracts": "Live contracts",
+  "chain.view": "View ↗",
+  "chain.toast": "On NEAR testnet: {what}",
+  "chain.toastMany": "{n} transactions on NEAR testnet",
+  "chain.kind.guest": "account created, heroine minted",
+  "chain.kind.chest": "chest opened",
+  "chain.kind.skin": "wheel skin minted",
+  "chain.kind.dragon": "dragon minted",
+  "chain.kind.act": "Town Works act recorded",
+  "chain.kind.gate": "Gate-Loom toll paid",
+  "chain.kind.trade": "stall trade settled",
 };
 // sprint 5h seams (A5): each area's English strings live in its own file; other locales fall back to English
 export default Object.assign(EN, quests, hud, market, npe, tips, video, account, judge);
