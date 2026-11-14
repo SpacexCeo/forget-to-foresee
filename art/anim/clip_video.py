@@ -1,6 +1,6 @@
 """A 5-second review video of one clip on one character (the owner's workflow: one clip, one good angle).
   blender -b --python art/anim/clip_video.py -- --model <model_with_clips.glb> --clip walk --out <file.mp4>
-      [--speed 1.7] [--seconds 5] [--view 0.75,-1,0.32] [--dist 4.6] [--fps 30] [--samples 32]
+      [--speed 1.7] [--seconds 5] [--view 0.75,-1,0.32] [--dist 4.6] [--fps 30] [--samples 32] [--engine cycles]
 --clip may be a sequence, e.g. spawn,walk,walk,bite,idle,death: the clips play one after another (the last pose
 holds) and the character travels at --speed only during the ones named walk or run.
 The model is one plain .glb with its clips as actions: art/tools/glb_with_clips.mjs makes it from a shipped model
@@ -81,6 +81,8 @@ sc.render.engine = 'BLENDER_EEVEE_NEXT' if 'BLENDER_EEVEE_NEXT' in [e.identifier
 sc.render.resolution_x, sc.render.resolution_y = 1280, 720; sc.render.resolution_percentage = 100
 try: sc.eevee.taa_render_samples = int(A.get('samples', 32)); sc.eevee.use_shadows = True
 except Exception as e: print('eevee', e)
+if A.get('engine') == 'cycles':  # --engine cycles: CPU path tracing (no GPU needed), few samples, denoised
+    sc.render.engine = 'CYCLES'; sc.cycles.device = 'CPU'; sc.cycles.samples = int(A.get('samples', 12)); sc.cycles.use_denoising = True
 sc.view_settings.view_transform = 'Filmic' if 'Filmic' in [v.name for v in bpy.types.ColorManagedViewSettings.bl_rna.properties['view_transform'].enum_items] else sc.view_settings.view_transform
 sc.render.image_settings.file_format = 'FFMPEG'; sc.render.ffmpeg.format = 'MPEG4'; sc.render.ffmpeg.codec = 'H264'; sc.render.ffmpeg.constant_rate_factor = 'HIGH'; sc.render.ffmpeg.gopsize = FPS
 sc.render.filepath = A['out']
