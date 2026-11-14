@@ -254,7 +254,13 @@ def make_materials():
         mats[f"altar_glyph_{k:02d}"] = glyph
     mats["altar_eye"] = ftf.simple_material("M_Altar_Eye", (0.9, 0.55, 0.18), 0.35, emit=(1.0, 0.55, 0.14), emit_strength=0.2)
     mats["ink"] = ftf.simple_material("M_Shop_Ink", (0.02, 0.022, 0.03), 0.5)
-    mats["fire"] = ftf.simple_material("M_Shop_Fire", (1.0, 0.5, 0.1), 0.5, emit=(1.0, 0.42, 0.06), emit_strength=5.0)
+    # flames carry their gradient in the vertex colour (white-yellow core, orange sheath, dark tip): glTF has no
+    # per-vertex emission, so the colour is the base colour under the room's ambient light plus a low even glow
+    fire = vc_material("M_Shop_Fire", (1.0, 1.0, 1.0), rough=0.6, double_sided=True)
+    fb = fire.node_tree.nodes["Principled BSDF"]
+    fb.inputs["Emission Color"].default_value = (1.0, 0.36, 0.06, 1.0)
+    fb.inputs["Emission Strength"].default_value = 0.6
+    mats["fire"] = fire
     # Interior-only materials (S-001..S-003). Interiors are lit by their baked vertex colour under a plain
     # ambient light in the client, so nothing here is a true metal (a metal has no diffuse and would go black).
     mats["window_day"] = vc_material("M_Shop_Daylight", (1.0, 1.0, 1.0), rough=0.9)          # painted daylight, never baked
@@ -364,19 +370,26 @@ BAKE_EMIT = {"lamp": ((1.0, 0.62, 0.26), 0.6), "fire": ((1.0, 0.40, 0.08), 1.5),
 BAKE_SKIP = ("lamp", "fire", "window_day", "case_glass", "glass_lit", "glass")   # keep their authored colour
 BAKE_EDGE = float(os.environ.get("TOWN_BAKE_EDGE", "0.34"))       # longest edge after tessellation, metres
 BAKE_SAMPLES = int(os.environ.get("TOWN_BAKE_SAMPLES", "768"))
-BAKE_MID = float(os.environ.get("TOWN_BAKE_MID", "0.36"))         # where the median lit surface lands (0..1)
+BAKE_MID = float(os.environ.get("TOWN_BAKE_MID", "0.41"))         # where the median lit surface lands (0..1)
 # Lightmap (14.11): every large surface of an interior (floor, walls, beams, furniture) also carries a second UV set
 # and one shared light texture per room, shipped as the material's occlusion map on TEXCOORD_1. The client lights
 # interiors with a plain ambient light, and three.js multiplies ambient light by the occlusion map, so the map is a
 # greyscale lightmap there: soft shadows, contact darkening and lamp pools at texel density, while the vertex colour
 # keeps the tint and the light's hue. Small things (jars, books, candles) stay on per-vertex light.
-BAKE_GAMMA = float(os.environ.get("TOWN_BAKE_GAMMA", "1.7"))      # contrast of the baked light (1 = plain shoulder)
+BAKE_GAMMA = float(os.environ.get("TOWN_BAKE_GAMMA", "2.1"))      # contrast of the baked light (1 = plain shoulder)
 LM_SIZE = int(os.environ.get("TOWN_LM_SIZE", "2048"))
 LM_SUPER = int(os.environ.get("TOWN_LM_SUPER", "2"))               # bake at LM_SIZE x LM_SUPER, box-filter down
 LM_SAMPLES = int(os.environ.get("TOWN_LM_SAMPLES", "384"))
 LM_MIN_DIAG = 0.6                                                   # islands smaller than this stay per-vertex, metres
 LM_EDGE = 1.0                                                       # tessellation of lightmapped meshes (hue only)
 LM_WARM = (1.0, 0.90, 0.76)
+# Draw calls and size (3D review, 14.11). Indoors nothing but the base colour reaches the screen (one ambient light:
+# no speculars, no normal mapping), so a room ships no normal or ORM textures, every untextured material and every
+# small prop shares ONE vertex-coloured material (its base colour goes into the vertex colour), and the static
+# meshes are joined per material. Only the hanging lamps stay separate nodes (they swing).
+PROPS_BASE = {"bronze": (0.62, 0.40, 0.16), "iron": (0.10, 0.095, 0.09), "ceramic": (1.0, 1.0, 1.0), "paper": (0.93, 0.87, 0.72),
+              "wax": (1.0, 0.95, 0.84), "ink": (0.02, 0.022, 0.03)}
+PROPS_SMALL = ("timber", "stone", "plaster", "cloth", "rock")   # small pieces of these lose the tiling texture, not the colour
 LM_FLOOR = 0.035                                                    # darkest light value kept (never pure black)
 
 
@@ -488,6 +501,30 @@ def lightmap_uv(objs):
     bpy.ops.object.mode_set(mode="OBJECT")
 
 
+def props_material():
+    """The one vertex-coloured material of a room's props (double sided: paper sheets, cloth edges)."""
+    return bpy.data.materials.get("M_Shop_Props") or vc_material("M_Shop_Props", (1.0, 1.0, 1.0), rough=0.8, double_sided=True)
+
+
+def strip_pbr(m, keep_occlusion):
+    """Leaves only what an interior shows: base colour (x vertex colour), emission, and the lightmap as occlusion."""
+    nt = m.node_tree
+    b = nt.nodes.get("Principled BSDF")
+    if b is None:
+        return m
+    for name in ("Normal", "Roughness", "Metallic"):
+        for lk in list(b.inputs[name].links):
+            nt.links.remove(lk)
+    b.inputs["Roughness"].default_value = 0.9
+    b.inputs["Metallic"].default_value = 0.0
+    if not keep_occlusion:
+        for n in nt.nodes:
+            if n.type == "GROUP" and n.node_tree and n.node_tree.name == "glTF Material Output":
+                for lk in list(n.inputs["Occlusion"].links):
+                    nt.links.remove(lk)
+    return m
+
+
 def lightmap_material(src, img, tag):
     """The shipped material of a lightmapped mesh: `src` with the room's light texture on the LM UV set as occlusion."""
     m = src.copy()
@@ -534,6 +571,8 @@ def bake_interior(sc, piece, grp, tb, all_objects, exposure=1.0):
     lm_objs = []
     for o in list(grp["meshes"]):
         if MAT_KEY[o.name] in BAKE_SKIP or MAT_KEY[o.name] == "case_glass" or not LM_SIZE:
+            continue
+        if o.parent is not None:   # a swinging lamp stays per-vertex: one props mesh and its flames, two draw calls
             continue
         small, has_big = split_small(o, LM_MIN_DIAG)
         if small is not None:
@@ -646,8 +685,11 @@ def bake_interior(sc, piece, grp, tb, all_objects, exposure=1.0):
     if lm_light is not None:
         # the texture sets the exposure of the whole room: per-vertex samples of the big concave shell sit in
         # corners and read several times darker, so the small per-vertex props use the texture's scale too
-        cov = lm_light.max(axis=2) > 0
-        med_lm = float(np.median(lm_light.max(axis=2)[cov]))
+        # (the median is taken over lit texels only: the closing shell and a cave's dark shell are in the atlas too)
+        peak = lm_light.max(axis=2)
+        cov = peak > 0
+        lit_t = peak > 0.02 * float(np.percentile(peak[cov], 95))
+        med_lm = float(np.median(peak[lit_t]))
         k = k_lm = mid / (1.0 - mid) / max(med_lm, 1e-6) * exposure
     for o in lit:
         n = len(o.data.loops)
@@ -673,6 +715,20 @@ def bake_interior(sc, piece, grp, tb, all_objects, exposure=1.0):
     for o in meshes:
         o.data.materials[0] = keep[o.name]
         o.hide_render = False
+    # the props material: untextured things and small pieces carry their base colour in the vertex colour
+    pm = props_material()
+    for o in lit:
+        key = MAT_KEY[o.name]
+        base = PROPS_BASE.get(key) or (FLAT[key] if key in PROPS_SMALL and o not in lm_objs else None)
+        if base is None:
+            continue
+        n = len(o.data.loops)
+        c = np.zeros(n * 4, dtype=np.float32)
+        o.data.color_attributes["Col"].data.foreach_get("color", c)
+        c = c.reshape(n, 4)
+        c[:, :3] *= np.array(base, dtype=np.float32)
+        o.data.color_attributes["Col"].data.foreach_set("color", c.ravel())
+        o.data.materials[0] = pm
     if lm_light is not None:
         tone = np.clip(_tone(lm_light, k_lm), LM_FLOOR, 1.0).max(axis=2)
         log("lightmap stats", piece, "coverage", round(float(cov.mean()), 3), "light p10/p50/p90", [round(float(v), 4) for v in np.percentile(lm_light.max(axis=2)[cov], [10, 50, 90])],
@@ -694,6 +750,31 @@ def bake_interior(sc, piece, grp, tb, all_objects, exposure=1.0):
                 lm_mats[src.name] = lightmap_material(src, lm_img, tag)
             o.data.materials[0] = lm_mats[src.name]
             o.data.uv_layers.active = o.data.uv_layers[0]
+    # no normal / ORM textures indoors; then one mesh per material (the swinging lamps keep their own nodes)
+    tag = "_" + piece.replace("town_shop_", "")
+    plain = {}
+    for o in meshes:
+        m = o.data.materials[0]
+        if "_LM_" in m.name:
+            strip_pbr(m, True)
+        elif m.name.startswith("M_Town_") and any(n.type == "TEX_IMAGE" for n in m.node_tree.nodes):
+            if m.name not in plain:
+                cp = m.copy()
+                cp.name = f"{m.name}_S{tag}"
+                plain[m.name] = strip_pbr(cp, False)
+            o.data.materials[0] = plain[m.name]
+    by_mat = {}
+    for o in grp["meshes"]:
+        if o.parent is None:
+            by_mat.setdefault(o.data.materials[0].name, []).append(o)
+    gone = {o for objs in by_mat.values() for o in objs[1:]}
+    grp["meshes"] = [o for o in grp["meshes"] if o not in gone]
+    for mname, objs in by_mat.items():
+        key = MAT_KEY[objs[0].name]
+        for o in objs:
+            o.data.uv_layers.active = o.data.uv_layers[0]
+        j = ftf.join(objs, f"{piece}_{mname.replace('M_Town_', '').replace('M_Shop_', '').lower()}")
+        MAT_KEY[j.name] = key
     for lo in lights:
         bpy.data.objects.remove(lo, do_unlink=True)
     for o in others:
