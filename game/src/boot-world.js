@@ -491,7 +491,7 @@ if (townMode.town) {
     import('./scenes/glass-shoal.js').then((m) => {
       glassShoal = m.createGlassShoal({ THREE, scene, camera, rig, player, toWorld: townToWorld, groundAt: (x, z) => town.groundAt(x, z), folkAt, ledger: townLedger, chests: chestBag, storage: ctx.storage,
         locale: () => (ctx.i18n && ctx.i18n.locale) || 'en', toast: (s) => toast(s), reduced: () => lookdev.reducedMotion, mobile: mobileDevice, touch: () => !!input.touchControls,
-        hero: () => (irisAvatar && irisAvatar.hero ? irisAvatar.hero.id : startHero.id), clip: (n) => { if (irisAvatar && irisAvatar.combat) irisAvatar.combat(n); }, axes: () => input.moveAxes(),
+        hero: () => (irisAvatar && irisAvatar.hero ? irisAvatar.hero.id : startHero.id), clip: (n) => !!(irisAvatar && irisAvatar.combat && irisAvatar.combat(n)), axes: () => input.moveAxes(),
         // her own companion dragons fight beside her at the Shoal (game/shoal-allies.js): only the ones flying with her now
         allies: () => companions.filter((c) => c.ready && c.root.visible).map((c) => ({ kind: c.kind, pos: c.root.getWorldPosition(new THREE.Vector3()), flourish: () => c.flourish(lookdev.reducedMotion) })) });
       const shoalJump = params.get('shoal'), gs = glassShoal;
@@ -1558,7 +1558,7 @@ function frame() {
   if (play && !inTown) play.update(dt, { focus, moving: movingState, speed, running: player.run && movingState });
   else if (irisAvatar) irisAvatar.update(dt, movingState, avatar, clock.elapsedTime, speed, player.run && movingState, lookdev.reducedMotion, null); // the town: her gait before the season
   // the sword in her hand: after the mixer, so the closed fist sits on top of every clip
-  if (heldBlade) heldBlade.update();
+  if (heldBlade) heldBlade.update(dt, lookdev.reducedMotion);
   else if (!heldBladeLoading && glassShoal && glassShoal.hasBlade && glassShoal.hasBlade()) {
     heldBladeLoading = true;
     import('./play/held-blade.js').then((m) => { heldBlade = m.createHeldBlade({ THREE, fetchGltf: prefetchGltf, hasModelFile, mobile: mobileDevice,
