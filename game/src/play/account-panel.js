@@ -4,6 +4,7 @@
 // closes it; while a wallet is being asked only the × does, so a stray tap on the way back from the wallet never drops
 // a sign-in half way. The flow itself is net/account-login.js; this file only draws it.
 
+const OPEN_ICONS = ((import.meta.env && import.meta.env.BASE_URL) || '/') + 'assets/ui/icons/open/'; // art/ui/build_open_icons.py
 const CSS = `
 .acct, .acct * { box-sizing: border-box; }
 .acct { position: fixed; inset: 0; z-index: calc(var(--z-dialogue, 50) + 3); display: grid; place-items: center; background: rgba(3, 7, 7, .62); font: 15px/1.45 system-ui, -apple-system, 'Segoe UI', sans-serif; color: var(--ftf-text, #eef0ea); padding: 12px; }
@@ -15,6 +16,10 @@ const CSS = `
 .acct-row { display: grid; gap: 8px; margin: 10px 0; }
 .acct-btn { min-height: 46px; padding: 10px 14px; border-radius: 12px; border: 1px solid rgba(214, 226, 214, .22); background: #16211f; color: inherit; font: 600 15px/1.2 var(--font-ui, system-ui); text-align: left; cursor: pointer; }
 .acct-btn:disabled { opacity: .5; cursor: default; }
+.acct-btn[data-ic] { display: flex; align-items: center; gap: 10px; }
+.acct-btn[data-ic]::before { content: ''; flex: 0 0 22px; height: 22px; background: center / contain no-repeat; }
+.acct-btn[data-ic=wallet]::before { background-image: url("${OPEN_ICONS}account_wallet_glyph_48.webp"); }
+.acct-btn[data-ic=link]::before { background-image: url("${OPEN_ICONS}account_link_glyph_48.webp"); }
 .acct-go { display: block; width: 100%; text-align: center; border: 0; background: var(--ftf-gold, #c5a469); color: #1b1407; }
 .acct-status { min-height: 1.4em; margin: 8px 0 4px; font-size: 14px; }
 .acct-small { margin: 12px 0 0; color: rgba(233, 230, 220, .6); font-size: 12.5px; }
@@ -102,12 +107,12 @@ export function openAccountPanel({ doc = document, t, makeLogin, makeEmail = nul
 
   // the wallet rows: discovery is local and fast; nothing loads from the network until a tap
   const loadWallets = () => (wallets ? Promise.resolve(wallets) : import('../net/wallets.js'));
-  const add = (label, onTap) => { const b = el('button', 'acct-btn', label); b.type = 'button'; b.addEventListener('click', onTap); rows.append(b); return b; };
+  const add = (label, onTap, ic = 'wallet') => { const b = el('button', 'acct-btn', label); b.type = 'button'; b.dataset.ic = ic; b.addEventListener('click', onTap); rows.append(b); return b; };
   const pkWin = doc.defaultView || globalThis.window;
   const pkOk = wallets ? !!(wallets.passkeySupported && wallets.passkeySupported(pkWin)) : !!(pkWin && pkWin.PublicKeyCredential);
   if (pkOk) { // passkeys first: the "email-like" login, nothing to install
-    add(t('acct.passkey'), () => loadWallets().then((w) => run(w.passkeyProvider({ mode: 'get', storage: globalThis.localStorage }))));
-    add(t('acct.passkey.new'), () => loadWallets().then((w) => run(w.passkeyProvider({ mode: 'create', storage: globalThis.localStorage }))));
+    add(t('acct.passkey'), () => loadWallets().then((w) => run(w.passkeyProvider({ mode: 'get', storage: globalThis.localStorage }))), 'link');
+    add(t('acct.passkey.new'), () => loadWallets().then((w) => run(w.passkeyProvider({ mode: 'create', storage: globalThis.localStorage }))), 'link');
   }
   add(t('acct.near'), () => { say(t('acct.busy')); loadWallets().then(async (w) => run(w.bestNearProvider ? await w.bestNearProvider() : w.nearProvider())); });
   add(t('acct.near.testnet'), () => loadWallets().then((w) => run(w.nearProvider())));
