@@ -18,6 +18,8 @@ const CSS = `
 .acct-go { display: block; width: 100%; text-align: center; border: 0; background: var(--ftf-gold, #c5a469); color: #1b1407; }
 .acct-status { min-height: 1.4em; margin: 8px 0 4px; font-size: 14px; }
 .acct-small { margin: 12px 0 0; color: rgba(233, 230, 220, .6); font-size: 12.5px; }
+.acct-where { display: grid; gap: 2px; margin: 0 0 12px; padding: 8px 10px; border-radius: 10px; background: rgba(0,0,0,.25); border: 1px solid rgba(233, 180, 76, .35); font-size: 13px; }
+.acct-where code { font: 13px ui-monospace, monospace; color: #9fd4cf; word-break: break-all; } .acct-where small { color: rgba(233,230,220,.7); } .acct-where small.acct-on { color: #7fd18b; }
 `;
 
 function ensureStyle(doc) {
@@ -40,7 +42,12 @@ export function openAccountPanel({ doc = document, t, makeLogin, makeEmail = nul
   const guest = el('button', 'acct-guest', t('acct.guest')); guest.type = 'button';
   const rows = el('div', 'acct-row');
   const status = el('p', 'acct-status'); status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');
-  card.append(x, el('h2', null, t('acct.title')), guest, el('p', 'acct-note', t('acct.guest.note')), rows, status, el('p', 'acct-small', t('acct.testnet')));
+  // where the player stands (lead 14.11): the game account on chain and whether a login keeps it (play/chain-panel.js)
+  const where = el('p', 'acct-where');
+  { const read = (k) => { try { return JSON.parse(globalThis.localStorage.getItem(k) || 'null'); } catch { return null; } };
+    const day1 = read('ftf.day1.v1'), linked = read('ftf.acct.linked.v1'), id = day1 && day1.guest && day1.guest.account_id;
+    where.append(el('small', null, t('chain.account')), el('code', null, id || '—'), el('small', linked ? 'acct-on' : null, id ? (linked ? '✓ ' + t('chain.linked', { when: new Date(linked.at).toLocaleDateString() }) : t('chain.guestOnly')) : t('chain.noAccount'))); }
+  card.append(x, el('h2', null, t('acct.title')), where, guest, el('p', 'acct-note', t('acct.guest.note')), rows, status, el('p', 'acct-small', t('acct.testnet')));
   root.append(card);
   let settle; const done = new Promise((r) => { settle = r; });
   let busy = false, closed = false;
@@ -74,6 +81,7 @@ export function openAccountPanel({ doc = document, t, makeLogin, makeEmail = nul
     show(r);
   }
   function show(r) {
+    if (r.status === 'linked' || r.status === 'restored') { try { globalThis.localStorage.setItem('ftf.acct.linked.v1', JSON.stringify({ account: r.account || null, at: Date.now() })); } catch { /* memory only */ } } // play/chain-panel.js LINKED_KEY
     if (r.status === 'linked') { say(t('acct.linked', { account: r.account })); setTimeout(() => close(r), 1600); return; }
     if (r.status === 'restored') { say(t('acct.restored', { account: r.account })); setTimeout(() => close(r), 1600); return; }
     if (r.status === 'no_device_key') { say(t('acct.nokey')); return; }

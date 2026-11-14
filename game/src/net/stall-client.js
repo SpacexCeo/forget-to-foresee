@@ -9,6 +9,7 @@ import { createTxClient, importSecretKey } from './near-tx.js';
 import { guestFrom } from './agent-ledger.js';
 import { relayerUrl } from './tee-agent.js';
 import { NEAR_DEPLOYMENT } from './near-deployment.js';
+import { recordTx } from './receipts.js';
 
 /** Which townsperson keeps which resource stall (relayer market/catalog.js RESOURCES makers). */
 export const STALLS = Object.freeze({ guard: Object.freeze(['spider_silk_thread', 'chitin_plate']), shrinekeeper: Object.freeze(['veil_dust']), ash: Object.freeze(['ash_ore']), shardkeeper: Object.freeze(['crown_shard']) });
@@ -49,7 +50,7 @@ export function playerCall(q) {
 /** The desk's settle answer -> {state: 'done' | 'error', settled, dryRun, hash, url, error}. Verified only with a hash. */
 export function readSettle(status, j, playerHash) {
   if (!j || typeof j !== 'object') return { state: 'error', error: 'offline', playerUrl: txUrl(playerHash) };
-  if (status === 200 && j.settled === true && HASH.test(String(j.tx_hash || ''))) return { state: 'done', settled: true, hash: j.tx_hash, url: txUrl(j.tx_hash), playerUrl: txUrl(playerHash) };
+  if (status === 200 && j.settled === true && HASH.test(String(j.tx_hash || ''))) return recordTx('trade', j.tx_hash, { note: j.item || null }), { state: 'done', settled: true, hash: j.tx_hash, url: txUrl(j.tx_hash), playerUrl: txUrl(playerHash) };
   if (status === 200 && j.dry_run) return { state: 'done', settled: false, dryRun: true, hash: null, url: null, playerUrl: txUrl(playerHash) };
   return { state: 'error', error: String(j.error || 'failed').replace(/[^a-z_]/g, '').slice(0, 32) || 'failed', playerUrl: txUrl(playerHash) };
 }

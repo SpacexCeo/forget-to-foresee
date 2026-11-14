@@ -7,6 +7,7 @@
 import { createTxClient, generateKeyPair, importSecretKey } from '../net/near-tx.js';
 import { DAY1_DEPLOYMENT } from '../net/day1-deployment.js';
 import { NEAR_DEPLOYMENT } from '../net/near-deployment.js';
+import { recordTx } from '../net/receipts.js';
 
 export const DAY1_KEY = 'ftf.day1.v1';
 /** The free fund cannot pay for another guest, or today's free mints are used up: a retry will not help now. */
@@ -51,13 +52,13 @@ export function createDay1Mint({ storage = null, deployment = DAY1_DEPLOYMENT, r
           // the relayer answers 200 only after the final status and a minted guest; it is checked again below anyway
           const res = await fetch(relayer + '/api/create-guest', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ public_key: rec.playerKey.publicKey, nickname: rec.nickname || 'guest' }) });
           const body = await res.json().catch(() => ({}));
-          if (body && body.tx_hash) { rec.txHash = body.tx_hash; st.txHash = body.tx_hash; save(); }
+          if (body && body.tx_hash) { rec.txHash = body.tx_hash; st.txHash = body.tx_hash; save(); if (res.ok) recordTx('guest', body.tx_hash, { note: body.account_id || null }); }
           const why = (body && body.error) || 'relayer_' + res.status;
           if (!res.ok) { set(CLOSED.has(why) ? 'unavailable' : 'failed', why); return api; }
         } else {
           const key = await importSecretKey(guestSecret);
           const r = await client.call({ key, signerId: deployment.guestKeyAccount, receiverId: deployment.guests, methodName: 'create_guest', args: { public_key: rec.playerKey.publicKey, nickname: rec.nickname || 'guest' } });
-          rec.txHash = r.hash; st.txHash = r.hash; save();
+          rec.txHash = r.hash; st.txHash = r.hash; save(); if (r.ok) recordTx('guest', r.hash);
           if (!r.ok) { if (FUND_EMPTY.test(String(r.failure || ''))) set('unavailable', 'fund_empty'); else set('failed', 'tx_failed'); return api; }
         }
       }

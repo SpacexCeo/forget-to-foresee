@@ -12,6 +12,7 @@
 import { b58encode, importSecretKey } from './near-tx.js';
 import { guestFrom } from './agent-ledger.js';
 import { relayerUrl } from './tee-agent.js';
+import { recordTx } from './receipts.js';
 
 export const UNIT = 1_000_000;
 export const WORKS = Object.freeze(['loom', 'caravan', 'archive', 'observatory']);
@@ -139,7 +140,7 @@ export function createTownAct({ storage, base = relayerUrl(), fetch = globalThis
         const signature = b58encode(await key.sign(new TextEncoder().encode(actMessage(g.accountId, action, a, at))));
         const r = await fetch(url + '/api/town/act', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ account_id: g.accountId, public_key: key.publicKey, at, action, args: a, signature }) });
         let b = {}; try { b = await r.json(); } catch { /* empty */ }
-        if (r.status === 200 && b.ok) { const h = String(b.tx_hash || '').replace(/^https:\/\/testnet\.nearblocks\.io\/txns\//, ''); return { ok: true, hash: /^[1-9A-HJ-NP-Za-km-z]{32,64}$/.test(h) ? h : null, result: b.result ?? null }; }
+        if (r.status === 200 && b.ok) { const h = String(b.tx_hash || '').replace(/^https:\/\/testnet\.nearblocks\.io\/txns\//, ''); recordTx('act', h, { note: action }); return { ok: true, hash: /^[1-9A-HJ-NP-Za-km-z]{32,64}$/.test(h) ? h : null, result: b.result ?? null }; }
         if (r.status === 404 && !b.error) return { ok: false, reason: 'not_available' };
         return { ok: false, reason: REASON[b.error] || (r.status === 503 ? 'not_available' : r.status >= 500 ? 'tx_failed' : 'network'), hash: null };
       } catch { return { ok: false, reason: 'network' }; }

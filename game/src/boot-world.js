@@ -76,6 +76,7 @@ import { COMPANIONS_ENABLED, companionsToShow } from './scenes/companion-rules.j
 import { createDoorGlow } from './scenes/door-glow.js';
 import { cue, cueAt, MOB_SOUNDS } from './audio/town-audio.js';
 import { expectOnboarding, blocksWindows, onOnboarding, setOnboardingHold } from './ui/onboarding-queue.js';
+import { installTxToast } from './ui/tx-toast.js';
 
 /**
  * Builds the renderer, the island, the camera and the frame loop (the heavy chunk: three.js, scenes, render,
@@ -965,6 +966,8 @@ window.addEventListener('ftf:skin-wear', (e) => {
 });
 /** What the menu's wardrobe shows: the skin worn now and the ones this player has (window.__ftfSkins, read by play/game-menu.js). */
 window.__ftfSkins = () => ({ current: irisAvatar ? irisAvatar.hero.id : startHero.id, owned: skinsOwned(), trying: !!tryOn });
+// On-chain receipts (lead 14.11): every transaction a flow lands shows a toast with its explorer link (net/receipts.js)
+installTxToast({ t: (k, a) => ctx.i18n.t(k, a) });
 /** Above the altar: when the next Tournament round starts ("Open now" in this build: rounds are always open). */
 let altarTimer = null;
 /** The new-player intro's crowd lines (play/locales/en-npe.js, sprint 7.3), in the barks rotation when the intro is on. */

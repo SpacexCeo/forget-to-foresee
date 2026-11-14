@@ -120,3 +120,23 @@ test('the fund-empty and daily-cap copy exists in English and Russian', async ()
   const en = (await import('../../src/play/locales/en.js')).default; const ru = (await import('../../src/play/locales/ru.js')).default;
   for (const k of ['day1.mint.fund_empty', 'day1.mint.daily_cap']) { assert.match(en[k], /local guest/); assert.ok(ru[k]); }
 });
+
+// On-chain receipts (net/receipts.js, play/chain-panel.js): only real hashes are kept, once, newest first, with the
+// explorer link; the menu block shows the guest account, its mint and the live contracts from local records only.
+test('receipts: valid hashes kept once with explorer links; the chain block reads the Day-1 record', async () => {
+  const { recordTx, loadReceipts } = await import('../../src/net/receipts.js');
+  const { chainModel } = await import('../../src/play/chain-panel.js');
+  const storage = memoryStorage();
+  const h1 = '6TtWeZ3WuHfhAEkPa9k7mfHAs6ayxqG4iY2iJyGLahbA', h2 = 'E3ppFxXgvtEZbJeFUsa5dstyueCF85HqiBuG9wmVWXey';
+  assert.equal(recordTx('chest', 'not-a-hash', { storage }), null);
+  assert.equal(recordTx('nope', h1, { storage }), null);
+  recordTx('chest', h1, { storage, now: 1 }); recordTx('gate', 'https://testnet.nearblocks.io/txns/' + h2, { storage, now: 2 }); recordTx('chest', h1, { storage, now: 3 });
+  const list = loadReceipts(storage);
+  assert.deepEqual(list.map((r) => [r.kind, r.hash]), [['gate', h2], ['chest', h1]]);
+  assert.match(list[0].url, /nearblocks\.io\/txns\/E3pp/);
+  storage.setItem(DAY1_KEY, JSON.stringify({ guest: { account_id: 'iris-1.guests.ftf-coordinator.testnet' }, txHash: '44gpMGrxQ8bZp3n1v9u2yWcKXk7aT5fJdHsE1LqRm6Nc' }));
+  const m = chainModel(storage);
+  assert.equal(m.account, 'iris-1.guests.ftf-coordinator.testnet');
+  assert.equal(m.receipts.length, 3); assert.equal(m.linked, null);
+  assert.ok(m.contracts.some((c) => c.id.startsWith('guests.')) && m.contracts.every((c) => /\/address\//.test(c.url)));
+});
