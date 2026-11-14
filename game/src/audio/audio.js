@@ -23,6 +23,7 @@ const DUCK_KINDS = new Set(['voice', 'sting']);
 const VARY_KINDS = new Set(['sfx', 'step', 'ui']);
 const DUCK = { music: dbToGain(-9), amb: dbToGain(-6) };
 const SFX_DIP = dbToGain(-4); // music under a strike, a hit or a cast: a short dip so the effect reads
+const MAKEUP = dbToGain(9);   // output makeup before the limiter (-3 dB, 12:1), which keeps the peaks in
 
 /** The generated sound manifest plus the licensed music beds (two generators, one lookup). */
 export function withMusic(m, music = MUSIC_MANIFEST) {
@@ -73,9 +74,12 @@ export function createAudio(opts = {}) {
     try { n.limiter.threshold.value = -3; n.limiter.ratio.value = 12; n.limiter.attack.value = 0.003; n.limiter.release.value = 0.15; } catch { /* optional */ }
     n.musicDuck.connect(n.musicDip); n.musicDip.connect(n.music); n.music.connect(n.master);
     n.amb.connect(n.ambDuck); n.ambDuck.connect(n.sfx); n.sfx.connect(n.master);
-    n.master.connect(n.limiter); n.limiter.connect(H ? H.Howler.masterGain : ctx.destination);
+    // makeup gain before the limiter (owner 15.11 "no sound": the mix peaked near -30 dBFS, inaudible on laptop speakers)
+    n.makeup = ctx.createGain(); n.makeup.gain.value = MAKEUP;
+    n.master.connect(n.makeup); n.makeup.connect(n.limiter); n.limiter.connect(H ? H.Howler.masterGain : ctx.destination);
     for (const b of BUSES) n[b].gain.value = sliderGain(vols[b]);
-    if (H) { n.master.gain.value = 1; H.Howler.volume(sliderGain(vols.master)); }   // master = Howler's global volume (beds too)
+    if (H) H.Howler.volume(1);   // the master slider stays on our master bus: Howler's global volume would also scale the
+    // streamed beds' <audio> elements before they enter the graph, so music took the master level twice
     return n;
   }
 
@@ -371,8 +375,7 @@ export function createAudio(opts = {}) {
       if (!BUSES.includes(bus)) return;
       vols = sanitizeVolumes({ ...vols, [bus]: v });
       saveVolumes(storage, vols);
-      if (H && bus === 'master') H.Howler.volume(sliderGain(vols.master));
-      else if (nodes) ramp(nodes[bus].gain, sliderGain(vols[bus]), 0.05);
+      if (nodes) ramp(nodes[bus].gain, sliderGain(vols[bus]), 0.05);
     },
     getVolumes() { return { ...vols }; },
     /** Decodes sounds ahead of time; a group name loads every variant (steps must not miss their first beat). */
