@@ -9,12 +9,13 @@ import { createTxClient, importSecretKey } from './near-tx.js';
 import { guestFrom } from './agent-ledger.js';
 import { relayerUrl } from './tee-agent.js';
 import { NEAR_DEPLOYMENT } from './near-deployment.js';
+import { EXPLORER as NET_EXPLORER } from './network.js';
 
 /** Which townsperson keeps which resource stall (relayer market/catalog.js RESOURCES makers). */
 export const STALLS = Object.freeze({ guard: Object.freeze(['spider_silk_thread', 'chitin_plate']), shrinekeeper: Object.freeze(['veil_dust']), ash: Object.freeze(['ash_ore']), shardkeeper: Object.freeze(['crown_shard']) });
 export const stallItems = (npc) => STALLS[npc] || [];
 export const MAX_QTY = 20;
-export const EXPLORER = 'https://testnet.nearblocks.io/txns/';
+export const EXPLORER = NET_EXPLORER + '/txns/';
 const HASH = /^[1-9A-HJ-NP-Za-km-z]{40,50}$/;
 const ACCOUNT = /^[a-z0-9._-]{2,64}$/;
 /** silk micro-units (1e6 per silk) -> shown silk with two decimals */

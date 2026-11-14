@@ -9,8 +9,9 @@ import { dirname } from 'node:path';
 import { generateKeyPair, importSecretKey } from '../lib/near-tx.js';
 import { TRADERS, CLAN_WALLETS, traderAccount, clanAccount, TRADER_METHODS, CLAN_METHODS } from '../market/catalog.js';
 import { marketEnv } from '../market/index.js';
+import { NET } from '../lib/network.js';
 
-const town = process.argv[2] || 'ftf-town.testnet';
+const town = process.argv[2] || process.env.FTF_TOWN_CONTRACT || NET.town;
 const file = marketEnv().keysFile;
 const old = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : {};
 old.traders ||= []; old.clans ||= [];

@@ -113,15 +113,17 @@ export function placeTip({ W, H, w, h, anchor = null, avoid = [] }) {
 function render(doc, tip) {
   const el = doc.createElement('div'); el.className = 'ftf-tip'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', tip.title || 'Tip');
   el.style.cssText = 'position:fixed;left:0;top:0;z-index:var(--z-coach,35);width:max-content;max-width:min(340px, calc(100vw - 32px));box-sizing:border-box;padding:12px 14px;'
-    // the in-game HUD's panel look (cast bar, profile pill): dark green glass, a thin gold hairline, warm text
-    + 'background:rgba(12,20,17,.9);border:1px solid rgba(201,163,90,.6);border-radius:14px;color:#f1ead8;'
-    + 'font:14px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;box-shadow:0 8px 22px rgba(0,0,0,.35);backdrop-filter:blur(8px);overflow-wrap:anywhere';
+    // owner 14.11: minimalism, no backing panel - text straight on the scene with a light shadow, like the HUD
+    + 'background:none;border:0;color:#f1ead8;text-shadow:0 1px 3px rgba(0,0,0,.85),0 0 8px rgba(0,0,0,.45);'
+    + 'font:14px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;overflow-wrap:anywhere';
   const h = doc.createElement('div'); h.style.cssText = 'font-weight:700;color:#e9b44c;margin-bottom:4px'; h.textContent = tip.title || '';
   const p = doc.createElement('div'); p.textContent = tip.body || '';
-  const row = doc.createElement('div'); row.style.cssText = 'display:flex;gap:8px;margin-top:10px;justify-content:flex-end';
-  const mk = (text, fn, primary) => { const b = doc.createElement('button'); b.type = 'button'; b.textContent = text; b.style.cssText = `min-height:36px;padding:0 14px;border-radius:999px;cursor:pointer;font:600 13px system-ui,sans-serif;${primary ? 'background:rgba(201,163,90,.22);color:#f6df9b;border:1px solid rgba(201,163,90,.75)' : 'background:transparent;color:#a9b3a8;border:1px solid rgba(255,255,255,.18)'}`; b.addEventListener('click', fn); return b; };
+  const row = doc.createElement('div'); row.style.cssText = 'display:flex;gap:14px;margin-top:8px;justify-content:flex-end';
+  const mk = (text, fn, primary) => { const b = doc.createElement('button'); b.type = 'button'; b.textContent = text; b.style.cssText = `min-height:32px;padding:0 4px;border:0;background:none;cursor:pointer;font:600 13px system-ui,sans-serif;text-shadow:inherit;${primary ? 'color:#f6df9b;text-decoration:underline;text-underline-offset:3px' : 'color:#c9cfc6'}`; b.addEventListener('click', fn); return b; };
   row.append(mk('Skip tips', () => { skipTips(); emit('tip.dismissed', { id: tip.id, skipped: true }); }, false), mk('Got it', () => done(true), true));
   el.append(h, p, row);
+  // a click on the tip stays on the tip: an open window (the inventory) must not read it as a click outside and close
+  for (const ev of ['pointerdown', 'mousedown', 'click']) el.addEventListener(ev, (e) => { if (e && e.stopPropagation) e.stopPropagation(); });
   doc.body.append(el);
   // place next to the anchor (selector or element), else upper centre; never over a visible button (owner, 14.11)
   const a = typeof tip.anchor === 'string' ? doc.querySelector(tip.anchor) : tip.anchor;
@@ -132,7 +134,11 @@ function render(doc, tip) {
   // closes on a tap anywhere outside it, or on Esc
   const outside = (e) => { if (!el.contains(e.target)) done(true); };
   const esc = (e) => { if (e.key === 'Escape') done(true); };
-  const off = () => { if (doc.removeEventListener) { doc.removeEventListener('pointerdown', outside, true); doc.removeEventListener('keydown', esc, true); } };
+  // a window opened over the tip (the inventory, the menu): the tip steps back unseen and returns when it closes,
+  // so a click meant for the tip never lands on the window's backdrop and closes it (critic play test 14.11)
+  const watch = typeof setInterval === 'function' ? setInterval(() => { if (showing && showing.el === el && blocked(doc)) { const id = tip.id; hideCurrent(); if (!queue.includes(id)) queue.unshift(id); drainLater(doc); } }, 400) : null;
+  if (watch && watch.unref) watch.unref();
+  const off = () => { if (watch) clearInterval(watch); if (doc.removeEventListener) { doc.removeEventListener('pointerdown', outside, true); doc.removeEventListener('keydown', esc, true); } };
   if (doc.addEventListener) { doc.addEventListener('pointerdown', outside, true); doc.addEventListener('keydown', esc, true); }
   showing = { id: tip.id, el, off };
   emit('tip.shown', { id: tip.id });

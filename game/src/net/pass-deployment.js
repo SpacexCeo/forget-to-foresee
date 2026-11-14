@@ -3,9 +3,10 @@
 // The default is the TESTNET rehearsal: the modal shows a "TESTNET REHEARSAL, not mainnet" banner and the testnet
 // explorer. Switch to mainnet only after the owner's runbook (docs/mainnet-pass-runbook.md) has passed its checks.
 // Nothing here is a key or a balance.
+import { NEAR_NETWORK, EXPLORER } from './network.js';
 export const PASS_DEPLOYMENT = Object.freeze({
-  network: 'testnet',
+  network: NEAR_NETWORK,
   contract: null,          // set after the owner's deploy (e.g. "pass.<owner>.testnet")
   relayerBase: null,       // null: the Day 1 relayer (net/tee-agent.js relayerUrl)
-  explorerBase: 'https://testnet.nearblocks.io/txns/',
+  explorerBase: EXPLORER + '/txns/',
 });

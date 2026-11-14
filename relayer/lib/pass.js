@@ -15,17 +15,14 @@ import { createHash } from 'node:crypto';
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { b58decode, b58encode, createTxClient, findFailure, importSecretKey, serializeFunctionCallTx, sha256, signedTxBytes } from './near-tx.js';
-import { createBucket, DEFAULTS } from './core.js';
+import { createBucket } from './core.js';
+import { NET, NETWORKS, netOf, networkName } from './network.js';
 import { EXPEDITION } from './expedition-rules/expedition-config.js';
 
 export const PORTAL_FEE_SILK = EXPEDITION.PORTAL_FEE_C / 100; // whole silk (200)
 export const BOARD_SEASON = 1;
-export const RPC = Object.freeze({
-  // [VERIFY current public RPC limits and sunset notices before mainnet] two endpoints each, the client fails over
-  mainnet: Object.freeze(['https://rpc.mainnet.near.org', 'https://free.rpc.fastnear.com']),
-  testnet: DEFAULTS.rpcUrls,
-});
-export const EXPLORER = Object.freeze({ mainnet: 'https://nearblocks.io/txns/', testnet: 'https://testnet.nearblocks.io/txns/' });
+export const RPC = Object.freeze({ mainnet: NETWORKS.mainnet.rpcUrls, testnet: NETWORKS.testnet.rpcUrls });
+export const EXPLORER = Object.freeze({ mainnet: NETWORKS.mainnet.explorer + '/txns/', testnet: NETWORKS.testnet.explorer + '/txns/' });
 export const BACKOFF_MS = Object.freeze([30_000, 120_000, 600_000, 3_600_000]);
 export const EXPIRE_MS = 24 * 3_600_000;
 const YOCTO = 10n ** 24n;
@@ -40,7 +37,7 @@ export const HTTP = Object.freeze({
 
 /** Environment -> config. Testnet and dry-run unless the owner sets otherwise. Never logs or returns the key. */
 export function passEnv(env = process.env) {
-  const network = env.FTF_PASS_NETWORK === 'mainnet' ? 'mainnet' : 'testnet';
+  const network = env.FTF_PASS_NETWORK ? (env.FTF_PASS_NETWORK === 'mainnet' ? 'mainnet' : 'testnet') : networkName(env); // else the main switch
   const list = (v) => (v ? String(v).split(',').map((s) => s.trim()).filter(Boolean) : null);
   return {
     network,
@@ -50,7 +47,7 @@ export function passEnv(env = process.env) {
     enabled: env.FTF_PASS_ENABLED === '1',
     dir: env.FTF_PASS_DIR || new URL('../data/pass', import.meta.url).pathname,
     rpcUrls: list(env.FTF_PASS_RPC_URLS) || RPC[network],
-    guestRpcUrls: list(env.FTF_RPC_URLS) || RPC.testnet,
+    guestRpcUrls: list(env.FTF_RPC_URLS) || netOf(env).rpcUrls,
     dailyCap: Math.max(1, Number(env.FTF_PASS_DAILY_CAP) || 100),
     minAllowanceYocto: BigInt(env.FTF_PASS_MIN_ALLOWANCE_YOCTO || String(YOCTO / 20n)),   // 0.05 NEAR of gas left on the key
     minBalanceYocto: BigInt(env.FTF_PASS_MIN_BALANCE_YOCTO || String(YOCTO / 10n)),        // 0.1 NEAR available on the contract
@@ -65,14 +62,14 @@ export function passEnv(env = process.env) {
 export const NAMED_RE = /^(([a-z\d]+[-_])*[a-z\d]+\.)*([a-z\d]+[-_])*[a-z\d]+$/;
 export const IMPLICIT_RE = /^[0-9a-f]{64}$/;
 /** {ok} or {ok: false, status: 'invalid_account'}. Uppercase is refused, never lowercased: the player sees what is used. */
-export function checkWallet(id, { network = 'testnet', forbidden = [] } = {}) {
+export function checkWallet(id, { network = NET.network, forbidden = [] } = {}) {
   const bad = { ok: false, status: 'invalid_account' };
   if (typeof id !== 'string' || id.length < 2 || id.length > 64) return bad;
   const implicit = IMPLICIT_RE.test(id);
   if (!implicit && !NAMED_RE.test(id)) return bad;
   if (forbidden.filter(Boolean).includes(id)) return bad;
-  if (!implicit && network === 'mainnet' && id.endsWith('.testnet')) return bad;
-  if (!implicit && network === 'testnet' && !id.endsWith('.testnet')) return bad;
+  if (!implicit && network === 'mainnet' && id.endsWith(NETWORKS.testnet.suffix)) return bad;
+  if (!implicit && network === 'testnet' && !id.endsWith(NETWORKS.testnet.suffix)) return bad;
   return { ok: true, implicit };
 }
 

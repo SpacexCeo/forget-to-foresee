@@ -7,6 +7,7 @@
 // A provider: {kind, id, name, connect() -> {address, publicKey?}, signMessage(text, nonceHex) -> signature text,
 // signDeviceKey() -> Uint8Array (>= 64 bytes)}. Nothing here runs until the player taps a wallet.
 import { DEVICE_KEY_TEXT, RECIPIENT, deviceKeyNonce, b58, b64, unb64, toHex, fromHex } from './account-login.js';
+import { NET, NETWORKS } from './network.js';
 
 const utf8 = (s) => new TextEncoder().encode(s);
 
@@ -69,9 +70,11 @@ export function solanaProvider(w) {
   };
 }
 
-export const MNW_TESTNET = 'https://testnet.mynearwallet.com';
+export const MNW_TESTNET = NETWORKS.testnet.wallet;
+/** This build's MyNearWallet (net/network.js). */
+export const MNW = NET.wallet;
 /** NEP-413 through MyNearWallet's popup: resolves {accountId, publicKey, signature (base64)}. */
-export function myNearWalletSign({ message, nonce, recipient = RECIPIENT, walletUrl = MNW_TESTNET, win = globalThis.window }) {
+export function myNearWalletSign({ message, nonce, recipient = RECIPIENT, walletUrl = MNW, win = globalThis.window }) {
   return new Promise((resolve, reject) => {
     const href = new URL(walletUrl); href.pathname = 'sign-message';
     href.searchParams.append('message', message);

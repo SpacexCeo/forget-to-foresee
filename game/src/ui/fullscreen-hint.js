@@ -55,10 +55,15 @@ export function mountFullscreenHint({ t, params = null, busy = () => false, doc 
   const el = doc.createElement('div'); el.className = 'ftf-fs-hint'; el.hidden = true; el.setAttribute('role', 'note');
   const go = doc.createElement('button'); go.type = 'button';
   // "Press F11 for fullscreen" with the key drawn as a key cap
-  const text = t('fs.hint'); const at = text.indexOf('F11');
-  if (at >= 0) { go.append(text.slice(0, at)); const k = doc.createElement('kbd'); k.textContent = 'F11'; go.append(k, text.slice(at + 3)); } else go.textContent = text;
-  go.title = t('fs.hint.click');
-  const x = doc.createElement('button'); x.type = 'button'; x.className = 'ftf-fs-x'; x.textContent = '×'; x.setAttribute('aria-label', t('fs.hint.close')); x.title = t('fs.hint.close');
+  const x = doc.createElement('button'); x.type = 'button'; x.className = 'ftf-fs-x'; x.textContent = '×';
+  let painted = null;
+  const paint = () => { // again after a language switch (checked with the overlays below)
+    const text = t('fs.hint'); if (text === painted) return; painted = text;
+    const at = text.indexOf('F11'); go.replaceChildren();
+    if (at >= 0) { go.append(text.slice(0, at)); const k = doc.createElement('kbd'); k.textContent = 'F11'; go.append(k, text.slice(at + 3)); } else go.textContent = text;
+    go.title = t('fs.hint.click'); x.setAttribute('aria-label', t('fs.hint.close')); x.title = t('fs.hint.close');
+  };
+  paint();
   el.append(go, x); doc.body.append(el);
 
   const full = () => isFullscreen({ fsElement: doc.fullscreenElement || doc.webkitFullscreenElement || null, displayFull: mm('(display-mode: fullscreen)'),
@@ -72,7 +77,7 @@ export function mountFullscreenHint({ t, params = null, busy = () => false, doc 
   x.addEventListener('click', () => { dismissed = true; try { if (ss) ss.setItem(FS_HINT_OFF, '1'); } catch { /* */ } update(); });
   const onChange = () => update();
   doc.addEventListener('fullscreenchange', onChange); win.addEventListener('resize', onChange);
-  const timer = setInterval(update, 1000); // the overlays come and go without events of their own
+  const timer = setInterval(() => { paint(); update(); }, 1000); // the overlays (and the locale) change without events of their own
   update();
   return {
     el, update,

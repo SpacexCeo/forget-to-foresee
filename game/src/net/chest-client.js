@@ -4,6 +4,7 @@
 // is re-checked here in the browser: the outcome's leaf and Merkle proof lead to the root committed on chain and the
 // draw's random value follows from the on-chain season seed. This adapter only maps the shapes and the reasons.
 // No relayer, no opening: nothing is ever invented here.
+import { EXPLORER } from './network.js';
 export const CHEST_OUTCOMES = Object.freeze(['nft', 'item', 'silk', 'xp']);
 
 // Every relayer code has its own plain message (chest.err.<key>); only a code nobody knows falls back to 'bad'.
@@ -60,7 +61,7 @@ export function createChestClient({ storage = null, load = () => import('./chest
  * {state: 'none'} | {state: 'offline'}.
  * @param {{owner?: string|null, deployment?: object, rpcUrls?: string[], fetch?: Function}} o
  */
-export async function readLootNfts({ owner = null, deployment = null, rpcUrls = null, fetch = globalThis.fetch, explorer = 'https://testnet.nearblocks.io' } = {}) {
+export async function readLootNfts({ owner = null, deployment = null, rpcUrls = null, fetch = globalThis.fetch, explorer = EXPLORER } = {}) {
   const [{ createNearClient }, { DAY1_DEPLOYMENT }, { NEAR_DEPLOYMENT }] = await Promise.all([import('./near.js'), import('./day1-deployment.js'), import('./near-deployment.js')]);
   const dep = deployment || DAY1_DEPLOYMENT;
   if (!owner || !dep || !dep.chests) return { state: 'none' };

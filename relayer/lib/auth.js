@@ -15,6 +15,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from '
 import { dirname, join } from 'node:path';
 import { recoverPersonal } from './tee-crypto.js';
 import { b58decode } from './near-tx.js';
+import { NET } from './network.js';
 
 export const AUTH = Object.freeze({
   recipient: 'forget-to-foresee', // the NEP-413 recipient
@@ -38,7 +39,7 @@ export function loginMessage(f) {
     `Device key: ${f.deviceKey || 'none'}`,
     `Nonce: ${f.nonce}`,
     `Expires: ${f.expires}`,
-    'This proves you own this login. It sends no transaction and costs nothing. Your account lives on NEAR testnet; nothing here has real-world value.',
+    `This proves you own this login. It sends no transaction and costs nothing. Your account lives on NEAR ${NET.network}${NET.network === 'testnet' ? '; nothing here has real-world value' : ''}.`,
   ].join('\n');
 }
 

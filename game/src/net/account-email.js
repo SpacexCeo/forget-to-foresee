@@ -8,9 +8,10 @@
 //   sign in by email (any device, no wallet app): a code -> the relayer hands back the account and its email key ->
 //     this browser plays as that account (the same Day-1 account every login maps to; mints go there as before);
 //   the methods list and unlink, each with a fresh account proof.
+import { NET } from './network.js';
 
 /** The account proof text; must equal relayer/lib/email-auth.js proofMessage byte for byte (a test checks). */
-export const proofMessage = (action, accountId, detail, at) => `Forget to Foresee account\nAction: ${action}\nAccount: ${accountId}\nDetail: ${detail}\nAt: ${at}\nThis proves you control this game account on NEAR testnet. It sends no transaction.`;
+export const proofMessage = (action, accountId, detail, at) => `Forget to Foresee account\nAction: ${action}\nAccount: ${accountId}\nDetail: ${detail}\nAt: ${at}\nThis proves you control this game account on ${NET.label}. It sends no transaction.`;
 /** The same normalization as the relayer's: lower case, trimmed, a plain address; null otherwise. */
 export function normEmail(s) { const e = String(s == null ? '' : s).trim().toLowerCase(); return e.length <= 254 && /^[a-z0-9._%+-]{1,64}@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,24}$/.test(e) ? e : null; }
 export const validCode = (c) => /^\d{6}$/.test(String(c || '').trim());

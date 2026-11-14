@@ -29,6 +29,7 @@ import { Input } from './ui/input.js';
 import { PAD } from './ui/gamepad.js';
 import { navigateGamepadMenu } from './ui/gamepad-menu.js';
 import { mountSceneControls } from './ui/scene-controls.js';
+import { bindI18n } from './ui/dom.js';
 import { setBindings, loadBindings, bindings } from './ui/keybinds.js';
 import { createMouseAim, aimPoint } from './ui/mouse-aim.js';
 import { menuKeyAction, registerWindow, claimWindow, closeTopWindow } from './ui/window-toggle.js';
@@ -220,6 +221,7 @@ const controls = mountSceneControls(document.getElementById('scene-controls'), {
     { label: 'Touch: use the joysticks (left stick moves, skill buttons on the right)', visible: () => !!(input.touchControls && touchSticks && touchSticks.mode === 'tap'), onClick: () => touchSticks.setMode('sticks') },
     { label: 'Start over (a new season)', visible: () => !!play, onClick: () => { if (window.confirm('Start a new season? The current one is lost.')) startOver(); } },
   ] });
+bindI18n(document.getElementById('scene-controls'), ctx.i18n); // the gear's label follows the locale (it was English everywhere)
 { const st = document.createElement('style'); st.textContent = '.ftf-play-away #ui > *:not(.ftf-root-menu) { display: none !important; }'; document.head.append(st); }
 const toastEl = document.getElementById('toast');
 
@@ -567,6 +569,7 @@ if (townMode.town) {
         isDay: () => !['night', 'twilight'].includes(lookdev.look && lookdev.look.name) });
       marketTicker = ui.createMarketTicker({ t, line: (r) => net.tradeLine(t, r), poll: () => net.fetchMarket(), onTrade: (r) => marketScene.onTrade(r),
         onLedger: () => (featureFlags.on('townLedger') ? () => window.dispatchEvent(new CustomEvent('ftf:menu-open', { detail: { tab: 'town' } })) : null) });
+      ctx.i18n.subscribe(() => marketTicker.relabel()); // a language switch redraws the ticker at once
     }).catch((e) => console.warn('[town] market', e));
   }
   if (!loomMeter && (featureFlags.on('loomMeter') || featureFlags.on('presenceChip'))) { // the town's shared hungry object (owner 14.11)
@@ -618,6 +621,7 @@ if (townMode.town) {
     nickname: () => loadDay1(ctx.storage).nickname || null, skin: () => (irisAvatar ? irisAvatar.hero.id : startHero.id),
     onSkin: () => toggleSkin(), canSwap: () => { const o = skinsOwned(); return !!(o.elise || o.sheriffchenko); },
     onProfile: () => openProfileFor(quest), reducedMotion: () => lookdev.reducedMotion });
+  if (!playerHud.relabeled) { playerHud.relabeled = true; ctx.i18n.subscribe(() => playerHud.relabel()); } // a language switch redraws the rank and the silk pill
   // The endgame whitelist pass (story TZ §11; ui/endgame-pass.js), behind ?story=1. The story dispatches window
   // 'ftf:story-onward' after the twist; the relayer decides eligibility. ?passDemo=1 shows the labelled simulation (no hash, no call).
   // 'ftf:pass-open' reopens the modal (HUD / help entry points).
@@ -987,7 +991,10 @@ function updateAltarTimer() {
   if (!visible) return;
   // declutter: with the player HUD on, an altar icon (CSS) and the short state; the full line is the tooltip
   const full = ctx.i18n.t('day1.altar.timer') + ' · ' + ctx.i18n.t('day1.altar.open');
-  const text = playerHud ? ctx.i18n.t('day1.altar.short') : full;   // says what is open (design review 13.11: a bare "Open now" told nothing)
+  // before ten stone spiders (game/tourney-gate.js) the label shows the lock and the spider count, the open icon set's padlock
+  const tg = tourneyGate(townLedger.stats, { judge: judge || params.get('judge') === '1' }), locked = !tg.open;
+  if (altarTimer.dataset.locked !== String(locked)) { altarTimer.dataset.locked = String(locked); if (locked) altarTimer.style.setProperty('--ph-i-altar', `url("${import.meta.env.BASE_URL}assets/ui/icons/open/tournament_locked_glyph_48.webp")`); else altarTimer.style.removeProperty('--ph-i-altar'); }
+  const text = locked ? ctx.i18n.t('town.altar.locked', { n: tg.n, need: tg.need }) : playerHud ? ctx.i18n.t('day1.altar.short') : full;   // says what is open (design review 13.11: a bare "Open now" told nothing)
   if (altarTimer.textContent !== text) { altarTimer.textContent = text; altarTimer.title = full; }
   // kept below the top-right chips (Controls, Profile) and inside the screen: on a phone the altar projects right under them
   const minTop = innerWidth < 700 || innerHeight < 500 ? (document.body.classList.contains('ph-on') ? 236 : 150) : 118, half = Math.min(altarTimer.offsetWidth / 2 || 110, innerWidth / 2 - 8);

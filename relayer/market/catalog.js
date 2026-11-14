@@ -3,6 +3,8 @@
 // PRICE_UNIT), drifting mean-reverting between half and twice the base. Trader keys are the townsfolk of game/src/play/townsfolk-plan.js and
 // the clans of game/src/net/shard-nft.js.
 
+import { NET } from '../lib/network.js';
+
 /** Goods: id, base price, who makes and sells it. */
 export const ITEMS = Object.freeze([
   ['bread', 3, 'baker'], ['honey_cake', 7, 'baker'],
@@ -36,8 +38,8 @@ export const CLAN_AGENTS = Object.freeze(['iris', 'salt', 'ash', 'moss', 'amber'
 export const TRADERS = Object.freeze([...TOWNSFOLK, ...CLAN_AGENTS]);
 
 /** The town contract; every NPC has its own wallet under it (owner, 12.11). */
-export const TOWN_ACCOUNT = 'ftf-town.testnet';
-/** Testnet account of a trader: trader-01 … trader-20.<town>, in the order of TRADERS. */
+export const TOWN_ACCOUNT = NET.town;
+/** Account of a trader: trader-01 … trader-20.<town>, in the order of TRADERS. */
 export const traderAccount = (key, parent = TOWN_ACCOUNT) => `trader-${String(TRADERS.indexOf(key) + 1).padStart(2, '0')}.${parent}`;
 /** The trader key of an account (null when it is not a trader's). */
 export function traderKey(account) {

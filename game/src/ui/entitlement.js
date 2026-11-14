@@ -2,6 +2,7 @@
 // Hackathon slice (spec §1): no paid account check, no real money. The entitlement
 // is clearly labeled, free, testnet-only, and lives in this browser.
 import { STORAGE_KEYS } from './storage.js';
+import { NEAR_NETWORK } from '../net/network.js';
 
 function randomHex(bytes) {
   const a = new Uint8Array(bytes);
@@ -25,7 +26,7 @@ export function getEntitlement(storage) {
 export function issueDemoEntitlement(storage, guestId, now = Date.now()) {
   const existing = getEntitlement(storage);
   if (existing && existing.guestId === guestId) return existing;
-  const e = Object.freeze({ kind: 'synthetic-demo', label: 'demo', network: 'testnet', paid: false, priceNear: 0, guestId, issuedAt: new Date(now).toISOString() });
+  const e = Object.freeze({ kind: 'synthetic-demo', label: 'demo', network: NEAR_NETWORK, paid: false, priceNear: 0, guestId, issuedAt: new Date(now).toISOString() });
   storage.setJSON(STORAGE_KEYS.entitlement, e);
   return e;
 }

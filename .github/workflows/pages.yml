@@ -51,6 +51,8 @@ jobs:
         env:
           # Day 1: the relayer that signs create_guest server-side (relayer/); no key is built into the page
           VITE_FTF_RELAYER_URL: ${{ vars.FTF_RELAYER_URL }}
+          # the NEAR network (game/src/net/network.js): unset or anything but 'mainnet' builds the testnet game
+          VITE_FTF_NEAR_NETWORK: ${{ vars.FTF_NEAR_NETWORK }}
       - name: Smoke the built page (fails on any page error or a stuck loading screen)
         run: |
           npm i --no-save --no-audit --no-fund playwright@1.49.1

@@ -31,7 +31,9 @@ in that host's environment.
 
 `server.js` also reads `relayer/.env` (git-ignored; variables already set in the environment win).
 
-Optional env: `FTF_GUESTS_CONTRACT` (default `guests.ftf-coordinator.testnet`), `FTF_RPC_URLS` (comma-separated),
+Optional env: `FTF_NEAR_NETWORK` (`mainnet`, anything else is testnet; one switch for every network default: RPC,
+explorer and every contract id, `.testnet` ids become `.near`, table in `lib/network.js`; the specific variables below
+still win), `FTF_GUESTS_CONTRACT` (default `guests.ftf-coordinator.testnet`, on mainnet `.near`), `FTF_RPC_URLS` (comma-separated),
 `HOST` (default `0.0.0.0`).
 
 Then in the game repository set the Actions variable `FTF_RELAYER_URL=https://<host>`; the Pages build passes it as

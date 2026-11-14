@@ -1,9 +1,10 @@
 // The relayer's validation, CORS, rate limit and create-guest flow against a fake RPC (no network, no real key).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { sanitizeNickname, normalizePublicKey, validateBody, allowOrigin, createBucket, createGuest, createQueue, cors, envConfig } from '../lib/core.js';
 import { generateKeyPair, b58encode } from '../lib/near-tx.js';
+import { netOf } from '../lib/network.js';
 
 const PK = 'ed25519:' + b58encode(new Uint8Array(32).fill(5));
 
@@ -107,3 +108,18 @@ test('create-guest: final + minted gives 200; idempotent; honest failures; cap; 
 test('the signer is the same code as the game client (game/src/net/near-tx.js)', () => {
   assert.equal(readFileSync(new URL('../lib/near-tx.js', import.meta.url), 'utf8'), readFileSync(new URL('../../game/src/net/near-tx.js', import.meta.url), 'utf8'));
 });
+
+test('one switch: FTF_NEAR_NETWORK=mainnet has no testnet value, and no relayer source hard-codes a testnet id or URL', () => {
+  const main = netOf({ FTF_NEAR_NETWORK: 'mainnet' });
+  assert.equal(main.explorer, 'https://nearblocks.io');
+  for (const v of Object.values(main).flat()) assert.ok(!String(v).includes('testnet'), String(v));
+  assert.equal(netOf({}).network, 'testnet');
+  const files = (dir) => readdirSync(new URL(dir, import.meta.url), { recursive: true }).filter((p) => p.endsWith('.js')).map((p) => dir + p.replace(/\\/g, '/'));
+  const bad = /['"`][\w.:/-]*\.testnet\b[\w.:/-]*['"`]|testnet\.nearblocks|rpc\.testnet|test\.rpc\.fastnear/; // a quoted id or URL
+  for (const f of ['../server.js', ...files('../lib/'), ...files('../api/'), ...files('../market/')]) {
+    if (f.endsWith('/network.js')) continue;
+    const src = readFileSync(new URL(f, import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '').replace(/\s\/\/ .*$/gm, '');
+    assert.ok(!bad.test(src), f + ': ' + (src.match(bad) || [])[0]);
+  }
+});
+
