@@ -33,12 +33,25 @@ for (const [name, e] of map) {
   const [w0, w1] = e.window || [-Infinity, Infinity];
   for (const ch of src.listChannels()) {
     const s = ch.getSampler(), t = s.getInput().getArray(), v = s.getOutput().getArray(), n = s.getOutput().getElementSize();
-    let i0 = t.findIndex((x) => x >= w0 - 1e-4); if (i0 < 0) i0 = t.length - 1;
-    let i1 = t.length - 1; while (i1 > i0 && t[i1] > w1 + 1e-4) i1--;
-    const t0 = e.window ? t[i0] : 0;
-    const T = Float32Array.from(t.subarray(i0, i1 + 1), (x) => x - t0), V = v.slice(i0 * n, (i1 + 1) * n);
+    let T, V, norm = s.getOutput().getNormalized();
+    if (!e.window) { T = t.slice(); V = v.slice(); }
+    else {
+      // the window's own ends as keys (sampled between the pack keys; a still track keeps only 2 keys), then the keys inside
+      const q = norm ? (v instanceof Int16Array ? 32767 : v instanceof Int8Array ? 127 : v instanceof Uint16Array ? 65535 : 255) : 1;
+      const f = Float32Array.from(v, (x) => (q === 1 ? x : Math.max(x / q, -1)));
+      const at = (time) => {
+        let k = 0; while (k + 1 < t.length - 1 && t[k + 1] <= time) k++;
+        const k1 = Math.min(k + 1, t.length - 1), u = t[k1] > t[k] ? Math.min(1, Math.max(0, (time - t[k]) / (t[k1] - t[k]))) : 0;
+        const dot = n === 4 ? f[k * 4] * f[k1 * 4] + f[k * 4 + 1] * f[k1 * 4 + 1] + f[k * 4 + 2] * f[k1 * 4 + 2] + f[k * 4 + 3] * f[k1 * 4 + 3] : 1;
+        const o = []; let len = 0;
+        for (let j = 0; j < n; j++) { const x = f[k * n + j] * (1 - u) + (dot < 0 ? -1 : 1) * f[k1 * n + j] * u; o.push(x); len += x * x; }
+        return n === 4 ? o.map((x) => x / (Math.sqrt(len) || 1)) : o;
+      };
+      const end = Math.min(w1, t[t.length - 1]), times = [w0, ...Array.from(t).filter((x) => x > w0 + 1e-4 && x < end - 1e-4), end];
+      T = Float32Array.from(times, (x) => x - w0); V = Float32Array.from(times.flatMap(at)); norm = false;
+    }
     const inp = doc.createAccessor().setType('SCALAR').setArray(T).setBuffer(buf);
-    const outp = doc.createAccessor().setType(s.getOutput().getType()).setArray(V).setBuffer(buf).setNormalized(s.getOutput().getNormalized());
+    const outp = doc.createAccessor().setType(s.getOutput().getType()).setArray(V).setBuffer(buf).setNormalized(norm);
     const smp = doc.createAnimationSampler().setInput(inp).setOutput(outp).setInterpolation(s.getInterpolation());
     out.addSampler(smp).addChannel(doc.createAnimationChannel().setTargetNode(ch.getTargetNode()).setTargetPath(ch.getTargetPath()).setSampler(smp));
   }

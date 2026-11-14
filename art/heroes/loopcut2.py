@@ -8,7 +8,7 @@ fps = bpy.context.scene.render.fps
 a = next(x for x in bpy.data.actions if x.name.split('|')[-1] == argv[1] or x.name.startswith(argv[1]))
 arm.animation_data_create(); arm.animation_data.action = a
 f0, f1 = map(int, a.frame_range)
-body = [b for b in arm.pose.bones if any(k in b.name for k in ('UpLeg', 'Leg', 'Foot', 'Arm', 'Spine', 'Hips'))]
+body = [b for b in arm.pose.bones if any(k in b.name.lower() for k in ('upleg', 'leg', 'thigh', 'calf', 'foot', 'arm', 'spine', 'hip'))]
 P = {}
 for f in range(f0, f1 + 1):
     bpy.context.scene.frame_set(f); P[f] = [b.matrix.to_quaternion() for b in body]

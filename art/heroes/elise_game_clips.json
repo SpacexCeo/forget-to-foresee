@@ -1,5 +1,5 @@
 {
- "_": "The new Elise (the owner's Tripo elise_anim_pack.glb, Mixamo rig): the game's hero clip names cut from the pack's clips (art/tools/glb_game_clips.mjs). window: [start, end] seconds of the pack clip; the extras are what play/iris-avatar.js reads (impact_s, release_s, step_s from the hand or foot speed peak inside the window: art/heroes/peaks.py). Walk and run speed: the hips travel of the pack clip on this body (root_motion_m / seconds of art/heroes/retarget_pack.py's index for elise; the pack is her own clips, so no hips_scale). The pack run is not a clean cycle: the window is the closest-pose pair (14 deg at worst, art/heroes/loopcut2.py).",
+ "_": "The new Elise (the owner's Tripo elise_anim_pack.glb, Mixamo rig): the game's hero clip names cut from the pack's clips (art/tools/glb_game_clips.mjs). window: [start, end] seconds of the pack clip; the extras are what play/iris-avatar.js reads (impact_s, release_s, step_s: the window starts just before the hand or foot speed peak, art/heroes/peaks.py, so a strike lands within 0.13-0.18 s, a cast lets go at 0.1 s and slash1 hits at 0.3 s like the game's old keyed moves). Walk and run speed: the hips travel of the pack clip on this body (root_motion_m / seconds of art/heroes/retarget_pack.py's index for elise; the pack is her own clips, so no hips_scale). The pack run is not a clean cycle: the window is the closest-pose pair (14 deg at worst, art/heroes/loopcut2.py).",
  "idle": {
   "from": "idle",
   "extras": {
@@ -56,60 +56,60 @@
  "strike1": {
   "from": "box_03",
   "window": [
-   0.35,
-   0.95
+   0.52,
+   1.1
   ],
   "extras": {
    "loop": false,
-   "impact_s": 0.32,
-   "step_s": 0.32,
+   "impact_s": 0.15,
+   "step_s": 0.15,
    "step_foot": "L"
   }
  },
  "strike2": {
   "from": "box_02",
   "window": [
-   1.8,
-   2.42
+   1.97,
+   2.6
   ],
   "extras": {
    "loop": false,
-   "impact_s": 0.32,
-   "step_s": 0.32,
+   "impact_s": 0.15,
+   "step_s": 0.15,
    "step_foot": "R"
   }
  },
  "strike3": {
   "from": "front_kick_02",
   "window": [
-   0.35,
-   1.2
+   0.57,
+   1.33
   ],
   "extras": {
    "loop": false,
-   "impact_s": 0.4,
-   "step_s": 0.4,
+   "impact_s": 0.18,
+   "step_s": 0.18,
    "step_foot": "L"
   }
  },
  "slash1": {
   "from": "slash",
   "window": [
-   1.6,
-   2.5
+   1.78,
+   2.58
   ],
   "extras": {
    "loop": false,
-   "impact_s": 0.48,
-   "step_s": 0.48,
+   "impact_s": 0.3,
+   "step_s": 0.3,
    "step_foot": "L"
   }
  },
  "strike_charge": {
   "from": "slash",
   "window": [
-   0.9,
-   1.9
+   0.95,
+   1.95
   ],
   "extras": {
    "loop": false,
@@ -120,13 +120,13 @@
  "strike_super": {
   "from": "slash",
   "window": [
-   1.9,
+   1.95,
    2.6
   ],
   "extras": {
    "loop": false,
-   "impact_s": 0.18,
-   "step_s": 0.18,
+   "impact_s": 0.13,
+   "step_s": 0.13,
    "step_foot": "L",
    "from": "strike_charge"
   }
@@ -134,28 +134,28 @@
  "cast_lance": {
   "from": "cast_a_spell",
   "window": [
-   1.9,
-   2.9
+   2.32,
+   3
   ],
   "extras": {
    "loop": false,
-   "release_s": 0.52,
+   "release_s": 0.1,
    "hand": "R",
-   "step_s": 0.52,
+   "step_s": 0.1,
    "step_foot": "L"
   }
  },
  "cast_snare": {
   "from": "cast_a_spell",
   "window": [
-   0.7,
-   1.7
+   1.07,
+   1.75
   ],
   "extras": {
    "loop": false,
-   "release_s": 0.47,
+   "release_s": 0.1,
    "hand": "R",
-   "step_s": 0.47,
+   "step_s": 0.1,
    "step_foot": "R"
   }
  }
