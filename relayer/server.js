@@ -1,6 +1,7 @@
 // Standalone relayer: plain Node http serving the same handlers as the serverless entry points in api/.
 // node server.js   (env: FTF_GUEST_KEY, NEARAI_API_KEY, FTF_MARKET=1, FTF_ALLOWED_ORIGINS or ALLOWED_ORIGIN (comma list added to the Pages origin), PORT=8787, HOST=0.0.0.0, TRUST_PROXY=1 behind a reverse proxy)
 import http from 'node:http';
+import { pathToFileURL } from 'node:url';
 import { readFileSync } from 'node:fs';
 import { requireStorage, resetDb } from './lib/storage.js';
 
@@ -55,7 +56,7 @@ export function createServer() {
   });
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) { // also true on Windows
   const port = Number(process.env.PORT) || 8787, host = process.env.HOST || '0.0.0.0';
   // the storage first: with FTF_DB set the relayer does not start without its database (never a silent fallback to files)
   try { console.log(requireStorage(process.env)); }

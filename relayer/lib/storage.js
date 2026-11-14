@@ -32,6 +32,9 @@ export function requireStorage(env = process.env) {
   return `storage: database ${env.FTF_DB} (schema ${d.version()}, ${c.identities} identities, ${c.journal} journal rows)`;
 }
 
+/** For /api/health: where the state lives ({kind: 'sqlite', schema} | {kind: 'files'}). */
+export function storageInfo(env = process.env) { try { const d = activeDb(env); return d ? { kind: 'sqlite', schema: d.version() } : { kind: 'files' }; } catch { return { kind: 'error' }; } }
+
 // ---- the stores, in the shapes their JSON versions have ----
 
 /** lib/auth.js createIdentityStore */

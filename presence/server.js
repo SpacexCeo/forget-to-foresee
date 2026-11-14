@@ -4,6 +4,7 @@
 //                     PRESENCE_DATA_DIR: the folder of chat-history.json, the rooms' last lines and actions; unset keeps them in memory only)
 // GET /health -> counts only. WebSocket on /presence (or /).
 import http from 'node:http';
+import { pathToFileURL } from 'node:url';
 import { createHash } from 'node:crypto';
 import { handshake, wrapSocket } from './lib/ws.js';
 import { createHub, LIMITS } from './lib/hub.js';
@@ -86,7 +87,7 @@ export function createPresence({ env = process.env, now = () => Date.now(), log 
   return { server, hub, sockets, history };
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) { // also true on Windows
   const port = Number(process.env.PORT) || 8788, host = process.env.HOST || '0.0.0.0';
   let made;
   try { made = createPresence(); }

@@ -46,5 +46,8 @@ jobs:
       - name: presence
         working-directory: presence
         run: npm test
+      - name: database (data layer, the import from JSON files, backups)
+        working-directory: db
+        run: npm test
       - name: transaction counter (recorded pages, no network)
         run: node --test tools/count/count.test.mjs
