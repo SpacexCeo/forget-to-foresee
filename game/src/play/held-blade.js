@@ -149,10 +149,12 @@ export function createHeldBlade({ THREE, model, held, fetchGltf, hasModelFile, m
       if (on && on.root !== root) detach();
       if (!on && want && sword && root) attach(root);
       if (!on) return;
+      const was = shown;
       on.holder.visible = want; shown = want;
       // the mixer has just written the knuckle bones: the closed hand goes on top of whatever clip plays
       if (want) for (const [bone, q] of on.bones) bone.quaternion.copy(q);
-      else for (const [bone, , rest] of on.bones) if (!/^(fingers|index|thumb)_R$/.test(bone.name)) bone.quaternion.copy(rest);
+      // put away: the hand opens once and the clips own the fingers again (a reset every frame froze them in the attach-time pose)
+      else if (was) for (const [bone, , rest] of on.bones) if (!/^(fingers|index|thumb)_R$/.test(bone.name)) bone.quaternion.copy(rest);
     },
     dispose() { detach(); sword = null; },
   };
