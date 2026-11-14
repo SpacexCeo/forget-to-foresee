@@ -110,6 +110,10 @@
     .boot .boot-reel.on { opacity: .55; }
     .boot:has(.boot-reel.on) .boot-stage::before { content: ""; position: absolute; inset: -40%; pointer-events: none; background: radial-gradient(ellipse at 50% 50%, rgba(4, 8, 10, .25), rgba(4, 8, 10, .75) 75%); }
     #boot.boot--failed .boot-reel { display: none; }
+    /* owner 14.11: the loading screen is only the reel, the text and the bar; the line-art diagram, the planets, the
+       globe and the noise/nebula layers stay in the markup but are not drawn */
+    .boot .boot-diagram, .boot .boot-bodies, .boot .boot-world, .boot .boot-halo { display: none; }
+    .boot::before, .boot::after { content: none; }
     @media (prefers-reduced-motion: reduce) { .boot .boot-line i, .boot .boot-line b, .boot .boot-log li { transition: none; } .boot::after, .boot .boot-line b, .boot .boot-diagram .bd-sign, .boot .boot-log li:first-child::after { animation: none; } }
     html[data-motion="reduce"] .boot .boot-line i, html[data-motion="reduce"] .boot .boot-line b { transition: none; }
     html[data-motion="reduce"] .boot::after, html[data-motion="reduce"] .boot .boot-line b, html[data-motion="reduce"] .boot .boot-diagram .bd-sign, html[data-motion="reduce"] .boot .boot-log li:first-child::after { animation: none; }
