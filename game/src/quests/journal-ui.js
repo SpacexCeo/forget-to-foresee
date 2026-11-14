@@ -56,7 +56,7 @@ const CSS = `
 .fj-main{display:block;width:calc(100% - 24px);margin:8px 12px;padding:10px 14px;border-radius:10px;border:1px solid var(--ftf-gold, #c5a469);background:rgba(197,164,105,.12);text-align:left}
 .fj-main small{display:block;font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--ftf-gold, #c5a469)}.fj-main b{display:block;font-size:16px}.fj-main span{display:block;font-size:14px;color:var(--ftf-text, #eef0ea)}
 .fj-main.is-locked{border-color:var(--ftf-border, rgba(197,164,105,.4));background:rgba(255,255,255,.04)}.fj-main.is-locked span{color:var(--ftf-muted, #aab6b0)}
-.fj-next{margin:0 0 16px;padding:10px 14px;border-left:3px solid var(--ftf-gold, #c5a469);background:rgba(197,164,105,.10);border-radius:0 10px 10px 0;font-weight:700}.fj-next small{display:block;font-size:12px;letter-spacing:.08em;color:var(--ftf-gold, #c5a469)}
+.fj-next{margin:0 0 16px;padding:10px 14px;border:1px solid var(--ftf-gold, #c5a469);background:rgba(197,164,105,.10);border-radius:10px;font-weight:700}.fj-next small{display:block;font-size:12px;letter-spacing:.08em;color:var(--ftf-gold, #c5a469)}
 @media (max-width:899px){.fj{width:100vw;height:100vh;border-radius:0}.fj-body{grid-template-columns:1fr}.fj-row{min-height:72px}
  .fj.show-detail .fj-rail{display:none}.fj:not(.show-detail) .fj-detail{display:none}.fj-back-btn{display:inline-block}.fj-detail{padding:20px}}
 html[data-motion=reduce] .fj.fj-anim{animation:none}
