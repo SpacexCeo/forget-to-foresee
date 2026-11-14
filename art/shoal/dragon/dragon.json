@@ -88,11 +88,11 @@
   "nv": 10
  },
  "saddle": {
-  "_": "Seat socket on the back between the wing roots and the hips.",
+  "_": "Seat socket on the back, 1.05 m behind the wing roots (y -2.15) so the spread wing arm never crosses the girths or the rider's thigh, and in front of the thighs. z = the back's height + 0.17 (build_saddle.py prints it).",
   "pos": [
    0,
-   -1.3,
-   3.2
+   -1.1,
+   3.13
   ]
  },
  "joints": {
