@@ -1,6 +1,7 @@
-// The Shell monument (story K2, docs/leaderboard.md): a nacre spiral shell standing on a carved plinth (owner 12.11:
+// The Shell monument (story K2, docs/leaderboard.md): a nacre spiral shell floating over its anchor (owner 14.11: no
+// plinth; it bobs on a damped spring and swings away when walked into, then settles back) (owner 12.11:
 // "more mystical"): the whorls shift between pearl, rose and sea-green, the mouth of the shell glows from inside
-// and breathes, its lip and the plinth's band are engraved. Beside the spawn opposite the Gate-Loom. Procedural
+// and breathes, its lip is engraved. Beside the spawn opposite the Gate-Loom. Procedural
 // (no new art file, no extra pass). E in reach ("Read the Shell") opens the board
 // panel (ui/board-panel.js): the latest snapshot (game/public/board/latest.json, else the relayer's /api/board/latest)
 // and the player's own row recomputed from the local expedition log. Behind ?story=1 (boot-world loads it lazily).
@@ -9,6 +10,9 @@ import { scoreAccount } from '../game/board-score.js';
 import { renderBoardPanel } from '../ui/board-panel.js';
 
 /** Town-local metres: to Iris's left in the first frame, mirroring the Gate-Loom (4, 0, 22.5) across the spawn path. */
+/** The shell's float: height of its lowest whorl over the cobbles, and its spring (stiffness, damping, her push, reach, leash). */
+export const SHELL_FLOAT_Y = 0.55;
+export const SPRING = Object.freeze({ k: 14, c: 2.6, push: 42, reach: 1.0, max: 0.9 });
 export const BOARD_TOWN = Object.freeze([-4, 0, 22.5]);
 export const BOARD_REACH = 2.6;
 
@@ -49,17 +53,8 @@ export function createTownBoard({ scene, position, facing = 0, i18n, log = () =>
   root.position.set(position[0], position[1], position[2]); root.rotation.y = facing;
   const disposables = [];
   const own = (x) => { disposables.push(x); return x; };
-  const stone = own(new THREE.MeshStandardMaterial({ color: 0x4a4d53, roughness: 0.9, flatShading: true }));
   const nacre = own(new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.24, metalness: 0.22, emissive: new THREE.Color(0x1c2a2c), emissiveIntensity: 0.35 }));
   const seamMat = own(new THREE.MeshBasicMaterial({ color: 0x8fe2d6, toneMapped: false }));
-  // the plinth: two stacked drums, a bead between them and an engraved band that glows faintly
-  const plinth = new THREE.Mesh(own(new THREE.CylinderGeometry(0.78, 0.95, 0.34, 10)), stone); plinth.position.y = 0.17;
-  const drum = new THREE.Mesh(own(new THREE.CylinderGeometry(0.6, 0.7, 0.3, 10)), stone); drum.position.y = 0.49;
-  const bandTex = own((() => { const w = 128, h = 8, d = new Uint8Array(w * h * 4); let q = 11; const rnd = () => (q = (q * 16807) % 2147483647) / 2147483647;
-    for (let g = 0; g < 20; g++) { const x0 = Math.floor(g * w / 20) + 1; for (let k = 0; k < 3; k++) { const x = x0 + Math.floor(rnd() * 4), y0 = 1 + Math.floor(rnd() * 3), len = 2 + Math.floor(rnd() * 4); for (let y = y0; y < Math.min(h - 1, y0 + len); y++) { const j = (y * w + x) * 4; d[j] = d[j + 1] = d[j + 2] = d[j + 3] = 255; } } }
-    const t = new THREE.DataTexture(d, w, h, THREE.RGBAFormat); t.wrapS = THREE.RepeatWrapping; t.magFilter = THREE.LinearFilter; t.minFilter = THREE.LinearFilter; t.needsUpdate = true; return t; })());
-  const bandMat = own(new THREE.MeshStandardMaterial({ color: 0xcfc8b6, roughness: 0.6, emissive: new THREE.Color(0x39d6c4), emissiveMap: bandTex, emissiveIntensity: 1.1 }));
-  const band = new THREE.Mesh(own(new THREE.CylinderGeometry(0.71, 0.71, 0.09, 24, 1, true)), bandMat); band.position.y = 0.36;
   // the shell: a tube wound on a growing spiral (2.6 turns), its radius growing with it; colours shift along the whorls
   const TURNS = 2.6, NU = 96, NV = 14, pos = [], col = [], idx = [], c = new THREE.Color();
   const frame = (u) => { const th = u * TURNS * Math.PI * 2, R = 0.045 * Math.exp(0.42 * th / (Math.PI)) , r = R * 0.62; return { th, R, r }; };
@@ -81,7 +76,7 @@ export function createTownBoard({ scene, position, facing = 0, i18n, log = () =>
   const mouth = new THREE.Mesh(own(new THREE.CircleGeometry(end.r * 0.92, 24)), glowMat); mouth.position.copy(mouthAt).addScaledVector(mouthDir, -0.03); mouth.lookAt(mouthAt.clone().add(mouthDir));
   const seam = new THREE.Mesh(own(new THREE.TorusGeometry(end.r * 1.02, 0.03, 6, 32)), seamMat); seam.position.copy(mouthAt); seam.lookAt(mouthAt.clone().add(mouthDir));
   shell.add(body, mouth, seam);
-  // stand it on the plinth: the widest whorl down, the mouth turned up toward the visitor
+  // the widest whorl down, the mouth turned up toward the visitor
   const box = new THREE.Box3().setFromBufferAttribute(shellGeo.attributes.position);
   shell.rotation.z = -end.th + Math.PI * 0.62; shell.position.set(0, 0.64 + (box.max.y - box.min.y) * 0.5, 0); shell.rotation.y = 0.35;
   // a soft pool of light on the cobbles: a radial falloff, never a flat disc
@@ -90,7 +85,17 @@ export function createTownBoard({ scene, position, facing = 0, i18n, log = () =>
     fragmentShader: /* glsl */`uniform vec3 uColor; uniform float uOpacity; varying vec2 vUv; void main() { float r = length(vUv * 2.0 - 1.0); gl_FragColor = vec4(uColor, uOpacity * pow(max(1.0 - r, 0.0), 2.0)); }`,
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, fog: false }));
   const pool = new THREE.Mesh(own(new THREE.PlaneGeometry(4.4, 4.4)), halo); pool.rotation.x = -Math.PI / 2; pool.position.y = 0.03;
-  root.add(plinth, drum, band, shell, pool);
+  // no plinth (owner 14.11): the shell levitates over its anchor, a faint ring of light on the cobbles and a hairline
+  // tether up to it; walking into it pushes it away and a damped spring brings it back, with a little wobble
+  const anchorMat = own(new THREE.MeshBasicMaterial({ color: 0x8fe2d6, transparent: true, opacity: 0.45, toneMapped: false, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+  const anchorRing = new THREE.Mesh(own(new THREE.RingGeometry(0.42, 0.46, 40)), anchorMat); anchorRing.rotation.x = -Math.PI / 2; anchorRing.position.y = 0.04; anchorRing.name = 'story_shell_anchor';
+  const tetherGeo = own(new THREE.BufferGeometry()); tetherGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
+  const tetherMat = own(new THREE.LineBasicMaterial({ color: 0x8fe2d6, transparent: true, opacity: 0.35, depthWrite: false }));
+  const tether = new THREE.Line(tetherGeo, tetherMat); tether.frustumCulled = false; tether.name = 'story_shell_tether';
+  const hover = new THREE.Group(); hover.name = 'story_shell_float'; hover.add(shell);
+  const restY = shell.position.y - 0.64 + SHELL_FLOAT_Y; shell.position.y = 0;
+  hover.position.y = restY;
+  root.add(anchorRing, tether, hover, pool);
   scene.add(root);
 
   let panel = null, view = null, snapshot = null, loaded = false, tab = 'human';
@@ -110,6 +115,23 @@ export function createTownBoard({ scene, position, facing = 0, i18n, log = () =>
     if (!keyHandler) { keyHandler = (e) => { if (e.key === 'Escape') close(); }; win.addEventListener('keydown', keyHandler); }
   }
 
+  // the float: a 2-D damped spring in the root's own frame (x across, z along), pushed by her body when she walks in
+  const sp = { x: 0, z: 0, vx: 0, vz: 0 };
+  let lastT = 0;
+  const cosF = Math.cos(facing), sinF = Math.sin(facing);
+  function floatStep(pos, dt, time) {
+    let fx = -SPRING.k * sp.x - SPRING.c * sp.vx, fz = -SPRING.k * sp.z - SPRING.c * sp.vz;
+    if (pos) {                                               // her body: world offset to the shell, turned into the root's frame
+      const wx = root.position.x - pos[0], wz = root.position.z - pos[2];
+      const lx = wx * cosF - wz * sinF + sp.x, lz = wx * sinF + wz * cosF + sp.z, d = Math.hypot(lx, lz);
+      if (d < SPRING.reach && d > 1e-4 && Math.abs(pos[1] - root.position.y) < 2.5) { const k = SPRING.push * (1 - d / SPRING.reach); fx += (lx / d) * k; fz += (lz / d) * k; }
+    }
+    sp.vx += fx * dt; sp.vz += fz * dt; sp.x += sp.vx * dt; sp.z += sp.vz * dt;
+    const r = Math.hypot(sp.x, sp.z); if (r > SPRING.max) { sp.x *= SPRING.max / r; sp.z *= SPRING.max / r; sp.vx *= 0.5; sp.vz *= 0.5; } // never drifts off its anchor
+    hover.position.set(sp.x, restY + 0.07 * Math.sin(time * 1.2), sp.z);
+    hover.rotation.set(sp.vz * 0.18, 0.3 * Math.sin(time * 0.25), -sp.vx * 0.18);   // it leans with the swing and sways a little
+    const a = tetherGeo.attributes.position; a.setXYZ(0, 0, 0.04, 0); a.setXYZ(1, hover.position.x, hover.position.y - 0.25, hover.position.z); a.needsUpdate = true;
+  }
   const spot = {
     id: 'shell_board',
     near: (pos) => { const at = root.position; return Math.hypot(pos[0] - at.x, pos[2] - at.z) <= BOARD_REACH && Math.abs(pos[1] - at.y) < 3; },
@@ -121,10 +143,12 @@ export function createTownBoard({ scene, position, facing = 0, i18n, log = () =>
     root, spot,
     get open() { return !!panel; }, get snapshot() { return snapshot; },
     openPanel: open, close,
-    /** Per frame: a panel closes when she walks off; the seam breathes. */
+    /** Per frame: a panel closes when she walks off; the seam breathes; the shell floats on its spring. */
     update(pos, time = 0) {
+      const dt = Math.min(0.05, Math.max(0, time - lastT)); lastT = time;
+      if (dt > 0) floatStep(pos, dt, time);
       const k = 0.5 + 0.5 * Math.sin(time * 1.1);          // a gentle pulse: the mouth, its lip and the band breathe together
-      seamMat.color.setHSL(0.47, 0.6, 0.6 + 0.1 * k); glowMat.opacity = 0.6 + 0.3 * k; halo.uniforms.uOpacity.value = 0.16 + 0.1 * k; bandMat.emissiveIntensity = 0.8 + 0.5 * k; nacre.emissiveIntensity = 0.3 + 0.12 * k;
+      seamMat.color.setHSL(0.47, 0.6, 0.6 + 0.1 * k); glowMat.opacity = 0.6 + 0.3 * k; halo.uniforms.uOpacity.value = 0.16 + 0.1 * k; anchorMat.opacity = 0.35 + 0.2 * k; nacre.emissiveIntensity = 0.3 + 0.12 * k;
       if (panel && pos) { const at = root.position; if (Math.hypot(pos[0] - at.x, pos[2] - at.z) > BOARD_REACH + 2) close(); }
     },
     setActive(on) { root.visible = !!on; if (!on) close(); },

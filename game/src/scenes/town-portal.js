@@ -1,8 +1,9 @@
 // The Gate-Loom (story P1/P5, docs/plans/story/FTF-Story-Quests-Leaderboard-TZ.md §6.7): a portal standing where Iris
-// arrived in the hill town, the goal of the Expedition. Procedural (no new art file): a woven gate (owner 12.11: "more
-// mystical"): a dark weathered stone arch on a stepped base with a bone-white inner band of glowing glyphs, loom
-// threads strung across the opening, a slow swirling veil inside (one small shader: layered noise, deep indigo to
-// teal, faint stars), drifting motes, a pool of light on the cobbles and one soft light; four states: dormant (fee
+// arrived in the hill town, the goal of the Expedition. Procedural (no new art file). Minimal (owner 14.11: keep the
+// swirl, drop the heavy arch and the steps): a slim floating frame of light (a hairline outline and a thin band of
+// glowing glyphs) around a slow swirling veil (one small shader: layered noise, deep indigo to teal, faint stars),
+// hovering above the cobbles and breathing up and down; drifting motes, a pool of light on the cobbles under it and one
+// soft light; four states: dormant (fee
 // not met: indigo veil, teal glyphs), ready (fee met: the veil opens gold, the glyphs burn gold), spent (after the
 // twist: the veil is gone, the stone is cold), off (story flag off: nothing is created). E in reach shows its
 // line through the town's prompt; in `ready` a confirmation says what happens before the fee is paid. Behind ?story=1.
@@ -14,6 +15,8 @@ import { formatSilkC } from '../net/silk-core.js';
 /** Town-local metres beside the spawn, to Iris's right in the first frame (the spawn is (0, 0, 25), she faces -z). */
 export const PORTAL_TOWN = Object.freeze([4.4, 0, 24.8]);      // clear of the standing mirror at (2.8, 0, 21.5) and of the stall posts further right
 export const PORTAL_REACH = 3;
+/** How high the frame floats above the ground (metres). */
+export const FLOAT_Y = 0.42;
 
 /** The portal's state from the story phase and the balance (pure). */
 export function portalState({ on = false, phase = 'off', balanceC = 0, onChainC = null, feeC = EXPEDITION.PORTAL_FEE_C } = {}) {
@@ -108,30 +111,14 @@ export function createTownPortal({ scene, position, facing = 0, i18n, read, onPa
   root.position.set(position[0], position[1], position[2]); root.rotation.y = facing;
   const disposables = [];
   const own = (x) => { disposables.push(x); return x; };
-  // the arch: dark weathered stone, faceted; inside it a thinner bone-white band that carries the glyphs
-  const curve = new THREE.CatmullRomCurve3(archPoints());
-  const stoneMat = own(new THREE.MeshStandardMaterial({ color: 0x3a3d44, roughness: 0.92, metalness: 0.0, flatShading: true }));
-  const ring = new THREE.Mesh(own(new THREE.TubeGeometry(curve, 44, 0.2, 6, false)), stoneMat); ring.name = 'story_portal_ring';
+  // the frame of light: a hairline outline, closed under the veil (it floats), and inside it a thin band of glyphs
+  const frameMat = own(new THREE.MeshBasicMaterial({ color: LOOK.dormant.glyph, transparent: true, opacity: 0.9, toneMapped: false, depthWrite: false, blending: THREE.AdditiveBlending }));
+  const ring = new THREE.Mesh(own(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(archPoints(40, 1.2, 2.98), true), 96, 0.022, 5, true)), frameMat); ring.name = 'story_portal_ring';
   const glyphs = own(glyphTexture());
-  const bandMat = own(new THREE.MeshStandardMaterial({ color: 0xd8d0be, roughness: 0.6, emissive: new THREE.Color(LOOK.dormant.glyph), emissiveMap: glyphs, emissiveIntensity: 1.4 }));
+  const bandMat = own(new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 0.6, emissive: new THREE.Color(LOOK.dormant.glyph), emissiveMap: glyphs, emissiveIntensity: 1.4, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
   const inner = new THREE.CatmullRomCurve3(archPoints(40, 1.08, 2.86));
-  const band = new THREE.Mesh(own(new THREE.TubeGeometry(inner, 60, 0.07, 6, false)), bandMat); band.position.z = 0.02; band.name = 'story_portal_band';
+  const band = new THREE.Mesh(own(new THREE.TubeGeometry(inner, 60, 0.035, 6, false)), bandMat); band.position.z = 0.02; band.name = 'story_portal_band';
   glyphs.repeat.set(3, 1);
-  // a stepped base and two capstones at the feet
-  const base = new THREE.Mesh(own(new THREE.BoxGeometry(3.4, 0.14, 1.3)), stoneMat); base.position.y = 0.07;
-  const step = new THREE.Mesh(own(new THREE.BoxGeometry(2.9, 0.12, 0.9)), stoneMat); step.position.y = 0.2;
-  const footGeo = own(new THREE.CylinderGeometry(0.3, 0.36, 0.5, 6));
-  const feet = [-1, 1].map((sx) => { const m = new THREE.Mesh(footGeo, stoneMat); m.position.set(sx * 1.08, 0.5, 0); return m; });
-  // loom threads: thin warp lines from the arch down to the step, a few of them slack
-  const tp = [];
-  for (let i = 0; i < 17; i++) {
-    const x = -0.92 + i * 0.115, top = 0.12 + Math.sqrt(Math.max(0, 1 - (x / 1.08) ** 2)) * 2.86 * (0.74 + 0.26 * Math.sqrt(Math.max(0, 1 - (x / 1.08) ** 2))) - 0.08;
-    const sag = i % 4 === 1 ? 0.05 : 0;
-    tp.push(x, top, -0.03, x + sag, top * 0.5, -0.03, x + sag, top * 0.5, -0.03, x, 0.27, -0.03);
-  }
-  const threadGeo = own(new THREE.BufferGeometry()); threadGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(tp), 3));
-  const threadMat = own(new THREE.LineBasicMaterial({ color: 0xcfe9e2, transparent: true, opacity: 0.42, depthWrite: false }));
-  const threads = new THREE.LineSegments(threadGeo, threadMat);
   // the veil: an oval inside the arch, one small shader
   const discMat = own(new THREE.ShaderMaterial({ uniforms: { uTime: { value: 0 }, uOpacity: { value: LOOK.dormant.veil }, uFlare: { value: 0 }, uDeep: { value: new THREE.Color(LOOK.dormant.deep) }, uBright: { value: new THREE.Color(LOOK.dormant.bright) } },
     vertexShader: VEIL_VERT, fragmentShader: VEIL_FRAG, transparent: true, depthWrite: false, side: THREE.DoubleSide, toneMapped: false, fog: false }));
@@ -144,16 +131,18 @@ export function createTownPortal({ scene, position, facing = 0, i18n, read, onPa
     vertexShader: VEIL_VERT, fragmentShader: /* glsl */`uniform vec3 uColor; uniform float uOpacity; varying vec2 vUv; void main() { float r = length(vUv * 2.0 - 1.0); gl_FragColor = vec4(uColor, uOpacity * pow(max(1.0 - r, 0.0), 1.6)); }`,
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, fog: false }));
   const pool = new THREE.Mesh(own(new THREE.PlaneGeometry(5.2, 4.2)), poolMat); pool.rotation.x = -Math.PI / 2; pool.position.set(0, 0.16, 0.9); pool.renderOrder = 1;
-  root.add(base, step, ...feet, ring, band, threads, disc, pool);
+  const lift = new THREE.Group(); lift.name = 'story_portal_float'; lift.position.y = FLOAT_Y; // the gate hovers; the pool stays on the cobbles
+  lift.add(ring, band, disc);
+  root.add(lift, pool);
   let glow = null;
-  if (light) { glow = new THREE.PointLight(LOOK.dormant.light, LOOK.dormant.intensity, 7, 2); glow.position.set(0, 1.5, 0.7); root.add(glow); }
+  if (light) { glow = new THREE.PointLight(LOOK.dormant.light, LOOK.dormant.intensity, 7, 2); glow.position.set(0, 1.5, 0.7); lift.add(glow); }
   let motes = null;
   if (!reducedMotion) {
     const n = 40, pos = new Float32Array(n * 3), seed = new Float32Array(n);
     for (let i = 0; i < n; i++) { seed[i] = (i * 0.618) % 1; pos[i * 3] = (seed[i] * 2 - 1) * 1.15; pos[i * 3 + 1] = 0.4 + ((i * 0.381) % 1) * 2.6; pos[i * 3 + 2] = 0.15 + ((i * 0.733) % 1) * 0.9; }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     motes = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xbfeee6, size: 0.06, transparent: true, opacity: 0.8, depthWrite: false, blending: THREE.AdditiveBlending }));
-    motes.userData.seed = seed; root.add(motes);
+    motes.userData.seed = seed; lift.add(motes);
   }
   scene.add(root);
 
@@ -164,7 +153,7 @@ export function createTownPortal({ scene, position, facing = 0, i18n, read, onPa
     const L = LOOK[s] || LOOK.dormant;
     discMat.uniforms.uDeep.value.setHex(L.deep); discMat.uniforms.uBright.value.setHex(L.bright); discMat.uniforms.uOpacity.value = L.veil; discMat.uniforms.uFlare.value = 0;
     bandMat.emissive.setHex(L.glyph); bandMat.emissiveIntensity = s === 'ready' ? 2.2 : s === 'spent' ? 0 : 1.4;
-    threadMat.opacity = s === 'spent' ? 0.14 : 0.42; poolMat.uniforms.uColor.value.setHex(L.light); poolMat.uniforms.uOpacity.value = L.pool;
+    frameMat.color.setHex(s === 'spent' ? 0x2a3238 : L.glyph); frameMat.opacity = s === 'spent' ? 0.35 : 0.9; poolMat.uniforms.uColor.value.setHex(L.light); poolMat.uniforms.uOpacity.value = L.pool;
     if (glow) { glow.color.setHex(L.light); glow.intensity = L.intensity; }
   }
 
@@ -215,6 +204,7 @@ export function createTownPortal({ scene, position, facing = 0, i18n, read, onPa
       if (state === 'spent') return;
       if (glow) { const want = (LOOK[state] || LOOK.dormant).intensity * (1 + 0.5 * fed); glow.intensity += (want - glow.intensity) * Math.min(1, dt * 1.5); } // a flare settles back
       if (!reducedMotion) {
+        lift.position.y = FLOAT_Y + 0.06 * Math.sin(time * 0.8);  // it breathes up and down above the cobbles
         const L = LOOK[state] || LOOK.dormant, breath = 0.9 + 0.1 * Math.sin(time * 1.3);
         discMat.uniforms.uTime.value = time * (state === 'ready' ? 1.6 : 1); discMat.uniforms.uOpacity.value = L.veil * breath;
         discMat.uniforms.uFlare.value = Math.max(0, discMat.uniforms.uFlare.value - dt * 0.8);
