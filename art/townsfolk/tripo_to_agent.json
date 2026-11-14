@@ -1,0 +1,11 @@
+{
+ "_": "A Tripo rig (BoneRoot, Hip, L_Thigh ...) to the town's shared agent rig names (art/townsfolk/tripo_person.py --rename). The bones left out (Pelvis, Waist, the twist and share bones, the finger joints past the first) keep their Tripo names and follow their parents at rest.",
+ "BoneRoot": "root", "Hip": "pelvis", "Spine01": "spine", "Spine02": "chest", "NeckTwist01": "neck", "Head": "head",
+ "L_Eye": "eye_L", "R_Eye": "eye_R",
+ "L_Clavicle": "shoulder_L", "L_Upperarm": "upperarm_L", "L_Forearm": "forearm_L", "L_Hand": "hand_L",
+ "L_Thumb1": "thumb_L", "L_Index1": "index_L", "L_Mid1": "fingers_L",
+ "R_Clavicle": "shoulder_R", "R_Upperarm": "upperarm_R", "R_Forearm": "forearm_R", "R_Hand": "hand_R",
+ "R_Thumb1": "thumb_R", "R_Index1": "index_R", "R_Mid1": "fingers_R",
+ "L_Thigh": "thigh_L", "L_Calf": "shin_L", "L_Foot": "foot_L", "L_ToeBase": "toe_L",
+ "R_Thigh": "thigh_R", "R_Calf": "shin_R", "R_Foot": "foot_R", "R_ToeBase": "toe_R"
+}
