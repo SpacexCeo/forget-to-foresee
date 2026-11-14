@@ -71,12 +71,17 @@ export function installGameCursor({ base = '/', sceneState = () => null, canvas 
     host.style.setProperty('--gc-strip', `url("${base}${CURSOR_BASE}cursor_${next}_frames.png")`);
     host.style.setProperty('--gc-hx', hx + 'px'); host.style.setProperty('--gc-hy', hy + 'px');
   };
+  const topModal = () => { try { return doc.querySelector('dialog:modal'); } catch { return doc.querySelector('dialog[open]'); } };
   const locked = () => !!doc.pointerLockElement;   // mouse aim: the crosshair is the cursor
   const refresh = () => set(cursorFor(over, { scene: sceneState(), booting: !!doc.getElementById('boot'), canvas: canvas() }));
   const move = (e) => {
     if (e.pointerType && e.pointerType !== 'mouse') { host.hidden = true; return; }
     x = e.clientX; y = e.clientY; over = e.target;
-    host.hidden = locked();
+    // a modal <dialog> (the menu, Settings) sits in the browser's top layer, above any z-index: our element would hide
+    // under it, so over an open modal the system pointer comes back (owner 14.11: "the cursor does not work in the menu")
+    const modal = topModal();
+    doc.documentElement.classList.toggle('ftf-gc-on', !modal);
+    host.hidden = locked() || !!modal;
     host.style.setProperty('--gc-x', x + 'px'); host.style.setProperty('--gc-y', y + 'px');
     refresh();
   };
