@@ -2086,5 +2086,11 @@ export default {
   "skin.locked": "转盘大奖",
   "skin.lockedElise": "第一天之后",
   "wheel.grand": "大奖",
+  "nft.collection": "可赢取的卡牌",
+  "nft.owned": "已拥有",
+  "nft.card.pass": "白名单通行证",
+  "nft.how.wheel": "幸运转盘的大奖",
+  "nft.how.hatch": "守巢人决定谁已准备好",
+  "nft.how.pass": "赛季结束时获得",
   ...quests, // last: the journal, the tracker and the starter guide (en-quests.js keys) replace older copies above
 };

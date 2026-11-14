@@ -2087,5 +2087,11 @@ export default {
   "skin.locked": "Il primo premio della ruota",
   "skin.lockedElise": "Dopo il primo giorno",
   "wheel.grand": "Primo premio",
+  "nft.collection": "Carte da guadagnare",
+  "nft.owned": "Tua",
+  "nft.card.pass": "Pass whitelist",
+  "nft.how.wheel": "Il primo premio della Ruota della fortuna",
+  "nft.how.hatch": "Il Custode dei Nidi decide chi è pronto",
+  "nft.how.pass": "Si ottiene alla fine di una stagione",
   ...quests, // last: the journal, the tracker and the starter guide (en-quests.js keys) replace older copies above
 };

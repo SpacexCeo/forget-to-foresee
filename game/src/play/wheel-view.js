@@ -155,7 +155,7 @@ export function renderWheel({ doc = document, t, wheel, items = [], base = '/', 
     card.className = 'wv-card wv-r-' + seg.rarity;
     const art = el('div', 'wv-art');
     const href = p.item ? itemIcon(p.item) : null;
-    if (seg.kind === 'skin') { const img = el('img', 'wv-skin'); img.src = base + 'assets/cards/sheriffchenko_m.webp'; img.alt = ''; art.append(img); } // the painted skin (night 14.11)
+    if (seg.kind === 'skin') { const img = el('img', 'wv-skin'); img.src = base + 'assets/nft/sherif_card_m.webp'; img.alt = ''; art.append(img); } // the NFT card she has won (owner 14.11)
     else if (href) { const img = el('img'); img.src = href; img.alt = ''; art.append(img); }
     else { const s = svg('svg', { viewBox: '-16 -16 32 32', width: 72, height: 72, 'aria-hidden': 'true' }); s.innerHTML = GLYPH[seg.kind] || GLYPH.part; art.append(s); }
     const name = el('b', 'wv-name', nameOf(p, seg));
@@ -254,7 +254,7 @@ export const WHEEL_CSS = `
 .wv-card { margin: 10px 0; padding: 14px; border-radius: 14px; border: 2px solid var(--wv-frame, #d9b26a); background: radial-gradient(circle at 50% 0, rgba(255,255,255,.08), rgba(0,0,0,.25)); box-shadow: 0 0 22px color-mix(in srgb, var(--wv-frame, #d9b26a) 45%, transparent); display: grid; justify-items: center; gap: 6px; text-align: center; animation: wv-pop .35s cubic-bezier(.2,1.4,.4,1); }
 @keyframes wv-pop { from { transform: scale(.7); opacity: 0; } }
 .wv-art img, .wv-art svg { width: 84px; height: 84px; display: block; }
-.wv-art img.wv-skin { width: auto; height: 150px; filter: drop-shadow(0 6px 12px rgba(0,0,0,.5)); }
+.wv-art img.wv-skin { width: auto; height: 150px; border-radius: 10px; filter: drop-shadow(0 6px 12px rgba(0,0,0,.5)); }
 .wv-gp { display: grid; grid-template-columns: 76px 1fr; gap: 12px; align-items: center; margin: 12px 0 4px; padding: 10px 12px; border-radius: 14px; border: 1px solid rgba(255,215,106,.55); background: radial-gradient(circle at 20% 30%, rgba(255,215,106,.18), rgba(0,0,0,.3)); }
 .wv-gp-art { height: 112px; display: grid; place-items: end center; border-radius: 10px; background: radial-gradient(circle at 50% 70%, rgba(255,231,168,.35), transparent 70%); overflow: hidden; }
 .wv-gp-art img { height: 108px; width: auto; filter: drop-shadow(0 4px 8px rgba(0,0,0,.5)); }
