@@ -5,7 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { GRIP } from '../../src/play/grip-pose.js';
-import { canHold, heldBladeFile } from '../../src/play/held-blade.js';
+import { canHold, heldBladeFile, glowBand, BLADE_GLOW } from '../../src/play/held-blade.js';
 
 const DIR = new URL('../../public/assets/models/', import.meta.url);
 const gltf = (f) => { const b = readFileSync(new URL(f, DIR)); return JSON.parse(b.subarray(20, 20 + b.readUInt32LE(12)).toString()); };
@@ -48,4 +48,14 @@ test('held blade: only a model with the finger joints holds it; phones take the 
   assert.equal(heldBladeFile(true, both), 'loomblade_m');
   assert.equal(heldBladeFile(true, (n) => n === 'loomblade'), 'loomblade');
   assert.equal(heldBladeFile(false, () => false), null);
+});
+
+test('held blade glow: the pulse climbs the blade from the guard to the tip once a period', () => {
+  const G = BLADE_GLOW;
+  assert.ok(G.from > 0.15 && G.to < 0.96, 'on the blade, not the hilt');
+  assert.ok(Math.abs(glowBand(G.from, 0) - 1) < 1e-9, 'starts at the guard');
+  const mid = G.from + (G.to - G.from) / 2;
+  assert.ok(Math.abs(glowBand(mid, G.period / 2) - 1) < 1e-9, 'halfway up at half the period');
+  assert.ok(glowBand(G.to, G.period / 2) < 0.01, 'the rest of the blade is quiet');
+  assert.ok(Math.abs(glowBand(mid, G.period * 1.5) - glowBand(mid, G.period / 2)) < 1e-9, 'loops');
 });

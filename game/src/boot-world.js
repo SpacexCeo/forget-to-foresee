@@ -1558,7 +1558,7 @@ function frame() {
   if (play && !inTown) play.update(dt, { focus, moving: movingState, speed, running: player.run && movingState });
   else if (irisAvatar) irisAvatar.update(dt, movingState, avatar, clock.elapsedTime, speed, player.run && movingState, lookdev.reducedMotion, null); // the town: her gait before the season
   // the sword in her hand: after the mixer, so the closed fist sits on top of every clip
-  if (heldBlade) heldBlade.update();
+  if (heldBlade) heldBlade.update(dt, lookdev.reducedMotion);
   else if (!heldBladeLoading && glassShoal && glassShoal.hasBlade && glassShoal.hasBlade()) {
     heldBladeLoading = true;
     import('./play/held-blade.js').then((m) => { heldBlade = m.createHeldBlade({ THREE, fetchGltf: prefetchGltf, hasModelFile, mobile: mobileDevice,
