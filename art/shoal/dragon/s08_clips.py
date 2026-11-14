@@ -39,10 +39,13 @@ LAND, TAKE = 2.4, 1.3
 # ---- the folded wing: the arm back along the flank, the forearm forward again, the fingers back in a fan that
 # hangs along the flank (finger 1 on top, finger 4 lowest), so the membranes between them stand as pleats
 def _folded():
-    p = Pose(); sk.aim(p, 'wing_arm.L', (0.30, 0.93, 0.07)); sk.aim(p, 'wing_fore.L', (0.06, -0.98, -0.14))
-    for i, d in enumerate(((0.04, 0.997, 0.055), (0.05, 0.998, 0.012), (0.06, 0.997, -0.02), (0.07, 0.996, -0.042))):
+    F = [[float(v) for v in d.split(',')] for d in str(A.get('fold', '0.2,0.975,0.09;0.02,-0.99,-0.13;0,1,0.055;0,1,0.012;0,1,-0.02;0,1,-0.042')).split(';')]
+    p = Pose(); sk.aim(p, 'wing_arm.L', F[0]); sk.aim(p, 'wing_fore.L', F[1])
+    for i, d in enumerate(F[2:]):
         a, b = f'wing_f{i + 1}a.L', f'wing_f{i + 1}b.L'; sk.aim(p, a, d, vec=sk.tail[b] - sk.head[a])
-    return p
+    # the closed fan still has slack membrane between the fingers: roll the whole wing about the body's long axis
+    # so that slack hangs down the flank like a cloak instead of standing out sideways
+    p['wing_arm.L'] = q(y=float(A.get('drape', 50))) @ p['wing_arm.L']; return p
 
 
 FOLD = _folded()
@@ -211,6 +214,13 @@ def takeoff(t):
     kf, kh = 1 - sm(0.36, 0.6, T), 1 - sm(0.48, 0.72, T)
     plant(p, dict(hind_l=kh, hind_r=kh, front_l=kf, front_r=kf)); c = p.contact
     p = blend(p, flap(0), sm(1.05, 1.3, T)); p.contact = c; return p
+
+
+if 'probe' in A:   # a quick look at the perched pose (the folded wing) and stop
+    B.apply(idle(0)); rig.animation_data.use_nla = False if rig.animation_data else None
+    d = B.deformed(); w = d[[v for vs in [list(pl.vertices) for pl in mesh.data.polygons if 'wing' in mesh.data.materials[pl.material_index].name] for v in vs]]
+    print('REPORT', json.dumps(dict(step='probe', wing_min=[round(float(v), 2) for v in w.min(0)], wing_max=[round(float(v), 2) for v in w.max(0)])))
+    ortho_views(f'{ROOT}/renders/probe', [mesh], views=('front', 'side', 'top', 'q34'), res=700, box=[[-3, -4.5, 0], [3, 5, 5]], pad=0.75); sys.exit(0)
 
 
 # ---- fit the upstroke fold to the membrane's top-view area (review: <= 0.6 of the downstroke's)
