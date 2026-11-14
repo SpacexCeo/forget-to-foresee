@@ -1,7 +1,8 @@
-// Dr. Iris's laboratory, 2048 (sprint plan 9.7): a procedural room for the prologue, built in code so nothing is
-// downloaded. 10 m (x) by 8 m (z) by 3.4 m, origin at the room's centre. buildLab() returns the scene parts the
-// prologue animates: the door, the red key, the monitors, the ceiling lights, the loose papers and the Glass
-// Resonator (device.js). mount(ctx) is the sprint seam (src/sprint/registry.js, flag `labPrologue`): it offers the
+// Dr. Iris's laboratory, 2048 (sprint plan 9.7). The furnished room is the owner's model (`lab_room`: the north
+// wall with the desk and its screens, two round pads, the side desk), set in a procedural shell: walls, door, window,
+// ceiling. 10 m (x) by 9.4 m (z, the north wall at -5.35) by 3.4 m, origin near the room's centre. buildLab() returns
+// the scene parts the prologue animates: the door, the red key and its console, the monitors, the ceiling lights, the
+// loose papers and the Resonator (device.js; the owner's `lab_device` model stands on the dark pad). mount(ctx) is the sprint seam (src/sprint/registry.js, flag `labPrologue`): it offers the
 // prologue to the intro flow as globalThis.__ftfPrologue.
 import * as THREE from 'three';
 import { buildDevice } from './device.js';
@@ -9,6 +10,18 @@ import { buildDevice } from './device.js';
 const canvasTex = (w, h, draw) => { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; };
 
 /** @returns {{root: THREE.Group, dispose(): void, lights: object, props: object, device: object}} */
+/** The models the lab asks for (public/assets/models), with the light variant on phones when it ships. */
+export const LAB_MODELS = Object.freeze({ room: 'lab_room', device: 'lab_device' });
+/** The round pads of the room model (x, z, radius, top): Iris steps onto them (the prologue lifts her by floorAt). */
+export const LAB_PADS = Object.freeze([{ x: 2.3, z: -3.4, r: 1.3, top: 0.21 }, { x: 3.22, z: 0.42, r: 1.75, top: 0.07 }]);
+
+/** Floor height at (x, z): a pad's top inside it, easing up over its last 15 cm. */
+export function floorAt(x, z, pads = LAB_PADS) {
+  let y = 0;
+  for (const p of pads) { const d = Math.hypot(x - p.x, z - p.z); if (d < p.r) y = Math.max(y, p.top * Math.min(1, (p.r - d) / 0.15)); }
+  return y;
+}
+
 export function buildLab() {
   const root = new THREE.Group(); root.name = 'lab';
   const trash = [];
@@ -17,16 +30,17 @@ export function buildLab() {
 
   // floor (tile grid), walls, ceiling
   const tile = canvasTex(256, 256, (g, w, h) => { g.fillStyle = '#c9ccd0'; g.fillRect(0, 0, w, h); g.strokeStyle = '#a9adb3'; g.lineWidth = 3; g.strokeRect(0, 0, w, h); });
-  tile.wrapS = tile.wrapT = THREE.RepeatWrapping; tile.repeat.set(10, 8); trash.push(tile);
-  box(10, 0.1, 8, mat({ map: tile, roughness: 0.55 }), 0, -0.05, 0);
+  tile.wrapS = tile.wrapT = THREE.RepeatWrapping; tile.repeat.set(10, 9.4); trash.push(tile);
+  const N = -5.35, D = 4.05 - N, ZC = (4.05 + N) / 2;          // the north wall stands behind the room model's own wall
+  box(10, 0.1, D, mat({ map: tile, roughness: 0.55 }), 0, -0.05, ZC);
   const wall = mat({ color: 0xe9e6df }), dark = mat({ color: 0x2c3440 });
-  box(10, 3.4, 0.1, dark, 0, 1.7, -4.05);                       // north: the dark accent wall
+  box(10, 3.4, 0.1, dark, 0, 1.7, N - 0.05);                    // north: the dark accent wall
   box(3.5, 3.4, 0.1, wall, -6.75 + 3.5 / 2 + 1.75, 1.7, 4.05);  // south, left of the door
   box(6.45, 3.4, 0.1, wall, 1.775, 1.7, 4.05);                  // south, right of the door
   box(1.1, 1.2, 0.1, wall, -3, 2.8, 4.05);                      // above the door
-  box(0.1, 3.4, 8, wall, -5.05, 1.7, 0);                        // west
-  box(0.1, 3.4, 3.0, wall, 5.05, 1.7, 2.5); box(0.1, 0.9, 4, wall, 5.05, 0.45, -1); box(0.1, 0.7, 4, wall, 5.05, 3.05, -1); box(0.1, 3.4, 1.0, wall, 5.05, 1.7, -3.5); // east, around the window
-  box(10, 0.1, 8, mat({ color: 0xdedbd4 }), 0, 3.45, 0);
+  box(0.1, 3.4, D, wall, -5.05, 1.7, ZC);                       // west
+  box(0.1, 3.4, 3.0, wall, 5.05, 1.7, 2.5); box(0.1, 0.9, 4, wall, 5.05, 0.45, -1); box(0.1, 0.7, 4, wall, 5.05, 3.05, -1); box(0.1, 3.4, 2.35, wall, 5.05, 1.7, -4.175); // east, around the window
+  box(10, 0.1, D, mat({ color: 0xdedbd4 }), 0, 3.45, ZC);
   // the window: a night-blue skyline strip of 2048
   const sky = canvasTex(512, 256, (g, w, h) => {
     const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#0a1230'); gr.addColorStop(1, '#27407a'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
@@ -38,8 +52,9 @@ export function buildLab() {
   // the door (slides west)
   const door = box(1.1, 2.2, 0.06, mat({ color: 0x8d96a3, roughness: 0.4, metalness: 0.3 }), -3, 1.1, 4.02);
   // the computer desk: two monitors (a pulsing waveform), a keyboard, the red glass key
-  const wood = mat({ color: 0x6b5a4a }), metal = mat({ color: 0x3a3f47, roughness: 0.4, metalness: 0.5 });
-  box(1.8, 0.05, 0.8, wood, 2.2, 0.76, -3.4); for (const [dx, dz] of [[-0.85, -0.35], [0.85, -0.35], [-0.85, 0.35], [0.85, 0.35]]) box(0.05, 0.76, 0.05, metal, 2.2 + dx, 0.38, -3.4 + dz);
+  // the console on the white pad: a white top on one slim column, in the room model's colours
+  const wood = mat({ color: 0xe8ebef, roughness: 0.35 }), metal = mat({ color: 0x3a3f47, roughness: 0.4, metalness: 0.5 });
+  box(1.8, 0.05, 0.8, wood, 2.2, 0.76, -3.4); box(1.2, 0.55, 0.12, wood, 2.2, 0.47, -3.6);
   const screen = document.createElement('canvas'); screen.width = 256; screen.height = 144; const sg = screen.getContext('2d');
   const screenTex = new THREE.CanvasTexture(screen); screenTex.colorSpace = THREE.SRGBColorSpace; trash.push(screenTex);
   const screenMat = new THREE.MeshBasicMaterial({ map: screenTex }); trash.push(screenMat);
@@ -49,7 +64,7 @@ export function buildLab() {
   const keyMat = new THREE.MeshStandardMaterial({ color: 0xc8303a, emissive: 0x7a0a12, emissiveIntensity: 0.6, roughness: 0.2, transparent: true, opacity: 0.92 }); trash.push(keyMat);
   const key = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.04, 0.04, 16), keyMat); key.position.set(2.9, 0.835, -3.1); root.add(key); trash.push(key.geometry);
   // the workbench with loose papers, a mug, a towel
-  box(2.2, 0.05, 0.9, wood, -2.0, 0.86, -2.4); for (const [dx, dz] of [[-1.05, -0.4], [1.05, -0.4], [-1.05, 0.4], [1.05, 0.4]]) box(0.05, 0.86, 0.05, metal, -2.0 + dx, 0.43, -2.4 + dz);
+  box(2.2, 0.05, 0.9, wood, -2.0, 0.86, -2.4); // (white, like the console) for (const [dx, dz] of [[-1.05, -0.4], [1.05, -0.4], [-1.05, 0.4], [1.05, 0.4]]) box(0.05, 0.86, 0.05, metal, -2.0 + dx, 0.43, -2.4 + dz);
   const paperMat = new THREE.MeshStandardMaterial({ color: 0xf4f1e8, roughness: 0.9, side: THREE.DoubleSide }); trash.push(paperMat);
   const paperGeo = new THREE.PlaneGeometry(0.21, 0.3); trash.push(paperGeo); const papers = [];
   for (let i = 0; i < 14; i++) { const p = new THREE.Mesh(paperGeo, paperMat); p.rotation.x = -Math.PI / 2; p.rotation.z = (i * 1.7) % 3; p.position.set(-2.9 + (i % 7) * 0.3, 0.89 + i * 0.001, -2.6 + Math.floor(i / 7) * 0.4); p.userData.home = p.position.clone(); p.userData.spin = 2 + (i * 0.37) % 3; root.add(p); papers.push(p); }
@@ -63,7 +78,7 @@ export function buildLab() {
     g.strokeStyle = '#c0392b'; g.lineWidth = 3; g.beginPath(); g.arc(370, 150, 60, 0, 6.3); g.stroke();
   }); trash.push(board);
   const boardMat = new THREE.MeshBasicMaterial({ map: board }); trash.push(boardMat);
-  const bd = new THREE.Mesh(new THREE.PlaneGeometry(3.5, 2), boardMat); bd.position.set(-2.75, 1.7, -3.99); root.add(bd); trash.push(bd.geometry);
+  const bd = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 1.6), boardMat); bd.position.set(-3.5, 1.7, N + 0.01); root.add(bd); trash.push(bd.geometry);
   // shelves and books on the west wall (instanced)
   for (const y of [0.9, 1.5, 2.1]) box(0.3, 0.04, 3.2, wood, -4.85, y, -0.4);
   const bookGeo = new THREE.BoxGeometry(0.2, 0.26, 0.05); trash.push(bookGeo); const bookMat = new THREE.MeshStandardMaterial({ roughness: 0.8 }); trash.push(bookMat);
@@ -79,7 +94,15 @@ export function buildLab() {
   const stripMat = new THREE.MeshBasicMaterial({ color: 0xffffff }); trash.push(stripMat);
   for (const z of [-2, 1.5]) { const s = new THREE.Mesh(new THREE.BoxGeometry(6, 0.03, 0.2), stripMat); s.position.set(0, 3.38, z); root.add(s); trash.push(s.geometry); }
   const ceil = new THREE.PointLight(0xffffff, 14, 14, 2); ceil.position.set(0, 3.1, 0); root.add(ceil);
-  const device = buildDevice(); device.root.position.set(3.2, 0, 0.4); device.root.rotation.y = -Math.PI / 2; root.add(device.root); // the ring faces west, into the room
+  const device = buildDevice(); device.root.position.set(3.2, LAB_PADS[1].top, 0.4); device.root.rotation.y = -Math.PI / 2; root.add(device.root); // faces west, into the room
+
+  // the owner's room and device models arrive after the film starts building (the prologue fetches them early)
+  const models = [];
+  /** @param {{room?: THREE.Object3D, device?: THREE.Object3D}} m scenes from the glTF loader (cloned here) */
+  function attachModels(m) {
+    if (m.room) { const r = m.room.clone(true); r.name = 'lab_room_model'; r.traverse((o) => { if (o.isMesh) { o.frustumCulled = false; o.receiveShadow = true; } }); root.add(r); models.push(r); }
+    if (m.device) device.attachModel(m.device);
+  }
 
   let screenT = -1;
   /** The monitors: a teal waveform; `armed` shows the warning. */
@@ -94,10 +117,10 @@ export function buildLab() {
   }
   drawScreen(0);
   return {
-    root, device,
+    root, device, attachModels, floorAt,
     lights: { hemi, sun, lamp, ceil, stripMat },
     props: { door, key, keyMat, papers, mug, coat, drawScreen },
-    dispose() { for (const t of trash) t.dispose(); books.dispose(); device.dispose(); },
+    dispose() { for (const t of trash) t.dispose(); books.dispose(); device.dispose(); for (const r of models) root.remove(r); },
   };
 }
 
