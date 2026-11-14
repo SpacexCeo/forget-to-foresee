@@ -32,6 +32,16 @@ export function validateBody(body) {
   return { ok: true, publicKey, nickname: sanitizeNickname(body.nickname) };
 }
 
+/**
+ * The sites the page may be served from: the GitHub Pages origin always, plus a comma list from the env
+ * (FTF_ALLOWED_ORIGINS, or the older ALLOWED_ORIGIN), e.g. the owner's own domain; a trailing slash or path is dropped.
+ */
+export function originList(csv, always = DEFAULTS.origins) {
+  const out = [...always];
+  for (const raw of String(csv || '').split(',')) { const s = raw.trim(); if (!s) continue; let o = s; try { o = new URL(s).origin; } catch { /* kept as typed */ } if (!out.includes(o)) out.push(o); }
+  return out;
+}
+
 /** Allowed origin for the CORS header, or null: the configured sites plus any localhost / 127.0.0.1 port. */
 export function allowOrigin(origin, origins = DEFAULTS.origins) {
   if (typeof origin !== 'string') return null;
@@ -107,7 +117,7 @@ export const envConfig = (env = process.env) => ({
   secretKey: env.FTF_GUEST_KEY || '',
   guests: env.FTF_GUESTS_CONTRACT || DEFAULTS.guests,
   rpcUrls: env.FTF_RPC_URLS ? env.FTF_RPC_URLS.split(',').map((s) => s.trim()).filter(Boolean) : DEFAULTS.rpcUrls,
-  origins: (env.FTF_ALLOWED_ORIGINS || env.ALLOWED_ORIGIN) ? (env.FTF_ALLOWED_ORIGINS || env.ALLOWED_ORIGIN).split(',').map((s) => s.trim()).filter(Boolean) : DEFAULTS.origins,
+  origins: originList(env.FTF_ALLOWED_ORIGINS || env.ALLOWED_ORIGIN, DEFAULTS.origins),
 });
 
 /** The client IP for the rate limit; forwarded headers are trusted only behind a proxy (`trustProxy`). */

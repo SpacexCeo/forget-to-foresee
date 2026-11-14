@@ -1,5 +1,9 @@
 # Builds the browser game (game/) and publishes it to GitHub Pages:
 # https://spacexceo.github.io/forget-to-foresee/  (judges: /?demo=judge)
+# The owner's own domain is one repository variable: Settings -> Secrets and variables -> Actions -> Variables ->
+# FTF_DOMAIN = play.example.com (then Settings -> Pages -> Custom domain, the same name). The build then serves from "/",
+# every public link and og: tag points to https://<domain>/ and a CNAME file ships. FTF_BASE / FTF_SITE_URL override
+# each part alone (game/build/site.js). The relayer and presence servers take the new origin in FTF_ALLOWED_ORIGINS.
 # The whole season runs in the browser (same room code as the agent API), so a static host is enough.
 # One-time setup by the repository owner: Settings -> Pages -> Source: GitHub Actions.
 name: pages
@@ -25,6 +29,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      FTF_DOMAIN: ${{ vars.FTF_DOMAIN }}
+      FTF_BASE: ${{ vars.FTF_BASE || (vars.FTF_DOMAIN && '/') || '/forget-to-foresee/' }}
+      FTF_SITE_URL: ${{ vars.FTF_SITE_URL }}
     defaults:
       run:
         working-directory: game
@@ -38,10 +46,9 @@ jobs:
       - run: npm ci
       - name: Tests (rules parity, HUD, play layer)
         run: npm test
-      - name: Build for the Pages sub-path
+      - name: Build for the Pages path (FTF_BASE above)
         run: npm run build
         env:
-          FTF_BASE: /forget-to-foresee/
           # Day 1: the relayer that signs create_guest server-side (relayer/); no key is built into the page
           VITE_FTF_RELAYER_URL: ${{ vars.FTF_RELAYER_URL }}
       - name: Smoke the built page (fails on any page error or a stuck loading screen)
@@ -50,9 +57,10 @@ jobs:
           npx playwright install --with-deps chromium
           (npx vite preview --port 4173 --strictPort --host 127.0.0.1 > /tmp/preview.log 2>&1 &)
           sleep 4
-          node scripts/smoke-built.mjs "http://127.0.0.1:4173/forget-to-foresee/?day1=0&quest=0" 300
-        env:
-          FTF_BASE: /forget-to-foresee/ # the preview serves the sub-path the build was made for
+          node scripts/smoke-built.mjs "http://127.0.0.1:4173${FTF_BASE}?day1=0&quest=0" 300 # the preview serves the path the build was made for
+      - name: CNAME for the owner's domain (only when FTF_DOMAIN is set)
+        if: ${{ vars.FTF_DOMAIN != '' }}
+        run: echo "$FTF_DOMAIN" > dist/CNAME
       - uses: actions/upload-pages-artifact@v3
         with:
           path: game/dist

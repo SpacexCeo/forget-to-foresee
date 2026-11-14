@@ -1,5 +1,5 @@
 // Standalone relayer: plain Node http serving the same handlers as the serverless entry points in api/.
-// node server.js   (env: FTF_GUEST_KEY, NEARAI_API_KEY, FTF_MARKET=1, ALLOWED_ORIGIN, PORT=8787, HOST=0.0.0.0, TRUST_PROXY=1 behind a reverse proxy)
+// node server.js   (env: FTF_GUEST_KEY, NEARAI_API_KEY, FTF_MARKET=1, FTF_ALLOWED_ORIGINS or ALLOWED_ORIGIN (comma list added to the Pages origin), PORT=8787, HOST=0.0.0.0, TRUST_PROXY=1 behind a reverse proxy)
 import http from 'node:http';
 import { readFileSync } from 'node:fs';
 

@@ -13,6 +13,7 @@ import { biographyModel, biographyLines, biographyText } from './biography.js';
 import { renderAgentCard } from '../ui/world-hud/agent-card.js';
 import { loadAgentCard } from '../net/agent-nft.js';
 import { copyText } from './clipboard.js';
+import { siteLink } from '../ui/site-link.js';
 
 const { effectEvent, renderEvent } = uiI18n;
 const CLAN_INDEX = { iris: 0, salt: 1, ash: 2, moss: 3, amber: 4, frost: 5 };
@@ -256,7 +257,7 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
         el('p', { class: 'pl-muted', 'data-bio': 'note', text: L.note }),
         el('div', { class: 'pl-row' }, copyBtn, el('button', { class: 'pl-btn pl-small', type: 'button', 'data-share': '', text: t('postcard.share'), onclick: () => {
           const irisCard = shardsView && shardsView.cards.find((c) => c.shard.from === 'iris');
-          let link = 'https://spacexceo.github.io/forget-to-foresee/'; try { const u = new URL(location.href); link = u.origin + u.pathname; } catch { /* default */ }
+          const link = siteLink(); // this site's own link (ui/site-link.js)
           import('../ui/postcard.js').then((m) => m.openPostcard({ doc: document, t, kicker: t('postcard.kicker.biography'), title: t('postcard.finaleTitle'), line: L.outcome, link, signSvg: irisCard ? irisCard.card.svg : null })).catch((e) => console.warn('[play] postcard', e));
         } }), replaySource ? (() => {
           const b = el('button', { class: 'pl-btn pl-small', type: 'button', 'data-replay-copy': '', text: t('replay.copy'), onclick: async () => {

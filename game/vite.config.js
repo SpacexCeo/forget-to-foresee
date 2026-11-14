@@ -7,6 +7,7 @@ import { resolve } from 'node:path';
 import { modelListSource } from './build/model-list.js';
 import { fileURLToPath } from 'node:url';
 import { existsSync, readdirSync, rmSync } from 'node:fs';
+import { siteConfig } from './build/site.js';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
 
@@ -54,9 +55,14 @@ function dropDevOnlyModelsPlugin() {
   };
 }
 
+// Where the build is served and the site's own URL (build/site.js): '/' locally; the Pages workflow sets FTF_BASE
+// (/forget-to-foresee/ on GitHub Pages, '/' on the owner's domain via FTF_DOMAIN). The URL reaches the page as
+// import.meta.env.VITE_FTF_SITE_URL (share links) and %VITE_FTF_SITE_URL% in index.html (og: tags).
+const SITE = siteConfig(process.env);
+process.env.VITE_FTF_SITE_URL = SITE.siteUrl;
+
 export default defineConfig({
-  // Public path: '/' locally; the GitHub Pages workflow builds with FTF_BASE=/forget-to-foresee/.
-  base: process.env.FTF_BASE || '/',
+  base: SITE.base,
   // 'mpa': a missing file is a real 404, never index.html.
   appType: 'mpa',
   plugins: [modelListPlugin(), dropDevOnlyModelsPlugin()],

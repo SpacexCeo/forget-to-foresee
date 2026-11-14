@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import net from 'node:net';
 import { randomBytes } from 'node:crypto';
-import { createPresence } from '../server.js';
+import { createPresence, originList, originAllowed } from '../server.js';
 
 /** A raw WebSocket client: resolves {status, send(text), raw(buf), next(type), closed} after the handshake response. */
 function connect(port, { origin = 'https://spacexceo.github.io', path = '/presence' } = {}) {
@@ -88,4 +88,13 @@ test('server: PRESENCE_DATA_DIR keeps the room history across a restart; a newco
       b.end();
     });
   } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('origins: the Pages origin always, plus FTF_ALLOWED_ORIGINS (or ALLOWED_ORIGIN) for the owner\'s own domain', () => {
+  assert.deepEqual(originList(''), ['https://spacexceo.github.io']);
+  assert.deepEqual(originList('https://play.example.com/, https://spacexceo.github.io'), ['https://spacexceo.github.io', 'https://play.example.com']);
+  const o = originList('https://play.example.com');
+  assert.equal(originAllowed('https://play.example.com', o), true);
+  assert.equal(originAllowed('https://spacexceo.github.io', o), true, 'the old site keeps working');
+  assert.equal(originAllowed('https://evil.example', o), false);
 });
