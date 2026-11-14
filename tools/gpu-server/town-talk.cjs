@@ -14,7 +14,7 @@ const { execFileSync } = require('child_process');
   p.on('console', (m) => { if (m.type() === 'error' || /townsfolk|anim/i.test(m.text())) logs.push(m.type() + ' ' + m.text()); });
   p.on('pageerror', (e) => logs.push('pageerror ' + e.message));
   const t0 = Date.now();
-  await p.goto(url + '?intro=0&skip=intro');
+  await p.goto(url + '?intro=0&skip=intro' + (process.env.QS || '')); // QS='&animspeed=1': the clips at their authored speed (before/after)
   const folk = async () => p.evaluate(() => { const tf = window.__ftf && window.__ftf.town && window.__ftf.town.scene.townsfolk; if (!tf) return null;
     return ['scribe', 'shardkeeper'].map((k) => { const q = tf.byKey.get(k); return { k, state: q.state, file: q.file, pack: q.packFile, has: q.names.filter((n) => /laugh|greet|scratch/.test(n)) }; }); }).catch(() => null);
   let st = null;
