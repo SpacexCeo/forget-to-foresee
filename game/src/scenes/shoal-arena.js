@@ -95,9 +95,13 @@ export function createShoalArena(o) {
   // the model `hollow_tide` (art/shoal/boss): its clips follow the fight through game/shoal-boss-anim.js
   let bossModel = null, bossMixer = null, bossActions = null, bossAnim = freshBossAnim(), bossGlow = [];
   const bossW = {};
+  // the grey stack of spheres only stands in when there is no model file at all (GPU bench 14.11: it showed while the
+  // model streamed in); the Shoal waits on `ready` before the fight starts, and a failed load brings the stand-in back
+  let modelReady = Promise.resolve();
   if (hasModelFile('hollow_tide')) {
+    for (const s of segs) s.visible = false; crest.visible = false;
     const lite = 'hollow_tide' + getModelVariant();
-    fetchGltf(hasModelFile(lite) ? lite : 'hollow_tide').then(({ gltf }) => {
+    modelReady = fetchGltf(hasModelFile(lite) ? lite : 'hollow_tide').then(({ gltf }) => {
       for (const s of segs) s.visible = false; crest.visible = false;
       bossModel = gltf.scene; boss.add(bossModel);
       bossModel.traverse((o) => { if (o.isMesh) { o.frustumCulled = false; o.castShadow = true; if (o.material && o.material.emissiveMap) bossGlow.push({ m: o.material, base: o.material.emissiveIntensity }); } });
@@ -105,7 +109,7 @@ export function createShoalArena(o) {
         bossMixer = new THREE.AnimationMixer(bossModel); bossActions = {};
         for (const c of gltf.animations) { const a = bossMixer.clipAction(c); a.setEffectiveWeight(0); a.play(); a.paused = true; bossActions[c.name] = a; }
       }
-    }).catch(() => {});
+    }).catch(() => { for (const s of segs) s.visible = true; crest.visible = true; });
   }
   // telegraphs: the ground ring (slam), the band (sweep), the charge line (lunge); each fills from the body out as the
   // blow comes, with a bright rim (render/serpent-fx.js telegraphMaterial)
@@ -230,7 +234,7 @@ export function createShoalArena(o) {
   let H = R.freshHero(), B = R.freshBoss(), timers = {}, active = false, won = false, chestOpen = false;
   let FL = R.freshFlight();
   const me3 = { x: R.ARENA.landing[0], z: R.ARENA.landing[1], heading: Math.PI, speed: 0, lift: 0, dodgeDir: [0, -1] };
-  let combo = 0, comboT = 0, heavyT = 0, deadT = 0;
+  let combo = 0, comboT = 0, heavyT = 0, deadT = 0, sideRoll = 1;
   let kbVert = 0, liftHeld = false, touchFlight = false, landing = false, lastJump = -9, touchAim = false;
   let ultT = 0, ultEl = 0, ultGrounded = false, stopT = 0, shakeT = 0, shakeAmp = 0, burstT = 0, wasReady = false;
   let hover = null; // the mouse over the canvas (client px), from input()
@@ -288,7 +292,8 @@ export function createShoalArena(o) {
       const h2 = R.startDodge(H); if (h2 === H) return; H = h2;
       const ax = axes(); const { fwd, right } = rig.groundAxes();
       let dx = fwd.x * (ax[1] || 0) + right.x * (ax[0] || 0), dz = fwd.y * (ax[1] || 0) + right.y * (ax[0] || 0);
-      if (!dx && !dz) { dx = -Math.sin(me3.heading); dz = -Math.cos(me3.heading); }
+      // no stick: a sidestep, alternating sides (a backward roll carried her out of melee every time; GPU bench 14.11)
+      if (!dx && !dz) { sideRoll = -sideRoll; dx = Math.cos(me3.heading) * sideRoll; dz = -Math.sin(me3.heading) * sideRoll; }
       const d = Math.hypot(dx, dz) || 1; me3.dodgeDir = [dx / d, dz / d];
       clip('dash'); cue('dash_whoosh'); return;
     }
@@ -551,6 +556,11 @@ export function createShoalArena(o) {
   return {
     root, look, spawns,
     enter, leave, update, interact,
+    /** Settles once the boss model is in (or failed and the stand-in shows). */
+    ready: modelReady,
+    /** The arena-frame direction from her to the serpent (radians, atan2(dx, dz)), and her own heading (the camera lock). */
+    focusYaw: () => Math.atan2(R.ARENA.boss[0] - me3.x, R.ARENA.boss[1] - me3.z),
+    heading: () => me3.heading,
     get state() { return { hero: { ...H }, boss: { ...B, adds: B.adds.length }, won, chestOpen, flight: { ...FL }, lift: me3.lift, pos: [me3.x, me3.z], heading: me3.heading, ultT, shots: shots.length }; },
     /**
      * Keys while the fight owns her: F / 1 / a click = skill 1, Q / 2 = skill 2, Space / 4 = dodge, E = the chest / fly
