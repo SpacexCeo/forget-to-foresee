@@ -10,11 +10,11 @@ import { MobBrain, CAST_DAMAGE, ACTIONS } from '../../src/play/mobs.js';
 
 const seeded = (s = 1) => () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
 
-test('every source has its own look; only the combo finisher and the super strike are crits; only the super rings the ground', () => {
-  assert.deepEqual(Object.keys(IMPACT).sort(), ['lance', 'seed', 'snare', 'strike', 'strike3', 'super']);
+test('every source has its own look; only the finishers (combo third blow, super strike, Loomblade heavy) are crits; only the super rings the ground', () => {
+  assert.deepEqual(Object.keys(IMPACT).sort(), ['blade', 'blade_heavy', 'ember', 'gale', 'lance', 'seed', 'snare', 'strike', 'strike3', 'super']);
   assert.equal(IMPACT.lance.frag, 'ice'); assert.ok(IMPACT.snare.crackle > 0);
-  assert.equal(new Set(Object.values(IMPACT).map((i) => i.color)).size, 6, 'six colours');
-  assert.deepEqual(Object.entries(IMPACT).filter(([, i]) => i.crit).map(([k]) => k).sort(), ['strike3', 'super']);
+  assert.equal(new Set(Object.values(IMPACT).map((i) => i.color)).size, Object.keys(IMPACT).length, 'a colour each');
+  assert.deepEqual(Object.entries(IMPACT).filter(([, i]) => i.crit).map(([k]) => k).sort(), ['blade_heavy', 'strike3', 'super']);
   assert.deepEqual(Object.entries(IMPACT).filter(([, i]) => i.ring > 0).map(([k]) => k), ['super']);
 });
 
@@ -64,6 +64,7 @@ test('the pooled view: a hundred impacts keep the same scene objects, update set
   const before = count();
   for (let i = 0; i < 100; i++) fx.impact([i * 0.1, 1, 0], [0, 1], impactOf(['lance', 'snare', 'strike', 'super'][i % 4], { kill: i % 5 === 0 }));
   fx.trail([0, 1, 0], 0xffffff); fx.burst([0, 1, 0], 0xffffff); fx.shock([0, 0, 0], 0xffc36b, 2);
+  for (let i = 0; i < 5; i++) fx.slash([0, 1, 0], i, 2, 0xfff4dc, i % 2 ? -1 : 1, 0.2);
   assert.equal(count(), before, 'no new objects');
   for (let i = 0; i < 180; i++) fx.update(1 / 60);
   assert.ok(fx.kick.length() < 1e-3);

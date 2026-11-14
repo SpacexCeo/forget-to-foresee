@@ -5,7 +5,8 @@
 // the flash and the fragments stay (they carry the information), the camera does not move.
 //
 // Sources: lance (Frost Lance), snare (Storm Snare), strike (combo 1-2), strike3 (the combo's third blow),
-// super (the charged strike), seed (a monster's bolt reaching the ground or Iris). Only the super strike rings the
+// super (the charged strike), seed (a monster's bolt reaching the ground or Iris); in the Glass Shoal ember, gale,
+// blade, blade_heavy. Only the super strike rings the
 // ground (owner 12.11: no ground arc on ordinary hits).
 
 /** Per source: colour (hex), flash size (m), fragments (count, kind), crackles, ground ring (m, 0 none), camera shake and kick, hit-stop (s), crit. */
@@ -15,6 +16,11 @@ export const IMPACT = Object.freeze({
   strike: Object.freeze({ color: 0xfff0d2, flash: 0.4, frags: 3, frag: 'spark', crackle: 0, ring: 0, shake: 0.05, kick: 0.07, stop: 0.07, crit: false }),
   strike3: Object.freeze({ color: 0xffd28c, flash: 0.65, frags: 6, frag: 'spark', crackle: 0, ring: 0, shake: 0.22, kick: 0.16, stop: 0.1, crit: true }),
   super: Object.freeze({ color: 0xffc36b, flash: 0.95, frags: 10, frag: 'spark', crackle: 0, ring: 1.6, shake: 0.35, kick: 0.24, stop: 0.16, crit: true }),
+  // the Glass Shoal (scenes/shoal-arena.js): Elise's Ember Palms and Gale Discs, Iris's Loomblade combo and heavy slash
+  ember: Object.freeze({ color: 0xff8a3a, flash: 0.7, frags: 6, frag: 'spark', crackle: 0, ring: 0, shake: 0.04, kick: 0.04, stop: 0, crit: false }),
+  gale: Object.freeze({ color: 0xc8f0ff, flash: 0.55, frags: 5, frag: 'ice', crackle: 0, ring: 0, shake: 0.03, kick: 0.03, stop: 0, crit: false }),
+  blade: Object.freeze({ color: 0xfff4dc, flash: 0.55, frags: 4, frag: 'spark', crackle: 0, ring: 0, shake: 0.06, kick: 0.08, stop: 0.04, crit: false }),
+  blade_heavy: Object.freeze({ color: 0xffe2a0, flash: 0.9, frags: 9, frag: 'spark', crackle: 0, ring: 0, shake: 0.28, kick: 0.2, stop: 0.08, crit: true }),
   seed: Object.freeze({ color: 0x9ff5ea, flash: 0.45, frags: 5, frag: 'spark', crackle: 0, ring: 0, shake: 0, kick: 0, stop: 0, crit: false }),
 });
 /** What a finishing blow adds. */

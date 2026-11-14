@@ -9,6 +9,9 @@
 import * as R from '../game/shoal-rules.js';
 import { shoalSkillsFor, shoalExtrasFor, comboStep } from '../rpg/shoal-skills.js';
 import { hasModelFile, fetchGltf } from '../render/assets.js';
+import { createHitFx } from '../render/hit-fx.js';
+import { impactOf, IMPACT } from '../render/hit-fx-core.js';
+import { cue } from '../audio/town-audio.js';
 
 const CSS = `
 .sa-boss{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 14px);transform:translateX(-50%);width:min(520px,calc(100vw - 32px));z-index:14;color:#f3ead2;font:600 14px/1.2 "Atkinson Hyperlegible",system-ui,sans-serif;text-align:center;text-shadow:0 1px 3px #000;pointer-events:none}
@@ -104,6 +107,23 @@ export function createShoalArena(o) {
   // the aim: a small ring on the mirror where her casts will fly (cursor or the nearest foe)
   const aimMark = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.65, 32), new THREE.MeshBasicMaterial({ color: 0xffe6a6, transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide }));
   aimMark.rotation.x = -Math.PI / 2; aimMark.position.y = 0.06; aimMark.visible = false; root.add(aimMark);
+  // impact effects (night 14.11, render/hit-fx.js, pooled): ember blooms, gale shards, the Loomblade's arcs, the boss's
+  // slams on the mirror, and the camera kick of the blows (added in shakeCamera). Sounds through audio/town-audio.js.
+  const fx = createHitFx({ THREE, parent: root, doc, scale: mobile ? 0.6 : 1 });
+  let bossFlashT = 0;
+  /** A blow of `src` (hit-fx-core IMPACT) landing at `at` (arena-local): the look, a short shake, its hit-stop. */
+  function landFx(src, at, kill = false) {
+    const red = reduced(), imp = impactOf(src, { radius: 0.7, kill, reduced: red });
+    const dx = at[0] - me3.x, dz = at[2] - me3.z, l = Math.hypot(dx, dz) || 1;
+    fx.impact(at, [dx / l, dz / l], imp, 0);
+    if (imp.shake > 0) { if (shakeT <= 0) shakeAmp = 0; shakeAmp = Math.max(shakeAmp, imp.shake * 0.5); shakeT = 0.22; }
+    if (!red && imp.stop) stopT = Math.max(stopT, imp.stop);
+  }
+  /** Where a blow reaches the serpent: its body on her side, at chest height. */
+  function bossHitAt(y = 2) {
+    const dx = me3.x - R.ARENA.boss[0], dz = me3.z - R.ARENA.boss[1], l = Math.hypot(dx, dz) || 1, r = R.BOSS.contact * 0.6;
+    return [R.ARENA.boss[0] + dx / l * r, y, R.ARENA.boss[1] + dz / l * r];
+  }
 
   // ---- HUD
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -171,7 +191,7 @@ export function createShoalArena(o) {
     bossName.textContent = say('shoal.boss') + ' · ' + say('shoal.phase', { n: B.phase + 1 });
     if (elise() && !won) { hint.textContent = say(mobile ? 'shoal.flyHintTouch' : 'shoal.flyHint'); hint.hidden = false; hintT = 14; }
   }
-  function leave() { root.visible = false; hud.hidden = true; active = false; for (const s of shots) s.mesh.removeFromParent(); shots.length = 0; spiral.visible = false; }
+  function leave() { fx.still(); root.visible = false; hud.hidden = true; active = false; for (const s of shots) s.mesh.removeFromParent(); shots.length = 0; spiral.visible = false; }
 
   const bossDist = () => Math.hypot(me3.x - R.ARENA.boss[0], me3.z - R.ARENA.boss[1]);
   const faceBoss = () => { if (bossDist() < 14) me3.heading = Math.atan2(R.ARENA.boss[0] - me3.x, R.ARENA.boss[1] - me3.z); };
@@ -179,11 +199,12 @@ export function createShoalArena(o) {
   const damageBoss = (amount, opts = {}) => {
     const r = R.hitBoss(B, amount, R.BOSS, opts); B = r.boss;
     if (!opts.noCharge) charge(r.dealt, 0);
+    if (r.dealt > 0) bossFlashT = 0.12;
     if (r.phaseUp) { flash(say(B.phase === 1 ? 'shoal.phase2' : 'shoal.phase3')); }
     if (B.dead && !won) { won = true; boss.visible = false; chest.visible = true; for (const m of addMeshes.values()) m.removeFromParent(); addMeshes.clear(); B = { ...B, adds: [] }; flash(say('shoal.victory'), 3.5); onWin(); }
     return r.dealt;
   };
-  const hurt = (amount) => { const r = R.hitHero(H, amount); H = r.hero; if (r.taken) charge(0, r.taken); return r; };
+  const hurt = (amount) => { const r = R.hitHero(H, amount); H = r.hero; if (r.taken) { charge(0, r.taken); cue('iris_hurt'); } return r; };
 
   // ---- aim: the cursor's point on the mirror (desktop), else the nearest foe (touch)
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), hitP = new THREE.Vector3();
@@ -214,27 +235,33 @@ export function createShoalArena(o) {
       let dx = fwd.x * (ax[1] || 0) + right.x * (ax[0] || 0), dz = fwd.y * (ax[1] || 0) + right.y * (ax[0] || 0);
       if (!dx && !dz) { dx = -Math.sin(me3.heading); dz = -Math.cos(me3.heading); }
       const d = Math.hypot(dx, dz) || 1; me3.dodgeDir = [dx / d, dz / d];
-      clip('dash'); return;
+      clip('dash'); cue('dash_whoosh'); return;
     }
     const h2 = R.useSkill(H, s); if (!h2) return; H = h2;
     if (s.kind === 'ranged') {
       const at = aimPoint(); me3.heading = Math.atan2(at[0] - me3.x, at[1] - me3.z);
-      if (s.id === 'ember_palms') { for (const side of [-1, 1]) shoot(s, side * 0.35, 0, at); clip('strike1'); }
-      else if (s.id === 'gale_discs') { for (let k = 0; k < s.count; k++) shoot(s, 0, (k - (s.count - 1) / 2) * s.spread, at); clip('strike2'); }
+      if (s.id === 'ember_palms') { for (const side of [-1, 1]) shoot(s, side * 0.35, 0, at); clip('strike1'); cue('ember_cast'); }
+      else if (s.id === 'gale_discs') { for (let k = 0; k < s.count; k++) shoot(s, 0, (k - (s.count - 1) / 2) * s.spread, at); clip('strike2'); cue('gale_cast'); }
       return;
     }
     faceBoss();
     if (s.id === 'loom_combo') {
       combo = comboT > 0 ? combo + 1 : 1; comboT = 0.9;
       const i = comboStep(combo); clip('strike' + (i + 1));
-      melee(s.range, s.damage[i]);
-    } else if (s.id === 'loom_heavy') { heavyT = s.windup; clip('strike3'); }
+      melee(s.range, s.damage[i], false, i);
+    } else if (s.id === 'loom_heavy') { heavyT = s.windup; clip('strike3'); cue('cast_charge_frost'); }
   }
-  function melee(range, dmg) {
-    const fx = Math.sin(me3.heading), fz = Math.cos(me3.heading);
-    const hx = me3.x + fx * range * 0.6, hz = me3.z + fz * range * 0.6;
-    if (bossDist() <= R.BOSS.contact + range) damageBoss(dmg);
+  function melee(range, dmg, heavy = false, step = 0) {
+    const fx0 = Math.sin(me3.heading), fz0 = Math.cos(me3.heading);
+    const hx = me3.x + fx0 * range * 0.6, hz = me3.z + fz0 * range * 0.6;
+    // the blade's arc: the combo cuts right, left, then a rising finisher; the heavy slash a wide, slower crescent
+    const src = heavy ? 'blade_heavy' : 'blade', onBoss = bossDist() <= R.BOSS.contact + range;
+    fx.slash([me3.x, 1.15 + me3.lift, me3.z], me3.heading, range * (heavy ? 1.1 : 0.9), IMPACT[src].color, heavy ? 1 : step % 2 ? -1 : 1, heavy ? 0 : step === 2 ? -0.5 : 0.15, heavy ? 0.28 : 0.2);
+    cue(heavy ? 'strike_heavy' : 'strike_swing');
+    if (onBoss) { damageBoss(dmg); landFx(src, bossHitAt(1.6)); cue(heavy ? 'strike_heavy' : 'strike_impact'); }
+    const near = B.adds.filter((a) => Math.hypot(a.x - hx, a.z - hz) <= range + 0.8);
     const h = R.hitAdds(B.adds, [hx, hz], range, dmg); B = { ...B, adds: h.adds }; if (h.hit) charge(dmg * h.hit * R.BOSS.armor, 0);
+    if (h.hit) { const left = new Set(h.adds.map((a) => a.id)); for (const a of near) landFx(src, [a.x, 0.9, a.z], !left.has(a.id)); if (!onBoss) cue('strike_impact'); }
   }
   function shoot(s, offset, angle, at) {
     const h = me3.heading + angle, dx = Math.sin(h), dz = Math.cos(h);
@@ -278,9 +305,16 @@ export function createShoalArena(o) {
     if (B.adds.length) B = { ...B, adds: R.hitAdds(B.adds, [me3.x, me3.z], R.ULT.radius, R.ULT.damage).adds };
     const red = reduced();
     stopT = red ? 0 : R.ULT.hitStop; shakeT = 0.22; shakeAmp = red ? 0 : R.ULT.shake; burstT = 0.35;
+    cue('ember_hit');
   }
 
   function strikeLands(atk, damage) {
+    // the boss's blow lands: a shock on the mirror where it does, and the slam's sound
+    const A = R.BOSS.attacks[atk.kind];
+    if (A && atk.kind === 'slam' && atk.at) fx.shock([atk.at[0], 0, atk.at[1]], 0xff9a5a, A.radius);
+    else if (A && atk.kind === 'sweep') fx.shock([R.ARENA.boss[0], 0, R.ARENA.boss[1]], 0xff9a5a, A.radius);
+    else if (A && atk.kind === 'lunge' && atk.at && atk.dir) fx.shock([atk.at[0] + atk.dir[0] * A.length * 0.5, 0, atk.at[1] + atk.dir[1] * A.length * 0.5], 0xff9a5a, A.width * 1.2);
+    cue('mob_hulker_slam');
     if (!R.inDanger(atk, me3.x, me3.z, R.BOSS, me3.lift)) return;
     const real = H.dodge > 0; // a dodge's frames open the crest; the Tempest's do not
     const r = hurt(damage);
@@ -294,7 +328,7 @@ export function createShoalArena(o) {
     let sdt = dt; if (stopT > 0) { stopT -= dt; sdt = dt * 0.06; } // the Tempest's hit-stop
     let drain = 0;
     if (comboT > 0) comboT -= sdt;
-    if (heavyT > 0 && (heavyT -= sdt) <= 0) { const s = shoalSkillsFor('iris')[1]; melee(s.range, s.damage); }
+    if (heavyT > 0 && (heavyT -= sdt) <= 0) { const s = shoalSkillsFor('iris')[1]; melee(s.range, s.damage, true); }
     if (deadT > 0) { if ((deadT -= dt) <= 0) { const r = R.respawnAfterDeath(B); B = r.boss; H = r.hero; FL = R.freshFlight(); me3.lift = 0; landing = false; me3.x = r.at[0]; me3.z = r.at[1]; for (const m of addMeshes.values()) m.removeFromParent(); addMeshes.clear(); } }
     else {
       // movement: running on the mirror, or flying
@@ -347,19 +381,22 @@ export function createShoalArena(o) {
       const sh = shots[i], step = sh.s.speed * sdt;
       sh.x += sh.dx * step; sh.z += sh.dz * step; sh.left -= step; sh.y = Math.max(0.6, sh.y + sh.vy * sdt);
       sh.mesh.position.set(sh.x, sh.y, sh.z); if (sh.s.id === 'gale_discs') sh.mesh.rotation.y += sdt * 20;
+      const gale = sh.s.id === 'gale_discs', src = gale ? 'gale' : 'ember';
+      sh.wake = (sh.wake || 0) - sdt; if (sh.wake <= 0) { sh.wake = (gale ? 0.035 : 0.018) * (mobile ? 2 : 1); fx.trail([sh.x, sh.y, sh.z], IMPACT[src].color, gale ? 0.22 : 0.32, gale ? 0.25 : 0.12); }
       let spent = sh.left <= 0;
-      if (!won && !sh.hitBoss && Math.hypot(sh.x - R.ARENA.boss[0], sh.z - R.ARENA.boss[1]) <= R.BOSS.contact * 0.6 + sh.s.radius) { damageBoss(sh.s.damage); sh.hitBoss = true; if (!sh.s.pierce) spent = true; }
+      if (!won && !sh.hitBoss && Math.hypot(sh.x - R.ARENA.boss[0], sh.z - R.ARENA.boss[1]) <= R.BOSS.contact * 0.6 + sh.s.radius) { damageBoss(sh.s.damage); sh.hitBoss = true; landFx(src, [sh.x, sh.y, sh.z]); cue(gale ? 'gale_hit' : 'ember_hit'); if (!sh.s.pierce) spent = true; }
       if (B.adds.length && sh.y < 3) {
         const h = R.hitAdds(B.adds.filter((a) => !sh.hit.has(a.id)), [sh.x, sh.z], sh.s.radius, sh.s.damage, !sh.s.pierce);
         if (h.hit) {
           const before = new Map(B.adds.map((a) => [a.id, a])); const after = new Map(h.adds.map((a) => [a.id, a]));
           B = { ...B, adds: B.adds.map((a) => (sh.hit.has(a.id) ? a : after.get(a.id))).filter(Boolean) };
-          for (const id of before.keys()) if (!after.has(id) || after.get(id).hp !== before.get(id).hp) sh.hit.add(id);
+          for (const id of before.keys()) if (!after.has(id) || after.get(id).hp !== before.get(id).hp) { sh.hit.add(id); const a = before.get(id); landFx(src, [a.x, 0.9, a.z], !after.has(id)); }
+          cue(gale ? 'gale_hit' : 'ember_hit');
           charge(sh.s.damage * h.hit * R.BOSS.armor, 0);
           if (!sh.s.pierce) spent = true;
         }
       }
-      if (spent) { sh.mesh.removeFromParent(); shots.splice(i, 1); }
+      if (spent) { if (sh.left <= 0 && !sh.hitBoss && !sh.hit.size) fx.burst([sh.x, sh.y, sh.z], IMPACT[src].color, 3, 0.3); sh.mesh.removeFromParent(); shots.splice(i, 1); }
     }
     draw(dt, sdt);
   }
@@ -375,7 +412,9 @@ export function createShoalArena(o) {
     const coil = B.state === 'telegraph' ? 0.8 : B.state === 'active' ? -0.6 : 0;
     segs.forEach((s, i) => { const k = i / (segs.length - 1); s.position.set(Math.sin(k * 3 + tt * 0.6) * sway * 2, rise * (Math.sin(k * Math.PI) * 9 + k * 6 - coil * k * 3), (k - 0.5) * 6 - coil * k * 2); });
     const head = segs[segs.length - 1].position; crest.position.set(head.x, head.y + 2, head.z);
-    crestMat.emissiveIntensity = B.exposed > 0 ? 3 + Math.sin(tt * 12) : 0.6;
+    crestMat.emissiveIntensity = (B.exposed > 0 ? 3 + Math.sin(tt * 12) : 0.6) + (bossFlashT > 0 ? 2.5 * bossFlashT / 0.12 : 0);
+    if (bossFlashT > 0) bossFlashT = Math.max(0, bossFlashT - dt);
+    { const k = 0.7 * bossFlashT / 0.12; hide.emissive.setRGB(k, k * 0.92, k * 0.85); }   // the hide flashes when a blow bites
     crestMat.emissive.setHex(B.exposed > 0 ? 0xffa040 : 0x2a6cff);
     bossHud.classList.toggle('sa-open', B.exposed > 0);
     // telegraphs
@@ -411,6 +450,8 @@ export function createShoalArena(o) {
     }
     if (burstT > 0) { burstT -= dt; const k = 1 - burstT / 0.35; const r = 1 + k * R.ULT.radius; burst.position.set(me3.x, 0.08, me3.z); burst.scale.set(r, r, r); burst.material.opacity = 0.7 * (1 - k); }
     else burst.material.opacity = 0;
+    if (reduced()) fx.still();
+    fx.update(sdt); // under the hit-stop the sparks hang in the air with everything else
     // the aim ring (desktop: the cursor; touch: the auto target), only while there is something to aim at
     const showAim = elise() && !won && deadT <= 0 && (hover || touchAim);
     aimMark.visible = !!showAim;
@@ -468,6 +509,7 @@ export function createShoalArena(o) {
     },
     /** After the camera rig: the Tempest's screen shake (none under reduced motion). */
     shakeCamera(cam, dt) {
+      cam.position.add(fx.kick); // the blows' kick along their direction (zero under reduced motion)
       if (shakeT <= 0 || shakeAmp <= 0) return;
       shakeT -= dt; const k = shakeAmp * Math.max(0, shakeT / 0.22);
       cam.position.x += (Math.random() - 0.5) * k; cam.position.y += (Math.random() - 0.5) * k; cam.position.z += (Math.random() - 0.5) * k;
@@ -478,6 +520,6 @@ export function createShoalArena(o) {
     debugCharge() { H = { ...H, ult: R.ULT.max }; },
     /** Dev and tests: the boss falls and the chest opens (the reward runs as in a real win). */
     debugWin() { B = { ...B, exposed: 0 }; damageBoss(1e9 / R.BOSS.armor); chestOpen = true; },
-    dispose() { leave(); root.removeFromParent(); hud.remove(); },
+    dispose() { leave(); fx.dispose(); root.removeFromParent(); hud.remove(); },
   };
 }

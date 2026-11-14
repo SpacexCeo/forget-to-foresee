@@ -5,6 +5,7 @@
 //   spark     round sparks, the same physics, quicker (one Points, 160); also the motes of trails
 //   crackle   jagged violet arcs that flicker over the struck creature (one LineSegments)
 //   ring      ground rings that burst outwards (4 at once)
+//   slash     a blade's arc: a flat crescent bright at its leading edge that sweeps and fades (3 at once)
 // and the camera kick: a damped spring the blows push along their direction; the caller adds `kick` to the camera.
 //
 //   const fx = createHitFx({ THREE, parent: scene });
@@ -13,7 +14,7 @@
 //   fx.update(dt); camera.position.add(fx.kick)
 import { FRAG, KICK, fragVelocities, kickStep, crackle as crackleLine } from './hit-fx-core.js';
 
-const FLASHES = 8, RINGS = 4, CRACKLES = 12, CRACKLE_SEGS = 6;
+const FLASHES = 8, RINGS = 4, CRACKLES = 12, CRACKLE_SEGS = 6, SLASHES = 3, SLASH_ARC = 2.3;
 const CAP = { ice: 96, spark: 160 };
 
 function canvasTex(THREE, doc, draw) {
@@ -86,6 +87,18 @@ export function createHitFx({ THREE, parent, doc = globalThis.document, rand = M
   }
   let ringNext = 0;
 
+  // ---- slashes: a crescent whose vertex colour rises from the tail to the leading edge (additive: the tail vanishes)
+  const slashGeo = new THREE.RingGeometry(0.62, 1, 28, 2, -SLASH_ARC / 2, SLASH_ARC);
+  { const pa = slashGeo.attributes.position, c = new Float32Array(pa.count * 3);
+    for (let i = 0; i < pa.count; i++) { const a = Math.atan2(pa.getY(i), pa.getX(i)), u = (a + SLASH_ARC / 2) / SLASH_ARC, r = Math.hypot(pa.getX(i), pa.getY(i)), edge = 1 - Math.abs(r - 0.86) / 0.24; const b = Math.pow(Math.max(0, u), 2.2) * (0.45 + 0.55 * Math.max(0, edge)); c[i * 3] = c[i * 3 + 1] = c[i * 3 + 2] = b; }
+    slashGeo.setAttribute('color', new THREE.BufferAttribute(c, 3)); slashGeo.rotateX(-Math.PI / 2); }
+  const slashes = [];
+  for (let i = 0; i < SLASHES; i++) {
+    const m = new THREE.Mesh(slashGeo, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+    m.visible = false; m.renderOrder = 5; group.add(m); slashes.push({ m, t: 1, dur: 0.2, yaw: 0, dir: 1, r: 1 });
+  }
+  let slashNext = 0;
+
   // ---- camera kick
   const kickState = { x: [0, 0, 0], v: [0, 0, 0] };
   const kick = new THREE.Vector3();
@@ -133,6 +146,15 @@ export function createHitFx({ THREE, parent, doc = globalThis.document, rand = M
     trail(at, color, life = 0.28, jitter = 0.05) {
       emit(P.spark, [at[0] + (rand() - 0.5) * jitter, at[1] + (rand() - 0.5) * jitter, at[2] + (rand() - 0.5) * jitter], [(rand() - 0.5) * 0.3, 0.25, (rand() - 0.5) * 0.3], color, life, 0);
     },
+    /**
+     * A blade's arc around `at` (her chest), facing `heading` (rad, 0 = +z), `radius` m, sweeping `dir` (1 left to
+     * right, -1 back), tilted by `tilt` rad (a rising or falling cut).
+     */
+    slash(at, heading, radius, color, dir = 1, tilt = 0, dur = 0.2) {
+      const S = slashes[slashNext]; slashNext = (slashNext + 1) % SLASHES;
+      S.m.position.set(at[0], at[1], at[2]); S.m.material.color.set(color); S.r = radius; S.t = 0; S.dur = dur; S.dir = dir < 0 ? -1 : 1;
+      S.yaw = heading; S.tilt = tilt; S.m.visible = true;
+    },
     /** A small burst without a camera kick (a projectile ending, a spark off armour). */
     burst(at, color, n = 5, size = 0.45) {
       flash(at, color, size, 0.14);
@@ -177,6 +199,15 @@ export function createHitFx({ THREE, parent, doc = globalThis.document, rand = M
         r.m.scale.setScalar(r.r * (0.25 + 0.75 * e)); r.m.material.opacity = 0.85 * (1 - u);
         if (u >= 1) r.m.visible = false;
       }
+      for (const S of slashes) {
+        if (!S.m.visible) continue;
+        S.t += dt; const u = Math.min(1, S.t / S.dur), e = 1 - (1 - u) * (1 - u);
+        // the crescent's middle points along +x of its plane: turn it to face `yaw`, then sweep it through the cut
+        S.m.rotation.set(S.tilt, S.yaw - Math.PI / 2 + S.dir * (e - 0.5) * 1.6, 0, 'YXZ');
+        S.m.scale.set(S.r * (0.85 + 0.15 * e), 1, S.dir * S.r * (0.85 + 0.15 * e)); // dir -1 mirrors the crescent across its own axis
+        S.m.material.opacity = u < 0.35 ? 1 : 1 - (u - 0.35) / 0.65;
+        if (u >= 1) S.m.visible = false;
+      }
       kickStep(kickState, Math.min(dt, 1 / 30));
       const l = Math.hypot(...kickState.x);
       if (l > KICK.max) for (let i = 0; i < 3; i++) kickState.x[i] *= KICK.max / l;
@@ -188,7 +219,7 @@ export function createHitFx({ THREE, parent, doc = globalThis.document, rand = M
       group.parent?.remove(group);
       for (const f of flashes) f.sp.material.dispose();
       for (const p of Object.values(P)) { p.geo.dispose(); p.pts.material.dispose(); }
-      cGeo.dispose(); cLines.material.dispose(); ringGeo.dispose(); for (const r of rings) r.m.material.dispose();
+      cGeo.dispose(); cLines.material.dispose(); ringGeo.dispose(); slashGeo.dispose(); for (const S of slashes) S.m.material.dispose(); for (const r of rings) r.m.material.dispose();
       if (soft) soft.dispose(); if (shard) shard.dispose();
     },
   };
