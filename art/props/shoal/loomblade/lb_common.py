@@ -276,14 +276,20 @@ def build_studs():
 def shuttle_frame(x):
     s = P["shuttle"]
     q = abs(x) / s["half_length"]
-    k = max(0.0, 1 - q ** 2.2) ** 0.75
-    return s["center_z"] + s["upturn"] * q * q, s["half_height"] * k ** 0.8 + 0.0006, s["half_thick"] * k + 0.0006
+    # a guard with a silhouette (3D review 17): a full boss under the ring, slim arms that sweep up toward the
+    # blade, and each arm ends in a flared tip like the point of a weaving shuttle, closing to a point
+    t = min(1.0, max(0.0, (q - 0.93) / 0.07))
+    close = math.sqrt(max(0.0, 1.0 - t * t * (3 - 2 * t)))
+    flare = 1.0 + 1.05 * math.exp(-((q - 0.86) / 0.075) ** 2)
+    arm = 0.46 + 0.54 * (1.0 - min(1.0, q / 0.55)) ** 1.6
+    lift = s["upturn"] * (0.6 * q * q + 2.4 * q ** 4)
+    return s["center_z"] + lift, s["half_height"] * arm * flare * close + 0.0006, s["half_thick"] * (0.5 + 0.5 * arm) * (0.75 + 0.25 * flare) * close + 0.0006
 
 
 def build_shuttle(hi):
     s = P["shuttle"]
     L = s["half_length"]
-    ns, nc = (96, 32) if hi else (14, 10)
+    ns, nc = (96, 32) if hi else (20, 10)
     bm = bmesh.new()
     rings = []
     for i in range(1, ns):
@@ -294,7 +300,7 @@ def build_shuttle(hi):
             a = TAU * k / nc
             ca, sa = math.cos(a), math.sin(a)
             # a soft-cornered section: flat faces front and back, rounded top and bottom
-            ey = math.copysign(abs(ca) ** 0.6, ca) * hy
+            ey = math.copysign(abs(ca) ** 0.6, ca) * hy * (1.0 - 0.42 * max(0.0, sa) ** 1.5)   # pinched toward the top: a ridge
             ez = math.copysign(abs(sa) ** 0.85, sa) * hz
             ring.append(Vector((x, ey, zc + ez)))
         rings.append(ring)
