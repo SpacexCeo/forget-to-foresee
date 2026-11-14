@@ -14,7 +14,7 @@
     })();
   </script>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Forget to Foresee</title>
   <meta name="description" content="A 3D hill town on NEAR testnet: 20 traders with their own accounts trade on chain, Iris pays for prophecy with her memories, seasons are sealed before play.">
   <meta property="og:type" content="website">
@@ -283,7 +283,10 @@
       #ui .ftf-hud-status { top: calc(6px + env(safe-area-inset-top, 0px)) !important; left: 6px !important; right: auto !important; width: 190px !important; min-width: 0 !important; grid-template-columns: 1fr !important; gap: 0 !important; padding: 8px 10px !important; transform: scale(.58); transform-origin: top left; }
       #toast { bottom: calc(52px + env(safe-area-inset-bottom, 0px)); font-size: 12px; }
     }
+    /* phones (owner 14.11): fast repeated taps on the fight buttons must never zoom the page */
+    html, body, button { touch-action: manipulation; }
   </style>
+  <script>(function () { try { var stop = function (e) { e.preventDefault(); }; document.addEventListener("gesturestart", stop, { passive: false }); document.addEventListener("gesturechange", stop, { passive: false }); } catch (e) { /* zoom guard is optional */ } })();</script>
 </head>
 <body class="booting">
   <div id="boot" class="boot" role="status" aria-live="polite" aria-label="Loading">
