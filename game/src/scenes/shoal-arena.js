@@ -183,6 +183,8 @@ export function createShoalArena(o) {
     if (a.flourish) a.flourish();
   }
   /** Where a blow reaches the serpent: its body on her side, at chest height. */
+  /** Ice chipping off the serpent where a blow lands (render/serpent-fx.js hitSerpent), on top of the source's own impact. */
+  function serpentHit(at, heavy = false) { const dx = R.ARENA.boss[0] - me3.x, dz = R.ARENA.boss[1] - me3.z, l = Math.hypot(dx, dz) || 1; sfx.hitSerpent(at, [dx / l, dz / l], heavy); }
   function bossHitAt(y = 2) {
     const dx = me3.x - R.ARENA.boss[0], dz = me3.z - R.ARENA.boss[1], l = Math.hypot(dx, dz) || 1, r = R.BOSS.contact * 0.6;
     return [R.ARENA.boss[0] + dx / l * r, y, R.ARENA.boss[1] + dz / l * r];
@@ -270,7 +272,7 @@ export function createShoalArena(o) {
     if (!opts.noCharge) charge(r.dealt, 0);
     if (r.dealt > 0) bossFlashT = 0.12;
     if (r.phaseUp) { flash(say(B.phase === 1 ? 'shoal.phase2' : 'shoal.phase3')); cue('storm_crack'); shakeT = 0.3; shakeAmp = reduced() ? 0 : 0.3; sfx.roar([boss.position.x, 0, boss.position.z]); } // the roar
-    if (B.dead && !won) { won = true; boss.visible = !!bossModel; /* the model falls and sinks first (draw hides it) */ chest.visible = true; addsView.clear(); B = { ...B, adds: [] }; flash(say('shoal.victory'), 3.5); onWin(); }
+    if (B.dead && !won) { sfx.death([boss.position.x, boss.position.y, boss.position.z]); won = true; boss.visible = !!bossModel; /* the model falls and sinks first (draw hides it) */ chest.visible = true; addsView.clear(); B = { ...B, adds: [] }; flash(say('shoal.victory'), 3.5); onWin(); }
     return r.dealt;
   };
   const hurt = (amount) => { const r = R.hitHero(H, amount); H = r.hero; if (r.taken) { charge(0, r.taken); cue('iris_hurt'); } return r; };
@@ -329,7 +331,7 @@ export function createShoalArena(o) {
     // no fixed arc in front of her (owner 14.11: the strikes must follow the hand): the trail rides the limb or blade that swings
     // (render/strike-trail.js, driven by her clip's own start and impact moments)
     cue(heavy ? 'strike_heavy' : 'strike_swing');
-    if (onBoss) { damageBoss(dmg); landFx(src, bossHitAt(1.6)); cue(heavy ? 'strike_heavy' : 'strike_impact'); }
+    if (onBoss) { damageBoss(dmg); const hp0 = bossHitAt(1.6); landFx(src, hp0); serpentHit(hp0, heavy); cue(heavy ? 'strike_heavy' : 'strike_impact'); }
     const near = B.adds.filter((a) => Math.hypot(a.x - hx, a.z - hz) <= range + 0.8);
     const h = R.hitAdds(B.adds, [hx, hz], range, dmg); B = { ...B, adds: h.adds }; if (h.hit) charge(dmg * h.hit * R.BOSS.armor, 0);
     if (h.hit) { const left = new Set(h.adds.map((a) => a.id)); for (const a of near) landFx(src, [a.x, 0.9, a.z], !left.has(a.id)); if (!onBoss) cue('strike_impact'); }
@@ -464,7 +466,7 @@ export function createShoalArena(o) {
       const gale = sh.s.id === 'gale_discs', src = sh.s.src || (gale ? 'gale' : 'ember'), col = sh.s.color || IMPACT[src].color, hitCue = sh.s.hitCue || (gale ? 'gale_hit' : 'ember_hit');
       sh.wake = (sh.wake || 0) - sdt; if (sh.wake <= 0) { sh.wake = (gale ? 0.035 : 0.018) * (mobile ? 2 : 1); fx.trail([sh.x, sh.y, sh.z], col, gale ? 0.22 : 0.32, gale ? 0.25 : 0.12); }
       let spent = sh.left <= 0;
-      if (!won && !sh.hitBoss && Math.hypot(sh.x - R.ARENA.boss[0], sh.z - R.ARENA.boss[1]) <= R.BOSS.contact * 0.6 + sh.s.radius) { damageBoss(sh.s.damage, { noCharge: !!sh.s.ally }); sh.hitBoss = true; landFx(src, [sh.x, sh.y, sh.z], false, col); cue(hitCue); if (!sh.s.pierce) spent = true; }
+      if (!won && !sh.hitBoss && Math.hypot(sh.x - R.ARENA.boss[0], sh.z - R.ARENA.boss[1]) <= R.BOSS.contact * 0.6 + sh.s.radius) { damageBoss(sh.s.damage, { noCharge: !!sh.s.ally }); sh.hitBoss = true; landFx(src, [sh.x, sh.y, sh.z], false, col); serpentHit([sh.x, sh.y, sh.z]); cue(hitCue); if (!sh.s.pierce) spent = true; }
       if (B.adds.length && sh.y < 3) {
         const h = R.hitAdds(B.adds.filter((a) => !sh.hit.has(a.id)), [sh.x, sh.z], sh.s.radius, sh.s.damage, !sh.s.pierce);
         if (h.hit) {
@@ -522,6 +524,8 @@ export function createShoalArena(o) {
       if (a.kind === 'breath' || a.kind === 'claw') { const m = a.kind === 'breath' ? breathFan : clawFan; m.visible = true; m.position.set(a.at[0], 0.06, a.at[1]); m.rotation.y = Math.atan2(a.dir[0], a.dir[1]); setTele(m.material, k, op, tt); if (tell) { const A2 = R.BOSS.attacks[a.kind]; sfx.tellFrame('cone', { at: [a.at[0], 0, a.at[1]], dir: a.dir, half: A2.half, len: A2.length || A2.radius }, k, sdt); } if (a.kind === 'breath' && B.state === 'active') { _apex[0] = a.at[0]; _apex[2] = a.at[1]; sfx.breathFrame(mouth(a.dir), a.dir, R.BOSS.attacks.breath.half, R.BOSS.attacks.breath.length, sdt, _apex); } }
       if (a.kind === 'lunge') { line.visible = true; line.position.set(a.at[0], 0.05, a.at[1]); line.rotation.y = Math.atan2(a.dir[0], a.dir[1]); setTele(line.material, k, op, tt); if (tell) sfx.tellFrame('strip', { at: [a.at[0], 0, a.at[1]], dir: a.dir, len: R.BOSS.attacks.lunge.length, width: R.BOSS.attacks.lunge.width }, k, sdt); }
     }
+    if (B.exposed > 0 && !won) sfx.exposedFrame([boss.position.x, boss.position.y, boss.position.z], sdt); // the stagger window: glints crawl over the body
+    sfx.chill([me3.x, me3.lift, me3.z]); // frost clinging to her after a hit
     sfx.update(sdt, red);
     // adds
     addsView.sync(B.adds, sdt, [me3.x, me3.z], red, tt);
