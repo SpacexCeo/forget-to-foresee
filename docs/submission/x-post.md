@@ -58,9 +58,9 @@ The seal holds for every season (local commitment); the judge season is also com
 
 ## Optional post 5 (reply, what is new on 14 Nov)
 
-> New today: every blow shows its element, a loot card when you come back from a season, lit shop interiors with a hidden grotto, and two town tales, "The Ink That Remembers" and "The Lost Tourist".
+> New today: a painted town map, every blow shows its element, a loot card when you come back from a season, lit shop interiors with a hidden grotto, and two town tales, "The Ink That Remembers" and "The Lost Tourist".
 
-(196 characters. Everything named is on the live page; the boss fight stays off and is not mentioned.)
+(216 characters. Everything named is on the live page. The level-5 boss fight is on too, but its dragon and boss are placeholder shapes: leave it out until the models land.)
 
 Character counts: X counts each URL as 23 characters; recount after any edit.
 

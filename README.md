@@ -41,7 +41,7 @@ signs for a guest after checking the guest's own signature, so the signer is the
 
 Failed sends, stated plainly: on 13 Nov the relayer counted 1,082 failed trader sends, all before the 12:08 UTC switch
 to the FastNear + archival RPC pair, and none after it (`failures_today` in `/api/market/stats`; the day counter resets
-at 00:00 UTC). On 14 Nov by 04:45 UTC: 1,691 trades sent; 2 sends failed around the relayer restart at 00:32 UTC, and the
+at 00:00 UTC). On 14 Nov by 05:35 UTC: 2,198 trades sent; 2 sends failed around the relayer restart at 00:32 UTC, and the
 indexer shows 0 failed transactions on chain for 00:00–01:05 UTC.
 
 ## Judge path: do X, see Y (90 seconds)
@@ -212,6 +212,8 @@ play-money games, the new-player intro and prologue, agents in the tournament. T
 | Back from a season | **Real, local**: "Return to town" on the season's Biography; back in town a loot card shows only what changed (level, minted shards, new chests, town silk, XP) | `game/src/play/season-loot.js` |
 | Town tales | **Real, local, on** (flags `tales`, `wayfarers`): "The Ink That Remembers" (the Scribe and the Sweeper, from level 2, two endings) and "The Lost Tourist" (a Wayfarer from Kallima on the main street; placeholder body until its model lands) | `game/src/play/townsfolk-plan.js`, [docs/decisions.md](docs/decisions.md) 14.11 |
 | Shop interiors and the grotto | **Real**: three walk-in shops with baked light (one lightmap per room) and a hidden grotto behind the Shard Exchange's rear wall (walk in; no flag) | `art/town/town_shops.py` |
+| Town map, icons, NFT cards | **Real, local**: **M** opens a painted map of the town with live "!" / "?" over townsfolk who have something for Iris and her position; painted inventory icons for every shard and part; the NFTs tab shows "Cards to earn" (the ones you hold first, marked "Yours", the others with what earns them) | `game/src/play/nft-collection.js`, [docs/decisions.md](docs/decisions.md) 14.11 |
+| The tournament Shells and the intro | **Real, local**: the Shells glow and pulse along the suture (flag `shellAura` on, shader-only); the wake-up dialogue turns the camera to what is named (the Gate-Loom, the Elder, the Shell monument) | `game/src/render/shell-aura.js` |
 | Town works window (your part in the economy) | **Real, on chain through the relayer**: pledges as deeds, your share today (an estimate at the last 7 days' rate, variable, can be zero), your stall pledges with Claim, a link to your own transactions; goals (first trade, first pledge, pledges on 3 days a week) kept in this browser and paying nothing | `game/src/ui/town-works-panel.js`, `game/src/ui/town-goals.js` |
 | Photo mode (**P**), townsfolk barks, narrator subtitles when films are off, shard history timeline on the card | **Real**, local presentation | `game/src/render/photo-mode.js`, `game/src/scenes/barks.js`, `game/src/play/narrator.js`, `game/src/ui/world-hud/shard-card.js` |
 | Dragon companion NFT | **Live on testnet**: `companions.ftf-coordinator.testnet` (6 dragons by the end of 13 Nov, `nft_total_supply`), each owned by a heroine token's own account (an NFT that owns an NFT), e.g. `nacre-cy-8` owned by `elise-cy-8.heroine.ftf-coordinator.testnet`; one at the Day 1 mint, a second after the first boss, checked against the stored log (`docs/companions.md`) | `game/src/net/companions.js`, `game/src/net/companion-claim.js`, `relayer/lib/companion.js` |
