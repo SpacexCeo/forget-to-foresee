@@ -3,9 +3,11 @@
 // Muschio, Ambra, Brina.
 import quests from './it-quests.js';
 import hud from './it-hud.js';
+import npe from './it-npe.js';
 import account from './it-account.js';
 export default {
   ...hud, // first: the RPG HUD (en-hud.js keys); this file's own copies below win
+  ...npe, // the new-player dialogue, barks, card, glossary, Cup, tips and judge panel (en-npe.js, en-tips.js, en-judge.js keys)
   ...account, // the account panel (en-account.js keys)
   // ---- badge, help ----
   'play.badge': 'Demo locale · le regole girano nel tuo browser attraverso la stessa stanza dell’API degli agenti',
