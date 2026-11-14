@@ -43,7 +43,11 @@ const pos = (i) => mat4.getTranslation(vec3.create(), WORLD[i]);
 // ---- vertices at rest (bind pose), world space
 const P = prim.getAttribute('POSITION'), JA = prim.getAttribute('JOINTS_0'), WA = prim.getAttribute('WEIGHTS_0');
 const NV = P.getCount(), vj = [], vw = [], rest = [];
-const BIND = joints.map((_, i) => mat4.multiply(mat4.create(), WORLD[i], IBM[i]));
+// three.js skins with the mesh node's own world matrix at bind (SkinnedMesh.bindMatrix), the glTF spec without it;
+// the game is three.js, so the fit follows it (a Tripo mesh hangs under a turned, scaled Armature)
+const MESH = bodyNode.getWorldMatrix();
+const BIND = joints.map((_, i) => mat4.multiply(mat4.create(), mat4.multiply(mat4.create(), WORLD[i], IBM[i]), MESH));
+console.error('[grip] mesh node world', Array.from(MESH, (x) => +x.toFixed(3)).join(' '));
 for (let v = 0; v < NV; v++) {
   const j = JA.getElement(v, []), w = WA.getElement(v, []), s = w[0] + w[1] + w[2] + w[3] || 1, p = P.getElement(v, []), o = vec3.create();
   vj.push(j); vw.push(w.map((x) => x / s));
@@ -109,7 +113,7 @@ const nSkin = under.length ? Math.max(...under.map((v) => coords(rest[v])[2])) :
 let O = null;
 // the seat clears everything proximal to the knuckles, whatever bone it is skinned to (on Elise the little finger's
 // first bone carries the heel of the hand, where the hilt ends)
-const seatVerts = handVerts.filter((v) => coords(rest[v])[0] < fKnuckle + 0.004);
+const seatVerts = handVerts.filter((v) => coords(rest[v])[0] < fKnuckle + 0.004 && wOn(v, thumbSet) < 0.3);   // the thumb moves out of the way itself
 for (let n = nSkin; n <= nSkin + 0.06; n += 0.0005) { const o = fromCoords(fKnuckle - BACK, gMid, n); if (seatVerts.every((v) => distAxis(rest[v], o) >= want)) { O = o; break; } }
 if (!O) throw new Error('no seat on the palm');
 
@@ -131,7 +135,7 @@ function posed(a) {
   return { world, touched };
 }
 const LBS = (world, list) => {
-  const mats = world.map((m, i) => mat4.multiply(mat4.create(), m, IBM[i])), out = new Map();
+  const mats = world.map((m, i) => mat4.multiply(mat4.create(), mat4.multiply(mat4.create(), m, IBM[i]), MESH)), out = new Map();
   for (const v of list) { const p = P.getElement(v, []), o = vec3.create(); for (let k = 0; k < 4; k++) if (vw[v][k] > 0) vec3.scaleAndAdd(o, o, vec3.transformMat4(vec3.create(), p, mats[vj[v][k]]), vw[v][k]); out.set(v, o); }
   return out;
 };
@@ -172,7 +176,8 @@ const Xs = vec3.normalize(vec3.create(), vec3.scaleAndAdd(vec3.create(), F, A, -
 const swordWorld = mat4.fromValues(Xs[0], Xs[1], Xs[2], 0, A[0], A[1], A[2], 0, Zs[0], Zs[1], Zs[2], 0, Og[0], Og[1], Og[2], 1);
 const swordInSeat = mat4.multiply(mat4.create(), mat4.invert(mat4.create(), WORLD[iHand]), swordWorld);
 const near = (list) => list.filter((v) => distAxis(pts.get(v), O) < want + 0.0025).length;
-const report = {
+const jointGap = Object.fromEntries([...fingers.map((f) => [f.name, f.c[2]]), ['thumb', tChain[2]]].map(([n, ji]) => [n, +(distAxis(mat4.getTranslation(vec3.create(), PW[ji]), O) * 1000).toFixed(1)]));
+const report = { joint3_to_axis_mm: jointGap,
   rig: RIG_NAME, seat: threeName(RIG.hand), angles_deg: Object.fromEntries(Object.entries(ang).map(([k, v]) => [k, +v.toFixed(1)])),
   palm_normal: Array.from(N, (x) => +x.toFixed(3)), gap_mm: +((minDist(pts) - GRIP_R) * 1000).toFixed(2),
   vertices_near_the_hilt: { ...Object.fromEntries(NAMES.map((n) => [n, near(fingerVerts[n])])), thumb: near(thumbVerts), palm: near(palmVerts) },
