@@ -80,3 +80,16 @@ test('the girl (child_a, the owner\'s Tripo model): her bones carry the agent ri
     for (const n of ['pelvis', 'spine', 'chest', 'neck', 'head', 'thigh_L', 'shin_L', 'foot_L', 'thigh_R', 'shin_R', 'foot_R', 'upperarm_L', 'forearm_L', 'hand_L', 'upperarm_R', 'forearm_R', 'hand_R']) assert.ok(bones.has(n), f + ' has ' + n);
   }
 });
+
+test('the owner\'s Tripo townsfolk face forward like the town (glTF +Z): the boy and the Sweeper came in turned 90 degrees', () => {
+  for (const f of ['child_a', 'child_b', 'sweeper'].flatMap((k) => ['townsfolk_' + k + '.glb', 'townsfolk_' + k + '_m.glb'])) {
+    const { json } = glbJson(new URL('../../public/assets/models/' + f, import.meta.url));
+    const parent = {}; json.nodes.forEach((n, i) => (n.children || []).forEach((c) => { parent[c] = i; }));
+    const local = (n) => { const [x, y, z, w] = n.rotation || [0, 0, 0, 1], [sx, sy, sz] = n.scale || [1, 1, 1], t = n.translation || [0, 0, 0];
+      return [(1 - 2 * (y * y + z * z)) * sx, 2 * (x * y + z * w) * sx, 2 * (x * z - y * w) * sx, 0, 2 * (x * y - z * w) * sy, (1 - 2 * (x * x + z * z)) * sy, 2 * (y * z + x * w) * sy, 0, 2 * (x * z + y * w) * sz, 2 * (y * z - x * w) * sz, (1 - 2 * (x * x + y * y)) * sz, 0, t[0], t[1], t[2], 1]; };
+    const mul = (a, b) => { const r = new Array(16).fill(0); for (let i = 0; i < 4; i++) for (let k = 0; k < 4; k++) for (let l = 0; l < 4; l++) r[k * 4 + i] += a[l * 4 + i] * b[k * 4 + l]; return r; };
+    const at = (name) => { let i = json.nodes.findIndex((x) => x.name === name), m = local(json.nodes[i]); for (let p = parent[i]; p !== undefined; p = parent[p]) m = mul(local(json.nodes[p]), m); return [m[12], m[13], m[14]]; };
+    let dx = 0, dz = 0; for (const s of ['L', 'R']) { const a = at('foot_' + s), b = at('toe_' + s); dx += b[0] - a[0]; dz += b[2] - a[2]; }
+    assert.ok(dz > 0 && Math.abs(Math.atan2(dx, dz)) < 0.35, f + ' toes point ' + Math.round(Math.atan2(dx, dz) * 57.3) + ' deg off forward');
+  }
+});

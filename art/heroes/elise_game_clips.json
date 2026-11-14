@@ -1,5 +1,5 @@
 {
- "_": "The new Elise (the owner's Tripo elise_anim_pack.glb, Mixamo rig): the game's hero clip names cut from the pack's clips (art/tools/glb_game_clips.mjs). window: [start, end] seconds of the pack clip; the extras are what play/iris-avatar.js reads (impact_s, release_s, step_s: the window starts just before the hand or foot speed peak, art/heroes/peaks.py, so a strike lands within 0.13-0.18 s, a cast lets go at 0.1 s and slash1 hits at 0.3 s like the game's old keyed moves). Walk: one stride of the pack walk (its clip holds two). Run: one stride of flee_01 (owner 14.11: the pack run is a sprint and read terribly fast at our 3.3 m/s; flee_01 is a jog with bent arms), its window shifted so the left foot lands in the same phase as in the walk (the gait blends both on one stride phase). Speed: the hips travel over the window in the pack (art/heroes/runmeasure.py); contact: each foot's landing as a fraction of the stride (the footstep events). The pack run is not a clean cycle: the window is the closest-pose pair (14 deg at worst, art/heroes/loopcut2.py).",
+ "_": "The new Elise (the owner's Tripo elise_anim_pack.glb, Mixamo rig): the game's hero clip names cut from the pack's clips (art/tools/glb_game_clips.mjs). window: [start, end] seconds of the pack clip; the extras are what play/iris-avatar.js reads (impact_s, release_s, step_s: the window starts just before the hand or foot speed peak, art/heroes/peaks.py, so a strike lands within 0.13-0.18 s, a cast lets go at 0.1 s and slash1 hits at 0.3 s like the game's old keyed moves). Walk: one stride of the pack walk (its clip holds two). Run: one stride of the pack run (owner 14.11 picked it from five: variant 2, the sprint with pumping arms), the closest-pose window (14 deg at worst); the player runs at 4.43 m/s (physics/character.js), so both heroines play it near their own cadence, its window shifted so the left foot lands in the same phase as in the walk (the gait blends both on one stride phase). Speed: the hips travel over the window in the pack (art/heroes/runmeasure.py); contact: each foot's landing as a fraction of the stride (the footstep events). The pack run is not a clean cycle: the window is the closest-pose pair (14 deg at worst, art/heroes/loopcut2.py).",
  "idle": {
   "from": "idle",
   "extras": {
@@ -34,22 +34,22 @@
   }
  },
  "run": {
-  "from": "flee_01",
+  "from": "run",
   "window": [
-   1.25,
-   1.9583
+   0.4167,
+   1.0417
   ],
   "extras": {
    "loop": true,
-   "speed": 4.07,
+   "speed": 4.176,
    "contact": {
     "L": [
-     0.529,
-     0.529
+     0.667,
+     0.667
     ],
     "R": [
-     0.059,
-     0.059
+     0.2,
+     0.2
     ]
    }
   }

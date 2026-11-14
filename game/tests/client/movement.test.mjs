@@ -10,21 +10,21 @@ import { DEFAULT_MOTION, NPC_MOTION, createMotion, stepMotion, gaitBlend, turnRa
 import { CameraRig } from '../../src/render/camera-rig.js';
 import { floorWorld, makePlayer, simulate, measureAll } from './movement-measure.mjs';
 
-const WALK = 1.7, RUN = WALK * 1.94, DEG = 180 / Math.PI;
+const WALK = 1.7, RUN = WALK * 2.6, DEG = 180 / Math.PI; // run: the heroines' run clip speed (owner 14.11)
 const place = (ch, pos) => { ch.pos = pos.slice(); ch.prevPos = pos.slice(); ch.lastSafe = pos.slice(); return ch; };
 
-test('quick start: 90 % of the walk speed within 0.3 s, run tops out at 2.1x and takes longer', () => {
+test('quick start: 90 % of the walk speed within 0.3 s, run tops out at 2.6x and takes longer', () => {
   const walk = simulate(makePlayer(floorWorld()), () => [0, 1], 2);
   const run = simulate(makePlayer(floorWorld()), () => [0, 1], 2, { run: true });
   const t90 = (rows, v) => rows.find((r) => r.speed >= 0.9 * v).t;
   assert.ok(t90(walk, WALK) <= 0.3, 'walk reaches 90 % at ' + t90(walk, WALK));
   assert.ok(Math.abs(Math.max(...walk.map((r) => r.speed)) - WALK) < 1e-6);
   assert.ok(Math.abs(Math.max(...run.map((r) => r.speed)) - RUN) < 1e-6);
-  assert.ok(t90(run, RUN) > t90(walk, WALK) && t90(run, RUN) <= 0.5, 'run reaches 90 % at ' + t90(run, RUN));
+  assert.ok(t90(run, RUN) > t90(walk, WALK) && t90(run, RUN) <= 0.6, 'run reaches 90 % at ' + t90(run, RUN)); // 4.43 m/s since 14.11: a longer build-up
 });
 
-test('short controlled stop: from a walk in under 0.2 s and 0.15 m, from a run in under 0.4 s and 0.6 m, then exact rest', () => {
-  for (const [run, maxT, maxD] of [[false, 0.2, 0.15], [true, 0.4, 0.6]]) {
+test('short controlled stop: from a walk in under 0.2 s and 0.15 m, from a run in under 0.45 s and 0.8 m, then exact rest', () => {
+  for (const [run, maxT, maxD] of [[false, 0.2, 0.15], [true, 0.45, 0.8]]) { // the run is 4.43 m/s since 14.11 (was 3.3): 0.68 m to stop
     const ch = makePlayer(floorWorld());
     const rows = simulate(ch, (t) => (t < 2 ? [0, 1] : [0, 0]), 4, { run });
     const release = rows.find((r) => r.t >= 2 - 1e-6), stop = rows.find((r) => r.t > 2 && r.speed === 0);

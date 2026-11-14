@@ -4,7 +4,7 @@ The clips go into a separate side-car made by art/heroes/retarget_pack.py (the g
 clips: play/anim-library.js BAKED_CLIPS), so the model file carries the mesh and the skeleton only. The importer's
 helper objects (a cube and a sphere Tripo leaves in the file) are dropped; the whole character is scaled about its feet
 to `--height` metres and the scale is applied to the skeleton. Prints REPORT with the height and the bone count."""
-import bpy, json, sys
+import bpy, json, math, sys
 from mathutils import Vector
 
 argv = sys.argv[sys.argv.index('--') + 1:]; A = {argv[i][2:]: argv[i + 1] for i in range(0, len(argv), 2)}
@@ -25,6 +25,23 @@ if 'rename' in A:
     for old, new in json.load(open(A['rename'])).items():
         if not old.startswith('_') and old in arm.data.bones: arm.data.bones[old].name = new
 bpy.context.view_layer.update()
+# Facing (owner 14.11: the boy and the Sweeper ran sideways): some Tripo GLBs come facing +X. The town's bodies face
+# forward (Blender -Y, glTF +Z): the foot-to-toe direction of both feet tells, and the whole character (skeleton and
+# its skinned meshes) is turned about the vertical so it points forward, before the scale and the turn are applied.
+def bone(*names):
+    for n in names:
+        if n in arm.data.bones: return arm.data.bones[n]
+    return next((b for b in arm.data.bones if b.name.endswith(names[-1])), None)
+pairs = [(bone('foot_L', 'L_Foot', 'mixamorig:LeftFoot', 'LeftFoot'), bone('toe_L', 'L_ToeBase', 'mixamorig:LeftToeBase', 'LeftToeBase')),
+         (bone('foot_R', 'R_Foot', 'mixamorig:RightFoot', 'RightFoot'), bone('toe_R', 'R_ToeBase', 'mixamorig:RightToeBase', 'RightToeBase'))]
+yaw = 0.0
+ds = [(arm.matrix_world @ t.head_local) - (arm.matrix_world @ f.head_local) for f, t in pairs if f and t]
+if ds:
+    d = sum(ds, Vector())  # both feet: their toe-out cancels
+    yaw = math.atan2(d.x, -d.y)  # 0 when the toes point to -Y
+    if abs(yaw) > math.radians(20):
+        arm.rotation_mode = 'XYZ'; arm.rotation_euler.z -= yaw
+        bpy.context.view_layer.update()
 pts = [o.matrix_world @ v.co for o in body for v in o.data.vertices]
 h = max(p.z for p in pts) - min(p.z for p in pts); k = float(A.get('height', 1.9)) / h
 arm.scale = [s * k for s in arm.scale]; arm.location = arm.location * k
@@ -38,4 +55,4 @@ kw = dict(filepath=A['out'], export_format='GLB', use_selection=True, export_yup
 props = bpy.ops.export_scene.gltf.get_rna_type().properties.keys()
 bpy.ops.export_scene.gltf(**{x: v for x, v in kw.items() if x in props})
 print('REPORT', json.dumps(dict(step='tripo_person', height_m=round(max(p.z for p in pts) - min(p.z for p in pts), 3), lowest_z=round(min(p.z for p in pts), 3),
-                                scale=round(k, 4), bones=len(arm.data.bones), tris=sum(len(o.data.loop_triangles) or sum(len(pl.vertices) - 2 for pl in o.data.polygons) for o in body))))
+                                scale=round(k, 4), turned_deg=round(math.degrees(yaw), 1), bones=len(arm.data.bones), tris=sum(len(o.data.loop_triangles) or sum(len(pl.vertices) - 2 for pl in o.data.polygons) for o in body))))
