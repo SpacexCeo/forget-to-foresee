@@ -971,6 +971,7 @@ window.addEventListener('ftf:skin-wear', (e) => {
 window.__ftfSkins = () => ({ current: irisAvatar ? irisAvatar.hero.id : startHero.id, owned: skinsOwned(), trying: !!tryOn });
 /** Above the altar: when the next Tournament round starts ("Open now" in this build: rounds are always open). */
 let altarTimer = null;
+let tourneyProgress = null; // ui/tourney-progress.js once loaded (1 while loading)
 /** The new-player intro's crowd lines (play/locales/en-npe.js, sprint 7.3), in the barks rotation when the intro is on. */
 const NPE_BARKS = Object.freeze(Array.from({ length: 10 }, (_, i) => `npe.bark.${i + 1}`));
 const _altarP = new THREE.Vector3();
@@ -1722,6 +1723,9 @@ function frame() {
   if (playerHud) playerHud.update({ visible: !!(inTown && townFlow && townFlow.phase === 'town'), hp: townMobs ? townMobs.hp : 100, maxHp: 100, stamina });
   if (townFlow && !townFlow.registered) { flowFrame.device = input.device === 'gamepad' ? 'gamepad' : 'keyboard'; townFlow.update(dt, flowFrame); }
   updateAltarTimer();
+  // the Tournament gate made visible (ui/tourney-progress.js): the spider chip until ten stone spiders, then the open banner
+  if (!tourneyProgress && townLedger) { tourneyProgress = 1; import('./ui/tourney-progress.js').then((m) => { tourneyProgress = m.createTourneyProgress({ t: (k, a2) => ctx.i18n.t(k, a2), base: import.meta.env.BASE_URL }); }).catch(() => { tourneyProgress = null; }); }
+  if (tourneyProgress && tourneyProgress.update) tourneyProgress.update({ visible: !!(inTown && townFlow && townFlow.phase === 'town' && !document.querySelector('dialog[open], .d1-panel, .d1-card')), gate: tourneyGate(townLedger.stats, { judge: judge || params.get('judge') === '1' }), reduced: lookdev.reducedMotion });
 
   controls.update(input.device, null, inspecting);
   const near = inspecting || !play || play.zone === 'shell' ? null : nearestInteractable();
