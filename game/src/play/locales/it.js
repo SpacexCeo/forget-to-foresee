@@ -1354,6 +1354,8 @@ export default {
   'town.objective': "Raggiungi l’altare del Torneo",
   'town.loading': "La città sta prendendo forma…",
   'town.altar.prompt': "Iscriviti al Torneo",
+  'town.altar.locked': "Torneo: ragni di pietra {n}/{need}",
+  'town.altar.lockedToast': "Il Torneo si apre dopo {need} ragni di pietra. Ragni {n}/{need}: cacciali fuori dalle mura.",
   "town.objective.resume": "La tua stagione ti aspetta: l'altare ti riporta lassù",
   "town.altar.resume": "Torna al Torneo",
   "quest.obj.read": "Facoltativo: l'oste nella via bassa ha un segno da leggere",

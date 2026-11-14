@@ -1356,6 +1356,8 @@ const EN = {
   'town.objective': "Walk to the Tournament altar",
   'town.loading': "The town is taking shape…",
   'town.altar.prompt': "Register for the Tournament",
+  'town.altar.locked': "Tournament: stone spiders {n}/{need}",
+  'town.altar.lockedToast': "The Tournament opens after {need} stone spiders. Spiders {n}/{need}: hunt them outside the walls.",
   "town.objective.resume": "Your season waits: the altar takes you back",
   "town.altar.resume": "Return to the Tournament",
   "quest.obj.read": "Optional: the innkeeper on the lower street has a sign to read",

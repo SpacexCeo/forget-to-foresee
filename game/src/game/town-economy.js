@@ -163,7 +163,7 @@ export function levelOf(xp) {
   return { level: n + 1, xp, into: xp - lo, need: hi - lo, title: TITLES[Math.min(n, TITLES.length - 1)] };
 }
 
-const fresh = () => ({ v: 1, silk: START_SILK * 100, xp: 0, hires: {}, counter: 0, agents: {}, log: [], equity: [START_SILK * 100], stats: { signsRead: 0, trialsVerified: 0, memoriesForgotten: 0, agentsHired: 0, questSteps: 0, net: 0, rounds: 0, wins: 0, mobsKilled: 0 }, results: [] });
+const fresh = () => ({ v: 1, silk: START_SILK * 100, xp: 0, hires: {}, counter: 0, agents: {}, log: [], equity: [START_SILK * 100], stats: { signsRead: 0, trialsVerified: 0, memoriesForgotten: 0, agentsHired: 0, questSteps: 0, net: 0, rounds: 0, wins: 0, mobsKilled: 0, spidersKilled: 0 }, results: [] });
 
 /**
  * The town ledger, persisted under ftf.town.v1. `now` is injectable for tests.
@@ -280,6 +280,7 @@ export function createTownLedger({ storage = null, now = () => Date.now() } = {}
       const before = levelOf(st.xp).level;
       const gained = xpForKill(type, elite) + (st.stats.mobsKilled ? 0 : FIRST_KILL_XP);
       st.xp += gained; st.stats.mobsKilled++;
+      if (type === 'skitter') st.stats.spidersKilled = (st.stats.spidersKilled || 0) + 1; // the stone spiders: they open the Tournament (game/tourney-gate.js)
       save();
       const after = levelOf(st.xp).level;
       return { gained, level: after, levelUp: after > before ? after : 0 };

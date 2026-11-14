@@ -54,6 +54,7 @@ import { createTownLedger } from './game/town-economy.js';
 import { features as featureFlags } from './features.js';
 import { mountSprint } from './sprint/index.js';
 import { createDay1Mint, loadDay1 } from './play/day1-mint.js';
+import { tourneyGate } from './game/tourney-gate.js';
 import { findHandBone } from './play/hand-bones.js';
 import { nextSkin, wearPlan } from './play/skins.js';
 import { TALK_RADIUS } from './scenes/town-quest.js';
@@ -604,6 +605,7 @@ if (townMode.town) {
     islandReady, // the cover stays until the archipelago's first view is loaded and warmed
     onRegister: () => { if (irisAvatar) irisAvatar.react('register', clock.elapsedTime); }, // she reaches for the ring
     // the Tournament warning (owner 12.11); never on the judge link, whose flow stays as it was
+    tourney: () => tourneyGate(townLedger.stats, { judge: judge || params.get('judge') === '1' }), onTourneyLocked: (g) => toast(ctx.i18n.t('town.altar.lockedToast', { n: g.n, need: g.need })),
     confirmRegister: judge ? null : () => import('./ui/tourney-warn.js').then((m) => m.confirmTournament({ t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage })),
   });
   mountCasting();
@@ -637,6 +639,7 @@ if (townMode.town) {
   // (flag agentTournament: the Season Cup card first, with the Agent badge, Add an agent and the exhibition; play/season-cup.js)
   if (!tournMounted) { tournMounted = true; let panel = null, cupCard = null; const openEntry = () => import('./ui/town-works-panel.js').then((u) => { if (!panel) panel = u.createTournamentEntry({ t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage, flush: () => (expeditionSync ? expeditionSync.flush() : null) }); panel.open(); }).catch((err) => console.warn('[tournament]', err));
     window.addEventListener('ftf:tournament-open', () => {
+      { const g = tourneyGate(townLedger.stats, { judge: judge || params.get('judge') === '1' }); if (!g.open) { toast(ctx.i18n.t('town.altar.lockedToast', { n: g.n, need: g.need })); return; } } // owner 14.11: ten stone spiders first
       if (!featureFlags.on('agentTournament')) { openEntry(); return; }
       import('./play/season-cup.js').then((u) => { if (!cupCard) cupCard = u.createSeasonCup({ t: (k, a) => ctx.i18n.t(k, a), onEnterChain: openEntry }); cupCard.open(); }).catch((err) => { console.warn('[cup]', err); openEntry(); });
     }); }

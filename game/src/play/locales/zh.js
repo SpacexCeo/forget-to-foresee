@@ -1353,6 +1353,8 @@ export default {
   'town.objective': "走到锦标赛祭坛前",
   'town.loading': "城镇正在显现……",
   'town.altar.prompt': "报名参加锦标赛",
+  'town.altar.locked': "锦标赛：石蛛 {n}/{need}",
+  'town.altar.lockedToast': "击败 {need} 只石蛛后锦标赛开放。石蛛 {n}/{need}：去城墙外狩猎。",
   "town.objective.resume": "你的赛季在等你：祭坛会带你回去",
   "town.altar.resume": "返回锦标赛",
   "quest.obj.read": "可选：下街的旅店老板有一个符号要读",
