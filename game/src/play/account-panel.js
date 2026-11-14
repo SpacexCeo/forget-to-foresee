@@ -47,7 +47,7 @@ export function openAccountPanel({ doc = document, t, makeLogin, makeEmail = nul
   { const read = (k) => { try { return JSON.parse(globalThis.localStorage.getItem(k) || 'null'); } catch { return null; } };
     const day1 = read('ftf.day1.v1'), linked = read('ftf.acct.linked.v1'), id = day1 && day1.guest && day1.guest.account_id;
     where.append(el('small', null, t('chain.account')), el('code', null, id || '—'), el('small', linked ? 'acct-on' : null, id ? (linked ? '✓ ' + t('chain.linked', { when: new Date(linked.at).toLocaleDateString() }) : t('chain.guestOnly')) : t('chain.noAccount'))); }
-  card.append(x, el('h2', null, t('acct.title')), where, guest, el('p', 'acct-note', t('acct.guest.note')), rows, status, el('p', 'acct-small', t('acct.testnet')));
+  card.append(x, el('h2', null, t('acct.title')), guest, el('p', 'acct-note', t('acct.guest.note')), where, rows, status, el('p', 'acct-small', t('acct.testnet')));
   root.append(card);
   let settle; const done = new Promise((r) => { settle = r; });
   let busy = false, closed = false;
