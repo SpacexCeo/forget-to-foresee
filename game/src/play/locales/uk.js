@@ -2086,5 +2086,11 @@ export default {
   "skin.locked": "Головний приз колеса",
   "skin.lockedElise": "Після першого дня",
   "wheel.grand": "Головний приз",
+  "nft.collection": "Карти, які можна заробити",
+  "nft.owned": "Ваша",
+  "nft.card.pass": "Перепустка у вайтліст",
+  "nft.how.wheel": "Головний приз Колеса удачі",
+  "nft.how.hatch": "Хранитель гнізд вирішує, хто готовий",
+  "nft.how.pass": "Дається наприкінці сезону",
   ...quests, // last: the journal, the tracker and the starter guide (en-quests.js keys) replace older copies above
 };
