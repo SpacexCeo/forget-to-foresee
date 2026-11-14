@@ -84,5 +84,5 @@ test('the blade swoosh: its head runs along the arc, the tail dissolves, sparks 
 
 test('the arena draws no fixed arc in front of her: the strike's light rides the limb or blade that swings (owner)', () => {
   const src = readFileSync(new URL('../../src/scenes/shoal-arena.js', import.meta.url), 'utf8');
-  assert.doesNotMatch(src, /fx.slash(/);
+  assert.ok(!src.includes("fx.slash("), "no fixed arc");
 });
