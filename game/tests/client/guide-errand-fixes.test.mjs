@@ -18,7 +18,7 @@ test('every window the rpg HUD opens is announced, and the guide hears bag, mark
 test('the loot step completes on the bag event once it is the active step', () => {
   let g = initialGuide();
   const loot = GUIDE_STEPS.findIndex((s) => s.id === 'loot');
-  assert.equal(GUIDE_STEPS[loot].on, 'bag');
+  assert.deepEqual([...GUIDE_STEPS[loot].on], ['pickup', 'bag']);
   for (const s of GUIDE_STEPS.slice(0, loot)) g = feedGuide(g, s.on).state;
   const r = feedGuide(g, 'bag');
   assert.equal(r.completed, 'loot');
@@ -51,7 +51,7 @@ test('a tip with buttons moves on by itself, so the tour never stalls; a picked-
   const { HINT_BUTTONS_MS } = await import('../../src/play/day1.js');
   assert.ok(HINT_BUTTONS_MS > 0 && HINT_BUTTONS_MS <= 60000);
   const tq = readFileSync(new URL('../../src/scenes/town-quests.js', import.meta.url), 'utf8');
-  assert.match(tq, /if \(n > sealedSeen\) feedGuide\('bag'\)/);
+  assert.match(tq, /if \(d\.phase === 'pickup'\) feedGuide\('pickup'\)/);
   const { GUIDE_STEPS, guideEvent } = await import('../../src/quests/guide.js');
   const loot = GUIDE_STEPS.findIndex((s) => s.id === 'loot');
   const g = { done: GUIDE_STEPS.slice(0, loot).map((s) => s.id), rewarded: false };
@@ -62,4 +62,36 @@ test('no "I inspect … up close" hint, and I never starts an inspection in town
   const s = src('boot-world.js');
   assert.doesNotMatch(s, /inspect <b>\$\{near\.label\}<\/b> up close/);
   assert.match(s, /playOn && !inTown && \(input\.hit\('KeyI'\)/);
+});
+
+// ---- owner P0 14.11 (again): "pick up a chest" never counted: the pickup came during the fight, before its step
+test('a chest picked up before the loot step is remembered: the step completes the moment it comes up', () => {
+  let g = initialGuide();
+  const loot = GUIDE_STEPS.findIndex((s) => s.id === 'loot'), fight = GUIDE_STEPS.findIndex((s) => s.id === 'fight');
+  for (const s of GUIDE_STEPS.slice(0, fight)) g = feedGuide(g, s.on).state;
+  g = feedGuide(g, 'pickup').state;                         // the chest drops and she walks over it during the fight step
+  assert.ok(!g.done.includes('loot') && g.seen.includes('pickup'));
+  const r = feedGuide(g, 'hit');                            // the fight step completes...
+  assert.deepEqual(r.completedAll, ['fight', 'loot'], '...and the loot step with it');
+  assert.equal(feedGuide(initialGuide(), 'nonsense').state.seen, undefined, 'unknown events are not stored');
+  assert.equal(GUIDE_STEPS.length, 8);
+});
+
+test('the chest moments are separate events: pickup (walked over), bagged, open, contents; an opened chest feeds s_chest', async () => {
+  const { createChestBag, CHEST_EVENT, CHEST_PHASES } = await import('../../src/game/chests.js');
+  assert.deepEqual([...CHEST_PHASES], ['pickup', 'bagged', 'open', 'contents']);
+  const win = new EventTarget(), seen = [];
+  win.addEventListener(CHEST_EVENT, (e) => seen.push(e.detail.phase));
+  const bag = createChestBag({ win });
+  const c = bag.add({ tier: 'rare', source: 'monster' });
+  assert.deepEqual(seen, ['bagged'], 'into the bag is not a pickup');
+  bag.settle(c.id, { outcome: { kind: 'xp', amount: 5 } });
+  assert.deepEqual(seen, ['bagged', 'open', 'contents']);
+  assert.equal(bag.settle(c.id, { outcome: { kind: 'xp', amount: 5 } }), null); assert.equal(seen.length, 3, 'never opened twice');
+  assert.match(src('scenes/town-monsters.js'), /if \(walked\) chestEvent\('pickup'/);
+  assert.match(src('scenes/town-quests.js'), /d\.phase === 'open'\) questDo\(\{ type: 'EVENT', event: 'open_chest' \}\)/);
+});
+
+test('turning the camera with the mouse aim (no button held) completes the camera step', () => {
+  assert.match(src('scenes/town-quests.js'), /e\.buttons \|\| \(doc\.pointerLockElement && doc\.pointerLockElement === e\.target && Math\.abs\(e\.movementX \|\| 0\) > 2\)/);
 });

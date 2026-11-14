@@ -27,6 +27,7 @@ import { setMarkers } from '../sprint/markers.js';
 import { artBox, resIconPath } from '../market/art.js';
 import { portraitPath } from '../quests/portraits.js';
 import { registerWindow, claimWindow } from '../ui/window-toggle.js';
+import { CHEST_EVENT } from '../game/chests.js';
 
 /** A sprint flag: features.json (sprint §3.6), or ?ff=questJournal,questTracker,autoWalk for a local check. */
 export function flagOn(name, search = (globalThis.location && globalThis.location.search) || '') {
@@ -347,9 +348,11 @@ export function createTownQuests({ scene = null, hudToast = null, storage, townL
   const notify = (text) => { if (hudToast) { hudToast(text); return; } try { win.dispatchEvent(new CustomEvent('ftf:toast', { detail: { text } })); } catch { /* none */ } }; // the HUD toast stack (boot-world toast)
   function feedGuide(ev) {
     if (!useGuide) return;
-    const r = guideEvent(guide, ev); if (!r.completed) return;
+    const r = guideEvent(guide, ev);
+    if (r.state !== guide && !r.completed) { guide = r.state; try { storage.setItem(GUIDE_KEY, JSON.stringify(guide)); } catch { /* memory only */ } } // an early event, remembered
+    if (!r.completed) return;
     guide = r.state; try { storage.setItem(GUIDE_KEY, JSON.stringify(guide)); } catch { /* memory only */ }
-    try { win.dispatchEvent(new CustomEvent('ftf:guide.step', { detail: { id: r.completed, done: true } })); } catch { /* none */ }
+    for (const id of r.completedAll || [r.completed]) { try { win.dispatchEvent(new CustomEvent('ftf:guide.step', { detail: { id, done: true } })); } catch { /* none */ } }
     if (r.reward) { townLedger.grant({ xp: r.reward }); notify(say('guide.done')); }
     if (tracker) tracker.refresh(true);
   }
@@ -387,12 +390,16 @@ export function createTownQuests({ scene = null, hudToast = null, storage, townL
     onOpen: (id) => { if (journal) journal.open(null, id); }, onWalk: (v) => walkTo(v) }) : null;
   if (useTracker && doc.body && doc.body.classList) { doc.body.classList.add('ftf-tracker-on'); if (!doc.getElementById || !doc.getElementById('ft-hide-pill')) { const st = doc.createElement('style'); st.id = 'ft-hide-pill'; st.textContent = 'body.ftf-tracker-on .ftf-town-objective{display:none!important}'; (doc.head || doc.body).append(st); } }
   const onGuideKey = (e) => { const tag = e && e.target && e.target.tagName; if (tag === 'INPUT' || tag === 'TEXTAREA') return; if (e.code === 'KeyR') feedGuide('camera'); else if (e.code === 'KeyI') feedGuide('bag'); else if (e.code === 'KeyB') feedGuide('market'); };
-  const onDrag = (e) => { if (e && e.buttons && e.target && e.target.tagName === 'CANVAS') feedGuide('camera'); };
+  // a drag on the scene turns the camera; so does any mouse move while the mouse aim holds the pointer (ui/mouse-aim.js),
+  // with no button held: that turn counts too (owner P0 14.11: no dead end on the new player's path)
+  const onDrag = (e) => { if (e && e.target && e.target.tagName === 'CANVAS' && (e.buttons || (doc.pointerLockElement && doc.pointerLockElement === e.target && Math.abs(e.movementX || 0) > 2))) feedGuide('camera'); };
   const onPortal = () => feedGuide('portal'), onHit = () => feedGuide('hit');
   // the loot step also completes when a chest is really picked up (owner P0 14.11): a new sealed chest in the bag
-  let sealedSeen = chests && chests.sealed ? chests.sealed().length : 0;
-  const onChests = () => { const n = chests && chests.sealed ? chests.sealed().length : 0; if (n > sealedSeen) feedGuide('bag'); sealedSeen = n; };
-  const offChests = useGuide && chests && chests.subscribe ? chests.subscribe(onChests) : null;
+  // chest moments (game/chests.js CHEST_EVENT), each on its own: her pickup completes the guide's loot step (remembered if
+  // it comes early), an opened chest is the journal's "open a chest" (s_chest) (owner P0 14.11)
+  const onChest = (e) => { const d = (e && e.detail) || {}; if (d.phase === 'pickup') feedGuide('pickup'); else if (d.phase === 'open') questDo({ type: 'EVENT', event: 'open_chest' }); };
+  win.addEventListener(CHEST_EVENT, onChest);
+  const offChests = () => win.removeEventListener(CHEST_EVENT, onChest);
   const onWindow = (e) => { const id = e && e.detail && e.detail.id; if (id === 'bag' || id === 'market' || id === 'journal') feedGuide(id); }; // the rpg HUD stops its keys, so the guide hears the window instead
   if (useGuide) { win.addEventListener('keydown', onGuideKey); win.addEventListener('pointermove', onDrag); win.addEventListener('ftf:portal-near', onPortal); win.addEventListener('ftf:mob-killed', onHit); win.addEventListener('ftf:mob-hit', onHit); win.addEventListener('ftf:window-open', onWindow); }
   function autoTrack() { // newly accepted quests are tracked while fewer than three are
