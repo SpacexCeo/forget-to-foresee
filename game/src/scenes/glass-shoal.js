@@ -254,6 +254,8 @@ export function createGlassShoal(o) {
     get mode() { return mode; },
     get save() { return { ...save }; },
     /** True while the ride or the fight owns the heroine (boot-world skips its physics and town input). */
+    /** Whether she has taken the Loomblade (play/held-blade.js puts it in her hand). */
+    hasBlade: () => !!save.blade,
     owns: () => mode === 'ride' || mode === 'arena' || mode === 'arena-wait',
     update, interact,
     /** Input while owned (keys from boot-world's Input). */
