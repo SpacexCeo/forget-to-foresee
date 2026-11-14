@@ -86,3 +86,80 @@ class Baker:
                 self.apply(fn(k / frames if loop else k / (frames - 1))); bpy.context.view_layer.update()
                 files += ortho_views(f'{prefix}_{name}_{k}', [self.mesh], views=(views[k % len(views)],), res=res, box=box, pad=pad)
         self.apply(Pose()); self.rig.animation_data.use_nla = True; return files
+
+
+def mirror_pose(p):
+    """The same pose seen in a mirror (left <-> right): for clips that must be exact mirrors of each other."""
+    out = Pose()
+    for n, Q in p.items():
+        m = n[:-2] + ('.R' if n.endswith('.L') else '.L') if n[-2:] in ('.L', '.R') else n
+        out[m] = mirror(Q)
+    out.loc = (-p.loc[0], p.loc[1], p.loc[2]); return out
+
+
+def align(a, b):
+    """The smallest rotation (3x3) that turns direction a into direction b."""
+    a = np.asarray(a, float); b = np.asarray(b, float); a = a / np.linalg.norm(a); b = b / np.linalg.norm(b)
+    v = np.cross(a, b); c = float(a @ b)
+    if c < -0.999999:
+        ax = np.cross(a, [1.0, 0, 0]); ax = ax if np.linalg.norm(ax) > 1e-3 else np.cross(a, [0, 1.0, 0]); ax /= np.linalg.norm(ax)
+        return 2 * np.outer(ax, ax) - np.eye(3)
+    K = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]]); return np.eye(3) + K + K @ K / (1 + c)
+
+
+def quat(R): return Matrix(np.asarray(R).tolist()).to_quaternion()
+
+
+class Skel:
+    """Forward kinematics of the rest skeleton in plain numpy, in the pose convention of this file: every bone turns
+    about its own head by a rotation written in armature axes. fk(p)[bone] = (R, t): a rest point x that rides on the
+    bone goes to R @ x + t. Used for IK that is baked into plain rotation keys (nothing to solve in the game)."""
+    def __init__(self, rig):
+        bones = list(rig.data.bones)
+        self.head = {b.name: np.array(b.head_local) for b in bones}; self.tail = {b.name: np.array(b.tail_local) for b in bones}
+        self.parent = {b.name: (b.parent.name if b.parent else None) for b in bones}
+        self.order = []
+        def walk(b):
+            self.order.append(b.name)
+            for c in b.children: walk(c)
+        for b in bones:
+            if b.parent is None: walk(b)
+
+    def fk(self, p, upto=None):
+        out = {}; I = np.eye(3)
+        for n in self.order:
+            par = self.parent[n]; Rp, tp = out[par] if par else (I, np.zeros(3))
+            Q = p.get(n); Rq = np.array(Q.to_matrix()) if Q is not None else I; h = self.head[n]
+            t = Rp @ (h - Rq @ h) + tp
+            if par is None: t = t + np.array(p.loc, float)
+            out[n] = (Rp @ Rq, t)
+            if n == upto: break
+        return out
+
+    def at(self, F, bone, point=None):
+        """Where the bone's head (or a rest point riding on it) is in the pose F = fk(p)."""
+        R, t = F[bone]; return R @ (self.head[bone] if point is None else np.asarray(point, float)) + t
+
+    def aim(self, p, bone, direction, vec=None):
+        """Point the bone (its rest vector `vec`, default head -> tail) along a world direction with the smallest turn
+        from the rest orientation (no twist); the parents' pose is taken from p."""
+        vec = (self.tail[bone] - self.head[bone]) if vec is None else np.asarray(vec, float)
+        par = self.parent[bone]; Rp = self.fk(p, par)[par][0] if par else np.eye(3)
+        p[bone] = quat(Rp.T @ align(vec, direction)); return p
+
+    def plant(self, p, upper, lower, end, target, R_end=None, k=1.0, pole=None):
+        """Two-bone IK: the head of `end` (ankle, wrist) goes to `target`; `end` takes the world rotation R_end
+        (default: its rest orientation, a flat foot). If the target is out of reach the leg points straight at it.
+        k < 1 blends from the rotations already in p. Returns True when the target is reached."""
+        par = self.parent[upper]; Rp, tp = self.fk(p, par)[par]
+        h = Rp @ self.head[upper] + tp; a = self.head[lower] - self.head[upper]; b = self.head[end] - self.head[lower]
+        la, lb = np.linalg.norm(a), np.linalg.norm(b); d = np.asarray(target, float) - h; dist = float(np.linalg.norm(d)); dirn = d / dist
+        reach = dist <= (la + lb) * 0.9995; dc = min(max(dist, abs(la - lb) * 1.001), (la + lb) * 0.9995)
+        if pole is None: ab = a + b; pole = Rp @ (a - ab * (a @ ab) / (ab @ ab))
+        pole = np.asarray(pole, float); pole = pole - dirn * (pole @ dirn); pole /= np.linalg.norm(pole)
+        ca = (la * la + dc * dc - lb * lb) / (2 * la * dc); sa = math.sqrt(max(0.0, 1 - ca * ca))
+        knee = h + la * (ca * dirn + sa * pole); tip = h + dc * dirn
+        R1 = align(Rp @ a, knee - h) @ Rp; R2 = align(R1 @ b, tip - knee) @ R1
+        new = {upper: quat(Rp.T @ R1), lower: quat(R1.T @ R2), end: quat(R2.T @ (np.eye(3) if R_end is None else R_end))}
+        for n, Q in new.items(): p[n] = Q if k >= 1 else p.get(n, Quaternion()).slerp(Q, k)
+        return reach

@@ -39,6 +39,12 @@ test('dragon mix: the ride takes off, glides between wing beats and banks into t
   assert.ok(Math.abs(dragonMix('ride', wrap - 0.01).weights.flap - dragonMix('ride', wrap + 0.01).weights.flap) < 0.05);
 });
 
+test('dragon mix: the take-off keeps the paws on the ground through the crouch, the lift starts at the push', () => {
+  for (const t of [0, 0.2, DRAGON_ANIM.push]) assert.equal(dragonMix('ride', t).lift, 0);
+  assert.ok(dragonMix('ride', DRAGON_ANIM.push + 0.3).lift > 0);
+  assert.equal(dragonMix('ride', DRAGON_ANIM.takeoff).lift, 1);
+});
+
 test('dragon model: both files carry the seven clips, one skin with the saddle socket, and stay inside the budget', () => {
   for (const [file, maxBytes, maxTris] of [['shoal_dragon.glb', 8e6, 60000], ['shoal_dragon_m.glb', 3e6, 16000]]) {
     const { json, bytes } = glb(file);

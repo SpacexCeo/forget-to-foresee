@@ -59,9 +59,12 @@ names = [n for n, h, t, p, d in BONES if d and not n.startswith('wing_')]; col =
 P = co[body_idx]; x, y, z = P[:, 0], P[:, 1], P[:, 2]
 def seg_dist(a, b):
     a = np.array(a); b = np.array(b); ab = b - a; t = np.clip(((P - a) @ ab) / (ab @ ab), 0, 1); return np.linalg.norm(P - (a + t[:, None] * ab), axis=1)
+def chain_dist(prefix, side):
+    return np.min([seg_dist(h, t) for n, h, t, p, d in BONES if n.startswith(prefix) and n.endswith(side)], axis=0)
+NEAR = {(pre, sd): 1 - smooth(0.38, 0.62, chain_dist(pre, sd)) for pre in ('leg_f', 'leg_h') for sd in ('.L', '.R')}   # a leg bone only holds its own leg, never the belly between the legs
 def region(n):
-    if n.startswith('leg_f'): sx = x if n.endswith('.L') else -x; return smooth(0.05, 0.3, sx) * (1 - smooth(2.0, 2.6, z)) * smooth(-4.1, -3.9, y) * (1 - smooth(-2.4, -2.0, y))
-    if n.startswith('leg_h'): sx = x if n.endswith('.L') else -x; return smooth(0.05, 0.3, sx) * (1 - smooth(2.0, 2.7, z)) * smooth(-1.6, -1.2, y) * (1 - smooth(0.5, 0.8, y))
+    if n.startswith('leg_f'): sx = x if n.endswith('.L') else -x; return smooth(0.05, 0.3, sx) * (1 - smooth(2.0, 2.6, z)) * smooth(-4.1, -3.9, y) * (1 - smooth(-2.4, -2.0, y)) * NEAR[('leg_f', n[-2:])]
+    if n.startswith('leg_h'): sx = x if n.endswith('.L') else -x; return smooth(0.05, 0.3, sx) * (1 - smooth(2.0, 2.7, z)) * smooth(-1.6, -1.2, y) * (1 - smooth(0.5, 0.8, y)) * NEAR[('leg_h', n[-2:])]
     if n.startswith('tail'): return smooth(-0.3, 0.3, y)
     if n.startswith('neck') or n == 'head': return smooth(2.6, 3.0, z) * (1 - smooth(-2.5, -2.1, y))
     return np.ones(len(P))
@@ -80,7 +83,7 @@ legs = [n for n in names if n.startswith('leg_')]
 tails = [n for n in names if n.startswith('tail')]
 necks = ['neck1', 'neck2', 'neck3', 'neck4', 'head']
 # the head with its crest and ears is rigid: everything above the jaw line in front of / over the skull
-head_mask = (P[:, 2] > 4.05) & (P[:, 1] < -2.35) | (P[:, 2] > 4.55)
+head_mask = (P[:, 2] > 4.0) & (P[:, 1] < -2.2) | (P[:, 2] > 4.5)
 bw[head_mask] = 0; bw[head_mask, col['head']] = 1
 # no leg bone above the back line, no tail bone in front of the hips, no neck bone behind the shoulders
 move(P[:, 2] > 2.75, legs, 'spine2'); move(P[:, 1] < -0.6, tails, 'hips'); move(P[:, 1] > -1.9, necks, 'chest')
@@ -97,6 +100,16 @@ for _ in range(6):
     acc = bw.copy(); cnt = np.ones(len(P), np.float32)
     np.add.at(acc, e[:, 0], bw[e[:, 1]]); np.add.at(acc, e[:, 1], bw[e[:, 0]]); np.add.at(cnt, e[:, 0], 1); np.add.at(cnt, e[:, 1], 1)
     bw = acc / cnt[:, None]
+# the leg roots and the neck base fold the furthest (legs tucked in flight): there the blend is spread wider, over
+# several edge rings, so the skin stretches evenly instead of tearing at one ring (review A.8, A.9)
+core = ((P[:, 2] > 4.3) & (P[:, 1] < -2.5)) | (P[:, 2] > 4.7)                       # the skull stays rigid
+soles = ((P[:, 2] < 0.3) & (P[:, 1] < -2.6)) | ((P[:, 2] < 0.14) & (P[:, 1] > -1.0) & (P[:, 1] < 0.4))   # the paws too
+wide = ((z < 3.05) & (((y > -4.2) & (y < -2.1)) | ((y > -1.6) & (y < 0.8)))) | ((z > 2.5) & (y < -2.0))
+wide &= ~core & ~soles
+for _ in range(int(A.get('wide', 12))):
+    acc = bw.copy(); cnt = np.ones(len(P), np.float32)
+    np.add.at(acc, e[:, 0], bw[e[:, 1]]); np.add.at(acc, e[:, 1], bw[e[:, 0]]); np.add.at(cnt, e[:, 0], 1); np.add.at(cnt, e[:, 1], 1)
+    bw[wide] = (acc / cnt[:, None])[wide]
 # at most 4 bones, normalised
 order = np.argsort(-bw, axis=1); keep = np.zeros_like(bw, bool); np.put_along_axis(keep, order[:, :4], True, axis=1); bw[~keep] = 0
 bw[bw < 0.01] = 0; ssum = bw.sum(1, keepdims=True); zero = int((ssum[:, 0] < 1e-6).sum()); bw /= np.maximum(ssum, 1e-9)
@@ -127,8 +140,12 @@ def worldq(pb, axis, deg):
     R = pb.bone.matrix_local.to_3x3().to_quaternion(); return R.inverted() @ Quaternion(axis, math.radians(deg)) @ R
 TEST = {'neck_forward': [('neck1', 'X', 22), ('neck2', 'X', 16), ('neck3', 'X', 8), ('head', 'X', -40)],
         'wings_up': [('wing_arm.L', 'Y', -40), ('wing_arm.R', 'Y', 40), ('wing_fore.L', 'Y', -15), ('wing_fore.R', 'Y', 15)],
-        'legs_tucked': [('leg_h_upper.L', 'X', 75), ('leg_h_upper.R', 'X', 75), ('leg_h_lower.L', 'X', -30), ('leg_h_lower.R', 'X', -30),
-                        ('leg_f_upper.L', 'X', 60), ('leg_f_upper.R', 'X', 60), ('leg_f_lower.L', 'X', -125), ('leg_f_lower.R', 'X', -125), ('leg_f_paw.L', 'X', 70), ('leg_f_paw.R', 'X', 70)],
+        'legs_tucked': [('leg_h_upper.L', 'X', 62), ('leg_h_upper.R', 'X', 62), ('leg_h_lower.L', 'X', -30), ('leg_h_lower.R', 'X', -30),
+                        ('leg_f_upper.L', 'X', 42), ('leg_f_upper.R', 'X', 42), ('leg_f_lower.L', 'X', -115), ('leg_f_lower.R', 'X', -115), ('leg_f_paw.L', 'X', 62), ('leg_f_paw.R', 'X', 62)],
+        'wings_down': [('wing_arm.L', 'Y', 30), ('wing_arm.R', 'Y', -30)],
+        'head_turn_60': [(n, 'Z', 12) for n in ('neck1', 'neck2', 'neck3', 'neck4', 'head')],
+        'tail_side_45': [(f'tail{i}', 'Z', 9) for i in range(1, 6)],
+        'step': [('leg_f_upper.L', 'X', -30), ('leg_h_upper.R', 'X', 30), ('leg_h_lower.R', 'X', -20)],
         'tail_up': [('tail1', 'X', 30), ('tail2', 'X', 10), ('tail3', 'Z', 20), ('tail5', 'Z', 20)]}
 AX = dict(X=(1, 0, 0), Y=(0, 1, 0), Z=(0, 0, 1)); tests = {}
 for tname, rots in TEST.items():
@@ -137,6 +154,8 @@ for tname, rots in TEST.items():
     bpy.context.view_layer.update(); dg = bpy.context.evaluated_depsgraph_get(); ev = mesh.evaluated_get(dg); me = ev.to_mesh()
     a = np.empty(len(me.vertices) * 3, np.float32); me.vertices.foreach_get('co', a); a = a.reshape(-1, 3); ev.to_mesh_clear()
     ratio = np.linalg.norm(a[ed[:, 0]] - a[ed[:, 1]], axis=1) / np.maximum(rest_len, 1e-6); ratio[rest_len < 0.01] = 1
+    worst = np.argsort(-ratio)[:400]; mid = (co[ed[worst, 0]] + co[ed[worst, 1]]) / 2
+    print('WORST', tname, json.dumps([[round(float(v), 2) for v in mid[i]] + [round(float(ratio[worst[i]]), 1), round(float(rest_len[worst[i]]), 3)] for i in range(0, 400, 16)]))
     tests[tname] = dict(max_stretch=round(float(ratio.max()), 2), p999=round(float(np.quantile(ratio, 0.999)), 2), over_2=int((ratio > 2).sum()))
     workbench(900, True); ortho_views(f'{ROOT}/renders/s07_{tname}', [mesh], views=('side', 'q34'), res=900)
 for pb in rig.pose.bones: pb.rotation_quaternion = (1, 0, 0, 0)

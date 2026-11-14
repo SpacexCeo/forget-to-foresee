@@ -7,9 +7,11 @@
 
 /** Clip names in the model file. */
 export const DRAGON_CLIPS = Object.freeze(['glide', 'flap', 'bank_l', 'bank_r', 'idle', 'land', 'takeoff']);
-/** Timing (seconds). `descent` is the scene's landing time; `touch` is where the land clip's feet meet the ground. */
+/** Timing (seconds). `descent` is the scene's landing time; `touch` is where the land clip's hind feet meet the ground
+ * (the front feet follow 0.2 s later; from there the paws are held by baked IK); `push` is where the take-off clip's
+ * hind feet leave the ground after the crouch: the model is lifted only from that moment. */
 export const DRAGON_ANIM = Object.freeze({
-  descent: 2.5, land: 2.4, touch: 1.3, takeoff: 1.3, fade: 0.3,
+  descent: 2.5, land: 2.4, touch: 0.85, takeoff: 1.3, push: 0.45, fade: 0.3,
   cycle: 9, beats: 3.0,          // in a ride: `beats` seconds of wing beats at the start of every `cycle`
   bankFull: 0.3, bankShare: 0.85, // radians of roll for the full bank pose, and how much of the mix it takes
   bodyHeight: 2.3, hover: 0.5,    // the model's origin is at its feet: lift of the body centre, and the scene's landing hover
@@ -43,5 +45,5 @@ export function dragonMix(phase, t, bank = 0, A = DRAGON_ANIM) {
   const flying = off;
   if (bank > 0) w.bank_r = flying * b; else w.bank_l = flying * b;
   w.flap = flying * (1 - b) * clamp01(beat); w.glide = flying * (1 - b) * (1 - clamp01(beat));
-  return { weights: w, times, lift: smooth(0, A.takeoff, t) };
+  return { weights: w, times, lift: smooth(A.push, A.takeoff, t) };
 }

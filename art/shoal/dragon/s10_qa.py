@@ -16,4 +16,8 @@ SHOTS = [('glide', 20, 'behind', None), ('flap', 8, 'below', None), ('flap', 26,
 VIEW_DIRS['front_hi'] = (0.25, -0.85, 0.35)
 for i, (clip, frame, view, focus) in enumerate(SHOTS):
     pose(clip, frame); beauty(f'{ROOT}/renders/qa_{i}_{clip}', [mesh], views=(view,), res=1000, samples=40, focus=focus)
+# turntable stills for the QA pack: spread wings (glide) from four sides, above and below; perched (idle) from four sides
+VIEW_DIRS.update(tt_front=(0, -1, 0.12), tt_left=(1, 0, 0.12), tt_back=(0, 1, 0.12), tt_right=(-1, 0, 0.12), tt_top=(0, -0.05, 1), tt_below=(0, 0.05, -1))
+pose('glide', 1); beauty(f'{ROOT}/renders/tt_glide', [mesh], views=('tt_front', 'tt_left', 'tt_back', 'tt_right', 'tt_top', 'tt_below'), res=800, samples=32)
+pose('idle', 1); beauty(f'{ROOT}/renders/tt_idle', [mesh], views=('tt_front', 'tt_left', 'tt_back', 'tt_right'), res=800, samples=32)
 print('REPORT', json.dumps(dict(step='s10_qa', shots=len(SHOTS), status='PASS')))

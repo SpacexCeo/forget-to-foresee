@@ -92,18 +92,14 @@ def membrane(u, v, edge, along_v=False):
     for k, bk_ in enumerate((0.2, 0.4, 0.6, 0.8)):
         d = np.abs(b - (bk_ + 0.022 * np.sin(7 * a + 2.1 * k) + 0.01 * np.sin(23 * a + k)))
         vein = np.maximum(vein, np.clip(1 - d / (0.011 * (1.15 - 0.75 * a)), 0, 1))
-    for sgn in (1, -1):                       # fine side branches between the main veins
-        ph = (a * 2.6 + sgn * b * 2.5 + 0.03 * np.sin(31 * b)) * 5
-        d = np.abs(ph - np.round(ph)) / 5
-        vein = np.maximum(vein, 0.55 * np.clip(1 - d / 0.004, 0, 1) * smooth(0.08, 0.3, a))
     vein = vein ** 0.7
     if along_v: spar = np.maximum(np.clip(1 - a / 0.04, 0, 1), np.clip(1 - (1 - b) / 0.03, 0, 1))   # the arm, finger 4
     else: spar = np.maximum(np.clip(1 - b / 0.035, 0, 1), np.clip(1 - (1 - b) / 0.035, 0, 1))          # the two fingers
     col = col + (GOLD - col) * (0.9 * vein)[..., None]
     col = col + (IVORY - col) * spar[..., None]
-    folds = 0.5 + 0.5 * np.sin(b * 6.28 * 13 + 2 * np.sin(a * 5))            # fine folds along the veins
-    h = vein * 1.0 + spar * 1.6 + 0.10 * folds * (1 - spar)
-    rough = 0.34 - 0.08 * vein + 0.05 * folds; metal = 0.75 * vein
+    folds = 0.5 + 0.5 * mottle(u, v, 1.6)                                    # soft uneven skin, no regular lines (review A.2)
+    h = vein * 1.0 + spar * 1.6 + 0.05 * folds * (1 - spar)
+    rough = 0.34 - 0.08 * vein + 0.03 * folds; metal = 0.75 * vein
     return np.clip(col, 0, 1), h, rough, metal
 
 
@@ -123,8 +119,8 @@ paint(0.5, 0.62, AB, 1, lambda gx, gy: membrane(gx, gy, 0.35 * gy, along_v=True)
 
 
 def bones(gx, gy):
-    col = IVORY * (1 - 0.06 * (0.5 + 0.5 * np.sin(gy * 6.28 * 9)))[..., None] * (1 + 0.03 * mottle(gx, gy, 3))[..., None]
-    h = 0.3 * np.sin(gy * 6.28 * 9) + 0.2 * mottle(gx, gy, 4)
+    col = IVORY * (1 + 0.04 * mottle(gx, gy, 3))[..., None]   # no ring banding (review A.5)
+    h = 0.25 * mottle(gx, gy, 4)
     return np.clip(col + (PINK - IVORY) * 0.25 * smooth(0.5, 1, gy)[..., None], 0, 1), h, np.full_like(gx, 0.4), np.zeros_like(gx)
 
 
