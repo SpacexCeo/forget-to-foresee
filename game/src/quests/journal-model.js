@@ -36,7 +36,7 @@ export function questView(id, { qs, now = 0, have = {}, level = 1, tracked = [],
 }
 
 /** Every tab's rows (and the daily reset). Done holds completed and cooldown quests. */
-export function journalModel({ qs, now = 0, have = {}, level = 1, tracked = [], search = '', giverName = (k) => k, tr = null } = {}) {
+export function journalModel({ qs, now = 0, have = {}, level = 1, tracked = [], search = '', giverName = (k) => k, tr = null, main = null } = {}) {
   const views = JOURNAL.map((j) => questView(j.id, { qs, now, have, level, tracked, tr }));
   const q = String(search || '').trim().toLowerCase();
   const match = (v) => !q || v.title.toLowerCase().includes(q) || String(giverName(v.giver)).toLowerCase().includes(q);
@@ -49,7 +49,7 @@ export function journalModel({ qs, now = 0, have = {}, level = 1, tracked = [], 
   }
   for (const t of TABS) tabs[t].sort((a, b) => (RANK[a.status] - RANK[b.status]) || (a.sort - b.sort));
   const badge = Object.fromEntries(TABS.map((t) => [t, tabs[t].filter((v) => v.status === 'ready' || v.status === 'available').length]));
-  return { tabs, badge, resetAt: nextDailyReset(now) };
+  return { tabs, badge, resetAt: nextDailyReset(now), main: main || null }; // main: the Glass Shoal main quest's banner (town-quests.js), or null
 }
 
 /** "03:12:08" until a time (for the daily countdown). */

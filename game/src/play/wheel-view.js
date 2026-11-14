@@ -211,6 +211,7 @@ export function renderWheel({ doc = document, t, wheel, items = [], base = '/', 
     if (spinning || wheel.pending.length) return null;
     const r = wheel.spin(items);
     if (!r) return null;
+    try { globalThis.dispatchEvent(new CustomEvent('ftf:quest-event', { detail: { event: 'wheel' } })); } catch { /* the journal's s_wheel */ }
     spinning = true; card.hidden = true; refresh();
     const from = angle, to = landingAngle(from, r.index);
     if (reduced) { setAngle(to); land(r); return r; }

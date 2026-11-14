@@ -53,6 +53,10 @@ const CSS = `
 .fj-btn.primary{background:var(--ftf-gold, #c5a469);color:#14110a;border:0}.fj-btn.danger{border-color:#ff6b62;color:#ff6b62}.fj-btn[disabled]{opacity:.45;cursor:not-allowed}
 .fj-empty{padding:28px 20px;color:var(--ftf-muted, #aab6b0);text-align:center}.fj-empty b{display:block;color:var(--ftf-text, #eef0ea);margin-bottom:4px}
 .fj-back-btn{display:none}
+.fj-main{display:block;width:calc(100% - 24px);margin:8px 12px;padding:10px 14px;border-radius:10px;border:1px solid var(--ftf-gold, #c5a469);background:rgba(197,164,105,.12);text-align:left}
+.fj-main small{display:block;font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--ftf-gold, #c5a469)}.fj-main b{display:block;font-size:16px}.fj-main span{display:block;font-size:14px;color:var(--ftf-text, #eef0ea)}
+.fj-main.is-locked{border-color:var(--ftf-border, rgba(197,164,105,.4));background:rgba(255,255,255,.04)}.fj-main.is-locked span{color:var(--ftf-muted, #aab6b0)}
+.fj-next{margin:0 0 16px;padding:10px 14px;border:1px solid var(--ftf-gold, #c5a469);background:rgba(197,164,105,.10);border-radius:10px;font-weight:700}.fj-next small{display:block;font-size:12px;letter-spacing:.08em;color:var(--ftf-gold, #c5a469)}
 @media (max-width:899px){.fj{width:100vw;height:100vh;border-radius:0}.fj-body{grid-template-columns:1fr}.fj-row{min-height:72px}
  .fj.show-detail .fj-rail{display:none}.fj:not(.show-detail) .fj-detail{display:none}.fj-back-btn{display:inline-block}.fj-detail{padding:20px}}
 html[data-motion=reduce] .fj.fj-anim{animation:none}
@@ -128,6 +132,12 @@ export function createJournalUI({ doc, win, say, model, giverName, onWalk, onTra
       lst.append(r);
     }
     rail.append(tabs, s);
+    if (tab === 'story' && m.main && !search) { // the main quest (the Glass Shoal) always sits on top of Story: what to do next and where
+      const mq = m.main, mb = el('button', 'fj-main' + (mq.status === 'locked' ? ' is-locked' : '')); mb.type = 'button'; mb.dataset.quest = mq.id;
+      mb.append(el('small', null, say('journal.main.kicker') + (mq.status === 'completed' ? ' ✓' : '')), el('b', null, mq.title), el('span', null, mq.step));
+      if (mq.walk && mq.status !== 'locked') { mb.title = mq.walkLabel || ''; mb.addEventListener('click', () => walk(mq)); } else mb.disabled = true;
+      rail.append(mb);
+    }
     if (tab === 'daily' && list.length) { const rs = el('div', 'fj-reset', say('journal.resetIn', { time: countdown(m.resetAt - now()) })); rs.dataset.resetAt = String(m.resetAt); rail.append(rs); } // the daily countdown (00:00 UTC)
     rail.append(lst);
     body.append(rail, detail(view, m));
@@ -150,7 +160,9 @@ export function createJournalUI({ doc, win, say, model, giverName, onWalk, onTra
     const giver = el('span', 'fj-chip giver', say('journal.from', { giver: giverName(v.giver) })); giver.style.display = 'inline-flex'; giver.style.alignItems = 'center'; giver.style.gap = '6px';
     giver.prepend(artBox(doc, portraitPath(v.giver), giverName(v.giver), { size: 28, cls: 'ftf-art fj-portrait', radius: 14 })); chips.append(giver); // the giver's portrait (letter fallback)
     chips.append(el('span', 'fj-chip', v.lockedLevel ? say('journal.status.lockedLevel', { level: v.lockedLevel }) : say('journal.status.' + v.status)));
-    d.append(backBtn, el('h3', null, v.title), chips, el('p', 'fj-sum', v.summary), el('p', 'fj-desc', v.description));
+    d.append(backBtn, el('h3', null, v.title), chips);
+    const nx = nextLine(v); if (nx) { const b = el('div', 'fj-next'); b.append(el('small', null, say('journal.next')), el('span', null, nx)); d.append(b); } // the one thing to do now, and where
+    d.append(el('p', 'fj-sum', v.summary), el('p', 'fj-desc', v.description));
     d.append(el('div', 'fj-sec', say('journal.objectives')));
     for (const o of v.objectives) {
       const row = el('div', 'fj-obj' + (o.done ? ' done' : '')); row.dataset.obj = o.id;
@@ -188,6 +200,19 @@ export function createJournalUI({ doc, win, say, model, giverName, onWalk, onTra
     foot.append(more);
     d.append(foot);
     return d;
+  }
+
+  /** "Next:" for a quest: turn in to the giver, the first unfinished objective (and where), or talk to the giver. */
+  function nextLine(v) {
+    if (v.status === 'ready') { // the kill is done; a missing delivery comes first (its drops are in the quest's area)
+      const miss = v.objectives.find((x) => !x.done), area = v.markers.find((mk) => mk.kind === 'quest-area');
+      return miss ? say('journal.next.where', { what: miss.text, where: area ? area.label : giverName(v.turnIn) }) : say('journal.next.turnIn', { giver: giverName(v.turnIn) });
+    }
+    if (v.status === 'available') return say('journal.next.talk', { giver: giverName(v.giver) });
+    if (v.status !== 'active') return null;
+    const o = v.objectives.find((x) => !x.done); if (!o) return say('journal.next.turnIn', { giver: giverName(v.turnIn) });
+    const where = v.walk.kind === 'area' ? v.walk.label : (o.type === 'deliver' ? giverName(v.turnIn) : null);
+    return where ? say('journal.next.where', { what: o.text, where }) : o.text;
   }
 
   function onKey(e) {
