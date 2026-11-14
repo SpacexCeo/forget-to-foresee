@@ -28,6 +28,10 @@ export const ACT_EVERY_MS = 3200, ACT_QUEUE = 5, CHAT_KEEP = 90;
 const validAct = (k, v) => typeof k === 'string' && Object.hasOwn(ACTS, k) && ACTS[k](v ?? null);
 /** Drawing limits for the other players (play/remote-players.js). */
 export const REMOTE = Object.freeze({ maxDrawnPhone: 8, maxDrawnDesktop: 15, farM: 70, tagFarM: 25 });
+/** Name tags near the camera: below `near` metres a tag keeps the screen size it has at `near`; inside `hide` it goes. */
+export const TAG_CAMERA = Object.freeze({ near: 5, hide: 1.5 });
+/** The tag's scale factor for a camera `dc` metres away (1 at `near` and beyond), or 0 when it should hide (pure). */
+export const tagScaleFor = (dc, T = TAG_CAMERA) => (dc < T.hide ? 0 : dc < T.near ? dc / T.near : 1);
 
 /** Which remote players to draw: the nearest `max` within `far` metres of `from` (horizontal distance). */
 export function pickDrawn(list, from, max, far = REMOTE.farM) {

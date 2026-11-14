@@ -32,7 +32,7 @@ export function createMultiplayer({ scene, camera = null, THREE = null, t, stora
   const friends = storage ? createFriends({ storage, me }) : null;
   panel = createChatPanel({ t, presence, phone, isFriend: (m) => !!friends && friends.has(m), onClose: onChatClose });
   const unwatch = url ? watchFeats({ act: (k, v) => presence.act(k, v), ledger, chests }) : () => {};
-  const remote = createRemotePlayers({ scene, phone, aiLabel: t('mp.ai') });
+  const remote = createRemotePlayers({ scene, phone, aiLabel: t('mp.ai'), camera });
   // chat lines over the speakers' heads (owner 13.11); only when the game passes its camera
   const bubbles = camera && THREE ? createChatBubbles({ camera, THREE }) : null, feed = chatFeed(), heads = new Map();
   const local = [0, 0, 0], from = [0, 0, 0];
