@@ -1,6 +1,6 @@
 # How to see it in 90 seconds
 
-One entry, the same game everyone plays: **https://spacexceo.github.io/forget-to-foresee/** (desktop browser with
+One entry, the same game everyone plays: **https://ftf-game.xyz/** (desktop browser with
 WebGL 2; a phone works with on-screen sticks). Practice network (NEAR testnet), play money only.
 
 | # | Do | You should see | Status |

@@ -68,7 +68,7 @@ Everything below "History" is older.
 
 ## 1. Where things are
 
-- **`main`** = PR #12 (`e85f075`), live on GitHub Pages: https://spacexceo.github.io/forget-to-foresee/ . 498 game
+- **`main`** = PR #12 (`e85f075`), live on GitHub Pages: https://ftf-game.xyz/ . 498 game
   tests, 28 server tests, contracts CI green. Judge path: `?demo=judge&mode=walk` (fixed seed
   `cc161d308faa67539af44205b56b6d4f`); films skipped there unless `&films=full|cheap`.
 - **Integration branch (lead):** `claude/loving-curie-ihasft`, same content as `main` plus docs-only commits. Merge
@@ -185,7 +185,7 @@ iPhone 13; `check.cjs`/`race.cjs`/`onb*.cjs`). Pattern: `npm run build`, `npx vi
 ## Live state (read this first if the session or the usage limit ended)
 
 **Integration branch:** `claude/loving-curie-ihasft` (lead). `main` = PR #3 + PR #4 (merged 08.11 ~20:35 Kyiv), live on
-GitHub Pages: https://spacexceo.github.io/forget-to-foresee/ (`?demo=judge&mode=walk` is the README judge path).
+GitHub Pages: https://ftf-game.xyz/ (`?demo=judge&mode=walk` is the README judge path).
 The integration branch is ahead of `main` only by the round-5 agents (hands) and docs; merge it with a PR when convenient.
 Checks at 426cc1a: `cd game && npm test` 469/469, `cd server && npm test` 28/28, `npm run build` green; headless on the
 production build: `node tests/client/boot-smoke.mjs` (lobby and direct paths), the judge walk/hub paths, zero console errors.

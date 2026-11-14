@@ -11,7 +11,7 @@ confirmation; agents never post, submit, tag or sign for the owner.
 
 | Item | State | How it was checked |
 |---|---|---|
-| Hosted demo | **Up**: `https://spacexceo.github.io/forget-to-foresee/` and `?demo=judge` answer 200; last deploy 12.11 09:44 UTC | `curl -sI` |
+| Hosted demo | **Up**: `https://ftf-game.xyz/` and `?demo=judge` answer 200; last deploy 12.11 09:44 UTC | `curl -sI` |
 | Public repo + MIT licence | **Done** | GitHub |
 | Tests | **Green**: `bash scripts/verify-all.sh --skip-rust` → game 876, server 31, relayer 32, fail 0 | run on `86bb5b0` |
 | Relayer (owner's server) | **Up, old version**: `/api/health` answers (guests 15, today 9 of 200) and the free mint works; `/api/agent/*`, `/api/chest/open`, `/api/wheel/claim` answer **404** (not redeployed yet) | `curl` |
@@ -41,7 +41,7 @@ confirmation; agents never post, submit, tag or sign for the owner.
    git tag -a hackathon-submission -m "NEAR Hackathon submission" main && git push origin hackathon-submission
    ```
 3. **Repository page** (GitHub → the repo → ⚙ next to About):
-   - Website: `https://spacexceo.github.io/forget-to-foresee/?demo=judge`
+   - Website: `https://ftf-game.xyz/?demo=judge`
    - Topics: `near`, `near-protocol`, `nearhackathon`, `threejs`, `webgl`, `game`, `nft`, `tee`, `ai-agents`,
      `merkle-tree`
    - The description names the company ("RAEN Computers"); keep or remove as you prefer (the README's "Related

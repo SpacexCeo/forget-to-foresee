@@ -15,7 +15,7 @@ disabled and cleared, the network throttled through the DevTools protocol to Chr
 "Slow 4G" (1.6 Mbps, 150 ms), and records for the lobby URL (`/`) and the direct play URL
 (`/?play=direct&mode=walk&demo=judge`): first contentful paint, the time the lobby (or the play layer) exists, the bytes
 transferred by then (by type) and the largest resources. SwiftShader renders in this container, so frame times are not
-meaningful; the network and script-arrival timings are. The live site is `https://spacexceo.github.io/forget-to-foresee/`
+meaningful; the network and script-arrival timings are. The live site is `https://ftf-game.xyz/`
 (what `main` publishes), the local build is `vite preview` of `npm run build`.
 
 ## Before (08.11, the build on `main` at the time)

@@ -1,8 +1,50 @@
 # Forget to Foresee
 
+**A 3D browser action-RPG in a hill town whose economy runs live on NEAR testnet: you play Iris, who pays for prophecy with her own memories, and every season's prophecies are sealed on chain before the first move.**
+
+**▶ Play: https://ftf-game.xyz/** (desktop browser with WebGL 2; no install, no wallet, no gas prompt) · judge mode: **https://ftf-game.xyz/?judge=1**
+
+| | |
+|---|---|
+| ![The Town Ledger: live trades with their reasons and tx links](docs/media/readme/ledger.jpg) | ![The painted map of the hill town](docs/media/readme/map.jpg) |
+| The Town Ledger: the scripted traders' live testnet trades, each with its reason and tx | The hill town (**M**): who has a task for Iris, the shops, the Gate-Loom, the monsters outside |
+| ![The judge panel](docs/media/readme/judge.jpg) | ![The Glass Shoal boss arena](docs/media/readme/boss.jpg) |
+| `?judge=1`: a skippable panel walks the seven checks | The level-5 Glass Shoal boss fight (`?shoal=arena`) |
+
+Screenshots taken from the live site https://ftf-game.xyz/ on 14 Nov 2026 (Chromium, RTX GPU).
+
+### Judge it in 5 minutes
+
+| Time | Do | See |
+|---|---|---|
+| 0:00 | Open **https://ftf-game.xyz/?judge=1** and wait for the town | Iris in the hill town; the judge panel lists the seven checks of the [judge path](#judge-path-do-x-see-y-90-seconds) |
+| 0:30 | Game menu → **Town** (the Town Ledger) | The 20 scripted traders' trades on `ftf-town.testnet`, each with its price reason and a NearBlocks link |
+| 1:30 | **Profile → NFTs → Holder access → Try the demo account** | Memory-shard NFTs (NEP-171, `ftf-shards.testnet`) read from the chain |
+| 2:30 | Walk to the Tournament altar, **E**, then **V** (open at once with `?judge=1`) | Revealed signs checked against the root committed on `ftf-seasons.testnet` before trial 1 |
+| 3:30 | Take the free Day 1 mint, step outside the walls, **F** / **Q** on a stone spider, pick up the chest, **I → Open** | A guest account of your own owning an Elise NFT; the chest opened on chain, with its transaction link |
+| 4:30 | Without our UI: the `curl` in [Verify in 60 seconds](#no-gpu) and [`/api/market/stats`](https://159-195-130-113.sslip.io/api/market/stats) | `"revealed_count":15`; today's trade count and the latest hashes |
+
+### What is real on NEAR, at a glance
+
+| Real on NEAR testnet | Local in your browser | Not built / simulated |
+|---|---|---|
+| Town contract and 20 trader accounts trading all day; the sealed judge season (root + 15 leaves); memory-shard, heroine, dragon and agent-card NFTs; Day 1 guest accounts; chests from a committed deck; wallet / passkey sign-in | The 17-trial season rules, combat, quests, the boss fight; fresh seasons are committed locally only | Anything on mainnet (the network switch is ready in code, nothing deployed: [After the hackathon](#after-the-hackathon)); the weekly tournament card (a labelled simulation); a player-owned agent NFT |
+
+Every row with its evidence: [Real vs mock](#real-vs-mock). NEAR work by date: [docs/near-built-1-14-nov.md](docs/near-built-1-14-nov.md).
+
+### Credits
+
+Design and direction: **Lambada_eth**. Code, docs and procedural art: AI-assisted under the owner's direction ([disclosure](#baseline-third-party-code-and-ai-disclosure)).
+Music: "Hiraeth", "Tears in Rain", "Legionnaire" and "Computations in a Snowstorm" by **Scott Buckley**, released under CC-BY 4.0 (www.scottbuckley.com.au); "Floating Cities" and "Frozen Star" by **Kevin MacLeod** (incompetech.com), licensed under Creative Commons: By Attribution 4.0 (http://creativecommons.org/licenses/by/4.0/).
+Icons: silhouettes by Lorc, Delapouite, Felbrigg and Carl Olsen from [game-icons.net](https://game-icons.net), CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/), recoloured.
+CC0: sound effects from Kenney (RPG Audio, Interface Sounds, kenney.nl); character bodies from MakeHuman / MPFB; lab textures from Poly Haven. Other: a few meshes (the dragon among them) start from Tripo AI generations; CMU Graphics Lab Motion Capture Database (review build only); the lab window video from Pixabay (Pixabay Content License).
+Per-asset sources and licences: [docs/art/manifest.md](docs/art/manifest.md).
+
+---
+
 A 3D strategy game where **Iris**, a doctor-linguist from another planet who came through the glass in the year 2048, pays for prophecy with her own memories (you guide her; she is a character, not an AI). Every prophecy of a season is written and **committed to NEAR testnet before the first move**, then revealed with a Merkle proof you can check yourself.
 
-- **Play it now (no install, desktop browser with WebGL 2):** https://spacexceo.github.io/forget-to-foresee/ (one entry: the full game, the Expedition included)
+- **Play it now (no install, desktop browser with WebGL 2):** https://ftf-game.xyz/ (one entry: the full game, the Expedition included; the old https://spacexceo.github.io/forget-to-foresee/ redirects here)
 - **Built at NEAR HACKATHON** (1–14 Nov 2026) by Lambada_eth. Tracks: **Games** (primary) and **NFTs** (memory shards); see [Tracks](#tracks).
 - **Licence:** MIT. **AI use:** see [Baseline, third-party code and AI disclosure](#baseline-third-party-code-and-ai-disclosure).
 - **Numbers** (test counts, build size) are generated, not typed: [docs/STATS.md](docs/STATS.md) (`node scripts/stats.mjs --write`).
@@ -17,8 +59,8 @@ every trade carries its reason, and a model on NEAR AI Cloud sets each clan's bo
 | What | Number | Check it yourself |
 |---|---|---|
 | Testnet transactions on 13 Nov 2026 (UTC), counted from the public indexer | **21,360** successful (21,233 market trades, 80 chest openings, 20 new guest accounts), 2 failed: [docs/proof/tx-2026-11-13.md](docs/proof/tx-2026-11-13.md) (final, the whole UTC day) | `node tools/count/count.mjs --day 2026-11-13` (no keys; recounts every transaction by receiver, method and signer) |
-| Trades sent today and the latest hashes | `today`, `recent[].hash` in [`/api/market/stats`](https://159-195-130-113.sslip.io/api/market/stats) | open any hash at `https://testnet.nearblocks.io/txns/<hash>`; Town Pulse: [pulse.html](https://spacexceo.github.io/forget-to-foresee/pulse.html) |
-| A week of the economy in a minute | [economy-lab.html](https://spacexceo.github.io/forget-to-foresee/economy-lab.html) | `node tools/town/fast-week.mjs` |
+| Trades sent today and the latest hashes | `today`, `recent[].hash` in [`/api/market/stats`](https://159-195-130-113.sslip.io/api/market/stats) | open any hash at `https://testnet.nearblocks.io/txns/<hash>`; Town Pulse: [pulse.html](https://ftf-game.xyz/pulse.html) |
+| A week of the economy in a minute | [economy-lab.html](https://ftf-game.xyz/economy-lab.html) | `node tools/town/fast-week.mjs` |
 
 Accounts: the town contract [ftf-town.testnet](https://testnet.nearblocks.io/address/ftf-town.testnet); the traders
 [01](https://testnet.nearblocks.io/address/trader-01.ftf-town.testnet) · [02](https://testnet.nearblocks.io/address/trader-02.ftf-town.testnet) · [03](https://testnet.nearblocks.io/address/trader-03.ftf-town.testnet) · [04](https://testnet.nearblocks.io/address/trader-04.ftf-town.testnet) · [05](https://testnet.nearblocks.io/address/trader-05.ftf-town.testnet) · [06](https://testnet.nearblocks.io/address/trader-06.ftf-town.testnet) · [07](https://testnet.nearblocks.io/address/trader-07.ftf-town.testnet) · [08](https://testnet.nearblocks.io/address/trader-08.ftf-town.testnet) · [09](https://testnet.nearblocks.io/address/trader-09.ftf-town.testnet) · [10](https://testnet.nearblocks.io/address/trader-10.ftf-town.testnet) · [11](https://testnet.nearblocks.io/address/trader-11.ftf-town.testnet) · [12](https://testnet.nearblocks.io/address/trader-12.ftf-town.testnet) · [13](https://testnet.nearblocks.io/address/trader-13.ftf-town.testnet) · [14](https://testnet.nearblocks.io/address/trader-14.ftf-town.testnet) · [15](https://testnet.nearblocks.io/address/trader-15.ftf-town.testnet) · [16](https://testnet.nearblocks.io/address/trader-16.ftf-town.testnet) · [17](https://testnet.nearblocks.io/address/trader-17.ftf-town.testnet) · [18](https://testnet.nearblocks.io/address/trader-18.ftf-town.testnet) · [19](https://testnet.nearblocks.io/address/trader-19.ftf-town.testnet) · [20](https://testnet.nearblocks.io/address/trader-20.ftf-town.testnet) (`trader-NN.ftf-town.testnet`);
@@ -46,7 +88,7 @@ indexer shows 0 failed transactions on chain for 00:00–01:05 UTC.
 
 ## A new player's three beats (about 3 minutes)
 
-1. **First contact (0:00-1:00).** Open https://spacexceo.github.io/forget-to-foresee/. A card says who Iris is and the
+1. **First contact (0:00-1:00).** Open https://ftf-game.xyz/. A card says who Iris is and the
    goal: 200 silk to open the Gate-Loom and go home. The town asks your name and gives a free Elise card, minted to an
    account of your own on NEAR testnet (no wallet, no gas). The prologue and the townsfolk's welcome follow (Esc skips
    them). After that, the **Starter guide** on the right shows one step at a time: move (W A S D), turn the camera (R),
@@ -59,14 +101,14 @@ indexer shows 0 failed transactions on chain for 00:00–01:05 UTC.
    every chest stays sealed.
 3. **The end of the chapter (2:30-).** From level 5 the Shardkeeper offers the Glass Shoal: the Loomblade, a dragon
    ride and a three-phase boss, then a legendary chest and the title Tidebreaker. To go straight to the fight, open
-   [`?shoal=arena`](https://spacexceo.github.io/forget-to-foresee/?shoal=arena). The great dragon and the boss are still
+   [`?shoal=arena`](https://ftf-game.xyz/?shoal=arena). The great dragon and the boss are still
    placeholder shapes (see [Real vs mock](#real-vs-mock)).
 
 ## Judge path: do X, see Y (90 seconds)
 
-| # | Do (on https://spacexceo.github.io/forget-to-foresee/) | See | Proof |
+| # | Do (on https://ftf-game.xyz/) | See | Proof |
 |---|---|---|---|
-| 1 | Open the page, wait for the town | Iris in the hill town; no wallet, no gas prompt | `curl -sI https://spacexceo.github.io/forget-to-foresee/ \| head -1` → 200 |
+| 1 | Open the page, wait for the town | Iris in the hill town; no wallet, no gas prompt | `curl -sI https://ftf-game.xyz/ \| head -1` → 200 |
 | 2 | Look at the market ticker at the top of the town, then **Open the Town Ledger** (or game menu → Town) | Scripted traders' trades, each with a tx hash; every trader's own NEAR account and the reason for each price | [ftf-town.testnet](https://testnet.nearblocks.io/address/ftf-town.testnet), [`/api/market/stats`](https://159-195-130-113.sslip.io/api/market/stats) (`chain.total`, `recent[].hash`) |
 | 3 | **Profile → NFTs → Holder access → Try the demo account** | The memory shards, agent card and Elise of `lambada_eth.testnet`, and the "Shard keeper" title | [ftf-shards.testnet](https://testnet.nearblocks.io/address/ftf-shards.testnet) (`nft_tokens_for_owner`) |
 | 4 | Walk to the Tournament altar, press **E**, then **V** (the Tournament opens after 10 stone spiders; with `?judge=1` it is open at once) | Revealed signs checked against the root fixed before trial 1 | [ftf-seasons.testnet](https://testnet.nearblocks.io/address/ftf-seasons.testnet), the `curl` in [Verify in 60 seconds](#no-gpu) |
@@ -74,7 +116,7 @@ indexer shows 0 failed transactions on chain for 00:00–01:05 UTC.
 | 6 | Take the free Day 1 mint | A guest account of your own owning an Elise NFT, and a dragon owned by that NFT's account | [heroine.ftf-coordinator.testnet](https://testnet.nearblocks.io/address/heroine.ftf-coordinator.testnet), [companions.ftf-coordinator.testnet](https://testnet.nearblocks.io/address/companions.ftf-coordinator.testnet) |
 | 7 | Kill monsters outside the walls; open a chest if one drops | The chest's roll from the committed 10,000-card deck | [chests.ftf-coordinator.testnet](https://testnet.nearblocks.io/address/chests.ftf-coordinator.testnet), `node tools/verify-chest/verify.mjs` |
 
-In the game: add `?judge=1` to the page URL for a skippable panel that walks these 7 steps (on a phone it waits behind a small chip). Try to cheat it: [cheat.html](https://spacexceo.github.io/forget-to-foresee/cheat.html) (six attacks, the guard, the error and the test for each). What NEAR work exists and how to check each piece: [docs/near-built-1-14-nov.md](docs/near-built-1-14-nov.md). Pitch: [docs/pitch.md](docs/pitch.md).
+In the game: add `?judge=1` to the page URL for a skippable panel that walks these 7 steps (on a phone it waits behind a small chip). Try to cheat it: [cheat.html](https://ftf-game.xyz/cheat.html) (six attacks, the guard, the error and the test for each). What NEAR work exists and how to check each piece: [docs/near-built-1-14-nov.md](docs/near-built-1-14-nov.md). Pitch: [docs/pitch.md](docs/pitch.md).
 
 ## Hackathon window and legal
 
@@ -89,7 +131,7 @@ Each row ends with something you can check yourself, without trusting the game w
 
 | Do | You'll see | How to check it yourself |
 |---|---|---|
-| Open https://spacexceo.github.io/forget-to-foresee/ | The hill town, no wallet and no gas prompt (a NEAR guest account exists only if you take the free Day 1 mint) | `curl -sI https://spacexceo.github.io/forget-to-foresee/ \| head -1` prints a 200 status |
+| Open https://ftf-game.xyz/ | The hill town, no wallet and no gas prompt (a NEAR guest account exists only if you take the free Day 1 mint) | `curl -sI https://ftf-game.xyz/ \| head -1` prints a 200 status |
 | `bash scripts/verify-all.sh --skip-rust` | One table, one line per suite, exit 0 | The counts equal [docs/STATS.md](docs/STATS.md) (`node scripts/stats.mjs`) |
 | Read the sealed season on chain (the `curl` under [Verify in 60 seconds](#no-gpu)) | `"leaf_count":15`, `"revealed_count":15`, `"ash_key_committed":true` | The public testnet RPC, no code of ours |
 | In the game: **Signs & Visions → What does this prove? → Copy proof**, save it as `proof.json`, run `node tools/verify/verify.mjs proof.json` | Every line `✓`, exit 0 | Change one digit of the leaf in `proof.json`: the same command prints `✗` and exits 1 |
@@ -177,7 +219,7 @@ There is one entry: the link above opens the full game (`?story=0` switches the 
 The recorded season on NEAR testnet (`793f6c05e89839f2`) is evidence you can check without playing it again:
 
 - **The NFT does something (holder access):** open **Profile** (top right) → **NFTs** → *Holder access* → **Try the demo account**. The page reads `nft_tokens_for_owner` on `ftf-shards.testnet`, `agents.ftf-coordinator.testnet` and `heroine.ftf-coordinator.testnet` for `lambada_eth.testnet`, lists the tokens with nearblocks links and unlocks "Unlocked: Shard keeper"; the **Profile** tab then shows the *Shard keeper* title and an ink-ring frame on the portrait. Any testnet account id works; an account that holds nothing unlocks nothing. Read-only and cosmetic: no wallet, no signature, kept in this browser.
-- The **replay link** of the recorded season replays it command by command in your browser and checks its Merkle root against `ftf-seasons.testnet`: [open the replay](https://spacexceo.github.io/forget-to-foresee/?replay=r1.eyJzIjoiY2MxNjFkMzA4ZmFhNjc1MzlhZjQ0MjA1YjU2YjZkNGYiLCJyIjoidjMiLCJjIjpbWyJzdGFydF9zZWFzb24iLHt9XSxbImVuZF90aWNrIix7fV0sWyJlbmRfdGljayIse31dLFsiZW5kX3RpY2siLHt9XSxbInNhY3JpZmljZV9tZW1vcnkiLHsibWVtb3J5SWQiOjJ9XSxbImVuZF90aWNrIix7fV0sWyJlbmRfdGljayIse31dLFsiZW5kX3RpY2siLHt9XSxbImVuZF90aWNrIix7fV0sWyJlbmRfdGljayIse31dLFsiZW5kX3RpY2siLHt9XSxbImVuZF90aWNrIix7fV0sWyJlbmRfdGljayIse31dLFsiZW5kX3RpY2siLHt9XSxbImVuZF90aWNrIix7fV0sWyJlbmRfdGljayIse31dLFsiZW5kX3RpY2siLHt9XSxbImVuZF90aWNrIix7fV0sWyJjYXN0X3ZvdGUiLHsiYWNjZXB0Ijp0cnVlfV1dfQ) (generated by `node game/scripts/judge-replay-link.mjs`). Its memory shard is token `793f6c05e89839f2-7` on `ftf-shards.testnet`.
+- The **replay link** of the recorded season replays it command by command in your browser and checks its Merkle root against `ftf-seasons.testnet`: [open the replay](https://ftf-game.xyz/?replay=r1.eyJzIjoiY2MxNjFkMzA4ZmFhNjc1MzlhZjQ0MjA1YjU2YjZkNGYiLCJyIjoidjMiLCJjIjpbWyJzdGFydF9zZWFzb24iLHt9XSxbImVuZF90aWNrIix7fV0sWyJlbmRfdGljayIse31dLFsiZW5kX3RpY2siLHt9XSxbInNhY3JpZmljZV9tZW1vcnkiLHsibWVtb3J5SWQiOjJ9XSxbImVuZF90aWNrIix7fV0sWyJlbmRfdGljayIse31dLFsiZW5kX3RpY2siLHt9XSxbImVuZF90aWNrIix7fV0sWyJlbmRfdGljayIse31dLFsiZW5kX3RpY2siLHt9XSxbImVuZF90aWNrIix7fV0sWyJlbmRfdGljayIse31dLFsiZW5kX3RpY2siLHt9XSxbImVuZF90aWNrIix7fV0sWyJlbmRfdGljayIse31dLFsiZW5kX3RpY2siLHt9XSxbImVuZF90aWNrIix7fV0sWyJjYXN0X3ZvdGUiLHsiYWNjZXB0Ijp0cnVlfV1dfQ) (generated by `node game/scripts/judge-replay-link.mjs`). Its memory shard is token `793f6c05e89839f2-7` on `ftf-shards.testnet`.
 
 On a machine without a GPU (software rendering, about 5 fps) the walks take a few minutes and keys pressed while Iris is still walking or a trial is still ending do nothing; wait for her to stop and for the trial counter to change.
 
