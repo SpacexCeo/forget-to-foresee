@@ -17,6 +17,8 @@ import { detectTier, tierForPreference } from './render/quality.js';
 import { cycleLook, cycleAt, KEYS as CYCLE_KEYS, startPhase, weatherTimeline, WEATHER_FADE } from './render/daycycle.js';
 import { lookFor, mixStats } from './render/sky.js';
 import { CameraRig } from './render/camera-rig.js';
+import { cueShot, cueState, stepCue } from './render/dialogue-camera.js';
+import { on as onBus } from './sprint/bus.js';
 import { fixedSteps, rayCast, moveCapsule, MASK_PLAYER } from './physics/collision.js';
 import { PHYSICS_DT, steerTo, clickStuck } from './physics/character.js';
 import { damp } from './physics/motion.js';
@@ -159,6 +161,7 @@ const input = new Input(renderer.domElement);
 installTouchCopy(ctx.i18n, () => !!input.touchControls); // on touch, no keyboard keys in any text (ui/touch-copy.js)
 const hud = new DevHud(document.getElementById('hud'));
 const promptEl = document.getElementById('prompt');
+let lastPromptHtml = null; // the prompt's last written HTML (frame() writes it only on a change)
 // The lobby (title, language, settings, the Foresight Exchange) opens only from the pause menu now: the game starts in
 // the town (ui/loading.js bootPlan). Entering from it returns to the world.
 let menuLobby = null;
@@ -1107,6 +1110,12 @@ const focus = new THREE.Vector3();
 const ndc = new THREE.Vector2();
 const clock = new THREE.Clock();
 const physics = { steps: 0, substeps: 0, colliders: 0, grounded: false };
+// The wake-up dialogue's camera beats (render/dialogue-camera.js, QA pass 2 #2): the intro names each line's cue on
+// the bus; the frame loop leans the town camera toward it and back.
+const dialogueCue = { name: null, st: cueState(), irisFocus: [0, 0, 0] };
+onBus('npe.camera', (p) => { dialogueCue.name = (p && p.target) || null; });
+for (const n of ['npe.completed', 'npe.skipped']) onBus(n, () => { dialogueCue.name = null; });
+const hudStats = () => ({ info: renderer.info, physics, streaming: streamer.stats(), events: streamer.events, camera: rig, lookdev: lookdev.stats() });
 
 // Camera presets for screenshots / measurements (dev only).
 const view = params.get('view');
@@ -1387,6 +1396,14 @@ function frame() {
     const a = town.altar.focus, k = townFlow.focusK * townFlow.focusK * (3 - 2 * townFlow.focusK) * 0.7;
     focus.set(focus.x + (a[0] - focus.x) * k, focus.y + (a[1] - focus.y) * k, focus.z + (a[2] - focus.z) * k);
   }
+  if (inTown && (dialogueCue.name || dialogueCue.st.active)) { // a dialogue beat: the camera leans toward what the line is about
+    const at = { iris: [focus.x, focus.y - 1.1, focus.z], portal: townPortal ? townPortal.root.position.toArray() : null, board: townBoard ? townBoard.root.position.toArray() : null, elder: null };
+    const tf = town && town.townsfolk, elder = tf && dialogueCue.name === 'elder' ? tf.people.find((q) => q.key === 'elder' && q.root.visible) : null;
+    if (elder) at.elder = [elder.plan.x + TOWN_ORIGIN_W[0], elder.plan.y + TOWN_ORIGIN_W[1], elder.plan.z + TOWN_ORIGIN_W[2]];
+    const st = dialogueCue.st, was = st.active;
+    if (stepCue(st, cueShot(dialogueCue.name, at), focus.toArray(dialogueCue.irisFocus), rig.dist, dt, lookdev.reducedMotion)) { focus.set(st.focus[0], st.focus[1], st.focus[2]); rig.dist = st.dist; }
+    else if (was) rig.dist = st.base; // back on Iris at the player's own zoom
+  }
   // Shell hover is visual only; reduced motion holds the Shells at their rest pose.
   world3d.update(lookdev.reducedMotion ? 0 : clock.elapsedTime);
   // the shared town (docs/multiplayer.md): others' avatars and the chat; never on the judge link, ?mp=0 turns it off
@@ -1512,10 +1529,12 @@ function frame() {
 
   controls.update(input.device, null, inspecting);
   const near = inspecting || !play || play.zone === 'shell' ? null : nearestInteractable();
-  promptEl.innerHTML = inspecting
+  // no "I inspect … up close" hint (owner 14.11: unclear, and I is the bag key); the prompt stays hidden, and the DOM is
+  // touched only when its text changes (it was re-parsed every frame)
+  const promptHtml = inspecting
     ? `Inspecting <b>${inspecting.label}</b> · drag or arrows to orbit · wheel to zoom · <kbd>I</kbd>/<kbd>Esc</kbd> to leave`
-    : ''; // no "I inspect … up close" hint (owner 14.11: unclear, and I is the bag key)
-  promptEl.hidden = !promptEl.innerHTML || !!inspecting;
+    : '';
+  if (promptHtml !== lastPromptHtml) { lastPromptHtml = promptHtml; promptEl.innerHTML = promptHtml; promptEl.hidden = true; }
   if (toastTimer > 0 && (toastTimer -= dt) <= 0) toastEl.hidden = true;
 
   const drawn = sceneReady && (play || !(boot.lobbyOpen && boot.lobbyOpen())); // the lobby covers the canvas: no GPU work behind it
@@ -1524,7 +1543,7 @@ function frame() {
   if (!firstFrameDone && (drawn || sceneReady)) { firstFrameDone = true; if (boot.onFirstFrame) boot.onFirstFrame(); }
   if (boot.onProgress && (progressTimer -= dt) <= 0) { progressTimer = 0.25; boot.onProgress(streamer.stats()); }
   hud.frame(dt);
-  hud.update(dt, { info: renderer.info, physics, streaming: streamer.stats(), events: streamer.events, camera: rig, lookdev: lookdev.stats() });
+  hud.update(dt, hudStats); // gathered only when the F3 HUD redraws (streamer.stats() walks every asset)
   mouseAim.update();
   input.endFrame();
   requestAnimationFrame(frame);

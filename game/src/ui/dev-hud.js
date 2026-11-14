@@ -24,11 +24,15 @@ export class DevHud {
     }
   }
 
-  /** @param {{info:any, physics:any, streaming:any, camera:any}} s */
-  update(dt, s) {
+  /**
+   * @param {{info:any, physics:any, streaming:any, camera:any} | (() => object)} stats the numbers, or a function that
+   * gathers them: it runs only when the HUD redraws (4 Hz while shown), so the hidden HUD costs nothing per frame
+   */
+  update(dt, stats) {
     this.refresh -= dt;
     if (!this.visible || this.refresh > 0) return;
     this.refresh = 0.25;
+    const s = typeof stats === 'function' ? stats() : stats;
     const r = s.info.render, m = s.info.memory;
     const warn = (bad, text) => (bad ? `<b class="over">${text}</b>` : text);
     const st = s.streaming;
