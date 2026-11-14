@@ -262,7 +262,7 @@ export const BOSS = f({
   phases: f([
     f({ id: 1, above: 1.0, rotation: f(['slam', 'sweep', 'breath', 'slam']), telegraph: 1.4, rest: 1.6, adds: 0 }),
     f({ id: 2, above: 0.66, rotation: f(['lunge', 'breath', 'adds', 'slam', 'sweep']), telegraph: 1.15, rest: 1.3, adds: 3 }),
-    f({ id: 3, above: 0.33, rotation: f(['lunge', 'breath', 'slam', 'sweep', 'breath', 'lunge']), telegraph: 0.9, rest: 0.95, adds: 2 }),
+    f({ id: 3, above: 0.25, rotation: f(['lunge', 'breath', 'slam', 'sweep', 'breath', 'lunge']), telegraph: 0.9, rest: 0.95, adds: 2 }),
   ]),
   airMult: 0.6,           // damage taken while it flies (higher, harder to hit), the open weak point aside
   attacks: f({

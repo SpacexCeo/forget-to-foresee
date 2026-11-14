@@ -54,8 +54,8 @@ test('the ride stays inside its corridor and lasts 40 to 60 seconds', () => {
 
 test('boss phases follow HP and set their checkpoints', () => {
   assert.equal(R.phaseFor(1), 0); assert.equal(R.phaseFor(0.67), 0); assert.equal(R.phaseFor(0.66), 1);
-  assert.equal(R.phaseFor(0.4), 1); assert.equal(R.phaseFor(0.33), 2); assert.equal(R.phaseFor(0), 2);
-  assert.equal(R.checkpointHp(0), R.BOSS.hp); assert.equal(R.checkpointHp(1), Math.round(0.66 * R.BOSS.hp)); assert.equal(R.checkpointHp(2), Math.round(0.33 * R.BOSS.hp));
+  assert.equal(R.phaseFor(0.4), 1); assert.equal(R.phaseFor(0.3), 1); assert.equal(R.phaseFor(0.25), 2); assert.equal(R.phaseFor(0), 2);
+  assert.equal(R.checkpointHp(0), R.BOSS.hp); assert.equal(R.checkpointHp(1), Math.round(0.66 * R.BOSS.hp)); assert.equal(R.checkpointHp(2), Math.round(0.25 * R.BOSS.hp));
   assert.equal(R.freshBoss(1).hp, R.checkpointHp(1));
 });
 
