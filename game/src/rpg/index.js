@@ -73,6 +73,7 @@ export function mount(ctx) {
   // ------------------------------------------------------------------ casting
   const mobById = (id) => { const M = mobsOf(); return M && M.brain ? M.brain.mobs.find((m) => m.id === id && m.state !== 'dead' && m.state !== 'gone') : null; };
   const currentTarget = () => { const M = mobsOf(); const m = (targetId && mobById(targetId)) || (M && M.locked) || null; if (!m || !ctx.player) return null; return { mob: m, dist: Math.hypot(m.pos[0] - ctx.player.pos[0], m.pos[2] - ctx.player.pos[2]) }; };
+  globalThis.__ftfTarget = () => { const t = currentTarget(); return t ? t.mob : null; }; // the creature the player targeted, for the touch skill assist (scenes/town-casting.js)
   const dead = () => { const M = mobsOf(); return !!(M && M.iris && !M.iris.alive); };
   /** Forward a key to the game's own handlers (the bound physical key, marked so this layer lets it through). */
   function forward(action, type) {
