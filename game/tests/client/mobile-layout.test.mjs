@@ -41,3 +41,9 @@ test('phones: the dialogue box fits the screen and sits above the bottom tray; t
   assert.match(flow, /\.ftf-quest-talk \{ bottom: calc\(60px/);
   assert.match(src('play/game-menu.js'), /@media \(max-width: 480px\) \{ \.gm-head \{ padding-right: 64px; flex-wrap: wrap; \} \.gm-head \.gm-x \{ position: absolute;/);
 });
+
+test('the inventory: the rare / epic / legendary shine never takes the clicks meant for Open', () => {
+  const m = src('play/game-menu.js').match(/\.gm-card\[data-rarity="rare"\]::after[^{]*\{([^}]*)\}/);
+  assert.ok(m, 'the shine rule');
+  assert.match(m[1], /pointer-events: none/);
+});
