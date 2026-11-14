@@ -277,9 +277,10 @@ What exists today decides what can move to mainnet; nothing below is promised to
 
 | Piece | Mainnet-ready? | What is missing |
 |---|---|---|
+| Network switch (game, relayer, deploy scripts) | Ready in code: one setting (`FTF_NEAR_NETWORK=mainnet`, the Pages variable of the same name) picks RPC, explorer, wallet, labels and every contract id; two tests fail on a hard-coded testnet value. Runbook: [docs/deploy/mainnet.md](docs/deploy/mainnet.md) | Funding (about 75 NEAR to start) and the owner's go-ahead; nothing is deployed on mainnet |
 | Season commitment, memory shards, agent cards (`season-commit`, `memory-shard`, `agent-card`) | Closest: CI-tested on every change (`contracts.yml`); no method can change a committed root (`ERR_SEASON_EXISTS`) | An external review; deploy with the full-access keys deleted after setup |
 | Whitelist pass (`contracts/whitelist-pass`) | Written for mainnet: an owner runbook rehearses it on testnet first ([docs/mainnet-pass-runbook.md](docs/mainnet-pass-runbook.md)) | The owner's mainnet accounts and the testnet rehearsal; not deployed anywhere yet |
-| Town economy (`town`, `town-items`) and the relayer | Testnet only | Measured cost is 3.06 Tgas a trade, about 7 NEAR a day at today's 20,000+ trades; on mainnet that is real money, so the trader rate would drop to what play needs. The market key's `coordinator_transfer` should check the buyer's signature on chain ([SECURITY.md](SECURITY.md), limit 2) |
+| Town economy (`town`, `town-items`) and the relayer | Testnet only (the code switches with the setting above) | Measured cost is 3.06 Tgas a trade, about 7 NEAR a day at today's 20,000+ trades; on mainnet that is real money, so the trader rate would drop to what play needs. The market key's `coordinator_transfer` should check the buyer's signature on chain ([SECURITY.md](SECURITY.md), limit 2) |
 | Relayer and presence | One VPS behind an `sslip.io` host name, keys in its environment | A real domain, a second host, keys split per service, monitoring of balances (`node tools/count/runway.mjs` today) |
 | The game itself | Static page on GitHub Pages; no server needed to play | The rules run in the browser tab, so ranked play with value would need server- or chain-side checks of the run ([docs/verify.md](docs/verify.md)) |
 
