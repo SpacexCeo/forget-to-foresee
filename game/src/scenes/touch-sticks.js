@@ -60,6 +60,20 @@ body.ts-on .ftf-cast-bar, body.ts-on .ftf-run-toggle, body.ts-touch .ftf-scene-h
 body.ts-on .d1-hint { bottom: calc(236px + env(safe-area-inset-bottom, 0px)); }
 body.ts-on .ftf-town-prompt { bottom: calc(272px + env(safe-area-inset-bottom, 0px)); font-size: 14px !important; padding: 6px 14px !important; min-height: 36px; max-width: 60vw; } /* the Use button acts; the pill only names it */
 body.ts-on .ftf-photo-open { top: 40% !important; }
+/* moving on a phone (owner 14.11: "on the phone it is not comfortable to move"): the lower-left thumb zone stays free and
+   large, actions and their names live in the lower right, the top keeps one compact column, barks never cover a prompt */
+body.ts-on .ts-zone { width: 52vw; height: 58vh; }
+body.ts-on .ftf-mk { display: none !important; } /* the market's trade count: the Market itself is one tap away */
+body.ts-on .ftf-chat { left: auto !important; right: calc(8px + env(safe-area-inset-right, 0px)) !important; bottom: auto !important;
+  top: calc(140px + env(safe-area-inset-top, 0px)) !important; width: auto !important; max-width: 72vw; display: flex; flex-direction: column-reverse; align-items: flex-end; gap: 6px; }
+body.ts-on .ftf-town-prompt { left: auto !important; right: calc(14px + env(safe-area-inset-right, 0px)) !important; transform: none !important; max-width: 52vw; }
+body.ts-on .ftf-spiders { left: calc(10px + env(safe-area-inset-left, 0px)) !important; right: auto !important; transform: none !important;
+  top: calc(176px + env(safe-area-inset-top, 0px)) !important; max-width: 62vw; padding: 3px 10px 3px 4px !important; font-size: 12px !important; }
+body.ts-on .ftf-spiders-hint { display: none !important; }
+body.ts-on .ftf-altar-timer { top: calc(222px + env(safe-area-inset-top, 0px)) !important; }
+body.ts-on .ftf-bark { z-index: 4 !important; }
+body.ts-on:has(.ftf-town-prompt:not([hidden])) .ftf-bark, body.ts-on:has(.ts-use:not([hidden])) .ftf-bark { visibility: hidden !important; }
+
 @media (orientation: landscape) and (max-height: 500px) { .ts-arc { transform: scale(.86); transform-origin: 100% 100%; } .ts-btn.ts-use { bottom: 168px; } }
 @media (prefers-reduced-motion: reduce) { .ts-btn.ts-use:not([hidden]) { animation: none; } .ts-base { transition: none; } }
 `;
