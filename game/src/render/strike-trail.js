@@ -2,7 +2,7 @@
 // impact a ribbon follows the limb that moves fastest (a fist, a foot, the Loomblade's edge when she holds it), then it
 // fades; at the impact frame a flash blooms at the contact point. The limb is found by its speed, so a new move needs
 // no table: whatever she swings is what leaves the trail. Pooled (one ribbon of RIBBON samples, one flash), nothing
-// allocated per frame. Reduced motion: a shorter, fainter trail; the flash stays (it carries the hit).
+// allocated per frame. The flash is a tight hot core with a fan of stretched sparks (render/spell-fx.js), not a glow ball. Reduced motion: a shorter, fainter trail; the flash stays (it carries the hit).
 //
 //   const trail = createStrikeTrail({ THREE, parent: scene });
 //   trail.start(model, clip, impactS, blade);   // ftf:iris-action phase 'start' (blade: the held sword object or null)
@@ -45,6 +45,8 @@ void main(){ float tip = smoothstep(0.25, 1.0, vU); float soft = 1.0 - pow(abs(v
   float head = smoothstep(0.75, 1.0, vT);
   gl_FragColor = vec4(mix(uColor, vec3(1.0), clamp(tip * 0.55 + head * tip * 0.4, 0.0, 1.0)), vA * (0.25 + 0.75 * tip) * soft * streak); }`;
 
+import { createStreaks } from './spell-fx.js';
+
 /** @param {{THREE: object, parent: object}} o */
 export function createStrikeTrail({ THREE, parent }) {
   const pos = new Float32Array(RIBBON * 2 * 3), alpha = new Float32Array(RIBBON * 2), across = new Float32Array(RIBBON * 2), along = new Float32Array(RIBBON * 2);
@@ -63,10 +65,12 @@ export function createStrikeTrail({ THREE, parent }) {
   const ribbon = new THREE.Mesh(geo, mat); ribbon.frustumCulled = false; ribbon.visible = false; ribbon.name = 'strike_trail';
   parent.add(ribbon);
   // the contact flash: one soft sprite
-  const flashTex = (() => { const d = globalThis.document; if (!d || !d.createElement) return null; const c = d.createElement('canvas'); c.width = c.height = 64; const g = c.getContext && c.getContext('2d'); if (!g) return null; const r = g.createRadialGradient(32, 32, 0, 32, 32, 32); r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(0.3, 'rgba(255,235,190,0.8)'); r.addColorStop(1, 'rgba(255,200,120,0)'); g.fillStyle = r; g.fillRect(0, 0, 64, 64); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+  const flashTex = (() => { const d = globalThis.document; if (!d || !d.createElement) return null; const c = d.createElement('canvas'); c.width = c.height = 64; const g = c.getContext && c.getContext('2d'); if (!g) return null; const r = g.createRadialGradient(32, 32, 0, 32, 32, 32); r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(0.1, 'rgba(255,240,210,0.85)'); r.addColorStop(0.3, 'rgba(255,215,160,0.18)'); r.addColorStop(1, 'rgba(255,200,120,0)'); g.fillStyle = r; g.fillRect(0, 0, 64, 64); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
   const flash = new THREE.Sprite(new THREE.SpriteMaterial({ map: flashTex, color: 0xffffff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 }));
   flash.visible = false; flash.name = 'strike_flash'; parent.add(flash);
   let flashT = 1e9, flashSize = 0.8;
+  const sparks = createStreaks(THREE, parent, 160);
+  const _sp = new THREE.Vector3();
 
   const _v = new THREE.Vector3(), _w = new THREE.Vector3(), _d = new THREE.Vector3();
   let limbs = [], model = null, blade = null, look = STRIKE_LOOK.strike, active = false, t = 0, until = 0, impactAt = null, head = 0, lead = null;
@@ -91,7 +95,15 @@ export function createStrikeTrail({ THREE, parent }) {
     /** The impact frame: a flash at the leading limb (or the blade's tip). */
     impact() {
       const p = api.tip(_w); if (!p) return;
-      flash.position.copy(p); flashT = 0; flashSize = (0.55 + look.width * 1.6) * (lead && /hand|wrist/i.test(lead.bone.name) ? 1.35 : 1); flash.material.color.setHex(look.color);
+      flash.position.copy(p); flashT = 0; flashSize = (0.55 + look.width * 1.6) * (lead && /hand|wrist/i.test(lead.bone.name) ? 1.35 : 1) * 0.5; flash.material.color.setHex(look.color);
+      // the sparks fly on along the swing: the direction the tip last moved, opened into a cone
+      const n = lead || null; if (n) _sp.subVectors(p, n.last); else _sp.set(0, 0, 0);
+      const l = _sp.length(); if (l > 1e-4) _sp.multiplyScalar(1 / l); else _sp.set(0, 0.5, 0);
+      for (let i = 0; i < 26; i++) {
+        const s = 4 + Math.random() * 8;
+        sparks.emit(p.x, p.y, p.z, (_sp.x + (Math.random() - 0.5) * 1.6) * s, (_sp.y + Math.random() * 0.9) * s, (_sp.z + (Math.random() - 0.5) * 1.6) * s, 0.18 + Math.random() * 0.3, 0xffffff, look.color, 3.4, 0.02, 0.045, 3, -10);
+      }
+      sparks.emit(p.x, p.y, p.z, 0, 0.01, 0, 0.1, 0xffffff, look.color, 5, 0.22, 0);
     },
     /** The point the trail follows now (the blade's tip, else the leading limb), written into `out`; null if none. */
     tip(out) {
@@ -101,6 +113,7 @@ export function createStrikeTrail({ THREE, parent }) {
     },
     update(dt, reduced = false) {
       // flash
+      sparks.update(dt);
       if (flashT < 0.22) { flashT += dt; const k = flashT / 0.22; flash.visible = true; flash.material.opacity = (1 - k) * 0.95; flash.scale.setScalar(flashSize * (0.6 + 0.8 * k)); } else flash.visible = false;
       for (let i = 0; i < RIBBON; i++) age[i] += dt;
       if (active) {
@@ -132,7 +145,7 @@ export function createStrikeTrail({ THREE, parent }) {
     },
     get active() { return active; },
     get lead() { return lead ? lead.bone.name : blade ? 'blade' : null; },
-    dispose() { geo.dispose(); mat.dispose(); flash.material.dispose(); if (flashTex) flashTex.dispose(); ribbon.removeFromParent(); flash.removeFromParent(); },
+    dispose() { sparks.dispose(); geo.dispose(); mat.dispose(); flash.material.dispose(); if (flashTex) flashTex.dispose(); ribbon.removeFromParent(); flash.removeFromParent(); },
   };
   // the ring's samples in time order for the strip (scratch arrays, no allocation per frame)
   const sPos = new Float32Array(pos.length), sA = new Float32Array(alpha.length), sAge = new Float32Array(RIBBON);
