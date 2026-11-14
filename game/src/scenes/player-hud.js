@@ -71,7 +71,7 @@ body.st-winded .ts-btn[data-skill="dash"], body.st-winded .ftf-cast-slot[data-id
 .ph-delta.ph-plus { color: #9be3a9; } .ph-delta.ph-minus { color: #f19a8a; }
 @keyframes ph-float { from { opacity: 0; transform: translateY(0); } 15% { opacity: 1; } to { opacity: 0; transform: translateY(26px); } }
 .ph-toasts { position: absolute; top: calc(112px + env(safe-area-inset-top, 0px)); right: calc(18px + env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 6px; align-items: flex-end; max-width: min(340px, 70vw); }
-.ph-toast { padding: 8px 14px; background: var(--ph-bg); border: 1px solid var(--ph-line); border-left: 3px solid var(--ph-gold); border-radius: 10px; box-shadow: 0 6px 16px rgba(0, 0, 0, .3); animation: ph-in .25s ease-out; }
+.ph-toast { padding: 8px 14px; background: var(--ph-bg); border: 1px solid var(--ph-line); border-radius: 10px; /* an even hairline like the rest of the HUD, no side stripe */ box-shadow: 0 6px 16px rgba(0, 0, 0, .3); animation: ph-in .25s ease-out; }
 .ph-lvl.ph-up { animation: ph-lvlup .9s ease-out; }
 @keyframes ph-lvlup { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 200, 96, .9); } 35% { transform: scale(1.45); box-shadow: 0 0 0 8px rgba(255, 200, 96, .35); } 100% { transform: scale(1); box-shadow: 0 0 0 14px rgba(255, 200, 96, 0); } }
 .ph-toast.ph-out { opacity: 0; transform: translateX(12px); transition: opacity .3s, transform .3s; }
