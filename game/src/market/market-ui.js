@@ -68,6 +68,7 @@ const CSS = `
 .mk2-receipt .mk2-state { margin-bottom: 0; }
 .mk2-note { font-size: 12px; color: var(--ftf-muted, #aab6b0); }
 .mk2-state { min-height: 20px; margin-top: 8px; font-size: 13px; }
+.mk2-state.mk2-pending { color: #f2cc80; } .mk2-state.mk2-pending::before { content: ''; display: inline-block; width: 8px; height: 8px; margin-right: 8px; border-radius: 50%; background: currentColor; animation: mk2-pulse 1s ease-in-out infinite alternate; } @keyframes mk2-pulse { from { opacity: .3 } to { opacity: 1 } }
 .mk2-state.err { color: #ff8a7a; } .mk2-state a { color: var(--ftf-ok, #5ccf8a); }
 .mk2-confirm { margin-top: 10px; padding: 12px; border-radius: 10px; border: 1px solid rgba(197, 164, 105, .35); background: rgba(197, 164, 105, .06); display: grid; gap: 8px; }
 .mk2-empty { padding: 48px 20px; text-align: center; color: var(--ftf-muted, #aab6b0); }
@@ -160,9 +161,10 @@ export function createMarketUi({ t, client, dice = null, storage = null, doc = g
     state.replaceChildren(box); render();
     async function doBuy() {
       go.disabled = true; go.textContent = t('p2p.working');
+      const pending = el('p', 'mk2-state mk2-pending', t('p2p.pending')); box.append(pending); // pending -> settled, said in words
       const r = await client.buy(l.id, qty);
       if (!r.ok) { state.replaceChildren(el('p', 'mk2-state err', errText(r))); return; }
-      const ok = el('p', 'mk2-state', t('p2p.done.bought', { qty: r.fill.qty, item: name(l.item) }) + ' '); ok.append(...txLinks(r.fill));
+      const ok = el('p', 'mk2-state', t('p2p.done.bought', { qty: r.fill.qty, item: name(l.item), t: formatSilkC(r.fill.totalC ?? r.fill.qty * l.unitPriceC), fee: formatSilkC(r.fill.feeC ?? feeOf(r.fill.qty * l.unitPriceC)) }) + ' '); ok.append(...txLinks(r.fill));
       refreshSilk(true).catch(() => {});
       try { globalThis.dispatchEvent(new CustomEvent('ftf:feat', { detail: { k: 'trade' } })); } catch { /* the shared town's action feed is optional */ }
       await buyTab(); body.append(ok);

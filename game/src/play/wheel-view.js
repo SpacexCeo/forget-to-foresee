@@ -132,7 +132,8 @@ export function renderWheel({ doc = document, t, wheel, items = [], base = '/', 
       tb.disabled = worn; txt.append(tb);
     }
     gp.append(gart, txt); }
-  side.append(el('p', 'wv-head', t('wheel.header')), status, row, seedP, card, gp, el('h3', null, t('wheel.odds')), odd, el('p', 'gm-note', t('wheel.rules')));
+  const toast = el('p', 'wv-toast'); toast.hidden = true; toast.setAttribute('role', 'status'); // the claim lands: what and where
+  side.append(el('p', 'wv-head', t('wheel.header')), status, row, seedP, toast, card, gp, el('h3', null, t('wheel.odds')), odd, el('p', 'gm-note', t('wheel.rules')));
   root.append(box, side);
 
   let angle = 0, spinning = false, destroyed = false;
@@ -176,11 +177,13 @@ export function renderWheel({ doc = document, t, wheel, items = [], base = '/', 
     setTimeout(() => { ghost.remove(); target.classList.add('wv-bump'); setTimeout(() => target.classList.remove('wv-bump'), 600); }, 750);
   }
 
-  let retryT = null;
+  let retryT = null, toastT = null;
   async function claim(seed, art = null) {
+    const was = wheel.pending.find((x) => x.seed === seed), wasSeg = was && SEGMENTS.find((s) => s.id === was.segment);
     const r = await claimPrize(wheel, seed, { inventory, ledger, chests, mintSkin });
     if (destroyed) return r;
     if (r.ok || r.reason === 'already_owned') {
+      if (was && wasSeg) { toast.textContent = t(r.kind === 'skin' ? 'wheel.claimedNft' : 'wheel.claimed', { name: nameOf(was, wasSeg) }); toast.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { toast.hidden = true; }, 4000); }
       cue(r.kind === 'skin' ? 'ui_confirm' : 'gift_chime');
       if (art) flyToBag(art);
       const next = wheel.pending[0];
@@ -236,7 +239,7 @@ export function renderWheel({ doc = document, t, wheel, items = [], base = '/', 
   }
   const clock = setInterval(() => { if (destroyed) { clearInterval(clock); return; } if (wheel.available.total <= 0) refresh(); }, 1000); // the countdown to the next free spin; destroy() stops it
   if (clock && clock.unref) clock.unref();
-  return { root, spin, claim, get angle() { return angle; }, destroy() { destroyed = true; clearTimeout(retryT); clearInterval(clock); } };
+  return { root, spin, claim, get angle() { return angle; }, destroy() { destroyed = true; clearTimeout(retryT); clearTimeout(toastT); clearInterval(clock); } };
 }
 
 export const WHEEL_CSS = `
@@ -263,6 +266,8 @@ export const WHEEL_CSS = `
 .wv-meta { font: 600 12px/1 system-ui; letter-spacing: .08em; text-transform: uppercase; color: var(--wv-frame, #d9b26a); }
 .wv-r-mythic { background: radial-gradient(circle at 50% 0, rgba(255,215,106,.22), rgba(0,0,0,.4)); }
 .wv-claim { min-width: 140px; }
+.wv-toast { margin: 8px 0; padding: 8px 12px; border-radius: 10px; background: rgba(127, 209, 139, .14); border: 1px solid rgba(127, 209, 139, .45); color: #bfeec6; font-weight: 600; animation: wv-pop .35s cubic-bezier(.2,1.4,.4,1); }
+.wv-toast[hidden] { display: none; }
 .wv .gm-odds td:last-child { white-space: nowrap; text-align: right; }
 .wv-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 3px; vertical-align: -1px; }
 .wv-fly { position: fixed; z-index: 99; pointer-events: none; transition: transform .7s cubic-bezier(.5,0,.75,0), opacity .7s ease-in; }

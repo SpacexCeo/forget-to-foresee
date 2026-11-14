@@ -54,6 +54,7 @@ export default {
   "hud.name.default": "Viaggiatrice",
   "silk.tip.gate": "Seta che conta per il Telaio-Porta: {n}", "silk.tip.chain": "Registrata su NEAR: {n}", "silk.tip.pending": "In attesa di registrazione: {n}",
   "silk.tip.play": "Seta di gioco (solo su questo dispositivo): {n}", "silk.tip.total": "Tutta la tua seta: {n}", "silk.tip.fee": "Prezzo della Porta: {n}",
+  "silk.tip.earn": "Guadagni seta con: missioni, mostri, forzieri, prove verificate, vendite alle bancarelle e al mercato.", "silk.tip.spend": "Spendi seta per: il portale del Telaio-Porta, merci delle bancarelle, acquisti al mercato, assumere agenti cittadini.",
   "silk.tip.help": "Premi Registra per registrare ora la seta in attesa. Si registra anche da sola ogni minuto.", "silk.tip.what": "Cos’è la seta?",
   "silk.unit": "{n} seta",
 };

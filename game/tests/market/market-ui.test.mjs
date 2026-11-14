@@ -37,7 +37,7 @@ test('market window: NEAR testnet only, a confirmed buy, a plain error, cancel',
   assert.match(text(), /The seller receives 3\.13 silk/);
   [...doc.body.querySelectorAll('button')].find((b) => /^Buy for/.test(b.textContent)).click(); await tick(); await tick(); await tick();
   assert.deepEqual(calls[0], ['buy', 'lst_0000abcd', 1]);
-  assert.match(text(), /Bought 1 spider silk thread\./);
+  assert.match(text(), /Settled · bought 1 spider silk thread for 3\.2 silk; the 2% fee \(0\.07\) was burned\./);
   // sell: a price outside the band explains itself
   [...doc.body.querySelectorAll('.mk2-tabs button')][1].click(); await tick(); await tick();
   assert.match(text(), /Allowed 1\.5 to 6 silk each/);
