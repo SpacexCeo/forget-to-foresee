@@ -60,7 +60,7 @@ test('wayfarers: four minutes of the whole town with the visitors: nobody overla
 
 const glbJson = (url) => { const b = readFileSync(url); return { b, json: JSON.parse(b.subarray(20, 20 + b.readUInt32LE(12)).toString()) }; };
 
-test('wayfarer model: the owner's Tripo model (mesh + skin) and its baked clip file from the pack, inside the budget', { skip: !existsSync(MODEL) && 'model not built yet' }, () => {
+test('wayfarer model: the Tripo model (mesh + skin) and its baked clip file from the pack, inside the budget', { skip: !existsSync(MODEL) && 'model not built yet' }, () => {
   const clips = glbJson(new URL('../../public/assets/anim/townsfolk_wayfarer.glb', import.meta.url));
   const names = clips.json.animations.map((a) => a.name);
   for (const c of ['idle', 'idle_shift', 'idle_look', 'walk', 'wave', 'nod', 'talk', 'think', 'take_photo', 'haggle']) assert.ok(names.includes(c), 'the clip file has ' + c);
