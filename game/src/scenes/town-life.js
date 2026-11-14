@@ -8,7 +8,7 @@ import { WIND_UNIFORMS } from '../render/weather.js';
 /** Puffs per chimney and how many chimneys smoke at most, per detail level (0 = phones and the low tier, 1 = desktop). */
 export const TOWN_LIFE = Object.freeze({
   puffs: Object.freeze([7, 14]), chimneys: Object.freeze([8, 24]), birds: Object.freeze([7, 13]),
-  smokeHeight: 7, smokeSeconds: 9, skyDrift: Object.freeze({ bob: 2.2, sway: 5, period: 80 }),
+  pigeons: Object.freeze([5, 9]), smokeHeight: 7, smokeSeconds: 9, skyDrift: Object.freeze({ bob: 2.2, sway: 5, period: 80 }),
 });
 
 /** Where a puff is at `age` 0..1 of its life, relative to its chimney (the same maths as the shader; tested). */
@@ -68,6 +68,41 @@ const BIRD_FRAG = /* glsl */`
     gl_FragColor = vec4( uColor, 1.0 );
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
+  }`;
+
+/** Pigeons pecking on the square and the lower street (town-local spot, metres); Iris within `near` m scatters a flock,
+ * it flies off over `fly` s and lands again `away` s later once she is `clear` m off. */
+export const PIGEON_FLOCKS = Object.freeze([Object.freeze([3.2, 4.5, -15.5]), Object.freeze([-2.2, 0, 26])]);
+export const PIGEON = Object.freeze({ near: 4, clear: 9, fly: 3, away: 14 });
+/** One flock's step (pure): {p: 0 on the ground .. 1 gone, mode, t}; `d` = Iris's distance to the flock. */
+export function pigeonStep(st, dt, d) {
+  st.t += dt;
+  if (st.mode === 'ground' && d < PIGEON.near) { st.mode = 'up'; st.t = 0; }
+  else if (st.mode === 'up') { st.p = Math.min(1, st.p + dt / PIGEON.fly); if (st.p >= 1) { st.mode = 'gone'; st.t = 0; } }
+  else if (st.mode === 'gone' && st.t > PIGEON.away && d > PIGEON.clear) { st.mode = 'down'; st.t = 0; }
+  else if (st.mode === 'down') { st.p = Math.max(0, st.p - dt / PIGEON.fly); if (st.p <= 0) { st.mode = 'ground'; st.t = 0; } if (d < PIGEON.near) st.mode = 'up'; }
+  return st;
+}
+const PIGEON_VERT = /* glsl */`
+  uniform float uTime; uniform vec2 uFly;
+  attribute vec4 aSpot;  // world x, y, z, flock (0 | 1)
+  attribute vec3 aPhase; // escape angle, ground heading, phase
+  attribute float aTip;
+  void main() {
+    float fly = aSpot.w < 0.5 ? uFly.x : uFly.y;
+    float air = step( 0.001, fly ), gone = step( 0.999, fly );
+    float t = uTime + aPhase.z * 10.0;
+    vec3 ground = vec3( sin( t * 0.21 ) * 0.35, pow( max( 0.0, sin( t * 2.7 ) ), 12.0 ) * 0.05, cos( t * 0.17 ) * 0.35 );
+    vec2 dir = vec2( cos( aPhase.x ), sin( aPhase.x ) );
+    float h = fly * 16.0;
+    vec3 centre = aSpot.xyz + ground * ( 1.0 - air ) + vec3( dir.x * h, 9.0 * ( 1.0 - ( 1.0 - fly ) * ( 1.0 - fly ) ) + 0.12, dir.y * h );
+    float head = aPhase.y + sin( t * 0.4 ) * 0.8;
+    vec2 fwd = mix( vec2( sin( head ), cos( head ) ), dir, air );
+    vec2 side = vec2( fwd.y, - fwd.x );
+    float beat = sin( uTime * 17.0 + aPhase.z * 6.0 ) * 0.32 * air;
+    vec3 local = vec3( position.x * mix( 0.22, 1.0, air ), position.y + aTip * beat, position.z ) * 0.42 * ( 1.0 - gone );
+    vec3 p = centre + vec3( side.x * local.x + fwd.x * local.z, local.y, side.y * local.x + fwd.y * local.z );
+    gl_Position = projectionMatrix * viewMatrix * vec4( p, 1.0 );
   }`;
 
 /** A tiny deterministic generator (the scene must look the same on every load and in every capture). */
@@ -137,6 +172,26 @@ export function createTownLife({ parent, origin, center, detail = 1 }) {
   birds.name = 'town_birds'; birds.frustumCulled = false; birds.castShadow = false;
   group.add(birds);
 
+  // --- pigeons: two small flocks pecking on the ground, scattering when Iris walks up (one draw call) ---------------
+  const pc = TOWN_LIFE.pigeons[d], np = pc * PIGEON_FLOCKS.length, pr = rng(20261114);
+  const pigeonGeo = new THREE.InstancedBufferGeometry();
+  pigeonGeo.setAttribute('position', new THREE.BufferAttribute(base, 3));
+  pigeonGeo.setAttribute('aTip', new THREE.BufferAttribute(tip, 1));
+  const spot = new Float32Array(np * 4), pph = new Float32Array(np * 3);
+  PIGEON_FLOCKS.forEach((f, k) => { for (let i = 0; i < pc; i++) {
+    const a = pr() * 6.283, rad = 0.3 + pr() * 1.4, j = k * pc + i;
+    spot.set([origin[0] + f[0] + Math.cos(a) * rad, origin[1] + f[1], origin[2] + f[2] + Math.sin(a) * rad, k], j * 4);
+    pph.set([a + (pr() - 0.5) * 0.9, pr() * 6.283, pr()], j * 3);
+  } });
+  pigeonGeo.setAttribute('aSpot', new THREE.InstancedBufferAttribute(spot, 4));
+  pigeonGeo.setAttribute('aPhase', new THREE.InstancedBufferAttribute(pph, 3));
+  pigeonGeo.instanceCount = np;
+  const fly = { value: new THREE.Vector2(0, 0) }, flocks = PIGEON_FLOCKS.map(() => ({ p: 0, mode: 'ground', t: 0 }));
+  const pigeonMat = new THREE.ShaderMaterial({ uniforms: { uTime: time, uFly: fly, uColor: { value: new THREE.Color(0.36, 0.36, 0.4) } }, vertexShader: PIGEON_VERT, fragmentShader: BIRD_FRAG, side: THREE.DoubleSide });
+  const pigeons = new THREE.Mesh(pigeonGeo, pigeonMat);
+  pigeons.name = 'town_pigeons'; pigeons.frustumCulled = false; pigeons.castShadow = false;
+  group.add(pigeons);
+
   // --- the sky islands drift --------------------------------------------------------------------------------------
   let sky = null, skyBase = null;
   /** The real model of the sky piece (or null when it leaves). */
@@ -147,8 +202,13 @@ export function createTownLife({ parent, origin, center, detail = 1 }) {
    * @param {{sun?: THREE.Color, daylight?: number, pixelsPerMetre?: number}} [light] smoke takes the sun's colour, dimmed with
    *   the weather; `pixelsPerMetre` is the size of one metre at one metre from the camera, in drawing-buffer pixels
    */
-  function update(dt, light) {
+  function update(dt, light, playerPos = null) {
     time.value += dt;
+    if (playerPos && dt > 0) PIGEON_FLOCKS.forEach((f, k) => {
+      const st = pigeonStep(flocks[k], dt, Math.hypot(playerPos[0] - origin[0] - f[0], playerPos[2] - origin[2] - f[2]) + Math.abs(playerPos[1] - origin[1] - f[1]) * 2);
+      if (k === 0) fly.value.x = st.p; else fly.value.y = st.p;
+    });
+    if (light && light.sun) pigeonMat.uniforms.uColor.value.setRGB(0.36, 0.36, 0.4).multiplyScalar(0.35 + 0.65 * (light.daylight ?? 1));
     if (light && light.pixelsPerMetre) smokeMat.uniforms.uScale.value = light.pixelsPerMetre * 1.2;
     if (light && light.sun) smokeMat.uniforms.uColor.value.setRGB(0.5, 0.5, 0.52).lerp(light.sun, 0.35).multiplyScalar(0.55 + 0.75 * (light.daylight ?? 1));
     if (sky && skyBase) {
@@ -158,7 +218,7 @@ export function createTownLife({ parent, origin, center, detail = 1 }) {
   }
 
   function setActive(on) { group.visible = !!on; }
-  function dispose() { parent.remove(group); smokeGeo.dispose(); smokeMat.dispose(); birdGeo.dispose(); birds.material.dispose(); }
+  function dispose() { parent.remove(group); smokeGeo.dispose(); smokeMat.dispose(); birdGeo.dispose(); birds.material.dispose(); pigeonGeo.dispose(); pigeonMat.dispose(); }
 
-  return { group, smoke, birds, time, setChimneys, setSky, update, setActive, dispose, get puffs() { return smokeGeo.drawRange.count; } };
+  return { group, smoke, birds, pigeons, time, setChimneys, setSky, update, setActive, dispose, get puffs() { return smokeGeo.drawRange.count; } };
 }

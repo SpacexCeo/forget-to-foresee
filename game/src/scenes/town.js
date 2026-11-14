@@ -307,7 +307,7 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
    */
   function update(t, dt, { playerPos, reducedMotion = false, lamps: lampScale = 1, light = null, camera = null }) {
     if (!state.active) return;
-    life.update(reducedMotion ? 0 : dt, light);
+    life.update(reducedMotion ? 0 : dt, light, playerPos);
     swing.update(t, reducedMotion);
     if (townsfolk) { folkFrame.playerPos = playerPos; folkFrame.reducedMotion = reducedMotion; folkFrame.camera = camera; folkFrame.shown = shown(); townsfolk.update(dt, folkFrame); }
     state.time = t;
