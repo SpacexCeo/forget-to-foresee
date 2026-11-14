@@ -77,6 +77,10 @@ A phone (coarse pointer) has no lobby and starts in the town directly.
 - Inside a `.glb`: `*_col` meshes become colliders (never rendered); `socket_lamp_*` empties get up to six warm
   point lights without shadows on the six nearest Iris (they fade as they move); `town_sky` is visual only (its colliders,
   if any, are ignored and it casts no shadow).
+- The camera also collides with the drawn `*_plaster` and `*_roof` meshes of every piece (camera-only triangles,
+  `town.cameraShellTriangles`): the `_col` boxes wrap the ground floors, the upper floors lean over the street.
+  `M_Town_Plaster`, `M_Town_Roof`, `M_Town_Stone` and `M_Town_Timber` are drawn on both sides (shadow pass unchanged).
+  Pure part: `render/camera-boom.js`, `tests/client/camera-boom.test.mjs`.
 - `town_altar.glb`: material `M_Altar_Core` (the crystal) is driven by code: `emissiveIntensity` 0.3 asleep, 1.3
   awake (eased from 2.5 radii down to the prompt radius), a slow pulse (steady under reduced motion), and a flare
   during registration. The authored emissive strength is overwritten; colour is kept. The ring glyphs (nodes
