@@ -4,6 +4,11 @@
 // dialogue layer shows the subtitles and plays the voice. Skippable: skip() snaps to the end within 1.2 s.
 import * as THREE from 'three';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { buildLab, LAB_MODELS } from '../../scenes/lab/index.js';
 import { buildVortexDisk, buildTunnel } from './vortex.js';
 import { createLabAudio } from './lab-audio.js';
@@ -64,9 +69,21 @@ export function createPrologue(ctx = {}) {
     let renderer;
     try { renderer = new THREE.WebGLRenderer({ canvas, antialias: !phone, powerPreference: 'high-performance' }); } catch { host.remove(); throw new Error('no renderer for the prologue'); }
     renderer.setPixelRatio(Math.min(globalThis.devicePixelRatio || 1, phone ? 1 : 1.5)); renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
+    if (!phone) { renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; }
     const scene = new THREE.Scene(); scene.background = new THREE.Color(0x05070c);
+    // a soft studio environment: the lacquer, steel and glass get reflections, the shadows a little fill
+    const pmrem = new THREE.PMREMGenerator(renderer), envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture; pmrem.dispose();
+    scene.environment = envTex; scene.environmentIntensity = 0.3;
     const camera = new THREE.PerspectiveCamera(40, 1, 0.05, 200);
-    const resize = () => { const w = host.clientWidth || innerWidth, h = host.clientHeight || innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); };
+    // bloom on what is brighter than white (LED lines, downlight discs, the crystal, the vortex); phones draw direct
+    let composer = null, bloom = null;
+    if (!phone) {
+      composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 }));
+      composer.addPass(new RenderPass(scene, camera));
+      bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.6, 0.5, 1.6); composer.addPass(bloom);
+      composer.addPass(new OutputPass());
+    }
+    const resize = () => { const w = host.clientWidth || innerWidth, h = host.clientHeight || innerHeight; renderer.setSize(w, h, false); if (composer) composer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); };
     resize(); addEventListener('resize', resize);
     const lab = buildLab(); scene.add(lab.root);
     labModelsP.then((m) => { if (live) lab.attachModels(m); });
@@ -127,7 +144,7 @@ export function createPrologue(ctx = {}) {
       camera.fov = cam.fov; camera.updateProjectionMatrix(); camera.up.set(0, 1, 0); camera.lookAt(look);
       if (cam.roll) camera.rotateZ(THREE.MathUtils.degToRad(cam.tunnel ? cam.roll * (t - 31) : Math.sin(t * 3) * cam.roll * cam.k));
       if (cam.tunnel) tunnel.update(t - 31, (t - 31) / 4.5);
-      renderer.render(scene, camera);
+      if (composer) composer.render(); else renderer.render(scene, camera);
       if (st.done) { finish(resolve); return; }
       raf = requestAnimationFrame(() => frame(resolve));
     };
@@ -135,7 +152,7 @@ export function createPrologue(ctx = {}) {
       cancelAnimationFrame(raf); removeEventListener('resize', resize);
       const skipped = timeline.skipped; live = null;
       if (iris) { scene.remove(iris.model); iris.model.position.set(0, 0, 0); iris.model.rotation.set(0, 0, 0); iris.model.scale.setScalar(1); }
-      audio.dispose(); lab.dispose(); disk.dispose(); tunnel.dispose(); renderer.dispose(); try { renderer.forceContextLoss(); } catch { /* gone */ }
+      audio.dispose(); lab.dispose(); disk.dispose(); tunnel.dispose(); envTex.dispose(); if (composer) { composer.dispose(); bloom.dispose(); } renderer.dispose(); try { renderer.forceContextLoss(); } catch { /* gone */ }
       host.remove(); resolve(skipped ? 'skipped' : 'done');
     };
     return new Promise((resolve) => { raf = requestAnimationFrame(() => frame(resolve)); });
