@@ -34,6 +34,7 @@ FINGERS = ('wing_f1', 'wing_f2', 'wing_f3', 'wing_f4')
 TAIL_FLY = (30, 4, -2, -7, -13, -8, -12)
 STAND_Z = -0.04      # the standing body sits a little under the rest height: slack for the (straight) front legs
 LAND, TAKE = 2.4, 1.3
+FLY_Z = 0.14        # the flight clips sit this much above the root plane: the trailing paws stay over it (review A pass 5)
 
 
 # ---- the folded wing: the arm back along the flank, the forearm forward again, the fingers back in a fan that
@@ -120,15 +121,15 @@ def glide(t):
     both(p, 'wing_arm', q(y=-(7 + 3 * sin(ph)))); both(p, 'wing_fore', q(y=-2.5 * sin(ph - 0.8)))
     for f in FINGERS: both(p, f + 'b', q(y=-3 * sin(ph - 1.5)))
     p.add('neck1', q(z=1.5 * sin(ph))); p.add('chest', q(x=0.8 * sin(ph)))
-    p.loc = (0, 0, 0.05 * sin(ph)); return steady_head(tail_wave(p, ph, 1.5, 3.0), HEAD_Z + 0.25 * p.loc[2])
+    p.loc = (0, 0, FLY_Z + 0.05 * sin(ph)); return steady_head(tail_wave(p, ph, 1.5, 3.0), HEAD_Z + FLY_Z + 0.25 * (p.loc[2] - FLY_Z))
 
 
 def flap(t):
     ph = warp(t); p = wing_stroke(fly_body(Pose()), t)
     p.add('chest', q(x=2.0 * sin(ph - 0.3)))
     for s_ in LR: p.add('leg_h_upper' + s_, q(x=3 * sin(ph - 1.0)))
-    p.loc = (0, 0, -0.065 * sin(ph - pi / 4))      # lift lags the stroke: highest an eighth of a beat after the bottom
-    return steady_head(tail_wave(p, ph, 5.0, 1.5), HEAD_Z + 0.25 * p.loc[2])
+    p.loc = (0, 0, FLY_Z - 0.065 * sin(ph - pi / 4))      # lift lags the stroke: highest an eighth of a beat after the bottom
+    return steady_head(tail_wave(p, ph, 5.0, 1.5), HEAD_Z + FLY_Z + 0.25 * (p.loc[2] - FLY_Z))
 
 
 def bank_l(t):
@@ -140,7 +141,7 @@ def bank_l(t):
     for n, a in (('neck1', 5), ('neck2', 6), ('neck3', 6), ('head', 9)): p.add(n, q(z=a * w))
     p.add('head', q(y=-8)); p.add('chest', q(z=2))
     for i in range(5): p.add(f'tail{i + 1}', q(z=-5 * w))
-    p.loc = (0, 0, 0.04 * sin(ph)); return tail_wave(p, ph, 1.5, 1.5)
+    p.loc = (0, 0, FLY_Z + 0.04 * sin(ph)); return tail_wave(p, ph, 1.5, 1.5)
 
 
 # ---- feet on the ground
@@ -204,7 +205,6 @@ def takeoff(t):
     first, the hind feet last, about 0.48 s), the legs trail and tuck by the second stroke; ends in flap(0)."""
     T = t * TAKE; crouch = sm(0.0, 0.25, T) * (1 - sm(0.25, 0.42, T))
     p = fly_body(Pose(), sm(0.42, 0.95, T)); trail = sm(0.4, 0.6, T) * (1 - sm(0.7, 1.1, T))
-    for s_ in LR: p.add('leg_h_foot' + s_, q(x=25 * trail)); p.add('leg_h_paw' + s_, q(x=20 * trail))   # the toes point back as the feet leave
     # the first stroke is short and high (the tips must clear the ground), the second one is full
     stroke = wing_stroke(Pose(), (T - TAKE) / 0.6, amp=0.55 + 0.45 * sm(0.55, 0.9, T), base=24 - 14 * sm(0.5, 0.9, T) - 6 * sm(0.9, 1.3, T), fold=FOLDK * sm(0.5, 0.9, T), even=True)
     p.update(blend(wings_folded(Pose()), stroke, sm(0.0, 0.27, T)))
@@ -212,7 +212,7 @@ def takeoff(t):
     for i, a in enumerate(TAIL_FLY): p[f'tail{i + 1}'] = q(x=a * tk)
     p.add('tail1', q(x=16 * sm(0.2, 0.5, T) * (1 - sm(0.8, 1.3, T))))   # the tail stays level while the body pitches up
     p.add('hips', q(x=-16 * sm(0.2, 0.5, T) * (1 - sm(0.8, 1.3, T)))); p.add('neck1', q(x=12 * crouch)); p.add('neck2', q(x=8 * crouch))
-    p.loc = (0, 0, STAND_Z * (1 - sm(0.3, 0.45, T)) - 0.29 * crouch + 0.22 * sm(0.3, 0.5, T) * (1 - sm(0.9, 1.3, T)))
+    p.loc = (0, 0, STAND_Z * (1 - sm(0.3, 0.45, T)) - 0.25 * crouch + 0.36 * sm(0.3, 0.5, T) * (1 - sm(1.0, 1.3, T)))
     kf, kh = 1 - sm(0.36, 0.6, T), 1 - sm(0.48, 0.72, T)
     plant(p, dict(hind_l=kh, hind_r=kh, front_l=kf, front_r=kf)); c = p.contact
     p = blend(p, flap(0), sm(1.05, 1.3, T)); p.contact = c; return p
