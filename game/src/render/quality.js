@@ -84,7 +84,9 @@ export function qualityFor(tier, profile = 'desktop') {
 
 /** Governor settings per profile: phones aim at 30 fps (spec 10) and may also drop render resolution. */
 export const GOVERNORS = Object.freeze({
-  desktop: Object.freeze({ budgetMs: 1000 / 58, warmup: 4, window: 90, windowEnd: 40, cooldown: 5, pixelScales: Object.freeze([]) }),
+  // upScales: supersampling steps the desktop climbs on the top tier while frames keep the budget (owner 14.11: "the game
+  // must load any GPU to the max"); the whole render ratio never passes upRatioMax (render/lookdev.js clamps it).
+  desktop: Object.freeze({ budgetMs: 1000 / 58, warmup: 4, window: 90, windowEnd: 40, cooldown: 5, pixelScales: Object.freeze([]), upScales: Object.freeze([1.25, 1.5, 1.75, 2]), upRatioMax: 2 }),
   // 90 frames at 30 fps are three seconds over budget; asset streaming hitches are excluded by the warm-up.
   phone: Object.freeze({ budgetMs: 1000 / 30, warmup: 6, window: 90, windowEnd: 120, cooldown: 8, pixelScales: Object.freeze([0.85, 0.7]) }),
 });
@@ -184,8 +186,12 @@ export function detectProfile(env = {}) {
 
 /**
  * Frame-time governor for the automatic tier: after a warm-up it watches a rolling window and
- * steps the tier down once when the 75th-percentile frame time stays above budget (never up, so
- * it cannot oscillate; it stops judging after `windowEnd` seconds). Pure: feed it frame times.
+ * steps the tier down once when the 75th-percentile frame time stays above budget (the tier never goes up); it stops
+ * judging after `windowEnd` seconds. Pure: feed it frame times.
+ * Climbing (desktop, `upScales`): on the top tier ('ultra'), while a window keeps the budget, it raises the render
+ * resolution one supersampling step, so a strong GPU is used to the full. The first window over budget takes back one
+ * step and locks the climb (no oscillation). Once it has climbed it keeps watching past `windowEnd`, only ever stepping
+ * the supersampling back down, so a heavy fight later still gets its frames back.
  */
 export class TierGovernor {
   /**
@@ -194,10 +200,10 @@ export class TierGovernor {
    *          tier's pixel ratio) taken once the bottom tier is reached, e.g. [0.85, 0.7]; empty on desktop.
    *          `floor`: the lowest tier the governor may step down to (null: down to 'low'); see governorFloor().
    */
-  constructor({ budgetMs = 1000 / 58, warmup = 4, window = 90, windowEnd = 40, cooldown = 5, pixelScales = [], floor = null } = {}) {
-    Object.assign(this, { budgetMs, warmup, windowSize: window, windowEnd, cooldown, pixelScales: [...pixelScales], floor });
+  constructor({ budgetMs = 1000 / 58, warmup = 4, window = 90, windowEnd = 40, cooldown = 5, pixelScales = [], upScales = [], floor = null } = {}) {
+    Object.assign(this, { budgetMs, warmup, windowSize: window, windowEnd, cooldown, pixelScales: [...pixelScales], upScales: [...upScales], floor });
     this.t = 0; this.samples = []; this.lastChange = -Infinity; this.done = false;
-    this.pixelScale = 1; this.pixelStep = 0;
+    this.pixelScale = 1; this.pixelStep = 0; this.upStep = 0; this.upLocked = false;
   }
 
   /**
@@ -206,16 +212,29 @@ export class TierGovernor {
    * @returns {{tier?:string, pixelScale?:number}|null} the change to apply, or null to stay
    */
   step(ms, tier) {
-    if (this.done) return null;
     this.t += ms / 1000;
-    if (this.t > this.windowEnd) { this.done = true; return null; }
+    const watching = this.upStep > 0; // it has supersampled: guard the frame rate for the rest of the session
+    if (this.done && !watching) return null;
+    if (this.t > this.windowEnd && !this.done) { this.done = true; if (!watching) return null; }
     if (this.t < this.warmup || this.t - this.lastChange < this.cooldown) return null;
     this.samples.push(ms);
     if (this.samples.length > this.windowSize) this.samples.shift();
     if (this.samples.length < this.windowSize) return null;
     const sorted = [...this.samples].sort((a, b) => a - b);
     const p75 = sorted[Math.floor(sorted.length * 0.75)];
-    if (p75 <= this.budgetMs * 1.12) return null;
+    const over = p75 > this.budgetMs * 1.12;
+    if (over && this.upStep > 0) {
+      this.upStep--; this.upLocked = true; this.lastChange = this.t; this.samples = [];
+      this.pixelScale = this.upStep > 0 ? this.upScales[this.upStep - 1] : 1;
+      return { pixelScale: this.pixelScale };
+    }
+    if (this.done) return null;
+    if (!over) {
+      if (p75 > this.budgetMs || tier !== 'ultra' || this.upLocked || this.upStep >= this.upScales.length) return null;
+      this.pixelScale = this.upScales[this.upStep++]; this.lastChange = this.t; this.samples = [];
+      return { pixelScale: this.pixelScale };
+    }
+    this.upLocked = true;
     const next = tier === this.floor ? null : lowerTier(tier);
     this.lastChange = this.t; this.samples = [];
     if (next) return { tier: next };
