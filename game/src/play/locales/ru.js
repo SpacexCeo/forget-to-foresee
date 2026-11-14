@@ -636,6 +636,10 @@ export default {
   'ledger.copy': "Скопировать шаги проверки",
   'ledger.copied': "Скопировано",
   'ledger.view': "Открыть транзакцию",
+  // ---- entry gate (ui/entry-gate.js): the one button after loading, then the language ----
+  'entry.enter': "Войти в мир",
+  'entry.lang': "Выберите язык",
+  'entry.ready': "Город готов",
   'intro.skip': "Пропустить",
   'spot.wheel': "Крутить колесо",
   'item.prop_wheel_of_fortune': "Колесо фортуны",

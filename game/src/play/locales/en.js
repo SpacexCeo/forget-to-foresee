@@ -643,6 +643,10 @@ const EN = {
   'ledger.copy': "Copy verification steps",
   'ledger.copied': "Copied",
   'ledger.view': "View the transaction",
+  // ---- entry gate (ui/entry-gate.js): the one button after loading, then the language ----
+  'entry.enter': "Enter the world",
+  'entry.lang': "Choose your language",
+  'entry.ready': "The town is ready",
   'intro.skip': "Skip",
   'spot.wheel': "Spin the wheel",
   'item.prop_wheel_of_fortune': "Wheel of fortune",

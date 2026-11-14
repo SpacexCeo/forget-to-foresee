@@ -24,6 +24,7 @@ export const DEFAULT_FLAGS = Object.freeze({
   wayfarers: false, // the Wayfarers from Kallima: visitors in town (model townsfolk_wayfarer: the Lost Tourist, one visitor)
   tales: false, // town tales: the Scribe's lost words, a night step with the Sweeper (game/tales.js, scenes/town-tales.js)
   shellAura: false, // the tournament Shells' glow, drifting motes and suture pulse (render/shell-aura.js)
+  entryGate: false, // after loading: one "Enter the world" button, then the language and the account (ui/entry-gate.js)
   townLedger: false, // the Town Ledger: the game menu's Town tab and the market pill's button (docs/plans/track-fit-gaps.md)
 });
 export const FEATURES_TIMEOUT_MS = 3000;

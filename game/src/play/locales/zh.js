@@ -2,8 +2,10 @@
 // Same vocabulary as src/locales/zh.js: 贝壳, 丝, 回合, 锚, 卷轴; clans 伊里斯, 盐, 灰, 苔, 琥珀, 霜.
 import quests from './zh-quests.js';
 import hud from './zh-hud.js';
+import account from './zh-account.js';
 export default {
   ...hud, // first: the RPG HUD (en-hud.js keys); this file's own copies below win
+  ...account, // the account panel (en-account.js keys)
   // ---- badge, help ----
   'play.badge': '本地演示 · 规则在你的浏览器中运行，与代理 API 共用同一个房间',
   'play.help.title': '操作',
@@ -636,6 +638,10 @@ export default {
   'ledger.copy': "复制验证步骤",
   'ledger.copied': "已复制",
   'ledger.view': "查看交易",
+  // ---- entry gate (ui/entry-gate.js): the one button after loading, then the language ----
+  'entry.enter': "进入世界",
+  'entry.lang': "选择语言",
+  'entry.ready': "小镇已就绪",
   'intro.skip': "跳过",
   'spot.wheel': "转动转盘",
   'item.prop_wheel_of_fortune': "幸运转盘",

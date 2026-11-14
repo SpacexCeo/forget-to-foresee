@@ -3,8 +3,10 @@
 // Muschio, Ambra, Brina.
 import quests from './it-quests.js';
 import hud from './it-hud.js';
+import account from './it-account.js';
 export default {
   ...hud, // first: the RPG HUD (en-hud.js keys); this file's own copies below win
+  ...account, // the account panel (en-account.js keys)
   // ---- badge, help ----
   'play.badge': 'Demo locale · le regole girano nel tuo browser attraverso la stessa stanza dell’API degli agenti',
   'play.help.title': 'Comandi',
@@ -637,6 +639,10 @@ export default {
   'ledger.copy': "Copia i passi di verifica",
   'ledger.copied': "Copiato",
   'ledger.view': "Apri la transazione",
+  // ---- entry gate (ui/entry-gate.js): the one button after loading, then the language ----
+  'entry.enter': "Entra nel mondo",
+  'entry.lang': "Scegli la lingua",
+  'entry.ready': "La città è pronta",
   'intro.skip': "Salta",
   'spot.wheel': "Gira la ruota",
   'item.prop_wheel_of_fortune': "Ruota della fortuna",

@@ -2,8 +2,10 @@
 // Same vocabulary as src/locales/uk.js: Мушля, шовк, тик, якір, Сувій; clans Ірис, Сіль, Попіл, Мох, Бурштин, Іній.
 import quests from './uk-quests.js';
 import hud from './uk-hud.js';
+import account from './uk-account.js';
 export default {
   ...hud, // first: the RPG HUD (en-hud.js keys); this file's own copies below win
+  ...account, // the account panel (en-account.js keys)
   // ---- badge, help ----
   'play.badge': 'Локальне демо · правила працюють у вашому браузері через ту саму кімнату, що й API агентів',
   'play.help.title': 'Керування',
@@ -636,6 +638,10 @@ export default {
   'ledger.copy': "Скопіювати кроки перевірки",
   'ledger.copied': "Скопійовано",
   'ledger.view': "Відкрити транзакцію",
+  // ---- entry gate (ui/entry-gate.js): the one button after loading, then the language ----
+  'entry.enter': "Увійти у світ",
+  'entry.lang': "Оберіть мову",
+  'entry.ready': "Місто готове",
   'intro.skip': "Пропустити",
   'spot.wheel': "Крутити колесо",
   'item.prop_wheel_of_fortune': "Колесо фортуни",
