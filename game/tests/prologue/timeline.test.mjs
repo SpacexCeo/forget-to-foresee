@@ -9,7 +9,7 @@ test('the shots tile 0..38 s without gaps; the cues are in order and inside the 
   assert.equal(SHOTS[0].t0, 0); assert.equal(SHOTS[SHOTS.length - 1].t1, PROLOGUE_S);
   for (let i = 1; i < SHOTS.length; i++) assert.equal(SHOTS[i].t0, SHOTS[i - 1].t1);
   for (let i = 1; i < CUES.length; i++) assert.ok(CUES[i].t > CUES[i - 1].t);
-  assert.deepEqual(CUES.map((c) => c.id), ['title', 'year', 'check', 'key_press', 'device_on', 'oh_no', 'vortex_start', 'tunnel', 'whiteout']);
+  assert.deepEqual(CUES.map((c) => c.id), ['title', 'year', 'hmm', 'check', 'key_press', 'device_on', 'oh_no', 'vortex_start', 'gasp', 'tunnel', 'whiteout']);
   assert.equal(CUES.find((c) => c.id === 'oh_no').t, 24.3);
   assert.equal(shotAt(24.3).id, 'P8'); assert.equal(shotAt(99).id, 'P11');
 });
@@ -67,5 +67,15 @@ test('wake-up ring: people stand on the circle facing in, with a gap left open',
     assert.ok(Math.hypot(p.x + Math.sin(p.heading) * 0.1, p.z + Math.cos(p.heading) * 0.1) < RING.radius);
     const a = Math.atan2(p.x, p.z), d = Math.abs(Math.atan2(Math.sin(a - RING.gapAt), Math.cos(a - RING.gapAt)));
     assert.ok(d > RING.gap / 2 - 1e-9, 'nobody in the gap');
+  }
+});
+
+test('the startle shot (P8) shows her whole: the camera stands back and her raised hands and her waist are in frame (QA 14.11)', () => {
+  const v = (a, b) => [b[0] - a[0], b[1] - a[1], b[2] - a[2]], len = (a) => Math.hypot(...a), dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  for (let t = 24.6; t < 26.5; t += 0.3) {
+    const cam = cameraAt(t), ir = irisAt(t); assert.equal(cam.id, 'P8');
+    const her = [ir.x, 1.4, ir.z]; assert.ok(len(v(cam.pos, her)) > 1.6, `far enough at ${t.toFixed(1)}`);
+    const fwd = v(cam.pos, cam.look), half = (cam.fov / 2) * Math.PI / 180;
+    for (const y of [2.15, 1.0]) { const d = v(cam.pos, [ir.x, y, ir.z]); const ang = Math.acos(dot(d, fwd) / len(d) / len(fwd)); assert.ok(ang < half, `y ${y} in frame at ${t.toFixed(1)}`); }
   }
 });

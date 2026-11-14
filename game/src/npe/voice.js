@@ -20,6 +20,23 @@ export function pickVoice(voices) {
 }
 
 /**
+ * The sound settings a voice line follows: the master slider (audio/mix.js; at 0 nothing plays) and the narration
+ * preference (ui/prefs.js; only with it on may the browser's speech stand in for a missing file). Never throws.
+ */
+export function voiceSettings(storage) {
+  let master = 0.8, narration = false;
+  try { master = loadVolumes(storage).master; } catch { /* defaults */ }
+  try { const p = JSON.parse((storage && storage.getItem('ftf.prefs.v1')) || 'null'); narration = !!(p && p.narration === true); } catch { /* defaults */ }
+  return { master, narration };
+}
+
+/** Whether a prologue cue speaks, and how: null (no line, or the sound is off) or {id, speech}. Pure. */
+export function voicePlan(cue, { master = 0.8, narration = false } = {}) {
+  if (!cue || !cue.voice || !VOICE_LINES[voiceId(cue.voice)] || !(master > 0)) return null;
+  return { id: voiceId(cue.voice), speech: !!narration };
+}
+
+/**
  * @param {{base?: string, storage?: object, Audio?: Function, speech?: object, Utterance?: Function, timeoutMs?: number}} o
  */
 export function createVoice({ base = '/', storage = globalThis.localStorage, Audio = globalThis.Audio, speech = globalThis.speechSynthesis, Utterance = globalThis.SpeechSynthesisUtterance, timeoutMs = 4000 } = {}) {
@@ -49,11 +66,11 @@ export function createVoice({ base = '/', storage = globalThis.localStorage, Aud
     });
   }
   return {
-    /** Plays a line by id; resolves 'file' | 'speech' | 'silent'. */
-    async play(id) {
+    /** Plays a line by id; resolves 'file' | 'speech' | 'silent'. `speech: false` keeps the fallback silent. */
+    async play(id, { speech: allowSpeech = true } = {}) {
       const line = VOICE_LINES[voiceId(id)]; if (!line) return 'silent';
       if (await viaFile(String(base).replace(/\/?$/, '/') + line.file)) return 'file';
-      return viaSpeech(line.text);
+      return allowSpeech ? viaSpeech(line.text) : 'silent';
     },
   };
 }

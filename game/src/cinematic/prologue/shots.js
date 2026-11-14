@@ -17,21 +17,26 @@ export const SHOTS = Object.freeze([
   // P7 at eye level and back (QA pass 2 #4): the old low camera 1.8 m from her path looked up at her raised arms, which filled the
   // frame and, lit from below, read as another outfit; now she crosses the room to the device in a full-figure shot
   { id: 'P7', t0: 19.5, t1: 23.5, p0: [-1.9, 1.55, 2.9], p1: [-0.6, 1.5, 2.7], l0: [1.4, 1.15, 0.5], l1: [3.0, 1.25, 0.4], f0: 38, f1: 36, ease: true },
-  { id: 'P8', t0: 23.5, t1: 26.5, p0: [3.0, 1.6, 0.95], p1: [2.95, 1.6, 0.85], l0: [2.2, 1.55, 0.5], l1: [2.2, 1.55, 0.5], f0: 30, f1: 30 },
+  { id: 'P8', t0: 23.5, t1: 26.5, p0: [3.15, 1.65, 2.1], p1: [3.1, 1.65, 1.95], l0: [2.2, 1.55, 0.5], l1: [2.2, 1.55, 0.5], f0: 42, f1: 42 }, // her startle whole, hands in frame (QA 14.11)
   { id: 'P9', t0: 26.5, t1: 31.0, p0: [0.6, 1.55, 1.1], p1: [1.2, 1.5, 0.7], l0: [3.2, 1.5, 0.4], l1: [3.2, 1.5, 0.4], f0: 45, f1: 72, shake: 0.12, roll: 4 },
   { id: 'P10', t0: 31.0, t1: 35.5, tunnel: true, f0: 80, f1: 80, roll: 25 },
   { id: 'P11', t0: 35.5, t1: 38.0, tunnel: true, f0: 80, f1: 80 },
 ]);
 
-/** Cues (9.5): id, time, and what the dialogue layer shows. Emitted on the bus as `prologue.cue`. */
+/**
+ * Cues (9.5): id, time, and what the dialogue layer shows. Emitted on the bus as `prologue.cue`. `voice` names Iris's
+ * line in npe/voice.js VOICE_LINES; the intro plays it with the subtitle (npe/index.js).
+ */
 export const CUES = Object.freeze([
   { id: 'title', t: 0.0, text: 'FORGET TO FORESEE', durMs: 2800, card: true },
   { id: 'year', t: 3.0, text: "2048. Dr. Iris's laboratory.", durMs: 3800 },
+  { id: 'hmm', t: 9.9, speaker: 'Iris', text: 'Hmm...', durMs: 500, voice: 'iris_hmm' },
   { id: 'check', t: 10.4, speaker: 'Iris', text: 'One more check on the signal...', durMs: 2800 },
   { id: 'key_press', t: 14.0 },
   { id: 'device_on', t: 15.8 },
   { id: 'oh_no', t: 24.3, speaker: 'Iris', text: 'Oh no...', durMs: 1400, voice: 'iris_oh_no' },
   { id: 'vortex_start', t: 26.5 },
+  { id: 'gasp', t: 26.7, speaker: 'Iris', text: 'Ah!', durMs: 900, voice: 'iris_gasp' },
   { id: 'tunnel', t: 31.0 },
   { id: 'whiteout', t: 34.6 },
 ]);
