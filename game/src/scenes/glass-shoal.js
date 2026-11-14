@@ -167,9 +167,13 @@ export function createGlassShoal(o) {
     dragon.root.visible = false; mode = 'arena-wait';
     loadArena().then((a) => { event('landed'); mode = 'arena'; a.enter(save); toast(say('shoal.landed')); }).catch((e) => { console.warn('[shoal] arena', e); mode = 'town'; backToStone(); });
   }
+  /** Back in town: the town's own home spot when the game gives one (o.home: a grounded town point, a short drop above it), else the
+   *  ground beside the cliff stone. Never the stone's height 3 m back: on the slope that was inside the hill (owner 14.11: she fell through). */
   function backToStone() {
-    const w = stoneAt.clone().add(new THREE.Vector3(0, 0.2, -3));
-    player.teleport([w.x, w.y + 0.2, w.z], Math.PI);
+    const h = o.home && o.home();
+    if (h && h.position) { player.teleport(h.position, h.heading ?? Math.PI); return; }
+    const w = stoneAt.clone().add(new THREE.Vector3(0, 0, -3)), g = groundAt(w.x, w.z);
+    player.teleport([w.x, (g == null ? stoneAt.y : g) + 0.6, w.z], Math.PI);
   }
   function flyHome() {
     if (arena) arena.leave();
