@@ -981,7 +981,8 @@ const day1Open = () => !!document.querySelector('.d1-panel, .d1-card');
 let introOn = false; // the intro flight is on screen (the barks wait)
 function introFly(ms = 6500) {
   let seen = false; try { seen = !!(ctx.storage && ctx.storage.getItem(INTRO_KEY)); } catch { /* none */ }
-  if (seen || judge || lookdev.reducedMotion || params.get('skip') === 'intro' || params.get('intro') === 'off') return Promise.resolve(false);
+  // never on the Glass Shoal (?shoal=…): its end put the town camera back over the fight's (GPU bench 14.11)
+  if (seen || judge || lookdev.reducedMotion || params.get('skip') === 'intro' || params.get('intro') === 'off' || params.get('shoal')) return Promise.resolve(false);
   // the town is entered under the loading screen: fly only once the screen is gone (main.js sets __ftfBootMarks.done)
   const revealed = () => new Promise((res) => { const t0 = performance.now(); const tick = () => ((window.__ftfBootMarks && window.__ftfBootMarks.done) || performance.now() - t0 > 180000 ? res() : setTimeout(tick, 150)); tick(); });
   return revealed().then(() => new Promise((resolve) => {
@@ -1002,6 +1003,7 @@ function introFly(ms = 6500) {
     rig.rotate(-turn);
     const step = () => {
       if (done) return;
+      if (glassShoal && glassShoal.owns && glassShoal.owns()) { done = true; introOn = false; rig.pitchOverride = null; skip.remove(); window.removeEventListener('keydown', end); window.removeEventListener('pointerdown', end); resolve(true); return; } // the Shoal took the camera
       if (!t0) t0 = performance.now();
       const p = Math.min(1, (performance.now() - t0) / ms), e = p * p * (3 - 2 * p);
       rig.dist = 70 + (TOWN_CAMERA.dist - 70) * e;
