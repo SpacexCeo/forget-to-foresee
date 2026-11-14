@@ -24,9 +24,9 @@ after it. The relayer's day counter resets at 00:00 UTC.
 
 | Criterion | Score | Why |
 | --- | ---: | --- |
-| Technical implementation | **8.6** | 20 trader accounts with their own keys traded about 21,000 times on 13 Nov, every trade with a reason and a hash; an independent recount tool (`tools/count/count.mjs`); commit-reveal season verified on chain; TEE answers re-checked in the browser; NEP-171 and NEP-245 contracts; CI on every push; 1,200+ game tests. Minus: the player side of the economy is thin on chain (gate 0, items 0, pledges 0), and one VPS holds every service key. |
+| Technical implementation | **8.6** | 20 trader accounts with their own keys traded 21,233 times on 13 Nov (the final indexer count: 21,360 successful transactions, 2 failed), every trade with a reason and a hash; an independent recount tool (`tools/count/count.mjs`); commit-reveal season verified on chain; TEE answers re-checked in the browser; NEP-171 and NEP-245 contracts; CI on every push; 1,200+ game tests. Minus: the player side of the economy is thin on chain (gate 0, items 0, pledges 0), and one VPS holds every service key. |
 | Design / UX | **7.6** [I] | Transparent HUD, a starter guide that walks the first ten minutes, Town Ledger with trader accounts and reasons, intro and prologue, five locales, guest play with no wallet prompt. Not seen tonight by me (no browser checks by workers); the lead's boot checks are the evidence. The boss fight is built but off on the live page. |
-| Impact | **6.4** | A pattern others can reuse (sealed seasons, NPC merchants with their own accounts, NFT that owns an NFT). Testnet only; 56 guest accounts and about 60 chest openings are real players, but small. |
+| Impact | **6.4** | A pattern others can reuse (sealed seasons, NPC merchants with their own accounts, NFT that owns an NFT). Testnet only; 56 guest accounts and 80 chest openings on 13 Nov are real players, but small. |
 | Originality | **8.3** | Paying for prophecy with memories that become NFTs bound to a sealed season; merchants as wallets with readable price rules; a dragon NFT owned by a heroine NFT's account. |
 | Sustainability | **6.2** | `SECURITY.md`, measured cost per trade, kill switch, runway tool, decisions log, MIT, CI. Minus: one VPS on an `sslip.io` host, manual funding, nothing on mainnet. |
 | **Mean** | **7.42** | |

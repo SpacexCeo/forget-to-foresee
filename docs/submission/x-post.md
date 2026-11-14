@@ -22,8 +22,8 @@ events, not silk or outcomes).
 > Built at NEAR HACKATHON by @Lambada_eth
 > @NEARProtocol #NEARHackathon
 
-(271 characters as X counts them. Lead with the live economy. "Over 21,000 trades on 13 Nov": the relayer sent 21,218 by 23:57 UTC and the
-public-indexer recount is `docs/proof/tx-2026-11-13.md`; quote that file's number if it differs. Credit @Lambada_eth.)
+(271 characters as X counts them. Lead with the live economy. "Over 21,000 trades on 13 Nov": the public-indexer recount for the whole UTC day is
+21,233 market trades (`docs/proof/tx-2026-11-13.md`). Credit @Lambada_eth.)
 
 ## Post 2 (reply)
 

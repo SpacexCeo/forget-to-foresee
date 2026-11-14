@@ -45,7 +45,7 @@ leads with the live economy (20 trader accounts with their own keys on `ftf-town
 the Town Ledger window, the Economy Lab week), then sign-in, then the sealed seasons and memory shards. Every claim
 matches the README "Live on NEAR testnet right now" block and `docs/ai-use.md` (scripted traders; the clans' strategy
 layer asks NEAR AI Cloud about once an hour; the rules engine makes every trade). "Over 21,000 trades on 13 Nov": the
-relayer sent 21,218 by 23:57 UTC; the recount from the public indexer is `docs/proof/tx-2026-11-13.md`. "56 guest
+recount of the whole UTC day from the public indexer is 21,233 market trades (`docs/proof/tx-2026-11-13.md`). "56 guest
 accounts": `stats` on `guests.ftf-coordinator.testnet` at 00:00 UTC 14 Nov. NEP-245: the item contract is deployed; do not claim mints until `items.ftf-town.testnet` shows supply.
 Re-count before sending:
 `node -e 'console.log(require("fs").readFileSync(0,"utf8").trim().length)' < idea.txt`.
