@@ -99,3 +99,13 @@ test('minimap rim clamp: inside points stay, outside points sit on the rim', asy
   const [x, y, off] = clampToRim(300, 100, 200, 10);
   assert.equal(off, true); assert.equal(Math.round(x), 190); assert.equal(y, 100);
 });
+
+test('the tray uses the owner GPT icon family; the menu keeps both groups (14.11)', async () => {
+  const { TRAY } = await import('../../src/rpg/hud.js');
+  const { readFileSync } = await import('node:fs');
+  const inner = (n) => readFileSync(new URL('../../../docs/art/requests/in/hud/' + n + '.svg', import.meta.url), 'utf8').match(/<svg[^>]*>([\s\S]*)<\/svg>/)[1].trim();
+  for (const id of ['character', 'skills', 'journal', 'map', 'bag', 'market']) assert.ok(TRAY.find((x) => x.id === id).icon.includes(inner(id)), id);
+  const menu = TRAY.find((x) => x.id === 'menu').icon;
+  assert.ok(menu.includes('<g class="i-menu">' + inner('menu') + '</g>'));
+  assert.ok(menu.includes('<g class="i-gear">' + inner('settings') + '</g>'));
+});
