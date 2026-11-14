@@ -12,8 +12,8 @@ export default {
   'app.title.line2': 'TO FORESEE',
   'app.title.full': 'Forget to Foresee',
   'app.tagline': 'МАЙБУТНЄ КОШТУЄ СПОГАДУ',
-  'premise.line': 'Плати за пророцтво своїми спогадами. Кожне пророцтво запечатане в NEAR testnet до початку гри.',
-  'premise.hint': 'Піднімися сходами до вівтаря, щоб почати.',
+  'premise.line': "Ірис провалилася з 2048 року в місто на пагорбах. Заробіть 200 шовку в NEAR testnet, щоб відкрити Ткацьку Браму й повернутися додому.",
+  'premise.hint': "Перші кроки — у стартовому гіді праворуч.",
 
   // ---- common ----
   'common.close': 'Закрити',
