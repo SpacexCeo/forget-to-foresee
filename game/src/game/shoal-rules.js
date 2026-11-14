@@ -256,12 +256,13 @@ export const BOSS = f({
   exposedMult: 1.5,       // damage taken while the weak point is open
   exposedTime: 2.0,       // seconds the crest stays open after she dodges a blow
   contact: 6.5,           // the body's radius on the plain
-  // the ice dragon (owner 14.11): phase 1 on the ground (claw, landing slam, tail sweep, ice breath), phase 2 adds the
-  // bite charge and the wyrmlings, phase 3 takes to the air (it rises, breathes from above, dives into a slam, lands)
+  // the ice serpent (owner 14.11): it rises through the mirror (slam), lashes its tail (sweep), strikes (lunge) and
+  // breathes ice (breath: an inhale, then a cone); phase 2 brings the wyrmlings, phase 3 is faster and breathes more.
+  // The claw, the takeoff and the dive stay in the rules for a winged boss (no rotation uses them now).
   phases: f([
-    f({ id: 1, above: 1.0, rotation: f(['claw', 'slam', 'sweep', 'breath']), telegraph: 1.4, rest: 1.6, adds: 0 }),
-    f({ id: 2, above: 0.66, rotation: f(['lunge', 'breath', 'adds', 'claw', 'sweep']), telegraph: 1.15, rest: 1.3, adds: 3 }),
-    f({ id: 3, above: 0.33, rotation: f(['takeoff', 'breath', 'breath', 'dive', 'claw', 'lunge']), telegraph: 0.9, rest: 0.95, adds: 2 }),
+    f({ id: 1, above: 1.0, rotation: f(['slam', 'sweep', 'breath', 'slam']), telegraph: 1.4, rest: 1.6, adds: 0 }),
+    f({ id: 2, above: 0.66, rotation: f(['lunge', 'breath', 'adds', 'slam', 'sweep']), telegraph: 1.15, rest: 1.3, adds: 3 }),
+    f({ id: 3, above: 0.33, rotation: f(['lunge', 'breath', 'slam', 'sweep', 'breath', 'lunge']), telegraph: 0.9, rest: 0.95, adds: 2 }),
   ]),
   airMult: 0.6,           // damage taken while it flies (higher, harder to hit), the open weak point aside
   attacks: f({
