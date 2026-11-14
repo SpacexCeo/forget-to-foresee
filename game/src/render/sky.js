@@ -335,6 +335,22 @@ export function lutKey(sun, preset) {
   return [r(sun.x), r(sun.y), r(sun.z), r(preset.mie), r(preset.ozone), r(preset.altitude ?? OBSERVER_ALTITUDE)].join('|');
 }
 
+/** The day cycle re-renders the LUT once the sun has moved this far (radians, 0.1°: about every 8th frame at 60 fps). */
+export const LIVE_LUT_ANGLE = 0.1 * Math.PI / 180;
+const COS_LIVE_LUT = Math.cos(LIVE_LUT_ANGLE);
+
+/**
+ * Whether the sky-view LUT last rendered with uniforms `u` is out of date for `sun` and `preset`. The day cycle's sun
+ * moves about 0.0125° a frame (a 360° loop in eight minutes), far below what the dome can show, so re-rendering the
+ * ray-marched LUT every frame was pure GPU cost. Pure (plain {x,y,z} vectors work).
+ */
+export function lutStale(u, sun, preset) {
+  const s = u.uSunDir.value;
+  return s.x * sun.x + s.y * sun.y + s.z * sun.z < COS_LIVE_LUT
+    || Math.abs(u.uMie.value - preset.mie) > 1e-4 || Math.abs(u.uOzone.value - preset.ozone) > 1e-4
+    || Math.abs(u.uAlt.value - (preset.altitude ?? OBSERVER_ALTITUDE)) > 0.5;
+}
+
 /**
  * Normalisation and horizon colours of one sky-view LUT read-back (null pixels: neutral defaults). Pure.
  * @returns {{scale:number, mean:number, towardSun:number[], base:number[], sunTint:number[], zenith:number[]}}
@@ -475,15 +491,19 @@ export class SkyDome {
   /**
    * The day cycle's per-frame path (render/daycycle.js): the LUT is re-rendered for the moving sun on the GPU (no
    * read-back), and the normalisation and horizon colours come from `stats`, interpolated between keyframes that
-   * setAtmosphere() read once (mixStats).
+   * setAtmosphere() read once (mixStats). The LUT itself is re-rendered only once the sun has moved LIVE_LUT_ANGLE
+   * (lutStale); the sun direction, colour and every other uniform still follow every frame.
    */
   setAtmosphereLive(renderer, preset, stats) {
     const sun = sunDirection(preset.elevation, preset.azimuth);
     const lu = this.lutMat.uniforms;
-    lu.uSunDir.value.copy(sun); lu.uMie.value = preset.mie; lu.uOzone.value = preset.ozone; lu.uAlt.value = preset.altitude ?? OBSERVER_ALTITUDE;
-    const prev = renderer.getRenderTarget();
-    renderer.setRenderTarget(this.lut); this.lutQuad.render(renderer);
-    renderer.setRenderTarget(prev);
+    if (lutStale(lu, sun, preset)) {
+      lu.uSunDir.value.copy(sun); lu.uMie.value = preset.mie; lu.uOzone.value = preset.ozone; lu.uAlt.value = preset.altitude ?? OBSERVER_ALTITUDE;
+      const prev = renderer.getRenderTarget();
+      renderer.setRenderTarget(this.lut); this.lutQuad.render(renderer);
+      renderer.setRenderTarget(prev);
+      this.lutRenders = (this.lutRenders || 0) + 1;
+    }
     return this.applyStats(preset, sun, stats);
   }
 

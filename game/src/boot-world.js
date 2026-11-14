@@ -159,6 +159,7 @@ const input = new Input(renderer.domElement);
 installTouchCopy(ctx.i18n, () => !!input.touchControls); // on touch, no keyboard keys in any text (ui/touch-copy.js)
 const hud = new DevHud(document.getElementById('hud'));
 const promptEl = document.getElementById('prompt');
+let lastPromptHtml = null; // the prompt's last written HTML (frame() writes it only on a change)
 // The lobby (title, language, settings, the Foresight Exchange) opens only from the pause menu now: the game starts in
 // the town (ui/loading.js bootPlan). Entering from it returns to the world.
 let menuLobby = null;
@@ -1107,6 +1108,7 @@ const focus = new THREE.Vector3();
 const ndc = new THREE.Vector2();
 const clock = new THREE.Clock();
 const physics = { steps: 0, substeps: 0, colliders: 0, grounded: false };
+const hudStats = () => ({ info: renderer.info, physics, streaming: streamer.stats(), events: streamer.events, camera: rig, lookdev: lookdev.stats() });
 
 // Camera presets for screenshots / measurements (dev only).
 const view = params.get('view');
@@ -1512,10 +1514,12 @@ function frame() {
 
   controls.update(input.device, null, inspecting);
   const near = inspecting || !play || play.zone === 'shell' ? null : nearestInteractable();
-  promptEl.innerHTML = inspecting
+  // no "I inspect … up close" hint (owner 14.11: unclear, and I is the bag key); the prompt stays hidden, and the DOM is
+  // touched only when its text changes (it was re-parsed every frame)
+  const promptHtml = inspecting
     ? `Inspecting <b>${inspecting.label}</b> · drag or arrows to orbit · wheel to zoom · <kbd>I</kbd>/<kbd>Esc</kbd> to leave`
-    : ''; // no "I inspect … up close" hint (owner 14.11: unclear, and I is the bag key)
-  promptEl.hidden = !promptEl.innerHTML || !!inspecting;
+    : '';
+  if (promptHtml !== lastPromptHtml) { lastPromptHtml = promptHtml; promptEl.innerHTML = promptHtml; promptEl.hidden = true; }
   if (toastTimer > 0 && (toastTimer -= dt) <= 0) toastEl.hidden = true;
 
   const drawn = sceneReady && (play || !(boot.lobbyOpen && boot.lobbyOpen())); // the lobby covers the canvas: no GPU work behind it
@@ -1524,7 +1528,7 @@ function frame() {
   if (!firstFrameDone && (drawn || sceneReady)) { firstFrameDone = true; if (boot.onFirstFrame) boot.onFirstFrame(); }
   if (boot.onProgress && (progressTimer -= dt) <= 0) { progressTimer = 0.25; boot.onProgress(streamer.stats()); }
   hud.frame(dt);
-  hud.update(dt, { info: renderer.info, physics, streaming: streamer.stats(), events: streamer.events, camera: rig, lookdev: lookdev.stats() });
+  hud.update(dt, hudStats); // gathered only when the F3 HUD redraws (streamer.stats() walks every asset)
   mouseAim.update();
   input.endFrame();
   requestAnimationFrame(frame);
