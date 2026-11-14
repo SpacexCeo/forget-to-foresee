@@ -17,11 +17,15 @@ import town_houses as H
 from town_altar import _glyph
 from town_geo import RX, RY, RZ, T, tint
 
-TIMBER = H.TIMBER
-TIMBER_LIGHT = H.TIMBER_LIGHT
-STONE = H.STONE
-STONE_DARK = H.STONE_DARK
-FLOOR = (0.70, 0.56, 0.40)
+# The rooms' own palette (14.11): walnut-dark frames and oiled oak tops, warmer and deeper than the street's timber,
+# so the lamp light has something to glow against.
+TIMBER = (0.27, 0.165, 0.10)
+TIMBER_LIGHT = (0.50, 0.33, 0.20)
+STONE = (0.80, 0.76, 0.70)
+STONE_DARK = (0.50, 0.48, 0.45)
+FLOOR = (0.52, 0.35, 0.22)
+SHELL = (0.05, 0.04, 0.035)          # the dark closing shell behind every wall, the ceiling and the floor
+MIST_LOW, MIST_HIGH = (0.44, 0.53, 0.60), (0.80, 0.86, 0.90)   # the hill mist behind the window panes
 BRONZE = (1.0, 1.0, 1.0)
 CLANS = [("iris", (0.25, 0.16, 0.55)), ("sol", (0.78, 0.80, 0.76)), ("pepel", (0.045, 0.043, 0.041)),
          ("moh", (0.16, 0.27, 0.09)), ("yantar", (0.66, 0.32, 0.04)), ("iney", (0.35, 0.55, 0.68))]
@@ -39,9 +43,25 @@ def room(tb, w, d, h, plaster, rr, windows=("west", "east"), door_w=1.5, floor=T
     n = int(w / 0.5) if floor else 0
     for i in range(n):
         x0, x1 = -w / 2 + w * i / n, -w / 2 + w * (i + 1) / n
-        tb.quad("timber", (x0, 0, d / 2), (x1, 0, d / 2), (x1, 0, -d / 2), (x0, 0, -d / 2), tint(FLOOR, rr.uniform(0.82, 1.05)), uv_dir=(0, 0, 1))
+        # each plank row is cut into boards of uneven length, every board its own tone
+        z = -d / 2
+        while z < d / 2 - 1e-6:
+            z1 = min(d / 2, z + rr.uniform(1.6, 3.4))
+            tb.quad("timber", (x0, 0, z1), (x1, 0, z1), (x1, 0, z), (x0, 0, z), tint(FLOOR, rr.uniform(0.70, 1.08)), uv_dir=(0, 0, 1), uv_off=(rr.random(), rr.random()))
+            z = z1
     tb.col_poly([(-w / 2, 0, d / 2), (w / 2, 0, d / 2), (w / 2, 0, -d / 2), (-w / 2, 0, -d / 2)])
-    tb.quad("plaster", (-w / 2, h, -d / 2), (w / 2, h, -d / 2), (w / 2, h, d / 2), (-w / 2, h, d / 2), tint(plaster, 0.62))
+    # the ceiling: dark boards laid across the joists (no bare plaster overhead)
+    nb = int(d / 0.42)
+    for i in range(nb):
+        z0, z1 = -d / 2 + d * i / nb, -d / 2 + d * (i + 1) / nb
+        tb.quad("timber", (-w / 2, h, z0), (w / 2, h, z0), (w / 2, h, z1), (-w / 2, h, z1), tint(TIMBER, rr.uniform(0.78, 1.0)), uv_dir=(1, 0, 0), uv_off=(rr.random(), rr.random()))
+    # the closing shell: one dark box 6 cm outside the room, facing in, so no seam ever shows the void
+    e = 0.06
+    X, Z = w / 2 + e, d / 2 + e
+    for a, b, c, dd in (((-X, -e, Z), (X, -e, Z), (X, -e, -Z), (-X, -e, -Z)), ((-X, h + e, -Z), (X, h + e, -Z), (X, h + e, Z), (-X, h + e, Z)),
+                        ((-X, -e, -Z), (X, -e, -Z), (X, h + e, -Z), (-X, h + e, -Z)), ((X, -e, Z), (-X, -e, Z), (-X, h + e, Z), (X, h + e, Z)),
+                        ((-X, -e, Z), (-X, -e, -Z), (-X, h + e, -Z), (-X, h + e, Z)), ((X, -e, -Z), (X, -e, Z), (X, h + e, Z), (X, h + e, -Z))):
+        tb.quad("stone", a, b, c, dd, SHELL)
     for i in range(int(d / 1.6) + 1):
         z = -d / 2 + 0.3 + i * (d - 0.6) / int(d / 1.6)
         tb.box("timber", (0, h - 0.13, z), (w, 0.26, 0.22), tint(TIMBER, 0.9), skip="Y", uv_dir=(1, 0, 0))
@@ -64,12 +84,12 @@ def room(tb, w, d, h, plaster, rr, windows=("west", "east"), door_w=1.5, floor=T
                     tb.box("timber", (sx * (door_w / 2 - 0.08), 1.15, 0.12), (0.16, 2.3, 0.18), TIMBER, skip="zy", uv_dir=(0, 1, 0))
                 tb.box("timber", (0, 2.38, 0.12), (door_w + 0.2, 0.18, 0.2), TIMBER, skip="z", uv_dir=(1, 0, 0))
                 tb.ring("stone", (0, 2.38, 0.24), 0.13, 0.08, 0.04, 14, (0.92, 0.66, 0.24))
-                tb.quad("window_day", (-0.45, 2.56, 0.07), (0.45, 2.56, 0.07), (0.45, 2.9, 0.07), (-0.45, 2.9, 0.07))
+                tb.quad("window_day", (-0.45, 2.56, 0.07), (0.45, 2.56, 0.07), (0.45, 2.9, 0.07), (-0.45, 2.9, 0.07), [MIST_LOW, MIST_LOW, MIST_HIGH, MIST_HIGH])
             if name in windows:
                 nwin = max(1, int(ww / 3.6))
                 for i in range(nwin):
                     cx = -ww / 2 + ww * (i + 0.5) / nwin
-                    tb.quad("window_day", (cx - 0.55, 1.35, 0.05), (cx + 0.55, 1.35, 0.05), (cx + 0.55, 2.75, 0.05), (cx - 0.55, 2.75, 0.05))
+                    tb.quad("window_day", (cx - 0.55, 1.35, 0.05), (cx + 0.55, 1.35, 0.05), (cx + 0.55, 2.75, 0.05), (cx - 0.55, 2.75, 0.05), [MIST_LOW, MIST_LOW, MIST_HIGH, MIST_HIGH])
                     for (bx, by, sx, sy) in ((cx, 2.8, 1.3, 0.1), (cx, 1.3, 1.3, 0.1), (cx - 0.6, 2.05, 0.1, 1.5), (cx + 0.6, 2.05, 0.1, 1.5), (cx, 2.05, 0.05, 1.4), (cx, 2.15, 1.1, 0.05)):
                         tb.box("timber", (bx, by, 0.09), (sx, sy, 0.1 if sx > sy else 0.076), TIMBER_LIGHT, skip="z", uv_dir=(1, 0, 0) if sx > sy else (0, 1, 0))
                     tb.box("timber", (cx, 1.22, 0.16), (1.5, 0.06, 0.26), TIMBER_LIGHT, uv_dir=(1, 0, 0))
@@ -197,15 +217,34 @@ def runner(tb, z0, z1, w, col, x=0.0):
 
 
 def blind(tb, cx, top, w, cols):
-    """Inside a window wall frame: a striped fabric valance (rolled blind) above the window."""
-    n = 7
-    for i in range(n):
-        x0, x1 = cx - w / 2 + w * i / n, cx - w / 2 + w * (i + 1) / n
-        c = cols[i % 2]
-        tb.quad("cloth", (x0, top - 0.42, 0.2), (x1, top - 0.42, 0.2), (x1, top, 0.12), (x0, top, 0.12), c)
-        tb.poly("cloth", [(x0, top - 0.42, 0.2), ((x0 + x1) / 2, top - 0.5, 0.21), (x1, top - 0.42, 0.2)], c)
-    tb.cyl("bronze", (cx - w / 2 - 0.05, top + 0.02, 0.12), 0.02, 0.02, 0.0, 6, cap_top=False)
-    tb.beam("bronze", (cx - w / 2 - 0.06, top + 0.03, 0.12), (cx + w / 2 + 0.06, top + 0.03, 0.12), 0.03, 0.03)
+    """Inside a window wall frame: a bronze rod, a short pelmet and two gathered curtains tied back to the sides."""
+    main, trim = cols[0], cols[1]
+    tb.beam("bronze", (cx - w / 2 - 0.22, top + 0.04, 0.17), (cx + w / 2 + 0.22, top + 0.04, 0.17), 0.035, 0.035)
+    for sx in (-1, 1):
+        tb.cyl("bronze", (cx + sx * (w / 2 + 0.24), top + 0.0, 0.17), 0.05, 0.03, 0.08, 6)
+    n = 9
+    for i in range(n):   # the pelmet: shallow scallops
+        x0, x1 = cx - w / 2 - 0.12 + (w + 0.24) * i / n, cx - w / 2 - 0.12 + (w + 0.24) * (i + 1) / n
+        zf = 0.20 if i % 2 else 0.16
+        tb.quad("cloth", (x0, top - 0.26, zf), (x1, top - 0.26, zf), (x1, top + 0.02, 0.17), (x0, top + 0.02, 0.17), tint(main, 0.9 if i % 2 else 1.05))
+        tb.poly("cloth", [(x0, top - 0.26, zf), ((x0 + x1) / 2, top - 0.33, zf), (x1, top - 0.26, zf)], trim)
+    for sx in (-1, 1):   # the drapes: folded strips, wide at the rod, gathered at the tie, loose below
+        folds = 5
+        for i in range(folds):
+            u0, u1 = i / folds, (i + 1) / folds
+            rows = [(top, 0.46, 0.0), (1.72, 0.20, 0.0), (1.02, 0.34, 0.03)]   # (height, drape width, sag toward the room)
+            for (ya, wa, sa), (yb, wb, sb) in zip(rows, rows[1:]):
+                def px(wd, u):
+                    return cx + sx * (w / 2 + 0.18 - wd * u)
+                za0, za1 = 0.13 + (0.05 if i % 2 else 0.0) + sa, 0.13 + (0.0 if i % 2 else 0.05) + sa
+                zb0, zb1 = 0.13 + (0.05 if i % 2 else 0.0) + sb, 0.13 + (0.0 if i % 2 else 0.05) + sb
+                a, b, c, dd = (px(wb, u0), yb, zb0), (px(wb, u1), yb, zb1), (px(wa, u1), ya, za1), (px(wa, u0), ya, za0)
+                col = tint(main, 0.82 if i % 2 else 1.0)
+                if sx > 0:
+                    tb.quad("cloth", b, a, dd, c, col)
+                else:
+                    tb.quad("cloth", a, b, c, dd, col)
+        tb.box("cloth", (cx + sx * (w / 2 + 0.08), 1.72, 0.17), (0.23, 0.05, 0.11), tint(main, 0.55))
 
 
 def window_blinds(tb, w, d, cols, walls=("west", "east")):
@@ -263,7 +302,7 @@ def sconce(tb, name, wall_m, off, y=2.25):
         tb.light((0, -0.12, 0.42), (1.0, 0.66, 0.34), 55.0, 0.08)
 
 
-def window_lights(tb, w, d, walls=("west", "east"), power=90.0):
+def window_lights(tb, w, d, walls=("west", "east"), power=34.0):
     """Daylight spilling in through the painted windows (bake only)."""
     for name, (m, ww) in _walls(w, d).items():
         if name not in walls:
@@ -271,7 +310,7 @@ def window_lights(tb, w, d, walls=("west", "east"), power=90.0):
         nwin = max(1, int(ww / 3.6))
         with tb.at(m):
             for i in range(nwin):
-                tb.light((-ww / 2 + ww * (i + 0.5) / nwin, 2.1, 0.6), (0.95, 0.92, 0.86), power, 0.6)
+                tb.light((-ww / 2 + ww * (i + 0.5) / nwin, 2.1, 0.6), (0.62, 0.76, 0.95), power, 0.6)
 
 
 def potted_plant(tb, x, y, z, seed=0, r=0.22):
@@ -362,17 +401,9 @@ def build_exchange(tb):
         for i in range(6):
             shard(tb, -0.14 + (i % 3) * 0.14, 0.055, -0.06 + (i // 3) * 0.12, 0.05, 300 + i, "shard" if i % 2 else "shard_amber")
     book_stack(tb, 1.95, 1.08, -d / 2 + 2.35, 3, rr, 20)
-    # rear wall: two shelf units behind the counter and a tall cabinet on the left
+    # rear wall: two shelf units behind the counter (the drawer wall on the left comes with dress_exchange)
     shelf(tb, -0.2, -d / 2 + 0.3, 2.2, goods="boxes", seed=1)
     shelf(tb, 2.4, -d / 2 + 0.3, 2.2, goods="jars", seed=2)
-    with tb.at(T(-3.2, 0, -d / 2 + 0.4)):
-        tb.box("timber", (0, 1.15, 0), (1.3, 2.3, 0.6), tint(TIMBER, 0.95), skip="y", uv_dir=(0, 1, 0))
-        for sx in (-1, 1):
-            tb.box("timber", (sx * 0.31, 1.1, 0.305), (0.56, 1.9, 0.02), tint(TIMBER_LIGHT, 0.75), uv_dir=(0, 1, 0))
-            tb.cyl("bronze", (sx * 0.06, 1.1, 0.32), 0.02, 0.02, 0.02, 6)
-        tb.box("timber", (0, 2.34, 0.02), (1.4, 0.08, 0.66), TIMBER)
-        book_stack(tb, -0.3, 2.38, 0.0, 2, rr)
-        tb.col_box((0, 1.15, 0), (1.3, 2.3, 0.6))
     # six glass cases, three per side wall
     k = 0
     for sx in (-1, 1):
@@ -418,6 +449,7 @@ def build_exchange(tb):
         tb.socket("shop_pedestal", (0, 0, 1.6), 180.0)
         tb.light((0, 1.9, 0.0), (0.72, 0.5, 1.0), 120.0, 0.2)
     potted_plant(tb, 3.6, 0, d / 2 - 0.6, 7)
+    dress_exchange(tb, w, d, h, rr)
     hanging_ring_lamp(tb, "socket_lamp_ceiling", 0, 0.6, h, 0.85)
     walls = _walls(w, d)
     for wn in ("west", "east"):
@@ -539,6 +571,7 @@ def build_scribe(tb):
                 for i in range(nwin):
                     potted_plant(tb, -ww / 2 + ww * (i + 0.5) / nwin + 0.42, 1.25, 0.2, 60 + i + (5 if name == "east" else 0), 0.12)
     potted_plant(tb, 2.0, 0, d / 2 - 0.6, 71, 0.24)
+    dress_scribe(tb, w, d, h, rr)
     hanging_ring_lamp(tb, "socket_lamp_ceiling", 0, 0.4, h, 0.8)
     walls = _walls(w, d)
     for wn in ("west", "east"):
@@ -651,7 +684,7 @@ def build_inn(tb):
     potted_plant(tb, -1.6, 0, -d / 2 + 3.2, 92, 0.22)
     # the six clan banners, distributed around the walls
     walls = _walls(w, d)
-    spots = [("east", -4.4), ("east", 0.0), ("east", 4.4), ("west", -4.0), ("west", 2.4), ("north", -4.2)]
+    spots = [("east", -6.05), ("south", 3.3), ("east", 6.05), ("west", -4.0), ("west", 2.4), ("north", -4.2)]   # clear of the windows
     for (clan, col), (wall, off) in zip(CLANS, spots):
         m, _ww = walls[wall]
         with tb.at(m, T(off, 0, 0.1)):
@@ -660,6 +693,7 @@ def build_inn(tb):
             tb.poly("cloth", [(-0.34, 1.92, 0.01), (0.0, 1.66, 0.01), (0.34, 1.92, 0.01)], col)
             tb.box("cloth", (0, 3.18, 0.012), (0.68, 0.08, 0.02), tint(col, 0.6), skip="z")
             tb.ring("bronze", (0, 2.68, 0.02), 0.2, 0.15, 0.012, 16)
+    dress_inn(tb, w, d, h, rr)
     hanging_ring_lamp(tb, "socket_lamp_ceiling", 0.8, 0.6, h, 1.0, 10)
     hanging_ring_lamp(tb, "socket_lamp_ceiling_bar", 0.2, -d / 2 + 3.6, h, 0.7, 6)
     sconce(tb, "socket_lamp_wall_east_a", walls["east"][0], -2.2)
@@ -668,6 +702,230 @@ def build_inn(tb):
     sconce(tb, "socket_lamp_door_l", walls["south"][0], -1.5)
     sconce(tb, "socket_lamp_door_r", walls["south"][0], 1.5)
     window_lights(tb, w, d, walls=("east",))
+
+
+# ------------------------------------------------------------------ dressing pass (14.11): what makes each room its own
+
+def hanging_lantern(tb, name, x, z, h, drop=1.3, power=38.0, col=(1.0, 0.68, 0.36)):
+    """A small bronze lantern on a chain over a table or a case: a swing node, a lamp socket and a bake light,
+    so the surface below sits in its own warm pool."""
+    with tb.swing(name.replace("socket_", ""), (x, h - 0.02, z), length=drop):
+        tb.cyl("iron", (x, h - drop + 0.2, z), 0.012, 0.012, drop - 0.2, 4, cap_top=False)
+        tb.lathe("bronze", (x, h - drop + 0.08, z), [(0.02, 0.12), (0.13, 0.04), (0.15, 0.0)], 8)
+        tb.box("lamp", (x, h - drop - 0.02, z), (0.13, 0.2, 0.13))
+        for sx in (-1, 1):
+            for sz in (-1, 1):
+                tb.box("iron", (x + sx * 0.07, h - drop - 0.02, z + sz * 0.07), (0.018, 0.22, 0.018))
+        tb.cyl("bronze", (x, h - drop - 0.15, z), 0.1, 0.07, 0.03, 8, cap_bot=True)
+    tb.socket(name, (x, h - drop - 0.02, z))
+    tb.light((x, h - drop - 0.2, z), col, power, 0.07)
+
+
+def herb_bundle(tb, x, y, z, seed, kind="herb"):
+    """Dried herbs, garlic or onions hung from a beam on a cord."""
+    rr = random.Random(seed)
+    tb.beam("cloth", (x, y, z), (x, y - 0.16, z), 0.012, 0.012, (0.55, 0.45, 0.30))
+    if kind == "herb":
+        c = rr.choice([(0.30, 0.36, 0.16), (0.42, 0.40, 0.20), (0.36, 0.28, 0.34)])
+        tb.cyl("foliage", (x, y - 0.5, z), 0.12, 0.03, 0.36, 6, c, cap_top=False)
+        tb.blob("foliage", (x, y - 0.52, z), 0.12, c, seed=seed, squash=0.8, sub=1)
+    else:
+        c = (0.86, 0.80, 0.66) if kind == "garlic" else (0.72, 0.42, 0.18)
+        for i in range(5):
+            a = i * 2.4
+            tb.blob("plaster", (x + math.cos(a) * 0.045, y - 0.2 - i * 0.075, z + math.sin(a) * 0.045), 0.05, c, seed=seed + i, squash=0.9, sub=1, col_var=0.05)
+
+
+def copper_pot(tb, x, y, z, r=0.14, seed=0):
+    """A copper pot hung by its handle from a rail."""
+    tb.beam("iron", (x, y, z), (x, y - 0.1, z), 0.012, 0.012)
+    tb.lathe("bronze", (x, y - 0.1 - r * 1.3, z), [(r * 0.55, 0.0), (r, r * 0.25), (r * 1.05, r * 1.1), (r * 0.98, r * 1.3)], 10, (0.86, 0.50, 0.30), cap_bot=True)
+
+
+def sack(tb, x, z, seed, r=0.3, col=(0.62, 0.52, 0.36)):
+    tb.blob("cloth", (x, r * 0.8, z), r, col, seed=seed, squash=1.25, sub=2, col_var=0.05, jitter=0.1)
+    tb.blob("cloth", (x, r * 1.75, z), r * 0.28, tint(col, 0.85), seed=seed + 1, squash=0.8, sub=1)
+
+
+def crate(tb, x, y, z, s, rot, rr):
+    with tb.at(T(x, y, z), RY(rot)):
+        tb.box("timber", (0, s / 2, 0), (s, s, s), tint(TIMBER_LIGHT, rr.uniform(0.7, 0.95)), uv_dir=(1, 0, 0))
+        for sy in (0.12, s - 0.12):
+            tb.box("timber", (0, sy, 0), (s + 0.03, 0.08, s + 0.03), TIMBER, skip="y", uv_dir=(1, 0, 0))
+
+
+def wall_chart(tb, x, y, w, h, rr, kind="rings"):
+    """In wall space: a pinned parchment chart with ink circles, a timber batten above and below."""
+    with tb.at(T(x, y, 0.07), RZ(rr.uniform(-2.5, 2.5))):
+        tb.box("paper", (0, 0, 0), (w, h, 0.008), tint((1.0, 0.94, 0.80), rr.uniform(0.86, 1.0)), skip="z")
+        for sy in (-1, 1):
+            tb.box("timber", (0, sy * (h / 2), 0.008), (w + 0.06, 0.035, 0.03), TIMBER)
+        n = rr.randint(2, 4)
+        for i in range(n):
+            cx, cy, r = rr.uniform(-w * 0.28, w * 0.28), rr.uniform(-h * 0.28, h * 0.28), rr.uniform(0.07, min(w, h) * 0.26)
+            tb.ring("ink", (cx, cy, 0.008), r, r - 0.012, 0.003, 18)
+        tb.box("ink", (0, -h * 0.38, 0.008), (w * 0.6, 0.01, 0.003))
+
+
+def drying_line(tb, x0, z0, x1, z1, y, rr, n=7):
+    """A cord across the room with freshly inked sheets pegged to it (the Scribe's own ceiling)."""
+    sag = 0.14
+    pts = []
+    for i in range(n * 2 + 1):
+        u = i / (n * 2)
+        pts.append((x0 + (x1 - x0) * u, y - sag * 4 * u * (1 - u), z0 + (z1 - z0) * u))
+    for a, b in zip(pts, pts[1:]):
+        tb.beam("cloth", a, b, 0.012, 0.012, (0.50, 0.40, 0.28))
+    ang = math.degrees(math.atan2(-(z1 - z0), x1 - x0))
+    for i in range(n):
+        px, py, pz = pts[i * 2 + 1]
+        hh = rr.uniform(0.34, 0.46)
+        with tb.at(T(px, py, pz), RY(ang), RX(rr.uniform(-7, 7))):
+            tb.box("paper", (0, -hh / 2 - 0.01, 0), (0.3, hh, 0.006), tint((1.0, 0.95, 0.82), rr.uniform(0.85, 1.0)), skip="y")
+            r = rr.uniform(0.06, 0.1)
+            for sz in (-1, 1):
+                tb.ring("ink", (0, -hh / 2, sz * 0.005), r, r - 0.012, 0.002, 14)
+            tb.box("timber", (0, 0.0, 0), (0.03, 0.06, 0.02), TIMBER_LIGHT)
+
+
+def drawer_wall(tb, x, z, w, hgt, cols, rows, rot=0.0):
+    """The Exchange's wall of small deposit drawers: a tall cabinet, a grid of fronts each with a bronze pull,
+    a few standing open with a shard glowing inside."""
+    rr = random.Random(int(w * 100) + cols)
+    with tb.at(T(x, 0, z), RY(rot)):
+        tb.box("timber", (0, hgt / 2 + 0.1, 0), (w, hgt, 0.5), tint(TIMBER, 0.9), skip="y", uv_dir=(0, 1, 0))
+        tb.box("timber", (0, 0.05, 0.02), (w + 0.08, 0.1, 0.58), tint(TIMBER, 0.7), uv_dir=(1, 0, 0))
+        tb.box("timber", (0, hgt + 0.14, 0.02), (w + 0.12, 0.08, 0.6), TIMBER, uv_dir=(1, 0, 0))
+        cw, ch = (w - 0.1) / cols, (hgt - 0.1) / rows
+        for i in range(cols):
+            for j in range(rows):
+                cx, cy = -w / 2 + 0.05 + cw * (i + 0.5), 0.15 + ch * (j + 0.5)
+                opened = rr.random() < 0.08 and 0 < j < rows - 1
+                zf = 0.26 + (0.16 if opened else 0.0)
+                tb.box("timber", (cx, cy, zf), (cw - 0.035, ch - 0.035, 0.03), tint(TIMBER_LIGHT, rr.uniform(0.72, 0.98)), uv_dir=(1, 0, 0))
+                tb.cyl("bronze", (cx, cy - 0.012, zf + 0.015), 0.022, 0.016, 0.03, 6)
+                if opened:
+                    tb.box("timber", (cx, cy - ch / 2 + 0.03, 0.33), (cw - 0.06, 0.02, 0.16), TIMBER)
+                    shard(tb, cx, cy - ch / 2 + 0.04, 0.34, 0.07, i * 31 + j, "shard" if (i + j) % 2 else "shard_amber")
+        tb.col_box((0, hgt / 2 + 0.1, 0), (w, hgt, 0.5))
+
+
+def strongbox(tb, x, z, rot, s=0.7):
+    with tb.at(T(x, 0, z), RY(rot)):
+        tb.box("timber", (0, s * 0.3, 0), (s, s * 0.6, s * 0.62), tint(TIMBER, 0.8), uv_dir=(1, 0, 0))
+        with tb.at(T(-s / 2, s * 0.6, 0), RZ(-90)):
+            tb.cyl("timber", (0, 0, 0), s * 0.31, s * 0.31, s, 10, tint(TIMBER, 0.9), cap_top=True, cap_bot=True)
+        for bx in (-s * 0.34, 0.0, s * 0.34):
+            tb.box("bronze", (bx, s * 0.31, 0), (0.05, s * 0.64, s * 0.66))
+        tb.box("bronze", (0, s * 0.5, s * 0.33), (0.12, 0.14, 0.03))
+        tb.col_box((0, s * 0.45, 0), (s, s * 0.9, s * 0.62))
+
+
+def dress_inn(tb, w, d, h, rr):
+    # over the bar: a rail of copper pots, bundles of herbs, garlic and onions on the joist above the keeper
+    zb = -d / 2 + 2.5
+    tb.beam("iron", (-2.9, h - 0.62, zb), (2.9, h - 0.62, zb), 0.025, 0.025)
+    for sx in (-2.9, 0.0, 2.9):
+        tb.beam("iron", (sx, h - 0.62, zb), (sx, h - 0.26, zb), 0.02, 0.02)
+    for i, px in enumerate((-2.5, -2.05, -1.6, 1.5, 1.95, 2.45)):
+        copper_pot(tb, px, h - 0.62, zb, 0.11 + 0.03 * (i % 3), i)
+    for i, px in enumerate((-1.0, -0.55, -0.1, 0.35, 0.8)):
+        herb_bundle(tb, px, h - 0.62, zb, 500 + i, ("herb", "garlic", "herb", "onion", "herb")[i])
+    # a warm lantern low over each communal table and over the bench nook
+    hanging_lantern(tb, "socket_lamp_table_a", 1.4, -0.4, h, 1.55, 46.0)
+    hanging_lantern(tb, "socket_lamp_table_b", 2.0, 3.4, h, 1.55, 46.0)
+    hanging_lantern(tb, "socket_lamp_nook", -w / 2 + 1.0, 3.4, h, 1.5, 30.0)
+    # stores by the bar's end and the door: sacks, crates, a small keg
+    sack(tb, w / 2 - 0.6, -d / 2 + 1.2, 601, 0.3)
+    sack(tb, w / 2 - 0.95, -d / 2 + 0.8, 603, 0.26, (0.56, 0.50, 0.40))
+    crate(tb, -w / 2 + 0.55, 0, -d / 2 + 0.6, 0.62, 8, rr)
+    crate(tb, -w / 2 + 0.5, 0.62, -d / 2 + 0.62, 0.46, -14, rr)
+    crate(tb, w / 2 - 0.55, 0, d / 2 - 1.7, 0.56, 20, rr)
+    with tb.at(T(w / 2 - 0.55, 0.56, d / 2 - 1.7)):
+        H.barrel(tb, 0, 0, 0, 0.22, 0.46, rr)
+    # the hearth side: a basket of logs, a poker stand, a second rug layer under the bench
+    with tb.at(T(-w / 2 + 0.55, 0, 1.25)):
+        tb.cyl("timber", (0, 0, 0), 0.3, 0.36, 0.4, 10, tint(TIMBER_LIGHT, 0.8), cap_top=False, cap_bot=True)
+        for i in range(5):
+            with tb.at(T(-0.12 + (i % 3) * 0.12, 0.3 + (i // 3) * 0.14, 0), RX(90), RY(rr.uniform(-12, 12))):
+                tb.cyl("timber", (0, -0.26, 0), 0.07, 0.07, 0.52, 7, tint(TIMBER_LIGHT, rr.uniform(0.6, 0.9)), cap_top=True, cap_bot=True)
+    rug(tb, 1.4, -0.4, 4.2, 2.9, (0.40, 0.17, 0.12))
+    rug(tb, 2.0, 3.4, 4.0, 2.8, (0.22, 0.26, 0.32))
+    # plates and a wheel of cheese on the bar, a row of plates on a wall rail left of the shelves
+    for i in range(3):
+        tb.cyl("ceramic", (-1.4 + i * 0.02, 1.08 + i * 0.018, -d / 2 + 2.42), 0.14, 0.1, 0.016, 12, (0.90, 0.86, 0.78), cap_top=True)
+    tb.cyl("plaster", (2.5, 1.08, -d / 2 + 2.5), 0.17, 0.17, 0.1, 12, (0.86, 0.66, 0.24), cap_top=True)
+
+
+def dress_exchange(tb, w, d, h, rr):
+    # the wall of deposit drawers on the west side of the rear wall, where the plain cabinet stood
+    drawer_wall(tb, -3.25, -d / 2 + 0.34, 2.1, 2.5, 6, 9)
+    # a small lantern low over every glass case: six pools of light along the walls
+    k = 0
+    for sx in (-1, 1):
+        for cz in (-2.2, 0.4, 3.0):
+            hanging_lantern(tb, f"socket_lamp_caselight_{k}", sx * (w / 2 - 0.62), cz, h, 1.75, 22.0, (1.0, 0.74, 0.46))
+            k += 1
+    # strongboxes and a ledger stand by the counter; velvet drapes framing the shelves
+    strongbox(tb, 2.9, -d / 2 + 2.3, -20, 0.72)
+    strongbox(tb, 3.55, -d / 2 + 1.55, 12, 0.56)
+    walls = _walls(w, d)
+    with tb.at(walls["north"][0]):
+        for dx in (-2.12, 3.62):
+            for i in range(4):
+                x0, x1 = dx + i * 0.13, dx + (i + 1) * 0.13
+                zf0, zf1 = (0.12, 0.2) if i % 2 else (0.2, 0.12)
+                tb.quad("cloth", (x0, 0.05, zf0), (x1, 0.05, zf1), (x1, 3.1, zf1), (x0, 3.1, zf0), tint((0.20, 0.14, 0.36), 1.0 if i % 2 else 0.8))
+    # the keeper's ledger stand between the counter and the pedestal
+    with tb.at(T(-1.9, 0, -d / 2 + 2.6), RY(25)):
+        tb.box("timber", (0, 0.55, 0), (0.12, 1.1, 0.12), TIMBER, skip="y", uv_dir=(0, 1, 0))
+        tb.box("timber", (0, 0.03, 0), (0.5, 0.06, 0.4), TIMBER)
+        with tb.at(T(0, 1.14, 0), RX(-20)):
+            tb.box("timber", (0, 0, 0), (0.62, 0.04, 0.46), TIMBER_LIGHT, uv_dir=(1, 0, 0))
+            open_book(tb, 0, 0.02, 0, 0, 0.85)
+        tb.col_box((0, 0.6, 0), (0.5, 1.2, 0.4))
+    # two floor candelabra beside the pedestal steps, clear of the aisle
+    for cx, cz in ((-2.85, 0.25), (-2.95, -1.5)):
+        tb.col_cyl((cx, 0, cz), 0.14, 1.4, 6)
+        tb.cyl("bronze", (cx, 0, cz), 0.16, 0.05, 0.05, 10, cap_top=True)
+        tb.cyl("bronze", (cx, 0.05, cz), 0.025, 0.025, 1.25, 6)
+        tb.lathe("bronze", (cx, 1.3, cz), [(0.03, 0.0), (0.11, 0.05), (0.12, 0.07)], 8)
+        tb.cyl("wax", (cx, 1.37, cz), 0.035, 0.035, 0.16, 6)
+        tb.cyl("lamp", (cx, 1.53, cz), 0.022, 0.0, 0.07, 5, cap_top=False)
+        tb.light((cx, 1.62, cz), (1.0, 0.70, 0.40), 14.0, 0.04)
+
+
+def dress_scribe(tb, w, d, h, rr):
+    # two cords of drying sheets across the room, under the joists
+    drying_line(tb, -w / 2 + 0.15, -0.2, w / 2 - 0.15, 0.5, h - 0.75, rr, 8)
+    drying_line(tb, -w / 2 + 0.15, 3.3, w / 2 - 0.15, 2.7, h - 0.8, rr, 7)
+    # charts pinned between the wall posts
+    walls = _walls(w, d)
+    for wn, offs in (("west", (-1.83, 1.83)), ("east", (-1.83, 1.83)), ("south", (-3.2, 3.2))):
+        with tb.at(walls[wn][0]):
+            for off in offs:
+                wall_chart(tb, off, 2.0, rr.uniform(0.62, 0.8), rr.uniform(0.8, 1.0), rr)
+    # an armillary of bronze rings on the counter, a ladder against the bookshelf, a low reading lantern over the counter
+    with tb.at(T(2.15, 1.08, -d / 2 + 2.62)):
+        tb.cyl("bronze", (0, 0, 0), 0.1, 0.06, 0.04, 10, cap_top=True)
+        tb.cyl("bronze", (0, 0.04, 0), 0.014, 0.014, 0.16, 6)
+        for i, (ra, rb) in enumerate(((0, 0), (62, 20), (-48, 70))):
+            with tb.at(T(0, 0.4, 0), RY(rb), RX(ra)):
+                tb.ring("bronze", (0, 0, 0), 0.2 - i * 0.015, 0.185 - i * 0.015, 0.014, 20)
+        tb.blob("ceramic", (0, 0.4, 0), 0.07, (0.30, 0.42, 0.52), seed=3, squash=1.0, sub=2, col_var=0.03, jitter=0.0)
+    with tb.at(T(w / 2 - 0.62, 0, -d / 2 + 2.9), RY(-90), RX(-13)):
+        for sx in (-0.2, 0.2):
+            tb.box("timber", (sx, 1.25, 0), (0.05, 2.5, 0.07), TIMBER_LIGHT, uv_dir=(0, 1, 0))
+        for i in range(7):
+            tb.box("timber", (0, 0.3 + i * 0.32, 0), (0.4, 0.04, 0.05), TIMBER, uv_dir=(1, 0, 0))
+    hanging_lantern(tb, "socket_lamp_counter", 0.7, -d / 2 + 2.6, h, 1.5, 40.0)
+    # ink-work corner by the door: a tall jar of quills, stacked paper reams, a crate of scroll tubes
+    with tb.at(T(w / 2 - 0.6, 0, d / 2 - 0.7)):
+        crate(tb, 0, 0, 0, 0.6, 12, rr)
+        for i in range(5):
+            tb.box("paper", (rr.uniform(-0.05, 0.05), 0.62 + i * 0.05, rr.uniform(-0.04, 0.04)), (0.42, 0.045, 0.32), tint((1.0, 0.95, 0.84), rr.uniform(0.85, 1.0)))
+    rug(tb, -2.35, 0.1, 2.6, 4.6, (0.24, 0.30, 0.24))
+    rug(tb, 2.35, 0.1, 2.6, 4.6, (0.24, 0.30, 0.24))
 
 
 BUILDERS = {"exchange": build_exchange, "scribe": build_scribe, "inn": build_inn}
