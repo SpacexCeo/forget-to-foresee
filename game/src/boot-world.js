@@ -1176,13 +1176,11 @@ const mouseAim = createMouseAim({ target: renderer.domElement, input,
   onEscape: () => { for (const type of ['keydown', 'keyup']) document.body.dispatchEvent(new KeyboardEvent(type, { code: 'Escape', key: 'Escape', bubbles: true })); } });
 /**
  * The game cursor over the scene (ui/game-cursor.js; owner 14.11): grab while the camera turns, attack on a locked target,
- * talk / interact while a prompt is up; null = the plain pointer.
+ * else the plain pointer (a click on the ground walks there). The talk / interact cursors belong to the prompt button.
  */
 function cursorScene() {
   if (input.dragPointer != null) return 'grab';
-  if (townMobs && townMobs.locked) return 'attack';
-  const p = document.querySelector('.ftf-town-prompt:not([hidden])');
-  return p ? p.dataset.cursor || 'interact' : null;
+  return townMobs && townMobs.locked ? 'attack' : null;
 }
 function strikeNow() { if (townMobs && townMobs.strike(strikeAimInput())) interruptMove(STRIKE_ROOT); }
 let inspecting = null;

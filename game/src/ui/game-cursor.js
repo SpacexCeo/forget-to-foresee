@@ -3,7 +3,7 @@
 // system pointer is hidden and a 32x32 element follows the mouse, because animated images as a CSS `cursor` differ
 // between browsers (the pack's README). The state comes from what is under the mouse: an explicit `data-cursor`, a
 // disabled control (forbidden), a button or link (link), a text field (interact); over the 3D scene the game says it
-// (sceneState: grab while the camera turns, attack on a locked target, talk / interact at a prompt). The loading
+// (sceneState: grab while the camera turns, attack on a locked target); the town prompt carries talk / interact. The loading
 // screen shows the loading ring. Mouse aim's pointer lock hides it (its crosshair stays). Touch devices keep no cursor;
 // reduced motion keeps the icons still. Behind the `gameCursor` flag (game/public/features.json).
 

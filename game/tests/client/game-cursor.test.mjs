@@ -57,8 +57,8 @@ test('cursor: reduced motion holds the icons still; phones keep no cursor; the c
   assert.match(src, /const locked = \(\) => !!doc\.pointerLockElement;/);
 });
 
-test('cursor: the town prompt names its cursor and the scene reports grab / attack / prompt', () => {
+test('cursor: the town prompt names its cursor (talk / interact); the scene reports grab and attack only (a click there walks)', () => {
   assert.match(readFileSync(new URL('../../src/scenes/town-flow.js', import.meta.url), 'utf8'), /prompt\.dataset\.cursor = talkNpc \? 'talk' : 'interact';/);
   const bw = readFileSync(new URL('../../src/boot-world.js', import.meta.url), 'utf8');
-  assert.match(bw, /function cursorScene\(\) \{\n  if \(input\.dragPointer != null\) return 'grab';\n  if \(townMobs && townMobs\.locked\) return 'attack';/);
+  assert.match(bw, /function cursorScene\(\) \{\n  if \(input\.dragPointer != null\) return 'grab';\n  return townMobs && townMobs\.locked \? 'attack' : null;\n\}/);
 });
