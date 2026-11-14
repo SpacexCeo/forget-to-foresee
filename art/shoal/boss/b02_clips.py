@@ -2,7 +2,13 @@
   blender -b --python b02_clips.py -- --root <boss work root>
 idle (4 s loop); rise (2.4 s, out of the mirror, a roar); slam, lunge, sweep: each starts with exactly WIND = 1 s
 of wind-up (the game stretches it over the telegraph of the phase), then the strike, a hold and a recovery that ends
-in idle's first frame; hit (0.7 s recoil); death (3.4 s: it thrashes, falls on the mirror and sinks).
+in idle's first frame; hit (0.7 s recoil); roar (2.2 s, after a phase breaks); death (3.4 s: it thrashes, falls on
+the mirror and sinks).
+A serpent moves as a travelling wave, never as one stiff arc (3D review A.41-44): in idle the sway runs from the head
+down the body at one phase step per joint; a hit, the roar's shiver and the fall of the death start at the head and
+run down; in a slam or a lunge the lower joints start a little early so the head whips in last, exactly on the
+strike; in the sweep every joint follows the turn of the one below it a frame and a half later, and the top
+overshoots and settles.
 The strike poses are fitted by bisection so the head really meets the mirror (slam, death) or skims it (sweep).
 Output: work/02_clips.blend (one NLA track per clip), report/b02.json, renders/b02_*.jpg frame sheets."""
 import bpy, os, sys
@@ -27,10 +33,17 @@ def spine(p, fx=None, fy=None, fz=None):
     return p
 
 
+AMP = [0.35, 0.6, 0.85, 1.0, 1.1, 1.1, 1.0, 0.9, 0.75, 0.6, 0.45, 0.3]   # sway per joint: grows to the mid-body, tapers to the head
+STEP = 0.5                                                              # phase step per joint (the head leads)
+
+
 def idle(t):
     ph = 2 * pi * t; p = Pose()
-    spine(p, fx=lambda i: 1.0 * sin(ph - 0.4 * i + 1.2), fy=lambda i: 2.2 * sin(ph - 0.45 * i))
-    p['head'] = q(x=1.5 * sin(ph - 4.5), y=-3 * sin(ph - 5.0)); p['jaw'] = q(x=4 + 3 * sin(ph)); return p
+    # the LEAN of every segment is the travelling wave (so the wave reads on the body itself); a joint turns by the
+    # difference between its segment's lean and the one below
+    lean = lambda i: 13.0 * AMP[i] * sin(ph + STEP * i) if i >= 0 else 0.0
+    spine(p, fy=lambda i: lean(i) - lean(i - 1))
+    p['head'] = q(x=1.5 * sin(ph + STEP * NB + 0.6), y=-3 * sin(ph + STEP * NB)); p['jaw'] = q(x=4 + 3 * sin(ph)); return p
 
 
 IDLE0 = idle(0)
@@ -62,7 +75,10 @@ def rise(t):
     return blend(p, IDLE0, sm(0.85, 1.0, t))
 
 
-def attack(strike_pose, wind_pose, strike=0.3, hold=0.25, recover=0.95, loc_strike=(0, 0, 0)):
+EARLY = 0.012
+
+
+def attack(strike_pose, wind_pose, strike=0.3, hold=0.3, recover=0.95, loc_strike=(0, 0, 0)):
     total = WIND + strike + hold + recover
     def fn(t):
         T = t * total; w = sm(0, WIND, T)
@@ -70,7 +86,12 @@ def attack(strike_pose, wind_pose, strike=0.3, hold=0.25, recover=0.95, loc_stri
         if T > WIND:
             k = min(1.0, (T - WIND) / strike) ** 2
             hit = strike_pose(1.0 + 0.04 * sin(min(1.0, (T - WIND - strike) / hold) * pi) if T > WIND + strike else 1.0)
-            p = blend(p, hit, k); p.loc = tuple(v * k for v in loc_strike)
+            wind = p; p = blend(wind, hit, k); p.loc = tuple(v * k for v in loc_strike)
+        if T + EARLY * NB > WIND and T < WIND + strike:                # the whip: joint i starts EARLY * (NB - 1 - i) before the head
+            hit0 = strike_pose(1.0); base = blend(IDLE0, wind_pose(w), w) if T <= WIND else wind
+            for i, n in enumerate(SP):
+                ki = min(1.0, max(0.0, (T + EARLY * (NB - 1 - i) - WIND) / strike)) ** 2
+                p[n] = base.get(n, Quaternion()).slerp(hit0.get(n, Quaternion()), ki)
         if T > WIND + strike + hold: p = blend(p, IDLE0, sm(WIND + strike + hold, total, T))
         return p
     return fn, total
@@ -94,35 +115,56 @@ def lunge_hit(k):
 
 
 def sweep_fn():
-    strike, hold, recover = 0.5, 0.1, 0.95; total = WIND + strike + hold + recover
+    strike, hold, recover = 0.5, 0.1, 0.95; total = WIND + strike + hold + recover; LAG = 0.045; t1 = WIND + strike + hold
+
+    def yaw_at(T):
+        y = -40 * sm(0, WIND, T)
+        if T > WIND: y = -40 + 360 * sm(WIND, t1, T)
+        if T > t1: x = min(1.0, (T - t1) / 0.4); y = 320 + 40 * sm(t1, total - 0.7, T) + 10 * sin(pi * x) * (1 - x)   # overshoots, settles
+        return y
+
     def fn(t):
         T = t * total; w = sm(0, WIND, T)
         low = side(K_SWEEP); low['jaw'] = q(x=20); low['head'] = q(y=-10)
-        p = blend(IDLE0, low, w); yaw = -40 * w
-        if T > WIND: yaw = -40 + 360 * sm(WIND, WIND + strike + hold, T)
-        if T > WIND + strike + hold: k = sm(WIND + strike + hold, total, T); p = blend(low, IDLE0, k); yaw = 320 + 40 * k
-        p['root'] = q(z=yaw); return p
+        p = blend(IDLE0, low, w)
+        if T > t1: p = blend(low, IDLE0, sm(t1, total, T))
+        p['root'] = q(z=yaw_at(T))
+        for i, n in enumerate(SP): p.add(n, q(z=yaw_at(T - LAG * (i + 1)) - yaw_at(T - LAG * i)))      # each joint turns a little after the one below
+        return p
     return fn, total
 
 
 def hit(t):
-    p = spine(Pose(), fx=lambda i: -6.5 * bump(t, 0.25, 0.14) * (i / NB), fy=lambda i: 5 * sin(40 * t + i) * (1 - t) * bump(t, 0.3, 0.3))
+    LAGT = 0.04                                                        # the blow lands on the head; the recoil runs down the body
+    p = spine(Pose(), fx=lambda i: -6.5 * bump(t - LAGT * (NB - 1 - i), 0.25, 0.14) * (i / NB), fy=lambda i: 5 * sin(40 * t + i) * (1 - t) * bump(t, 0.3, 0.3))
     p['jaw'] = q(x=6 + 30 * bump(t, 0.25, 0.15)); p['head'] = q(x=-10 * bump(t, 0.25, 0.14))
     return blend(blend(IDLE0, p, sm(0, 0.12, t)), IDLE0, sm(0.75, 1.0, t))
 
 
+def roar(t):
+    """2.2 s: it rears back, then throws the head forward with the jaw wide; a shiver runs from the head down the body."""
+    T = t * 2.2; a = sm(0, 0.5, T) * (1 - sm(1.6, 2.2, T)); r = sm(0.45, 0.7, T) * (1 - sm(1.5, 1.9, T))
+    p = spine(Pose(), fx=lambda i: -9 * a * min(1, i / 4) + 5 * r * (i / NB), fy=lambda i: 2.5 * r * AMP[i] * sin(30 * T + 0.8 * i))
+    p['jaw'] = q(x=6 + 40 * r); p['head'] = q(x=-14 * a + 6 * r, y=4 * r * sin(30 * T))
+    return blend(blend(IDLE0, p, sm(0, 0.3, T)), IDLE0, sm(1.8, 2.2, T))
+
+
 def death(t):
-    T = t * 3.4; w = sm(0, 0.8, T); fall = sm(0.8, 1.6, T) ** 2
-    up = spine(Pose(), fx=lambda i: -7 * w * min(1, i / 3), fy=lambda i: 8 * sin(18 * T + 0.7 * i) * w * (1 - fall)); up['jaw'] = q(x=40 * w); up['head'] = q(x=-12 * w)
+    T = t * 3.4; w = sm(0, 0.8, T); LAG = 0.035
+    up = spine(Pose(), fx=lambda i: -7 * w * min(1, i / 3), fy=lambda i: 8 * sin(18 * T + 0.7 * i) * w * (1 - sm(0.8, 1.6, T) ** 2)); up['jaw'] = q(x=40 * w); up['head'] = q(x=-12 * w)
     lie = spine(Pose(), fx=lambda i: K_SLAM * 1.04 * PROFILE[i], fy=lambda i: 3.0); lie['jaw'] = q(x=24); lie['head'] = q(x=10, y=18)
-    p = blend(blend(IDLE0, up, w), lie, fall); p.loc = (0, 0, -5.0 * sm(1.9, 3.4, T)); return p
+    stand = blend(IDLE0, up, w); fall = sm(0.8, 1.6, T) ** 2
+    p = blend(stand, lie, fall)
+    for i, n in enumerate(SP):                                         # the head gives way first, the fall runs down to the base
+        d = LAG * (NB - 1 - i); p[n] = stand.get(n, Quaternion()).slerp(lie.get(n, Quaternion()), sm(0.8 + d, 1.6 + d, T) ** 2)
+    p.loc = (0, 0, -5.0 * sm(2.1, 3.4, T)); return p
 
 
 slam, T_SLAM = attack(slam_hit, slam_wind)
 lunge, T_LUNGE = attack(lunge_hit, lunge_wind, strike=0.25, hold=0.2, recover=0.95, loc_strike=(0, -9.0, 0))
 sweep, T_SWEEP = sweep_fn()
 CLIPS = [('idle', idle, 4.0, True, None), ('rise', rise, 2.4, False, IDLE0), ('slam', slam, T_SLAM, False, IDLE0), ('lunge', lunge, T_LUNGE, False, IDLE0),
-         ('sweep', sweep, T_SWEEP, False, IDLE0), ('hit', hit, 0.7, False, IDLE0), ('death', death, 3.4, False, None)]
+         ('sweep', sweep, T_SWEEP, False, IDLE0), ('hit', hit, 0.7, False, IDLE0), ('roar', roar, 2.2, False, IDLE0), ('death', death, 3.4, False, None)]
 for name, fn, sec, loop, ends in CLIPS: K.bake(name, fn, sec, loop, ends_like=ends)
 rig.animation_data.use_nla = False   # the NLA would override the poses set by hand
 head_at = {n: [round(float(v), 2) for v in K.bone_tip(f(tt), 'head')] for n, f, tt in (('slam', slam, (WIND + 0.3) / T_SLAM), ('lunge', lunge, (WIND + 0.25) / T_LUNGE), ('sweep', sweep, (WIND + 0.25) / T_SWEEP), ('death', death, 0.6))}

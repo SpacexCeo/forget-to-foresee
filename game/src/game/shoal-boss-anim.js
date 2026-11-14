@@ -1,14 +1,15 @@
-// The Hollow Tide's clip choice (pure: no three.js). The model `hollow_tide.glb` ships seven clips made in
-// art/shoal/boss/b02_clips.py: idle (loop), rise, slam, lunge, sweep, hit, death. Every attack clip starts with
+// The Hollow Tide's clip choice (pure: no three.js). The model `hollow_tide.glb` ships eight clips made in
+// art/shoal/boss/b02_clips.py: idle (loop), rise, slam, lunge, sweep, hit, roar, death. When a phase breaks it recoils
+// (`hit`) and then roars, unless the next telegraph cuts in. Every attack clip starts with
 // exactly `wind` seconds of wind-up; the fight's telegraph (1.4 / 1.15 / 0.9 s by phase, game/shoal-rules.js) is
 // mapped onto that part, so the blow in the clip lands when the rules strike, at any phase. scenes/shoal-arena.js
 // asks `bossAnimStep` every frame for the clip and its time and cross-fades to it.
 
-export const BOSS_CLIPS = Object.freeze(['idle', 'rise', 'slam', 'lunge', 'sweep', 'hit', 'death']);
+export const BOSS_CLIPS = Object.freeze(['idle', 'rise', 'slam', 'lunge', 'sweep', 'hit', 'roar', 'death']);
 /** Clip lengths in seconds (report/b02.json of the art pipeline; tests read them from the file too). */
 export const BOSS_ANIM = Object.freeze({
   wind: 1.0, fade: 0.2,
-  len: Object.freeze({ idle: 4.0, rise: 2.4, slam: 2.5, lunge: 2.4, sweep: 2.53, hit: 0.7, death: 3.4 }),
+  len: Object.freeze({ idle: 4.0, rise: 2.4, slam: 2.55, lunge: 2.4, sweep: 2.55, hit: 0.7, roar: 2.2, death: 3.4 }),
 });
 const ATTACKS = new Set(['slam', 'lunge', 'sweep']);
 const clamp01 = (x) => Math.max(0, Math.min(1, x));
@@ -30,7 +31,8 @@ export function bossAnimStep(a, b, dt, telegraph, won = false, A = BOSS_ANIM) {
   if (b.phase > a.phase) return { clip: 'hit', time: 0, phase: b.phase };          // a phase breaks: it recoils
   if (a.clip === 'idle') return { clip: 'idle', time: (a.time + dt) % L.idle, phase: b.phase };
   const time = a.time + dt;                                                          // finish the one-shot (recover, rise, hit)
-  return time >= L[a.clip] ? { clip: 'idle', time: 0, phase: b.phase } : { clip: a.clip, time, phase: b.phase };
+  if (time >= L[a.clip]) return { clip: a.clip === 'hit' ? 'roar' : 'idle', time: 0, phase: b.phase };   // after the recoil of a broken phase: the roar
+  return { clip: a.clip, time, phase: b.phase };
 }
 
 /** Cross-fade weights towards the current clip. `w` is mutated and returned ({clip: weight}, sums to 1). */

@@ -42,6 +42,9 @@ test('boss anim: the blow in the clip lands when the rules strike, in every phas
 test('boss anim: a broken phase makes it recoil, a win plays the death once and holds its last frame', () => {
   let a = { clip: 'idle', time: 1, phase: 0 }; const b = { ...R.freshBoss(1), state: 'rest', t: 2 };
   a = bossAnimStep(a, b, 1 / 60, 1.15); assert.equal(a.clip, 'hit'); assert.equal(a.phase, 1);
+  let r = a; const seen = [];                                   // left alone it roars after the recoil, then idles
+  for (let i = 0; i < 60 * 4; i++) { r = bossAnimStep(r, b, 1 / 60, 1.15); if (seen[seen.length - 1] !== r.clip) seen.push(r.clip); }
+  assert.deepEqual(seen, ['hit', 'roar', 'idle']);
   const dead = { ...b, dead: true };
   a = bossAnimStep(a, dead, 1 / 60, 1.15, true); assert.deepEqual([a.clip, a.time], ['death', 0]);
   for (let i = 0; i < 600; i++) a = bossAnimStep(a, dead, 1 / 60, 1.15, true);
@@ -55,7 +58,7 @@ test('boss anim: cross-fade weights stay normalised and reach the clip', () => {
   assert.ok(w.slam > 0.9);
 });
 
-test('boss model: both files carry the seven clips with the lengths the game times them by, inside the budget', () => {
+test('boss model: both files carry the eight clips with the lengths the game times them by, inside the budget', () => {
   for (const [file, maxBytes, maxTris] of [['hollow_tide.glb', 8e6, 50000], ['hollow_tide_m.glb', 3e6, 22000]]) {
     const { json, bytes, bin } = glb(file);
     assert.ok(bytes <= maxBytes, file + ' is ' + bytes + ' bytes');
