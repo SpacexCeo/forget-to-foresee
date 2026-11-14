@@ -17,10 +17,15 @@ from animkit import *
 A = args(); ROOT = A['root']; H = float(A.get('height', 0.42)); TEX = int(A.get('tex', 1024)); FPS = 30
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=A['src'])
+# the mesh as the skin shows it: Tripo keeps a quarter turn in the bind matrices, so the armature is applied at rest
+# (the head then faces -Y, the way the Tripo viewer shows it) before the Tripo rig is removed
+mesh = max((o for o in bpy.data.objects if o.type == 'MESH' and not o.name.startswith('Icosphere')), key=lambda o: len(o.data.vertices)); mesh.name = 'mob_skitter'
+active(mesh)
+for md in list(mesh.modifiers):
+    if md.type == 'ARMATURE': bpy.ops.object.modifier_apply(modifier=md.name)
+_mw = mesh.matrix_world.copy(); mesh.parent = None; mesh.matrix_world = _mw
 for o in list(bpy.data.objects):
-    if o.type != 'MESH' or o.name.startswith('Icosphere'): bpy.data.objects.remove(o, do_unlink=True)
-mesh = [o for o in bpy.data.objects if o.type == 'MESH'][0]; mesh.name = 'mob_skitter'
-active(mesh); mesh.parent = None
+    if o is not mesh: bpy.data.objects.remove(o, do_unlink=True)
 for md in list(mesh.modifiers): mesh.modifiers.remove(md)
 mesh.vertex_groups.clear(); bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 if mesh.data.shape_keys: mesh.shape_key_clear()
