@@ -6,6 +6,11 @@ import assert from 'node:assert/strict';
 import * as R from '../../src/game/shoal-rules.js';
 import { SHOAL_TEXT } from '../../src/locales/shoal.js';
 import { installDom } from '../lib/mini-dom.mjs';
+import { register } from 'node:module';
+// the build's virtual model list as an empty stand-in and vite's import.meta.env, as in strike-recovery.test.mjs
+const HOOK = `export async function resolve(s, c, n) { return s === 'virtual:model-list' ? { url: 'data:text/javascript,export const MODEL_FILES={};export const MODEL_DIRS={};', shortCircuit: true } : n(s, c); }
+export async function load(u, c, n) { const r = await n(u, c); if (u.includes('/game/src/') && r.source) { const t = String(r.source).replaceAll('import.meta.env', '({ BASE_URL: "/", DEV: false, PROD: true })'); return { ...r, source: t, shortCircuit: true }; } return r; }`;
+register('data:text/javascript,' + encodeURIComponent(HOOK), import.meta.url);
 
 test('the cliff stone calls the dragon before the fight and again after leaving it unbeaten', () => {
   const at = (step) => ({ ...R.freshShoal(), step, blade: true });
