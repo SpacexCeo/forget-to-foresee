@@ -208,7 +208,7 @@ export default {
   'judge.done': 'Fatto. Ogni passo è anche nel README, con il modo di verificarlo da soli.',
   'judge.s1': 'Sei nella città sulle colline. Nessun wallet e nessuna richiesta di gas.',
   'judge.s2': 'Il ticker del mercato in alto mostra i mercanti scriptati. Il suo pulsante “Apri il registro cittadino” (o la scheda Città del menu) mostra l’account NEAR di ogni mercante, il motivo di ogni prezzo e la transazione su testnet.',
-  'judge.s3': 'Apri Profilo → NFT → Accesso possessore → Prova l’account demo: i frammenti coniati, la carta agente ed Elise di un account testnet.',
+  'judge.s3': 'Apri Profilo → NFT → Accesso titolare → Prova l’account demo: i frammenti coniati, la carta agente ed Elise di un account testnet.',
   'judge.s4': 'Sali all’altare del torneo, premi E, poi V: i segni rivelati vengono verificati con la radice fissata prima della prova 1.',
   'judge.s5': 'Parla con un paesano (E). La battuta viene da un modello su NEAR AI Cloud in un TEE, o dal copione se non risponde.',
   'judge.s6': 'Prendi il conio gratuito del Giorno 1: un account ospite tutto tuo, un NFT di Elise e un drago posseduto da quell’NFT.',
