@@ -108,7 +108,7 @@ export function createPresence({ url = presenceUrl(), name = '', skin = 'iris', 
   // first; `at` is the server's clock (epoch ms); `old` marks what the room remembered from before we joined
   const chat = [];
   // canAct: this server knows 'act' (it sent 'hist'); an older one would disconnect us for an unknown message
-  let myName = '', lastActAt = -Infinity, idleKicked = false, canAct = false, kinds = null; const actQ = [];
+  let halted = false, myName = '', lastActAt = -Infinity, idleKicked = false, canAct = false, kinds = null; const actQ = [];
   // kinds: the acts the server named in its welcome; a server that names none takes only the first five (it kicks for any other)
   const serverTakes = (k) => (kinds ? kinds.includes(k) : FIRST_ACTS.includes(k));
   let caps = new Set(); const mobs = new Map(); const ears = { bite: [], death: [], fx: [] };
@@ -125,20 +125,25 @@ export function createPresence({ url = presenceUrl(), name = '', skin = 'iris', 
 
   function open() {
     if (stopped || !url || !WebSocketImpl) { status = 'offline'; emit(); return; }
-    status = 'connecting'; emit();
+    status = retries > maxRetries ? 'offline' : 'connecting'; emit(); // past the first tries it keeps trying quietly, the chip says offline
     try { ws = new WebSocketImpl(url); } catch { return retry(); }
     // the account lets others read this player's public NFTs and silk on chain (the player card); lv is the shown level
     ws.onopen = () => { retries = 0; send({ t: 'hello', v: 1, name, skin, area, ...(account ? { account } : {}), ...(Number.isInteger(lv) ? { lv } : {}) }); };
     ws.onmessage = (e) => { let m; try { m = JSON.parse(e.data); } catch { return; } handle(m); };
-    ws.onclose = () => { ws = null; players.clear(); mobs.clear(); caps = new Set(); if (status !== 'offline') retry(); };
+    ws.onclose = () => { ws = null; players.clear(); mobs.clear(); caps = new Set(); if (!halted) retry(); }; // halted: the room was full or kicked us, no retry
     ws.onerror = () => {};
   }
   function retry() {
     ws = null;
-    if (stopped || ++retries > maxRetries) { status = 'offline'; emit(); return; }
-    status = 'connecting'; emit();
-    timer = setTimeout(open, Math.min(30000, 1000 * 2 ** retries));
+    if (stopped) { status = 'offline'; emit(); return; }
+    // the service down or the socket dropped: the game goes on alone ("offline" chip) and tries again with a growing,
+    // jittered wait (2 s .. 30 s), forever; the browser coming back online tries at once
+    status = ++retries > maxRetries ? 'offline' : 'connecting'; emit();
+    clearTimeout(timer); timer = setTimeout(open, Math.min(30000, 1000 * 2 ** retries) * (0.75 + Math.random() * 0.5));
+    if (timer && timer.unref) timer.unref();
   }
+  const onOnline = () => { if (!stopped && !halted && !ws && timer && status !== 'online') { clearTimeout(timer); timer = null; retries = Math.min(retries, maxRetries); open(); } };
+  if (typeof globalThis.addEventListener === 'function') globalThis.addEventListener('online', onOnline);
   /** Rows [id, x, z, h, hp, state] from the server: each spider keeps its last positions for interpolation. */
   function mobRows(rows, t) {
     for (const r of rows) {
@@ -190,7 +195,7 @@ export function createPresence({ url = presenceUrl(), name = '', skin = 'iris', 
     } else if (m.t === 'sys') {
       sys = { key: m.key, s: m.s || 0, reason: m.reason || null, at: t };
       // an idle kick (the player was away from the town for a minute) is not final: update() joins again on her return
-      if (m.key === 'full' || m.key === 'kicked') { status = 'offline'; idleKicked = m.key === 'kicked' && m.reason === 'idle'; stopped = m.key === 'kicked' && !idleKicked; }
+      if (m.key === 'full' || m.key === 'kicked') { status = 'offline'; halted = true; idleKicked = m.key === 'kicked' && m.reason === 'idle'; stopped = m.key === 'kicked' && !idleKicked; }
       emit();
     }
   }
@@ -213,7 +218,7 @@ export function createPresence({ url = presenceUrl(), name = '', skin = 'iris', 
     hit(mob, k, n) { if (status === 'online' && caps.has('mobs') && typeof mob === 'string' && Number.isFinite(n) && n > 0) { send({ t: 'hit', mob, k, n: Math.round(n * 10) / 10 }); return true; } return false; },
     /** Per frame: sends our state at most SEND_HZ when it changed. */
     update(state) {
-      if (idleKicked && status === 'offline' && !ws) { idleKicked = false; retries = 0; open(); return; }
+      if (idleKicked && status === 'offline' && !ws) { idleKicked = false; halted = false; retries = 0; open(); return; }
       if (status !== 'online') return;
       pump();
       const t = now();
@@ -240,7 +245,7 @@ export function createPresence({ url = presenceUrl(), name = '', skin = 'iris', 
     /** The area we are in ('town' | 'isles'): a change rejoins in a room of that area (presence v2; an older server keeps one room). */
     get area() { return area; },
     setArea(a) { if (a === area || !['town', 'isles'].includes(a)) return; area = a; players.clear(); mobs.clear(); if (ws) { status = 'connecting'; retries = 0; try { ws.close(); } catch { /* closed */ } emit(); } },
-    stop() { stopped = true; idleKicked = false; actQ.length = 0; status = 'offline'; clearTimeout(timer); if (ws) try { ws.close(); } catch { /* closed */ } ws = null; players.clear(); emit(); },
+    stop() { if (typeof globalThis.removeEventListener === 'function') globalThis.removeEventListener('online', onOnline); stopped = true; idleKicked = false; actQ.length = 0; status = 'offline'; clearTimeout(timer); if (ws) try { ws.close(); } catch { /* closed */ } ws = null; players.clear(); emit(); },
   };
 }
 

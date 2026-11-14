@@ -56,12 +56,14 @@ export function createMultiplayer({ scene, camera = null, THREE = null, t, stora
   // the shared town-hill spiders (presence v2): the link play/mobs.js MobBrain.share() reads
   const bites = [], loot = new Map();
   const offBite = presence.on('bite', (b) => bites.push(b.mob));
-  const offDeath = presence.on('death', (d) => { loot.set(d.mob, !!d.mine); if (loot.size > 64) loot.delete(loot.keys().next().value); });
+  const offDeath = presence.on('death', (d) => { loot.set(d.mob, d.mine ? performance.now() : 0); if (loot.size > 64) loot.delete(loot.keys().next().value); });
   const mobLink = {
     live: () => presence.status === 'online' && presence.has('mobs'),
     rows: () => { const m = new Map(); for (const r of presence.mobs()) m.set(r.id, r); return m; },
     hit: (id, src, n) => presence.hit(id, src, n),
-    lootOf: (id) => { const v = loot.get(id); loot.delete(id); return !!v; },
+    // a loot right is for the death just told: one left over from an earlier life (a death seen while we were away or
+    // reconnecting) must not count this spider's next death as ours too
+    lootOf: (id) => { const v = loot.get(id); loot.delete(id); return !!v && performance.now() - v < 5000; },
     takeBites: () => bites.splice(0),
   };
   return {
