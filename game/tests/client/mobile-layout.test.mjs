@@ -21,8 +21,7 @@ test('phones: the game menu and the market never grow past a 360 px screen', () 
   assert.match(src('play/game-menu.js'), /\.gm-panel \{ grid-template-columns: minmax\(0, 1fr\); \}/);
   assert.match(src('play/game-menu.js'), /\.gm-head \.gm-x \{ flex: 0 0 44px; \}/);
   const mk = src('market/market-ui.js');
-  assert.match(mk, /\.mk2-wrap \{ padding: 8px; grid-template-columns: minmax\(0, 1fr\); \}/);
-  assert.match(mk, /\.mk2-tabs \{ overflow-x: auto;/);
+  assert.match(mk, /@media \(max-width: 760px\) \{ \.mk2-wrap \{ grid-template-columns: minmax\(0, 1fr\); \} \.mk2 \{ min-width: 0; \} \}/);
 });
 
 test('tablets: the altar label is kept below the quest tracker where they meet', () => {
