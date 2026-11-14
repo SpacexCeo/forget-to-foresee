@@ -78,7 +78,10 @@ export class CommandBus {
     const out = { ok, status: r.status, type, args, actionId, body, reason, replayed: !!body.replayed, source: body.error ? body.error.source || null : null, silent };
     // A walk replay must arrive before the next command is processed (proximity, not_in_transit).
     if (ok && type === 'move' && body.result && body.result.seconds > 0 && this.transport.realDelayMs) {
-      await this.sleep(this.transport.realDelayMs(body.result.seconds) + 2);
+      // The margin covers what the room's clock can lose against this timer: Date.now() is whole milliseconds on both
+      // ends, setTimeout drops the fraction and may fire a millisecond early. With 2 ms a loaded machine now and then
+      // found Iris still in transit, and the next command (enter_shell) was refused.
+      await this.sleep(Math.ceil(this.transport.realDelayMs(body.result.seconds)) + 8);
     }
     for (const fn of [...this.listeners]) { try { fn(out); } catch (e) { console.warn('[play] result listener failed', e); } }
     return out;
