@@ -1453,6 +1453,7 @@ export default {
   'loading.log.shells': "正在升起贝壳……",
   'loading.log.camps': "正在搭建营地和桥梁……",
   'loading.log.ready': "就绪",
+  'loading.longer': "加载时间比平时长——正在下载世界…",
   'loading.log.shadersIsland': "正在预热群岛……",
   // ---- townsfolk barks (scenes/barks.js) ----
   'bark.day.1': "今天交易所上空风向正好。",

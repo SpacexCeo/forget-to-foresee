@@ -1456,6 +1456,7 @@ const EN = {
   'loading.log.shells': "Raising the Shells…",
   'loading.log.camps': "Pitching camps and bridges…",
   'loading.log.ready': "Ready",
+  'loading.longer': "Loading takes longer than usual — downloading the world…",
   'loading.log.shadersIsland': "Warming the archipelago…",
   // ---- townsfolk barks (scenes/barks.js) ----
   'bark.day.1': "Fair winds over the Exchange today.",

@@ -1453,6 +1453,7 @@ export default {
   'loading.log.shells': "Підіймаємо Мушлі…",
   'loading.log.camps': "Ставимо табори й мости…",
   'loading.log.ready': "Готово",
+  'loading.longer': "Завантаження триває довше, ніж зазвичай — завантажуємо світ…",
   'loading.log.shadersIsland': "Прогріваємо архіпелаг…",
   // ---- townsfolk barks (scenes/barks.js) ----
   'bark.day.1': "Сьогодні над Біржею попутний вітер.",

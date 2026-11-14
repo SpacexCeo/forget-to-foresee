@@ -6,6 +6,10 @@
 import { MOTION, exit, isReduced } from './motion/index.js';
 
 export const LOG_LINES = 4;
+/** After this long on the screen a line under the bar says the world is still downloading (owner request). */
+export const SLOW_AFTER_MS = 20000;
+/** English text of that line before the locale chunk is in (the `loading.longer` key of play/locales/en.js). */
+export const SLOW_EN = 'Loading takes longer than usual — downloading the world…';
 /** English lines used before the locale chunk is in (the same text as the `loading.log.*` keys of play/locales/en.js). */
 export const LOG_EN = Object.freeze({
   'loading.log.code': 'Reading the Guests\u2019 signs…', 'loading.log.terrain': 'Laying the town\u2019s stones…', 'loading.log.houses': 'Raising houses and streets…',
@@ -182,6 +186,14 @@ export function createLoadingScreen(doc = globalThis.document) {
   let lg = null, translate = null;
   const attachLog = () => { lg = bootLog(root); if (translate) lg.setTranslator(translate); lg.log('loading.log.code'); };
   bind(); attachLog();
+  // The "takes longer than usual" line: added under the bar once SLOW_AFTER_MS has passed, gone with the screen.
+  let slowEl = null, t0 = null; // null: counted from navigation start on the first load
+  const slowText = () => { const v = translate ? translate('loading.longer') : null; return v && v !== 'loading.longer' ? v : SLOW_EN; };
+  const showSlow = () => {
+    const box = root && root.querySelector ? root.querySelector('.boot-bottom') : null;
+    if (slowEl || !box || !doc.createElement) return;
+    slowEl = doc.createElement('p'); slowEl.className = 'boot-slow'; slowEl.textContent = slowText(); box.append(slowEl);
+  };
   let shown = 0.04, real = 0, last = 0, raf = 0, finished = false, done = null; // a visible start before any byte
   const win = (doc && doc.defaultView) || globalThis;
   const now = () => (win.performance ? win.performance.now() : Date.now());
@@ -196,6 +208,8 @@ export function createLoadingScreen(doc = globalThis.document) {
     const t = now(); const dt = last ? Math.min(100, t - last) : 16; last = t;
     shown = trickle(shown, real, dt);
     paint();
+    if (t0 == null) t0 = win.performance ? 0 : t;
+    if (!finished && !slowEl && t - t0 >= SLOW_AFTER_MS) showSlow();
     if (!finished && root) raf = win.requestAnimationFrame ? win.requestAnimationFrame(frame) : setTimeout(frame, 50);
   };
   if (root) { root.classList.add('boot--live'); frame(); }
@@ -207,13 +221,14 @@ export function createLoadingScreen(doc = globalThis.document) {
     /** A line for the log under the bar: a `loading.log.*` key (what is loading right now). */
     log(key) { if (lg) lg.log(key); },
     /** The locale arrived: the log's lines are shown in the player's language from now on. */
-    setTranslator(fn) { translate = fn; if (lg) lg.setTranslator(fn); paintWord(root, fn); },
+    setTranslator(fn) { translate = fn; if (lg) lg.setTranslator(fn); paintWord(root, fn); if (slowEl) slowEl.textContent = slowText(); },
     /** The serif line over LOADING ("Forget to Foresee" on the first load). */
     setSub(text) { if (sub) sub.textContent = text; },
     /** Hands off: the ring completes, the screen cross-fades out over the screen duration; resolves when gone. */
     finish() {
       if (finished) return done;
       finished = true; real = 1; shown = 1; paint();
+      if (slowEl) { slowEl.remove(); slowEl = null; }
       if (!root) return (done = Promise.resolve());
       const reduced = isReduced(doc);
       done = new Promise((r) => (win.setTimeout || setTimeout)(r, reduced ? 60 : 140)) // let the full ring be seen
@@ -229,7 +244,7 @@ export function createLoadingScreen(doc = globalThis.document) {
     reopen(text) {
       if (!finished) { if (label && text != null) label.textContent = text; return !!root; }
       if (!spare || !doc.body) return false;
-      root = spare.cloneNode(true); bind(); attachLog(); paintWord(root, translate);
+      root = spare.cloneNode(true); bind(); attachLog(); paintWord(root, translate); slowEl = null; t0 = now();
       shown = 0.04; real = 0; last = 0; finished = false; done = null;
       if (label && text != null) label.textContent = text;
       doc.body.append(root);

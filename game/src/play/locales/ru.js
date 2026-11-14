@@ -1452,6 +1452,7 @@ export default {
   'loading.log.shells': "Поднимаем Раковины…",
   'loading.log.camps': "Ставим лагеря и мосты…",
   'loading.log.ready': "Готово",
+  'loading.longer': "Загрузка идёт дольше обычного — скачиваем мир…",
   'loading.log.shadersIsland': "Прогреваем архипелаг…",
   // ---- townsfolk barks (scenes/barks.js) ----
   'bark.day.1': "Сегодня над Биржей попутный ветер.",

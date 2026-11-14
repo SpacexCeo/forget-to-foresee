@@ -1454,6 +1454,7 @@ export default {
   'loading.log.shells': "Alziamo le Conchiglie…",
   'loading.log.camps': "Piantiamo campi e ponti…",
   'loading.log.ready': "Pronto",
+  'loading.longer': "Il caricamento richiede più del solito — scarichiamo il mondo…",
   'loading.log.shadersIsland': "Scaldiamo l'arcipelago…",
   // ---- townsfolk barks (scenes/barks.js) ----
   'bark.day.1': "Venti favorevoli sulla Borsa, oggi.",
