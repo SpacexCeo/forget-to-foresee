@@ -1232,6 +1232,7 @@ function handleInput(dt) {
   if (!playOn && !townOn) { navigateGamepadMenu(uiRoot, pad); return false; }
   if (townFlow && townFlow.busy) return false; // the registration sequence holds Iris and the camera
   if (npeLocked) return false; // the intro (prologue, dialogue, "What waits for you") owns the keys: E never reaches the town under it (QA pass 2 #1)
+  if (day1Open() || blocksWindows()) return false; // the name card and the free card pick own the keys too: E under them opened the Courier (jury path 14.11)
   if (photo && townOn && input.hit('KeyP')) photo.toggle();
   if (photo && photo.on) { // photo mode: Iris holds still, the camera orbits freely, a click saves nothing (the bar's button does)
     if (input.hit('Escape') || pad.hit(PAD.cancel)) photo.toggle(false);

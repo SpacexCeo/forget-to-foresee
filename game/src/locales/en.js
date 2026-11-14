@@ -6,8 +6,8 @@ export default {
   'app.title.line2': 'TO FORESEE',
   'app.title.full': 'Forget to Foresee',
   'app.tagline': 'THE FUTURE COSTS A MEMORY',
-  'premise.line': 'Pay for prophecy with your memories. Every prophecy is sealed on NEAR testnet before play.',
-  'premise.hint': 'Walk up the stairs to the altar to begin.',
+  'premise.line': "Iris fell from the year 2048 into a hill town. Earn 200 silk on NEAR testnet to open the Gate-Loom and go home.",
+  'premise.hint': "Your first steps are in the starter guide on the right.",
 
   // ---- common ----
   'common.close': 'Close',
