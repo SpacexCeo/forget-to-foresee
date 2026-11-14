@@ -72,8 +72,19 @@ def region(n):
 bw = np.zeros((len(P), len(names)), np.float32)
 for n, h, t, p, d in BONES:
     if n in col: bw[:, col[n]] = region(n) / (seg_dist(h, t) + 0.02) ** 4
+below_joint = 1 - smooth(1.42, 1.6, z)        # elbow at z 1.40, knee at 1.35: the lower leg bones stop a little above them
+for n in names:
+    if n.startswith(('leg_f_lower', 'leg_h_lower', 'leg_h_foot')): bw[:, col[n]] *= below_joint
 bw /= np.maximum(bw.sum(1, keepdims=True), 1e-12)
 unweighted_proxy = 0
+# The neck is shared out by POSITION ALONG the neck, not by distance: the throat plates stand 0.5-0.7 m in front of
+# the neck line, where every neck bone is about as far, and a distance blend gave them four near-equal bones that
+# changed from vertex to vertex (review A.48: 1 cm edges torn 5-7x). Along the neck each vertex has two neighbours.
+NK = ['neck1', 'neck2', 'neck3', 'neck4', 'head']; npts = [np.array(v, float) for v in J['neck']] + [np.array(J['head_end'], float)]
+# one straight axis from the neck's base to the skull (the neck is nearly straight): the parameter has no jumps
+ax_ = npts[4] - npts[0]; u_neck = np.clip(4 * ((P - npts[0]) @ ax_) / (ax_ @ ax_), 0, 5)
+ker = np.maximum(0.0, 1 - np.abs(u_neck[:, None] - (np.arange(5) + 0.5)) / 0.9); ker /= np.maximum(ker.sum(1, keepdims=True), 1e-9)
+nc = [col[n] for n in NK]; tot = bw[:, nc].sum(1); bw[:, nc] = tot[:, None] * ker
 
 # ---- rules (regions from the s03 tables)
 def move(mask, src, dst, amount=1.0):
@@ -136,9 +147,17 @@ for _ in range(3):
     m = (bw[short[:, 0]] + bw[short[:, 1]]) / 2
     for k_ in (0, 1):
         ok = ~keep_rigid[short[:, k_]]; bw[short[ok, k_]] = m[ok]
-# at most 4 bones, normalised
-order = np.argsort(-bw, axis=1); keep = np.zeros_like(bw, bool); np.put_along_axis(keep, order[:, :4], True, axis=1); bw[~keep] = 0
-bw[bw < 0.01] = 0; ssum = bw.sum(1, keepdims=True); zero = int((ssum[:, 0] < 1e-6).sum()); bw /= np.maximum(ssum, 1e-9)
+# at most 4 bones, normalised. Where many bones are equally far (the throat plates in front of the neck) neighbours
+# would keep different sets of four and tear on a 1 cm edge: cut, smooth once, cut again until the sets agree
+def top4(w):
+    order = np.argsort(-w, axis=1); keep = np.zeros_like(w, bool); np.put_along_axis(keep, order[:, :4], True, axis=1)
+    w = np.where(keep, w, 0); w[w < 0.01] = 0; return w / np.maximum(w.sum(1, keepdims=True), 1e-9)
+zero = int((bw.sum(1) < 1e-6).sum()); frozen = core | soles
+for _ in range(int(A.get('agree', 8))):
+    bw = top4(bw); acc = bw.copy(); cnt = np.ones(len(P), np.float32)
+    np.add.at(acc, e[:, 0], bw[e[:, 1]]); np.add.at(acc, e[:, 1], bw[e[:, 0]]); np.add.at(cnt, e[:, 0], 1); np.add.at(cnt, e[:, 1], 1)
+    sm_ = acc / cnt[:, None]; bw[~frozen] = sm_[~frozen]
+bw = top4(bw)
 
 for n in names:
     if n not in mesh.vertex_groups: mesh.vertex_groups.new(name=n)
@@ -181,8 +200,12 @@ for tname, rots in TEST.items():
     bpy.context.view_layer.update(); dg = bpy.context.evaluated_depsgraph_get(); ev = mesh.evaluated_get(dg); me = ev.to_mesh()
     a = np.empty(len(me.vertices) * 3, np.float32); me.vertices.foreach_get('co', a); a = a.reshape(-1, 3); ev.to_mesh_clear()
     ratio = np.linalg.norm(a[ed[:, 0]] - a[ed[:, 1]], axis=1) / np.maximum(rest_len, 1e-6); ratio[rest_len < 0.01] = 1
-    worst = np.argsort(-ratio)[:400]; mid = (co[ed[worst, 0]] + co[ed[worst, 1]]) / 2
-    print('WORST', tname, json.dumps([[round(float(v), 2) for v in mid[i]] + [round(float(ratio[worst[i]]), 1), round(float(rest_len[worst[i]]), 3)] for i in range(0, 400, 16)]))
+    # the worst edges with the two strongest bones of each end (TZ step 12): where a pose still tears
+    def top2(vi):
+        g = sorted(((gr.weight, mesh.vertex_groups[gr.group].name) for gr in mesh.data.vertices[int(vi)].groups), reverse=True)[:2]
+        return ' '.join(f'{n}:{w:.2f}' for w, n in g)
+    worst = np.argsort(-ratio)[:int(A.get('worst', 14))]
+    print('WORST', tname, json.dumps([dict(at=[round(float(v), 2) for v in (co[ed[i, 0]] + co[ed[i, 1]]) / 2], x=round(float(ratio[i]), 1), mm=round(float(rest_len[i]) * 1000), a=top2(ed[i, 0]), b=top2(ed[i, 1])) for i in worst]))
     tests[tname] = dict(max_stretch=round(float(ratio.max()), 2), p999=round(float(np.quantile(ratio, 0.999)), 2), over_2=int((ratio > 2).sum()))
     workbench(900, True); ortho_views(f'{ROOT}/renders/s07_{tname}', [mesh], views=('side', 'q34'), res=900)
 for pb in rig.pose.bones: pb.rotation_quaternion = (1, 0, 0, 0)
