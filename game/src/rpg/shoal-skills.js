@@ -6,9 +6,9 @@
 const f = Object.freeze;
 /** Iris with the Loomblade: a three-hit combo, a heavy slash and a roll. */
 export const IRIS_SHOAL = f([
-  f({ id: 'loom_combo', hero: 'iris', name: 'Loomblade Combo', slot: 1, key: 'F', kind: 'melee', mana: 0, cooldownMs: 380, range: 3.2, damage: f([60, 70, 110]), arc: 2.2, icon: 'strike', art: 'strike', text: 'Three woven cuts. The third one bites deep.' }),
-  f({ id: 'loom_heavy', hero: 'iris', name: 'Heavy Slash', slot: 2, key: 'Q', kind: 'melee', mana: 20, cooldownMs: 4500, range: 4.2, damage: 260, arc: 3.1, windup: 0.35, icon: 'lance', art: 'shard_burst', text: 'A slow, wide slash with the whole weight of the blade.' }),
-  f({ id: 'loom_dodge', hero: 'iris', name: 'Dodge Roll', slot: 4, key: 'Space', kind: 'movement', mana: 0, cooldownMs: 600, icon: 'dash', art: 'dash', text: 'Roll through a blow. A clean dodge opens the boss to your cuts.' }),
+  f({ id: 'loom_combo', hero: 'iris', name: 'Loomblade Combo', slot: 1, key: 'F', kind: 'melee', mana: 0, cooldownMs: 380, range: 3.2, damage: f([60, 70, 110]), arc: 2.2, icon: 'strike', art: 'open/act_blade_series_96', text: 'Three woven cuts. The third one bites deep.' }),
+  f({ id: 'loom_heavy', hero: 'iris', name: 'Heavy Slash', slot: 2, key: 'Q', kind: 'melee', mana: 20, cooldownMs: 4500, range: 4.2, damage: 260, arc: 3.1, windup: 0.35, icon: 'lance', art: 'open/act_heavy_strike_96', text: 'A slow, wide slash with the whole weight of the blade.' }),
+  f({ id: 'loom_dodge', hero: 'iris', name: 'Dodge Roll', slot: 4, key: 'Space', kind: 'movement', mana: 0, cooldownMs: 600, icon: 'dash', art: 'open/act_roll_96', text: 'Roll through a blow. A clean dodge opens the boss to your cuts.' }),
 ]);
 /** Elise remembers her gift: Ember Palms, Gale Discs and a hop that dodges (the three hotbar skills). */
 export const ELISE_SHOAL = f([
