@@ -26,7 +26,7 @@ import { navigateGamepadMenu } from './ui/gamepad-menu.js';
 import { mountSceneControls } from './ui/scene-controls.js';
 import { setBindings, loadBindings, bindings } from './ui/keybinds.js';
 import { createMouseAim, aimPoint } from './ui/mouse-aim.js';
-import { menuKeyAction, registerWindow, claimWindow } from './ui/window-toggle.js';
+import { menuKeyAction, registerWindow, claimWindow, closeTopWindow } from './ui/window-toggle.js';
 import { loadSettings, renderOverrides, lookFactors, frameDue } from './ui/settings-store.js';
 import { loadVolumes, saveVolumes } from './audio/mix.js';
 import './ui/styles.css';
@@ -1210,6 +1210,7 @@ function handleInput(dt) {
   if (input.hit('Escape') || pad.hit(PAD.cancel)) {
     if (townOn && townCasting && townCasting.handleKey('Escape')) return false; // put the armed cast away
     if (townOn && townFlow && townFlow.closePanel()) return false; // close the open talk panel
+    if (closeTopWindow()) return false; // the top-most open window (the sheet, the tree, the journal, the market, the map…) before any menu
     if (inspecting) leaveInspect();
     else if (playOn && play.handleKey('Escape')) clearWorldInput();
     else if (moveTarget || (playOn && play.routeActive) || (townOn && townFlow.routeActive)) stopSteering();

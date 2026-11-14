@@ -276,3 +276,21 @@ test('one window at a time: the menu, the journal, the market and the HUD window
   assert.match(read('market/index.js'), /registerWindow\('market'/);
   for (const id of ['skills', 'character', 'help']) assert.ok(read('rpg/index.js').includes(`['${id}', () =>`), id);
 });
+
+test('Esc closes the top-most open window first; the menu only when none is open (QA P1 14.11)', async () => {
+  const W = await import('../../src/ui/window-toggle.js');
+  W.resetWindows();
+  const mk = () => { const w = { on: false, isOpen: () => w.on, close: () => { w.on = false; } }; return w; };
+  const sheet = mk(), map = mk();
+  W.registerWindow('character', sheet); W.registerWindow('map', map);
+  assert.equal(W.closeTopWindow(), null, 'nothing open: Esc may open the menu');
+  W.claimWindow('character'); sheet.on = true;
+  assert.equal(W.closeTopWindow(), 'character'); assert.equal(sheet.on, false);
+  W.claimWindow('character'); sheet.on = true; W.claimWindow('map'); map.on = true;
+  assert.equal(sheet.on, false, 'opening the map closed the sheet');
+  sheet.on = true; // a window that opened without a claim still closes, after the claimed ones
+  assert.equal(W.closeTopWindow(), 'map'); assert.equal(W.closeTopWindow(), 'character'); assert.equal(W.closeTopWindow(), null);
+  W.resetWindows();
+  const boot = readFileSync(new URL('../../src/boot-world.js', import.meta.url), 'utf8');
+  assert.ok(boot.indexOf('if (closeTopWindow()) return false;') > 0 && boot.indexOf('if (closeTopWindow()) return false;') < boot.indexOf("else if (!blocksWindows()) openMenu();"), 'before the menu');
+});

@@ -16,6 +16,7 @@ export function menuKeyAction(menu, tab, toggle = true) {
 }
 
 const handles = new Map(); // id -> {isOpen(): boolean, close(): void}
+let order = []; // ids in the order they were last claimed (opened): the newest is on top
 
 /** Registers window `id`; returns the function that removes it. A later registration under the same id replaces the first. */
 export function registerWindow(id, handle) {
@@ -30,12 +31,26 @@ export const openWindows = () => [...handles].filter(([, h]) => openOf(h)).map((
 
 /** Window `id` is about to open: every other open window closes. Returns the ids that were closed. */
 export function claimWindow(id) {
+  order = [...order.filter((k) => k !== id), id];
   const closed = [];
   for (const [k, h] of [...handles]) {
     if (k === id || !openOf(h)) continue;
     try { h.close(); closed.push(k); } catch { /* a window that cannot close stays; the new one still opens */ }
   }
   return closed;
+}
+
+/**
+ * Esc (QA P1 14.11: the character sheet stayed open and Esc opened Settings over it): closes the top-most open window
+ * (the last one claimed; any other open one after those) and returns its id, or null when none is open (Esc may then
+ * open the menu).
+ */
+export function closeTopWindow() {
+  const open = new Set(openWindows());
+  const top = [...order].reverse().find((k) => open.has(k)) || [...open][0];
+  if (!top) return null;
+  try { handles.get(top).close(); } catch { /* */ }
+  return top;
 }
 
 /** Whether window `id` is registered and open. */
@@ -53,4 +68,4 @@ export function pressWindow(id) {
 }
 
 /** Tests: forget every handle. */
-export function resetWindows() { handles.clear(); }
+export function resetWindows() { handles.clear(); order = []; }
