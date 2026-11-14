@@ -37,6 +37,34 @@ export function pickDrawn(list, from, max, far = REMOTE.farM) {
 /** The animation name the server relays, from the player's ground speed (m/s) and grounded flag. */
 export const animFor = (speed, grounded = true) => (!grounded ? 'fall' : speed > 2.6 ? 'run' : speed > 0.25 ? 'walk' : 'idle');
 
+/**
+ * Our combat moves as the room sees them (presence v2, owner 14.11: "hits and casts of others shown"): the clip that
+ * started (play/iris-avatar.js 'ftf:iris-action') -> the relayed animation and the effect the others draw. A server
+ * before v2 turns an animation it does not know into 'idle' and never gets an fx, so nothing breaks there.
+ */
+export const COMBAT = Object.freeze({
+  strike1: { a: 'strike1', fx: 'strike' }, strike2: { a: 'strike2', fx: 'strike' }, strike3: { a: 'strike3', fx: 'strike3' },
+  strike_super: { a: 'super', fx: 'super' }, dash: { a: 'dash', fx: 'dash' }, cast_lance: { a: 'cast', fx: 'lance' }, cast_snare: { a: 'cast', fx: 'snare' },
+});
+/** How long a combat animation stays in our state after it started (s): long enough for one 10 Hz send. */
+export const COMBAT_HOLD = 0.45;
+/** The remote clip for a relayed animation (null: the gait handles it). */
+export const CLIP_OF = Object.freeze({ strike1: 'strike1', strike2: 'strike2', strike3: 'strike3', super: 'strike_super', dash: 'dash', cast: 'cast_lance' });
+/** The spider states the server sends (presence/lib/mobs.js MOB_STATES), by index. */
+export const MOB_STATES = Object.freeze(['idle', 'chase', 'windup', 'dead']);
+
+/** A shared spider where it should be drawn at time t (ms): interpolated between its last two server rows. */
+export function sampleMob(buf, t) {
+  if (!buf.length) return null;
+  const b = buf[buf.length - 1];
+  if (buf.length === 1 || t >= b.at) return { x: b.x, z: b.z, h: b.h };
+  for (let i = buf.length - 1; i > 0; i--) {
+    const a = buf[i - 1], c = buf[i];
+    if (t >= a.at && t <= c.at) { const k = (t - a.at) / Math.max(1, c.at - a.at); return { x: a.x + (c.x - a.x) * k, z: a.z + (c.z - a.z) * k, h: lerpAngle(a.h, c.h, k) }; }
+  }
+  return { x: buf[0].x, z: buf[0].z, h: buf[0].h };
+}
+
 /** Linear blend of two angles along the short way. */
 export function lerpAngle(a, b, k) { let d = ((b - a + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI; return a + d * k; }
 
@@ -71,7 +99,7 @@ export function changed(prev, s) {
  * @param {{url?: string, name?: string, skin?: 'iris'|'elise', storage?: Storage, WebSocketImpl?: typeof WebSocket, now?: () => number,
  *          onChange?: () => void, maxRetries?: number}} o
  */
-export function createPresence({ url = presenceUrl(), name = '', skin = 'iris', account = null, lv = null, storage = null, WebSocketImpl = globalThis.WebSocket, now = () => performance.now(), onChange = () => {}, maxRetries = 4 } = {}) {
+export function createPresence({ url = presenceUrl(), name = '', skin = 'iris', account = null, lv = null, area = 'town', storage = null, WebSocketImpl = globalThis.WebSocket, now = () => performance.now(), onChange = () => {}, maxRetries = 4 } = {}) {
   const players = new Map(); // id -> {id, name, skin, buf: [{at,p,h,a}]}
   // chat lines {id, name, account, text, at, mine, old?} and actions {act: true, id, name, account, k, v, at, mine, old?}, oldest
   // first; `at` is the server's clock (epoch ms); `old` marks what the room remembered from before we joined
@@ -80,6 +108,8 @@ export function createPresence({ url = presenceUrl(), name = '', skin = 'iris', 
   let myName = '', lastActAt = -Infinity, idleKicked = false, canAct = false, kinds = null; const actQ = [];
   // kinds: the acts the server named in its welcome; a server that names none takes only the first five (it kicks for any other)
   const serverTakes = (k) => (kinds ? kinds.includes(k) : FIRST_ACTS.includes(k));
+  let caps = new Set(); const mobs = new Map(); const ears = { bite: [], death: [], fx: [] };
+  const tell = (k, e) => { for (const f of ears[k]) try { f(e); } catch (err) { console.warn('[mp]', err); } };
   let ws = null, id = 0, room = 0, max = 15, status = url && WebSocketImpl ? 'connecting' : 'offline', retries = 0, lastSent = null, lastSendAt = 0, stopped = false, timer = null, sys = null;
   let muted = new Set(); try { muted = new Set(JSON.parse((storage && storage.getItem(MUTE_KEY)) || '[]')); } catch { /* fresh */ }
   const saveMuted = () => { try { storage && storage.setItem(MUTE_KEY, JSON.stringify([...muted].slice(-200))); } catch { /* private mode */ } };
@@ -95,9 +125,9 @@ export function createPresence({ url = presenceUrl(), name = '', skin = 'iris', 
     status = 'connecting'; emit();
     try { ws = new WebSocketImpl(url); } catch { return retry(); }
     // the account lets others read this player's public NFTs and silk on chain (the player card); lv is the shown level
-    ws.onopen = () => { retries = 0; send({ t: 'hello', v: 1, name, skin, ...(account ? { account } : {}), ...(Number.isInteger(lv) ? { lv } : {}) }); };
+    ws.onopen = () => { retries = 0; send({ t: 'hello', v: 1, name, skin, area, ...(account ? { account } : {}), ...(Number.isInteger(lv) ? { lv } : {}) }); };
     ws.onmessage = (e) => { let m; try { m = JSON.parse(e.data); } catch { return; } handle(m); };
-    ws.onclose = () => { ws = null; players.clear(); if (status !== 'offline') retry(); };
+    ws.onclose = () => { ws = null; players.clear(); mobs.clear(); caps = new Set(); if (status !== 'offline') retry(); };
     ws.onerror = () => {};
   }
   function retry() {
@@ -106,11 +136,28 @@ export function createPresence({ url = presenceUrl(), name = '', skin = 'iris', 
     status = 'connecting'; emit();
     timer = setTimeout(open, Math.min(30000, 1000 * 2 ** retries));
   }
+  /** Rows [id, x, z, h, hp, state] from the server: each spider keeps its last positions for interpolation. */
+  function mobRows(rows, t) {
+    for (const r of rows) {
+      if (!Array.isArray(r) || typeof r[0] !== 'string' || ![1, 2, 3, 4].every((i) => Number.isFinite(r[i]))) continue;
+      let e = mobs.get(r[0]); if (!e) mobs.set(r[0], e = { id: r[0], buf: [], hp: r[4], st: 'idle' });
+      const st = MOB_STATES[r[5]] || 'idle';
+      if (e.st === 'dead' && st !== 'dead') e.buf.length = 0; // it came back somewhere else: no slide from its grave
+      e.buf.push({ at: t, x: r[1], z: r[2], h: r[3] }); if (e.buf.length > 4) e.buf.shift();
+      e.hp = r[4]; e.st = st;
+    }
+  }
   function handle(m) {
     const t = now();
-    if (m.t === 'welcome') { id = m.id; room = m.room; max = m.max; myName = typeof m.name === 'string' ? m.name : name; canAct = false; kinds = Array.isArray(m.kinds) ? m.kinds.filter((k) => typeof k === 'string') : null; actQ.length = 0; players.clear(); for (const p of m.players) add(p); status = 'online'; lastSent = null; emit(); }
-    else if (m.t === 'join') { add(m.player); emit(); }
-    else if (m.t === 'leave') { players.delete(m.id); emit(); }
+    if (m.t === 'welcome') { id = m.id; room = m.room; max = m.max; myName = typeof m.name === 'string' ? m.name : name; canAct = false; kinds = Array.isArray(m.kinds) ? m.kinds.filter((k) => typeof k === 'string') : null; actQ.length = 0; players.clear(); for (const p of m.players) add(p); status = 'online'; lastSent = null;
+      caps = new Set(Array.isArray(m.caps) ? m.caps : []); mobs.clear(); if (Array.isArray(m.mobs)) mobRows(m.mobs, t);
+      emit(); }
+    else if (m.t === 'join') { add(m.player); if (m.player && typeof m.player.name === 'string' && !muted.has(m.player.name)) keep({ act: true, k: 'joined', id: m.player.id, name: m.player.name, at: Date.now(), mine: false, local: true }); emit(); }
+    else if (m.t === 'leave') { const gone = players.get(m.id); players.delete(m.id); if (gone && !muted.has(gone.name)) keep({ act: true, k: 'left', id: m.id, name: gone.name, at: Date.now(), mine: false, local: true }); emit(); }
+    else if (m.t === 'mobs') { if (Array.isArray(m.m)) mobRows(m.m, t); }
+    else if (m.t === 'bite') { if (typeof m.mob === 'string' && Number.isFinite(m.dmg)) tell('bite', { mob: m.mob, dmg: Math.max(0, Math.min(50, m.dmg)) }); }
+    else if (m.t === 'mdeath') { if (typeof m.mob === 'string') { const r = mobs.get(m.mob); if (r) { r.hp = 0; r.st = 'dead'; } tell('death', { mob: m.mob, mine: Array.isArray(m.loot) && m.loot.includes(id) }); } }
+    else if (m.t === 'fx') { const pl = players.get(m.id); if (pl && Array.isArray(m.p) && m.p.length === 3 && m.p.every(Number.isFinite) && Object.values(COMBAT).some((c) => c.fx === m.k)) tell('fx', { id: m.id, k: m.k, p: m.p, h: Number(m.h) || 0 }); }
     else if (m.t === 'snap') {
       for (const [pid, x, y, z, h, a] of m.s) {
         if (pid === id) continue;
@@ -148,6 +195,16 @@ export function createPresence({ url = presenceUrl(), name = '', skin = 'iris', 
     /** How many players share the room, us included (0 when not online). */
     get count() { return status === 'online' ? players.size + 1 : 0; },
     players, chat,
+    /** What this server can do (presence v2: 'area', 'fx', 'mobs'); empty for an older one. */
+    has: (cap) => caps.has(cap),
+    /** The shared spiders, drawn 150 ms behind: [{id, x, z, h, hp, state}] (town-local metres). */
+    mobs() { const t = now() - DELAY_MS; return [...mobs.values()].filter((e) => e.buf.length).map((e) => ({ id: e.id, hp: e.hp, state: e.st, ...sampleMob(e.buf, t) })); },
+    /** Listens for 'bite' {mob, dmg} (a spider reached us), 'death' {mob, mine} (mine: we may loot it), 'fx' {id, k, p, h}. */
+    on(kind, fn) { if (ears[kind]) ears[kind].push(fn); return () => { const i = ears[kind].indexOf(fn); if (i >= 0) ears[kind].splice(i, 1); }; },
+    /** Our blow or cast for the others to see (a v2 server only). */
+    fx(k) { if (status === 'online' && caps.has('fx') && Object.values(COMBAT).some((c) => c.fx === k)) send({ t: 'fx', k }); },
+    /** Our blow landed on a shared spider: the server checks it and keeps the health. */
+    hit(mob, k, n) { if (status === 'online' && caps.has('mobs') && typeof mob === 'string' && Number.isFinite(n) && n > 0) { send({ t: 'hit', mob, k, n: Math.round(n * 10) / 10 }); return true; } return false; },
     /** Per frame: sends our state at most SEND_HZ when it changed. */
     update(state) {
       if (idleKicked && status === 'offline' && !ws) { idleKicked = false; retries = 0; open(); return; }
@@ -174,6 +231,9 @@ export function createPresence({ url = presenceUrl(), name = '', skin = 'iris', 
     unmute(nameOf) { muted.delete(nameOf); saveMuted(); emit(); },
     isMuted: (nameOf) => muted.has(nameOf),
     report(pid) { send({ t: 'report', id: pid }); },
+    /** The area we are in ('town' | 'isles'): a change rejoins in a room of that area (presence v2; an older server keeps one room). */
+    get area() { return area; },
+    setArea(a) { if (a === area || !['town', 'isles'].includes(a)) return; area = a; players.clear(); mobs.clear(); if (ws) { status = 'connecting'; retries = 0; try { ws.close(); } catch { /* closed */ } emit(); } },
     stop() { stopped = true; idleKicked = false; actQ.length = 0; status = 'offline'; clearTimeout(timer); if (ws) try { ws.close(); } catch { /* closed */ } ws = null; players.clear(); emit(); },
   };
 }
@@ -193,5 +253,6 @@ export function createDemoPresence({ count = 3, now = () => performance.now(), o
     update() {},
     positions() { const t = (now() - t0) / 1000; return [...players.values()].map((pl, k) => { const s = botAt(k, t); const s2 = botAt(k, t - 0.1); return { id: pl.id, name: pl.name, skin: pl.skin, ai: true, p: s.p, h: s.h, a: s.a, speed: Math.hypot(s.p[0] - s2.p[0], s.p[2] - s2.p[2]) / 0.1 }; }); },
     say() {}, act: () => false, mute() {}, unmute() {}, isMuted: () => false, report() {}, stop() {},
+    has: () => false, mobs: () => [], on: () => () => {}, fx() {}, hit: () => false, area: 'town', setArea() {},
   };
 }

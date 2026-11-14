@@ -1632,6 +1632,8 @@ export default {
   'mp.act.boss.shoal': "{name} побеждает Полый Прилив на Стеклянной Отмели",
   'mp.act.trade': "{name} покупает товар на рынке",
   'mp.act.gate': "{name} накормил(а) Ткацкие Врата",
+  'mp.act.joined': "{name} теперь в городе",
+  'mp.act.left': "{name} покидает город",
   'set.title': "Настройки",
   'set.close': "Закрыть",
   'set.tab.graphics': "Графика",
